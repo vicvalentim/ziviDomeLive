@@ -27,13 +27,13 @@ java {
 // Such as:
 // <libName>.jar will be the name of your build jar
 // <libName>.zip will be the name of your release file
-val libName = "myLibrary"
+val libName = "ziviDomeLive"
 
 // The group ID of your library, which uniquely identifies your project.
 // It's often written in reverse domain name notation.
 // For example, if your website is "myDomain.com", your group ID would be "com.myDomain".
 // Replace "com.myDomain" with your own domain or organization name.
-group = "com.myDomain"
+group = "com.victorvalentim.zividomelive"
 
 // The version of your library. It usually follows semantic versioning (semver),
 // which uses three numbers separated by dots: "MAJOR.MINOR.PATCH" (e.g., "1.0.0").
@@ -56,7 +56,7 @@ var sketchbookLocation = ""
 val userHome = System.getProperty("user.home")
 val currentOS = OperatingSystem.current()
 if(currentOS.isMacOsX) {
-    sketchbookLocation = "$userHome/Documents/Processing/sketchbook"
+    sketchbookLocation = "$userHome/Documents/Processing/"
 } else if(currentOS.isWindows) {
     sketchbookLocation = "$userHome/My Documents/Processing/sketchbook"
 } else {
@@ -85,9 +85,10 @@ dependencies {
     // We are currently resolving from an unofficial, jitpack-enabled, processing4 repository.
     // Eventually, this will change to an official source.
 
-    // insert your external dependencies
-    implementation(group = "org.apache.commons", name = "commons-math3", version = "3.6.1")
-    // The provided example uses commons-math3. Replace or add as needed.
+    // Bibliotecas locais no sketchbook (ControlP5, Syphon, SpoutProcessing)
+    compileOnly(fileTree("$sketchbookLocation/libraries/controlP5/library"))
+    compileOnly(fileTree("$sketchbookLocation/libraries/Syphon/library"))
+    compileOnly(fileTree("$sketchbookLocation/libraries/spout/library"))
 
     // To add a dependency on a Processing library that is installed locally,
     // uncomment the line below, and replace <library folder> with the location of that library
