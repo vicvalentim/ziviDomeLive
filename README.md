@@ -1,40 +1,72 @@
-# Processing Library Template
-This is a template to help developers of Processing libraries to develop and release.
+## ziviDomeLive Library
 
-Please read the [documentation website](https://processing.github.io/processing-library-template/)
-for more information on how to use this template.
+ziviDomeLive is a Processing library that facilitates the creation of immersive visual experiences for fulldome projections. It allows for interactive and sound-reactive scene manipulation, making it ideal for fulldome environments and other immersive installations.
 
-Three important outputs are required to contribute a library to Processing, and this template provides 
-help and guidance on them. They are:
-1. **The library's code** - This template will build your code into a jar file with Gradle.
-2. **A website for the library** - We recommend using [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/)
-   to create a static website for your library. It allows you to write content for your website
-   using markdown, and structure the site using a yml configuration file. We provide a skeleton
-   MkDocs website as part of this template.
-3. **A url that serves the release artifacts** - We have already configured Gradle tasks to create the
-   release artifacts. If you host your code on Github, You can create a Github release that serves the 
-   release artifacts.
+Features:
+- Support for dome projection techniques (e.g., equirectangular and domemaster shaders).
+- Interaction with 3D scenes in real time.
+- Sound-reactive visual effects to enhance audience experience.
+- Customizable scene managers for control over dome content.
 
+## Installation:
 
-References for developing libraries for Processing can be found on the following Github wiki pages:
-- https://github.com/benfry/processing4/wiki/Library-Basics
-- https://github.com/benfry/processing4/wiki/Library-Guidelines
-- https://github.com/benfry/processing4/wiki/Library-Overview
+Install with the Contribution Manager:
+- You can install ziviDomeLive using the Processing Contribution Manager:
+   1. Open Processing and navigate to Sketch → Import Library... → Add Library....
+   2. Search for ziviDomeLive and click Install.
 
-> [!Note]
-> This template is based on Gradle. If you are looking for the old Ant-based template, see [processing/processing-library-template-ant](processing/processing-library-template-ant)
+- If the library is not available in the Contribution Manager, follow the manual installation steps below.
 
-## Contributors
+Manual Install:
+1. Download ziviDomeLive from https://github.com/vicvalentim/zividomelive.
+2. Unzip the downloaded file.
+3. Copy the folder into the libraries directory of your Processing sketchbook. You can find the sketchbook location in Processing under Preferences.
+4. The folder structure should be as follows:
 
-This template was created by Claudine Chen ([@mingness](https://github.com/mingness)) as part of the 2024 New Beginnings (pr05) Grant from the 
-[Processing Foundation](https://github.com/processing), to simplify the
-workflows for libraries, tools, and modes, mentored by Stef Tervelde ([@Stefterv](https://github.com/stefterv)).
+   Processing
+   libraries
+   ziviDomeLive
+   examples
+   library
+   ziviDomeLive.jar
+   reference
+   src
 
-It is based on and inspired by a number of Processing library templates, including:
-- https://github.com/processing/processing-library-template-gradle
-- https://github.com/enkatsu/processing-library-template-gradle
-- https://github.com/hamoid/processing-library-template/
+5. Restart Processing to use the library.
 
-I wish to thank the developers of these repositories, who generously provided
-guidance and time. This template has been developed in collaboration with
-[@enkatsu](https://github.com/enkatsu).
+## Usage:
+To use ziviDomeLive in your Processing sketch, import the library at the beginning of your code:
+
+import ziviDomeLive.*;
+
+ziviDomeLive dome;
+
+void setup() {
+size(800, 800, P3D);
+dome = new ziviDomeLive(this);
+dome.setup();
+}
+
+void draw() {
+
+dome.draw();
+
+}
+
+## Examples:
+Check out the examples folder for a variety of sample sketches that demonstrate how to use ziviDomeLive to create immersive, sound-reactive visual experiences.
+
+## Development:
+If you want to contribute to the development of ziviDomeLive:
+1. Fork the repository on GitHub: https://github.com/vicvalentim/zividomelive
+2. Clone your fork to your local machine.
+3. Make changes and test them locally.
+4. Push your changes and create a pull request.
+
+## Author:
+Developed by Victor Valentim.
+
+For more information, visit Victor Valentim's GitHub page: https://github.com/vicvalentim.
+
+## License:
+ziviDomeLive is licensed under the Apache License, Version 2.0. See the LICENSE file for more details.
