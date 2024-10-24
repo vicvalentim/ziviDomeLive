@@ -196,7 +196,7 @@ Thank you for contributing to **ziviDomeLive**!
 
 ## Author
 
-**Developed by Victor Valentim.**
+**Developed by [Victor Valentim](https://victorvalentim.com).**
 
 **Affiliations**:
 - CECULT - Universidade Federal do Recôncavo da Bahia
@@ -204,7 +204,7 @@ Thank you for contributing to **ziviDomeLive**!
 
 ## License
 
-**ziviDomeLive** is distributed under the Apache 2.0 and GPL-2.0 licenses.
+**ziviDomeLive** is distributed under the GPL-2.0 license.
 
 Copyright (c) 2024 Victor Valentim
 
