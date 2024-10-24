@@ -30,6 +30,12 @@
 
 ## Known Issues
 
+**Disclaimer for Apple Silicon Users**:
+- **Important**: For users on macOS with Apple Silicon (M family), it is recommended to use the Intel version of Processing to ensure full functionality of **Syphon**. The native ARM version of Processing does not currently support Syphon, which may limit the capabilities of the **ziviDomeLive** library.
+
+**Disclaimer for Linux Users**:
+- Due to the absence of a native library for **NDI** in Processing, Linux users will not have access to external integration features, such as those provided by **Syphon** or **Spout** on macOS and Windows.
+
 **OpenGL Error 1282**:
 - Some users may encounter the following OpenGL error in the Processing console:
    ```
@@ -190,11 +196,11 @@ Thank you for contributing to **ziviDomeLive**!
 
 ## Author
 
-**Developed by [Victor Valentim](https://victorvalentim.com).**
+**Developed by Victor Valentim.**
 
 **Affiliations**:
-- CECULT/UFRB - Universidade Federal do Recôncavo da Bahia
-- PPGARTES/UFMG - Universidade Federal de Minas Gerais
+- CECULT - Universidade Federal do Recôncavo da Bahia
+- PPGARTES - Universidade Federal de Minas Gerais
 
 ## License
 
