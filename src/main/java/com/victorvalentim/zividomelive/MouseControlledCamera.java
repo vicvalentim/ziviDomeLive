@@ -3,39 +3,52 @@ package com.victorvalentim.zividomelive;
 import processing.core.*;
 import processing.event.MouseEvent;
 
+/**
+ * The MouseControlledCamera class provides a camera that can be controlled using the mouse.
+ * It allows for rotation around a center point and zooming in and out.
+ */
 public class MouseControlledCamera {
-    PVector position; // Position of the camera
-    PVector center; // The point the camera is looking at
-    PVector up; // The up direction of the camera
-    float sensitivity = 0.005f; // Sensitivity for mouse movements
-    float zoomSensitivity = 10; // Sensitivity for zoom actions
-    float distance = 1500; // Initial distance from the center point
-    float angleX = PConstants.PI / 2; // Horizontal rotation angle
-    float angleY = 0; // Vertical rotation angle
-    boolean dragging = false; // Flag to indicate if the mouse is being dragged
-    float minDistance = 100; // Minimum zoom distance
-    float maxDistance = 5000; // Maximum zoom distance
+    PVector position;
+    PVector center;
+    PVector up;
+    float sensitivity = 0.005f;
+    float zoomSensitivity = 10;
+    float distance = 1500;
+    float angleX = PConstants.PI / 2;
+    float angleY = 0;
+    boolean dragging = false;
+    float minDistance = 100;
+    float maxDistance = 5000;
 
+    /**
+     * Constructs a MouseControlledCamera with default settings.
+     */
     MouseControlledCamera() {
-        // Initialize the position, center, and up vector
         position = new PVector(0, 0, distance);
         center = new PVector(0, 0, 0);
         up = new PVector(0, 1, 0);
     }
 
+    /**
+     * Applies the camera view to the given PGraphics object.
+     *
+     * @param pg the PGraphics object to apply the camera view to
+     */
     void apply(PGraphics pg) {
-        // Set the camera view for the given PGraphics object
         pg.camera(position.x, position.y, position.z, center.x, center.y, center.z, up.x, up.y, up.z);
     }
 
+    /**
+     * Updates the camera's position based on mouse input.
+     *
+     * @param p the PApplet instance to get mouse input from
+     */
     void update(PApplet p) {
-        // Update the camera's position based on mouse input
         if (isLeftMousePressed(p)) {
             if (!dragging) {
                 dragging = true;
                 return;
             }
-            // Calculate the change in angles based on mouse movement
             float dx = (p.mouseX - p.pmouseX) * sensitivity;
             float dy = (p.mouseY - p.pmouseY) * sensitivity;
             angleX += dx;
@@ -44,27 +57,38 @@ public class MouseControlledCamera {
             dragging = false;
         }
 
-        // Update the camera's position based on the angles
         float cosAngleY = PApplet.cos(angleY);
         position.x = center.x + distance * PApplet.cos(angleX) * cosAngleY;
         position.y = center.y + distance * PApplet.sin(angleY);
         position.z = center.z + distance * PApplet.sin(angleX) * cosAngleY;
     }
 
+    /**
+     * Adjusts the distance for zooming, constrained between min and max distances.
+     *
+     * @param delta the amount to zoom
+     */
     void zoom(float delta) {
-        // Adjust the distance for zooming, constrained between min and max distances
         distance -= delta * zoomSensitivity;
         distance = PApplet.constrain(distance, minDistance, maxDistance);
     }
 
+    /**
+     * Handles zooming using the mouse wheel.
+     *
+     * @param event the MouseEvent containing the wheel movement
+     */
     void mouseWheel(MouseEvent event) {
-        // Handle zooming using the mouse wheel
         float e = event.getCount();
         zoom(e);
     }
 
+    /**
+     * Updates the camera angles when the mouse is dragged.
+     *
+     * @param p the PApplet instance to get mouse input from
+     */
     void mouseDragged(PApplet p) {
-        // Update the camera angles when the mouse is dragged
         if (isLeftMousePressed(p)) {
             float dx = (p.mouseX - p.pmouseX) * sensitivity;
             float dy = (p.mouseY - p.pmouseY) * sensitivity;
@@ -73,13 +97,20 @@ public class MouseControlledCamera {
         }
     }
 
+    /**
+     * Resets the dragging flag when the mouse is released.
+     */
     void mouseReleased() {
-        // Reset dragging flag when the mouse is released
         dragging = false;
     }
 
+    /**
+     * Checks if the left mouse button is pressed.
+     *
+     * @param p the PApplet instance to get mouse input from
+     * @return true if the left mouse button is pressed, false otherwise
+     */
     private boolean isLeftMousePressed(PApplet p) {
-        // Check if the left mouse button is pressed
         return p.mousePressed && p.mouseButton == PConstants.LEFT;
     }
 }

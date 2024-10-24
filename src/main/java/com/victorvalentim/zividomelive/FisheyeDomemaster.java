@@ -3,66 +3,133 @@ package com.victorvalentim.zividomelive;
 import processing.core.*;
 import processing.opengl.*;
 
+/**
+ * The FisheyeDomemaster class handles the rendering of fisheye domemaster projections from equirectangular maps.
+ */
 public class FisheyeDomemaster {
-    PGraphics domemaster, domemasterSize;
-    PShader domemasterShader;
-    int resolution;
-    float sizePercentage; // Variável para armazenar o tamanho em porcentagem
-    PApplet parent; // Reference to PApplet for shader use
+    private PGraphics domemaster;
+    private PGraphics domemasterSize;
+    private PShader domemasterShader;
+    private int resolution;
+    private float sizePercentage;
+    private PApplet parent;
 
-    // Constructor with PApplet parent passed
-    FisheyeDomemaster(int resolution, String shaderPath, PApplet parent) {
+    /**
+     * Constructs a FisheyeDomemaster with the specified resolution, shader, and parent PApplet.
+     *
+     * @param resolution the resolution of the domemaster projection
+     * @param shader the PShader object
+     * @param parent the parent PApplet instance
+     */
+    public FisheyeDomemaster(int resolution, PShader shader, PApplet parent) {
         this.resolution = resolution;
-        this.sizePercentage = 100.0f; // Inicializar com 100%
-        this.parent = parent; // Assign the parent PApplet
-
-        domemaster = parent.createGraphics(resolution, resolution, PApplet.P2D);
-        domemaster.smooth(4);
-        domemasterSize = parent.createGraphics(resolution, resolution, PApplet.P2D);
-        domemasterSize.smooth(4);
-        domemasterShader = parent.loadShader(shaderPath); // Use parent to load shader
+        this.sizePercentage = 100.0f;
+        this.parent = parent;
+        this.domemasterShader = shader;
     }
 
-    // Method to set the field of view (fov) from the main class
+    /**
+     * Initializes or reinitializes the PGraphics object for the domemaster projection.
+     */
+    private void initializeDomemaster() {
+        if (domemaster != null) {
+            domemaster.dispose();
+        }
+        domemaster = parent.createGraphics(resolution, resolution, PApplet.P2D);
+        domemaster.smooth(4);
+    }
+
+    /**
+     * Initializes or reinitializes the PGraphics object for the domemaster size.
+     */
+    private void initializeDomemasterSize() {
+        if (domemasterSize != null) {
+            domemasterSize.dispose();
+        }
+        domemasterSize = parent.createGraphics(resolution, resolution, PApplet.P2D);
+        domemasterSize.smooth(4);
+    }
+
+    /**
+     * Sets the field of view (FOV) for the domemaster shader.
+     *
+     * @param fov the field of view to set
+     */
     void setFOV(float fov) {
+        if (domemasterShader == null) {
+            initializeDomemaster();
+        }
         domemasterShader.set("fov", fov);
     }
 
-    // Ajusta o percentual de tamanho
+    /**
+     * Sets the size percentage for the domemaster projection.
+     *
+     * @param percentage the size percentage to set, constrained between 0 and 100
+     */
     public void setSizePercentage(float percentage) {
-        sizePercentage = PApplet.constrain(percentage, 0, 100); // Garante que a porcentagem esteja entre 0 e 100
+        sizePercentage = PApplet.constrain(percentage, 0, 100);
     }
 
-    // Apply shader with the equirectangular map
+    /**
+     * Applies the shader to the equirectangular map and renders the domemaster projection.
+     *
+     * @param equirectangular the PGraphics object representing the equirectangular map
+     * @param fov the field of view to use for the shader
+     */
     void applyShader(PGraphics equirectangular, float fov) {
-        // Certifique-se de que o equirectangular não é nulo
         if (equirectangular == null) {
-            System.out.println("Equirectangular PGraphics é nulo.");
+            System.out.println("Equirectangular PGraphics is null.");
             return;
         }
 
-        // Atualiza o fov
+        if (domemaster == null) {
+            initializeDomemaster();
+        }
+        if (domemasterSize == null) {
+            initializeDomemasterSize();
+        }
+
         setFOV(fov);
 
-        // Renderiza o domemaster com o shader aplicado
         domemaster.beginDraw();
-        domemaster.background(0, 0); // Fundo transparente
+        domemaster.background(0, 0);
         domemasterShader.set("equirectangularMap", equirectangular);
         domemasterShader.set("resolution", new float[]{domemaster.width, domemaster.height});
         domemaster.shader(domemasterShader);
         domemaster.rect(0, 0, domemaster.width, domemaster.height);
         domemaster.endDraw();
 
-        // Ajusta o tamanho do domemaster para o percentual configurado
         float adjustedSize = resolution * (sizePercentage / 100.0f);
         domemasterSize.beginDraw();
-        domemasterSize.background(0, 0); // Fundo transparente
+        domemasterSize.background(0, 0);
         domemasterSize.image(domemaster, (domemasterSize.width - adjustedSize) / 2, (domemasterSize.height - adjustedSize) / 2, adjustedSize, adjustedSize);
         domemasterSize.endDraw();
     }
 
-    // Getter for domemaster graphics
+    /**
+     * Returns the PGraphics object for the domemaster projection.
+     *
+     * @return the PGraphics object representing the domemaster projection
+     */
     public PGraphics getDomemasterGraphics() {
+        if (domemasterSize == null) {
+            initializeDomemasterSize();
+        }
         return domemasterSize;
+    }
+
+    /**
+     * Releases the graphical resources used by the domemaster projection.
+     */
+    public void dispose() {
+        if (domemaster != null) {
+            domemaster.dispose();
+            domemaster = null;
+        }
+        if (domemasterSize != null) {
+            domemasterSize.dispose();
+            domemasterSize = null;
+        }
     }
 }

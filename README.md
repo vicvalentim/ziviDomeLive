@@ -5,28 +5,37 @@
 ## Features
 
 **Multiple Projection Modes**:
-   - **ziviDomeLive** supports a wide range of projection modes including fisheye domemaster, equirectangular, cubemap, and more. These projection modes are ideal for fulldome displays, virtual reality setups, and immersive environments, allowing you to create visuals that wrap around the viewer or adapt to spherical displays.
+- **ziviDomeLive** supports a wide range of projection modes including fisheye domemaster, equirectangular, cubemap, and more. These projection modes are ideal for fulldome displays, virtual reality setups, and immersive environments, allowing you to create visuals that wrap around the viewer or adapt to spherical displays.
 
 **Resolution Switching for Domemaster**:
-   - The library includes a mode that allows you to switch between 1k, 2k, 3k, and 4k resolutions for domemaster projection. This flexibility ensures that your visuals look sharp and detailed, regardless of the scale of your dome or display system. You can optimize performance based on the hardware capabilities and the specific requirements of your project.
+- The library includes a mode that allows you to switch between 1k, 2k, 3k, and 4k resolutions for domemaster projection. This flexibility ensures that your visuals look sharp and detailed, regardless of the scale of your dome or display system. You can optimize performance based on the hardware capabilities and the specific requirements of your project.
 
 **Scene Management**:
-   - Easily manage and switch between different scenes using the **Scene** interface. This feature allows for modular visual compositions where you can define multiple scenes and toggle between them dynamically. Each scene can have its own setup, rendering logic, and user interactions, making it versatile for both interactive installations and performances.
+- Easily manage and switch between different scenes using the **Scene** interface. This feature allows for modular visual compositions where you can define multiple scenes and toggle between them dynamically. Each scene can have its own setup, rendering logic, and user interactions, making it versatile for both interactive installations and performances.
 
 **Real-time Rendering**:
-   - **ziviDomeLive** is optimized for live visual performances and real-time applications. It handles frame-by-frame rendering, ensuring smooth performance even with complex 3D scenes and shader effects. This makes it perfect for VJs, live coding performances, and interactive art installations.
+- **ziviDomeLive** is optimized for live visual performances and real-time applications. It handles frame-by-frame rendering, ensuring smooth performance even with complex 3D scenes and shader effects. This makes it perfect for VJs, live coding performances, and interactive art installations.
 
 **External Integration**:
-   - Seamlessly integrate with other applications using **Syphon** (for macOS) or **Spout** (for Windows). With these integrations, you can share rendered frames from your Processing sketches to other software in real-time. This is particularly useful for multimedia performances, where your visuals can be further processed or projected using different tools.
+- Seamlessly integrate with other applications using **Syphon** (for macOS) or **Spout** (for Windows). With these integrations, you can share rendered frames from your Processing sketches to other software in real-time. This is particularly useful for multimedia performances, where your visuals can be further processed or projected using different tools.
 
 **Interactive UI**:
-   - The library integrates with **ControlP5**, a Processing library for creating graphical user interfaces (GUIs). This allows you to build interactive controls directly into your Processing sketches, such as sliders, buttons, and toggle switches, which can be used to manipulate various parameters of your visuals in real-time.
+- The library integrates with **ControlP5**, a Processing library for creating graphical user interfaces (GUIs). This allows you to build interactive controls directly into your Processing sketches, such as sliders, buttons, and toggle switches, which can be used to manipulate various parameters of your visuals in real-time.
 
 **Cross-Platform Compatibility**:
-   - **ziviDomeLive** works across multiple operating systems, including macOS, Windows, and Linux, making it highly versatile and accessible to a wide range of users. This ensures that your visual creations can be deployed on various platforms without compatibility issues.
+- **ziviDomeLive** works across multiple operating systems, including macOS, Windows, and Linux, making it highly versatile and accessible to a wide range of users. This ensures that your visual creations can be deployed on various platforms without compatibility issues.
 
 **Customizable Rendering Pipelines**:
-   - Define and customize rendering pipelines to meet the needs of your project. Whether you are rendering for fulldome projection or interactive experiences, the library allows you to adjust the rendering resolution, projection mode, and other parameters to optimize performance and visual quality.
+- Define and customize rendering pipelines to meet the needs of your project. Whether you are rendering for fulldome projection or interactive experiences, the library allows you to adjust the rendering resolution, projection mode, and other parameters to optimize performance and visual quality.
+
+## Known Issues
+
+**OpenGL Error 1282**:
+- Some users may encounter the following OpenGL error in the Processing console:
+   ```
+   OpenGL error 1282 at bot endDraw(): invalid operation
+   ```
+This error is related to specific OpenGL calls within Processing, but it does not impact the functionality of the **ziviDomeLive** library. Your visuals and performance should remain unaffected, and you can safely ignore this warning.
 
 ## Installation
 
@@ -39,18 +48,16 @@
 The **ziviDomeLive** library requires a few additional libraries to extend its capabilities and provide seamless integration with external tools. Below are the key dependencies you need to install in your Processing environment:
 
 - **[ControlP5](https://github.com/sojamo/controlp5)**:
-   - This library is used for creating graphical user interfaces (GUI) within your Processing sketches. It allows you to create buttons, sliders, knobs, and other interactive elements that can be used to control the behavior of your visual scenes.
-   - You can install it directly from the Processing Contribution Manager.
-  
+    - This library is used for creating graphical user interfaces (GUI) within your Processing sketches. It allows you to create buttons, sliders, knobs, and other interactive elements that can be used to control the behavior of your visual scenes.
+    - You can install it directly from the Processing Contribution Manager.
 
 - **[Syphon](https://github.com/Syphon/Processing)** (for macOS):
-   - Syphon is a technology that enables you to share frames from your Processing sketch with other Syphon-compatible applications on macOS. It’s ideal for live visual performances where you want to send your visuals to other software for further manipulation or projection.
-   - Ensure that the **Syphon for Processing** library is installed in your Processing environment.
-
+    - Syphon is a technology that enables you to share frames from your Processing sketch with other Syphon-compatible applications on macOS. It’s ideal for live visual performances where you want to send your visuals to other software for further manipulation or projection.
+    - Ensure that the **Syphon for Processing** library is installed in your Processing environment.
 
 - **[Spout](https://github.com/leadedge/SpoutProcessing)** (for Windows):
-   - Similar to Syphon but designed for Windows, Spout allows you to share frames from your Processing sketch with other Spout-compatible applications. This is useful for integrating your visuals into larger multimedia projects or sending them to other software for real-time manipulation or display.
-   - You will need to install the **Spout for Processing** library to enable this feature.
+    - Similar to Syphon but designed for Windows, Spout allows you to share frames from your Processing sketch with other Spout-compatible applications. This is useful for integrating your visuals into larger multimedia projects or sending them to other software for real-time manipulation or display.
+    - You will need to install the **Spout for Processing** library to enable this feature.
 
 These dependencies must be correctly installed in your Processing environment to ensure that **ziviDomeLive** operates as intended. If any of these libraries are missing, some features like external rendering or user interface controls may not function correctly.
 
@@ -151,7 +158,6 @@ We welcome contributions to the development of **ziviDomeLive**! Whether it's bu
 
     - Go to the [ziviDomeLive GitHub repository](https://github.com/vicvalentim/zividomelive) and click the **Fork** button to create your own copy of the repository.
 
-
 2. **Clone Your Fork**:
 
     - Clone the forked repository to your local machine by running:
@@ -171,7 +177,6 @@ We welcome contributions to the development of **ziviDomeLive**! Whether it's bu
     - Implement your changes in the codebase.
     - Test your changes locally to ensure they work as expected.
 
-
 5. **Push Your Changes**:
     - After committing your changes, push them to your forked repository:
       ```bash
@@ -185,9 +190,16 @@ Thank you for contributing to **ziviDomeLive**!
 
 ## Author
 
-**Developed by Victor Valentim.**
+**Developed by [Victor Valentim](https://victorvalentim.com).**
+
+**Affiliations**:
+- CECULT/UFRB - Universidade Federal do Recôncavo da Bahia
+- PPGARTES/UFMG - Universidade Federal de Minas Gerais
+
+## License
+
+**ziviDomeLive** is distributed under the Apache 2.0 and GPL-2.0 licenses.
+
+Copyright (c) 2024 Victor Valentim
 
 For more information, visit [Victor Valentim's GitHub page](https://github.com/vicvalentim).
-
-
-

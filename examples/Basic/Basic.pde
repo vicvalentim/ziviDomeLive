@@ -3,31 +3,30 @@ import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;
 
-// Instâncias principais
-zividomelive ziviDome;  // Instância da biblioteca zividomelive
-Scene currentScene;     // Cena atual que implementa a interface Scene
+// Main instances
+zividomelive ziviDome;  // Instance of the zividomelive library
+Scene currentScene;     // Current scene implementing the Scene interface
 
 void settings() {
-  size(1280, 720, P3D);  // Define o tamanho da janela e o modo P3D
+  size(1280, 720, P3D);  // Set the window size and P3D mode
 }
 
 void setup() {
-  // Inicializa a biblioteca zividomelive
+  // Initialize the zividomelive library
   ziviDome = new zividomelive(this);
-  ziviDome.setup();  // Configuração inicial da biblioteca
+  ziviDome.setup();  // Initial setup of the library
 
-  // Inicializa a cena e a define na biblioteca
+  // Initialize the scene and set it in the library
   currentScene = new Scene1(ziviDome);
   ziviDome.setScene(currentScene);
-
 }
 
 void draw() {
-  // Chama o método draw da biblioteca para processar renderizações adicionais
+  // Call the draw method of the library for additional rendering
   ziviDome.draw();
 }
 
-// Implementação da cena Scene1 que usa a interface Scene
+// Implementation of Scene1 that uses the Scene interface
 class Scene1 implements Scene {
   zividomelive parent;
 
@@ -37,28 +36,28 @@ class Scene1 implements Scene {
 
   @Override
   public void setupScene() {
-    // Configurações específicas da cena, se necessário
-    println("Setup da Scene1 concluído.");
+    // Specific scene setup, if necessary
+    println("Scene1 setup completed.");
   }
 
   @Override
   public void sceneRender(PGraphics pg) {
     pg.pushMatrix();
     pg.background(0, 0, 80, 0);
-    float radius = 700; // Distância do centro
+    float radius = 700; // Distance from the center
     int numPillars = 8;
     float angleStep = TWO_PI / numPillars;
     int[] colors = {#FF0000, #00FF00, #0000FF, #FFFF00, #FF00FF, #00FFFF, #FFFFFF, #FF8000};
-    float time = millis() / 2000.0; // Tempo em segundos para animação
+    float time = millis() / 2000.0; // Time in seconds for animation
     for (int i = 0; i < numPillars; i++) {
-      float angle = angleStep * i + time; // Adiciona a animação de rotação
+      float angle = angleStep * i + time; // Add rotation animation
       float x = sin(angle) * radius;
       float y = cos(angle) * radius;
       pg.pushMatrix();
       pg.translate(x, y, 0);
-      pg.rotateX(time); // Adiciona a rotação no eixo X
+      pg.rotateX(time); // Add rotation on the X axis
       pg.fill(colors[i]);
-      pg.box(200); // Altere os parâmetros conforme a necessidade para ajustar o tamanho
+      pg.box(200); // Adjust parameters as needed to change the size
       pg.popMatrix();
     }
     pg.popMatrix();
@@ -66,26 +65,36 @@ class Scene1 implements Scene {
 
   @Override
   public void keyPressed(char key) {
-    // Implementar lógica de resposta a teclas, se necessário
-    println("Tecla pressionada na Scene1: " + key);
+    // Implement key response logic, if necessary
+    println("Key pressed in Scene1: " + key);
+  }
+
+  @Override
+  public void mouseEvent(int mouseX, int mouseY, int button) {
+    // Implement mouse event logic, if necessary
+    println("Mouse event in Scene1: " + mouseX + ", " + mouseY + ", button: " + button);
   }
 }
 
-// Encaminha eventos de teclas para a biblioteca
+// Forward key events to the library
 void keyPressed() {
   ziviDome.keyPressed();
-  // Opcional: chamar keyPressed da cena atual
+  // Optionally call keyPressed of the current scene
   if (currentScene != null) {
     currentScene.keyPressed(key);
   }
 }
 
-// Encaminha eventos de mouse para a biblioteca
+// Forward mouse events to the library
 void mouseEvent(processing.event.MouseEvent event) {
   ziviDome.mouseEvent(event);
+  // Optionally call mouseEvent of the current scene
+  if (currentScene != null) {
+    currentScene.mouseEvent(event.getX(), event.getY(), event.getButton());
+  }
 }
 
-// Encaminha eventos de controle para a biblioteca
+// Forward control events to the library
 void controlEvent(controlP5.ControlEvent theEvent) {
   ziviDome.controlEvent(theEvent);
 }

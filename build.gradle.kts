@@ -118,6 +118,10 @@ tasks.jar {
     archiveBaseName.set(libName)
     archiveClassifier.set("")
     archiveVersion.set("")
+
+    from("shaders") {
+        into("data/shaders")
+    }
 }
 
 tasks.test {

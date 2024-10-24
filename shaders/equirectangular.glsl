@@ -1,11 +1,9 @@
-#version 410 core
-
-const float PI = 3.1415926535897932384626433832795;
+#define PROCESSING_COLOR_SHADER
 
 uniform sampler2D posX, negX, posY, negY, posZ, negZ;
 uniform vec2 resolution;
 
-out vec4 fragColor;
+const float PI = 3.1415926535897932384626433832795;
 
 void convert_xyz_to_cube_uv(float x, float y, float z, out int index, out vec2 uv) {
     float absX = abs(x);
@@ -69,12 +67,12 @@ void main() {
     convert_xyz_to_cube_uv(dir.x, dir.y, dir.z, index, uvCube);
 
     switch(index) {
-        case 0: fragColor = texture(posX, uvCube); break;
-        case 1: fragColor = texture(negX, uvCube); break;
-        case 2: fragColor = texture(posY, uvCube); break;
-        case 3: fragColor = texture(negY, uvCube); break;
-        case 4: fragColor = texture(posZ, uvCube); break;
-        case 5: fragColor = texture(negZ, uvCube); break;
-        default: fragColor = vec4(0.0); break;
+        case 0: gl_FragColor = texture2D(posX, uvCube); break;
+        case 1: gl_FragColor = texture2D(negX, uvCube); break;
+        case 2: gl_FragColor = texture2D(posY, uvCube); break;
+        case 3: gl_FragColor = texture2D(negY, uvCube); break;
+        case 4: gl_FragColor = texture2D(posZ, uvCube); break;
+        case 5: gl_FragColor = texture2D(negZ, uvCube); break;
+        default: gl_FragColor = vec4(0.0); break;
     }
 }
