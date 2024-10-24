@@ -2,48 +2,99 @@ package com.victorvalentim.zividomelive;
 
 import processing.core.*;
 
+/**
+ * The StandardRenderer class handles the rendering of a standard view using a PGraphics object.
+ * It utilizes a MouseControlledCamera for camera control and a Scene interface for rendering the scene.
+ */
 public class StandardRenderer {
     private PGraphics standardView;
-    private Scene currentScene; // Substituímos DrawScene por Scene
+    private Scene currentScene;
     private MouseControlledCamera cam;
     private PApplet parent;
 
-    // Construtor da classe StandardRenderer
+    /**
+     * Constructs a StandardRenderer with the specified parent PApplet, width, height, and current scene.
+     *
+     * @param parent the parent PApplet instance
+     * @param width the width of the standard view
+     * @param height the height of the standard view
+     * @param currentScene the current scene to be rendered
+     */
     StandardRenderer(PApplet parent, int width, int height, Scene currentScene) {
         this.parent = parent;
-        this.currentScene = currentScene; // Agora recebemos a cena diretamente
-        standardView = parent.createGraphics(width, height, PApplet.P3D); // Criação do PGraphics para a visualização padrão
-        setCam(new MouseControlledCamera()); // Inicializa a câmera
+        this.currentScene = currentScene;
+        this.standardView = null;
+        setCam(new MouseControlledCamera());
     }
 
-    // Método de renderização
+    /**
+     * Initializes or reinitializes the PGraphics object for the standard view.
+     */
+    private void initializeStandardView(int width, int height) {
+        if (standardView != null) {
+            standardView.dispose();
+        }
+        standardView = parent.createGraphics(width, height, PApplet.P3D);
+    }
+
+    /**
+     * Renders the current scene using the standard view PGraphics object.
+     * Updates the camera and applies its settings before rendering the scene.
+     */
     void render() {
-        getCam().update(parent); // Atualiza a câmera antes de desenhar
+        if (standardView == null) {
+            initializeStandardView(parent.width, parent.height);
+        }
 
-        standardView.beginDraw();  // Inicia o desenho no PGraphics
-        standardView.background(0, 0);  // Define o fundo da visualização
+        getCam().update(parent);
 
-        // Aplica configurações da MouseControlledCamera ao PGraphics
+        standardView.beginDraw();
+        standardView.background(0, 0);
+
         getCam().apply(standardView);
 
-        // Chama a função de renderização da cena usando a interface Scene
         currentScene.sceneRender(standardView);
 
-        standardView.endDraw();  // Finaliza o desenho no PGraphics
+        standardView.endDraw();
     }
 
-    // Retorna o PGraphics da visualização padrão
+    /**
+     * Returns the PGraphics object for the standard view.
+     *
+     * @return the PGraphics object representing the standard view
+     */
     PGraphics getStandardView() {
+        if (standardView == null) {
+            initializeStandardView(parent.width, parent.height);
+        }
         return standardView;
     }
 
-    // Retorna a instância da câmera controlada pelo mouse
+    /**
+     * Returns the instance of the MouseControlledCamera.
+     *
+     * @return the MouseControlledCamera instance
+     */
     public MouseControlledCamera getCam() {
         return cam;
     }
 
-    // Define uma nova instância da câmera controlada pelo mouse
+    /**
+     * Sets a new instance of the MouseControlledCamera.
+     *
+     * @param cam the new MouseControlledCamera instance
+     */
     public void setCam(MouseControlledCamera cam) {
         this.cam = cam;
+    }
+
+    /**
+     * Releases the graphical resources used by the standard view.
+     */
+    public void dispose() {
+        if (standardView != null) {
+            standardView.dispose();
+            standardView = null;
+        }
     }
 }

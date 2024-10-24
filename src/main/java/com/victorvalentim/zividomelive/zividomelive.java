@@ -6,24 +6,43 @@ import processing.opengl.*;
 import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;
+import java.util.concurrent.*;
 
-import java.net.URL;
-
+/**
+ * The `zividomelive` class is responsible for managing the rendering and control of a live dome visualization.
+ * It integrates with Processing, Syphon, and Spout to provide a comprehensive solution for dome rendering.
+ *
+ * <p>This class handles the setup, initialization, and rendering of various views including fisheye domemaster,
+ * equirectangular, cubemap, and standard views. It also manages the control panel and mouse events for interaction.</p>
+ *
+ * <p>Usage example:</p>
+ * <pre>
+ * {@code
+ * PApplet p = new PApplet();
+ * zividomelive domeLive = new zividomelive(p);
+ * domeLive.setup();
+ * domeLive.draw();
+ * }
+ * </pre>
+ *
+ * <p>Note: Ensure that the PApplet instance is properly configured before initializing this class.</p>
+ *
+ * @see PApplet
+ * @see SyphonServer
+ * @see Spout
+ */
 public class zividomelive {
 
-    private PApplet p;  // Referência para a instância PApplet
-    private boolean initialized = false; // Flag para verificar a inicialização
+    private PApplet p;
+    private boolean initialized = false;
+    private Scene currentScene;
 
-    private Scene currentScene;  // Interface para a cena personalizada
-
-    // Variáveis globais principais
     private float pitch = 0.0f, yaw = 0.0f, roll = 0.0f, fov = 210.0f, fishSize = 100.0f;
     private int resolution = 1024;
     private boolean showControlPanel = true;
     private boolean showPreview = false;
     private boolean enableOutput = false;
 
-    // Gerenciadores e renderizadores
     private ControlManager controlManager;
     private CubemapRenderer cubemapRenderer;
     private EquirectangularRenderer equirectangularRenderer;
@@ -35,87 +54,121 @@ public class zividomelive {
     private SyphonServer syphonServer;
     private Spout spout;
 
-    // Enum para tipos de visualização
+    private ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
+    /**
+     * Enum representing the different types of views available.
+     */
     public enum ViewType {
-        FISHEYE_DOMEMASTER, EQUIRECTANGULAR, CUBEMAP, STANDARD
+        /** Fisheye domemaster view. */
+        FISHEYE_DOMEMASTER,
+        /** Equirectangular view. */
+        EQUIRECTANGULAR,
+        /** Cubemap view. */
+        CUBEMAP,
+        /** Standard view. */
+        STANDARD
     }
 
     private ViewType currentView = ViewType.FISHEYE_DOMEMASTER;
     private boolean pendingReset = false;
     private int pendingResolution = resolution;
 
-    // Construtor
+    /**
+     * Constructs a new `zividomelive` instance with the specified PApplet.
+     *
+     * @param p the PApplet instance used for rendering
+     * @throws IllegalArgumentException if the PApplet instance is null
+     */
     public zividomelive(PApplet p) {
         if (p == null) {
-            throw new IllegalArgumentException("A instância PApplet não pode ser nula.");
+            throw new IllegalArgumentException("PApplet instance cannot be null.");
         }
         this.p = p;
         welcome();
     }
 
+    /**
+     * Prints a welcome message indicating that the library has been initialized.
+     */
     private void welcome() {
-        System.out.println("Biblioteca ziviDomeLive inicializada.");
+        System.out.println("[ziviDomeLive] Library initialized.");
     }
 
-    // Método para definir a cena atual
+    /**
+     * Sets the current scene to be rendered.
+     *
+     * @param scene the Scene instance to be set
+     */
     public void setScene(Scene scene) {
-        this.currentScene = scene;  // Define a cena atual
-        currentScene.setupScene();  // Chama o setup da cena ao definir
+        this.currentScene = scene;
+        currentScene.setupScene();
     }
 
-
+    /**
+     * Sets up the rendering environment, including frame rate, OpenGL info, texture hints,
+     * Syphon/Spout setup, and mouse event registration.
+     *
+     * @throws IllegalStateException if the PApplet instance is not properly configured
+     */
     public void setup() {
         if (p == null) {
-            throw new IllegalStateException("A instância PApplet não está configurada corretamente.");
+            throw new IllegalStateException("PApplet instance is not properly configured.");
         }
 
-        System.out.println("Iniciando setup...");
+        System.out.println("Starting setup...");
 
         try {
             p.frameRate(64);
-            System.out.println("Taxa de quadros definida para 64.");
+            System.out.println("Frame rate set to 64.");
         } catch (Exception e) {
-            System.out.println("Erro ao definir a taxa de quadros: " + e.getMessage());
+            System.out.println("Error setting frame rate: " + e.getMessage());
         }
 
         try {
             printlnOpenGLInfo();
         } catch (Exception e) {
-            System.out.println("Erro ao imprimir informações do OpenGL: " + e.getMessage());
+            System.out.println("Error printing OpenGL info: " + e.getMessage());
         }
 
         try {
             setupHints();
-            System.out.println("Dicas de textura configuradas.");
+            System.out.println("Texture hints configured.");
         } catch (Exception e) {
-            System.out.println("Erro ao configurar dicas de textura: " + e.getMessage());
+            System.out.println("Error configuring texture hints: " + e.getMessage());
         }
 
         p.registerMethod("post", this);
 
         try {
             setupSyphonOrSpout();
-            System.out.println("Configuração do Syphon/Spout concluída.");
+            System.out.println("Syphon/Spout setup completed.");
         } catch (Exception e) {
-            System.out.println("Erro ao configurar Syphon/Spout: " + e.getMessage());
+            System.out.println("Error setting up Syphon/Spout: " + e.getMessage());
         }
 
         try {
             registerMouseEvents();
-            System.out.println("Eventos de mouse registrados.");
+            System.out.println("Mouse events registered.");
         } catch (Exception e) {
-            System.out.println("Erro ao registrar eventos de mouse: " + e.getMessage());
+            System.out.println("Error registering mouse events: " + e.getMessage());
         }
 
-        System.out.println("Setup concluído.");
+        System.out.println("Setup completed.");
     }
 
+    /**
+     * Prints OpenGL information including version, vendor, and renderer.
+     */
     void printlnOpenGLInfo() {
         PApplet.println(PGraphicsOpenGL.OPENGL_VERSION);
         PApplet.println(PGraphicsOpenGL.OPENGL_VENDOR);
         PApplet.println(PGraphicsOpenGL.OPENGL_RENDERER);
     }
 
+    /**
+     * Configures texture hints for the rendering environment.
+     */
     void setupHints() {
         p.textureMode(PConstants.NORMAL);
         p.textureWrap(PConstants.REPEAT);
@@ -123,6 +176,9 @@ public class zividomelive {
         p.hint(PConstants.ENABLE_TEXTURE_MIPMAPS);
     }
 
+    /**
+     * Post-initialization method to set up managers after the initial setup.
+     */
     public void post() {
         if (!initialized) {
             initializeManagers();
@@ -131,155 +187,181 @@ public class zividomelive {
         }
     }
 
-    void initializeManagers() {
+    /**
+     * Initializes various managers required for rendering and control.
+     */
+    public void initializeManagers() {
         try {
-            System.out.println("Inicializando gerenciadores...");
+            System.out.println("Initializing managers...");
 
-            cameraManager = new CameraManager();
-            System.out.println("CameraManager inicializado.");
+            CompletableFuture<Void> cameraManagerFuture = CompletableFuture.runAsync(() -> {
+                cameraManager = new CameraManager();
+                System.out.println("CameraManager initialized.");
+            });
 
-            initializeRenderers();
-            controlManager = new ControlManager(p, this, resolution);
-            System.out.println("ControlManager inicializado.");
-            System.out.println("Gerenciadores inicializados com sucesso.");
+            CompletableFuture<Void> renderersFuture = CompletableFuture.runAsync(this::initializeRenderers);
+
+            CompletableFuture<Void> controlManagerFuture = CompletableFuture.runAsync(() -> {
+                controlManager = new ControlManager(p, this, resolution);
+                System.out.println("ControlManager initialized.");
+            });
+
+            CompletableFuture.allOf(cameraManagerFuture, renderersFuture, controlManagerFuture).join();
+            System.out.println("Managers initialized successfully.");
         } catch (Exception e) {
-            System.out.println("Erro ao inicializar gerenciadores: " + e.getMessage());
+            System.out.println("Error initializing managers: " + e.getMessage());
             e.printStackTrace();
         }
     }
+
+    /**
+     * Initializes various renderers required for different views.
+     */
 
     void initializeRenderers() {
         try {
-            System.out.println("Inicializando renderizadores...");
+            System.out.println("Initializing renderers...");
 
-            cubemapRenderer = new CubemapRenderer(resolution, p);
-            System.out.println("CubemapRenderer inicializado: " + (cubemapRenderer != null));
+            String equirectangularShaderPath = "data/shaders/equirectangular.glsl";
+            String domemasterShaderPath = "data/shaders/domemaster.glsl";
 
-            equirectangularRenderer = new EquirectangularRenderer(resolution, "equirectangular.glsl", p);
-            System.out.println("EquirectangularRenderer inicializado: " + (equirectangularRenderer != null));
+            CompletableFuture<Void> cubemapRendererFuture = CompletableFuture.runAsync(() -> {
+                cubemapRenderer = new CubemapRenderer(resolution, p);
+                System.out.println("CubemapRenderer initialized: " + true);
+            });
 
-            standardRenderer = new StandardRenderer(p, p.width, p.height, currentScene);
-            System.out.println("StandardRenderer inicializado: " + (standardRenderer != null));
+            CompletableFuture<Void> equirectangularRendererFuture = CompletableFuture.runAsync(() -> {
+                PShader equirectangularShader = p.loadShader(equirectangularShaderPath);
+                equirectangularRenderer = new EquirectangularRenderer(resolution, equirectangularShader, p);
+                System.out.println("EquirectangularRenderer initialized: " + true);
+            });
 
-            fisheyeDomemaster = new FisheyeDomemaster(resolution, "domemaster.glsl", p);
-            System.out.println("FisheyeDomemaster inicializado: " + (fisheyeDomemaster != null));
+            CompletableFuture<Void> standardRendererFuture = CompletableFuture.runAsync(() -> {
+                standardRenderer = new StandardRenderer(p, p.width, p.height, currentScene);
+                System.out.println("StandardRenderer initialized: " + true);
+            });
 
-            cubemapViewRenderer = new CubemapViewRenderer(p, resolution);
-            System.out.println("CubemapViewRenderer inicializado: " + (cubemapViewRenderer != null));
+            CompletableFuture<Void> fisheyeDomemasterFuture = CompletableFuture.runAsync(() -> {
+                PShader domemasterShader = p.loadShader(domemasterShaderPath);
+                fisheyeDomemaster = new FisheyeDomemaster(resolution, domemasterShader, p);
+                System.out.println("FisheyeDomemaster initialized: " + true);
+            });
 
-            System.out.println("Renderizadores inicializados com sucesso.");
+            CompletableFuture<Void> cubemapViewRendererFuture = CompletableFuture.runAsync(() -> {
+                cubemapViewRenderer = new CubemapViewRenderer(p, resolution);
+                System.out.println("CubemapViewRenderer initialized: " + true);
+            });
+
+            CompletableFuture.allOf(
+                cubemapRendererFuture,
+                equirectangularRendererFuture,
+                standardRendererFuture,
+                fisheyeDomemasterFuture,
+                cubemapViewRendererFuture
+            ).join();
+
+            System.out.println("Renderers initialized successfully.");
         } catch (Exception e) {
-            System.out.println("Erro ao inicializar renderizadores: " + e.getMessage());
+            System.out.println("Error initializing renderers: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
+    /**
+     * Sets up Syphon or Spout based on the operating system.
+     */
     void setupSyphonOrSpout() {
         try {
             String os = System.getProperty("os.name").toLowerCase();
             if (os.contains("mac")) {
                 syphonServer = new SyphonServer(p, "ziviDomeLive Syphon");
-                System.out.println("SyphonServer inicializado para macOS.");
+                System.out.println("SyphonServer initialized for macOS.");
             } else if (os.contains("win")) {
                 spout = new Spout(p);
-                System.out.println("Spout inicializado para Windows.");
+                System.out.println("Spout initialized for Windows.");
             }
         } catch (Exception e) {
-            System.out.println("Erro ao configurar Syphon/Spout: " + e.getMessage());
+            System.out.println("Error setting up Syphon/Spout: " + e.getMessage());
         }
     }
 
+    /**
+     * Registers mouse events for interaction.
+     */
     void registerMouseEvents() {
         try {
             p.registerMethod("mouseEvent", this);
-            System.out.println("Eventos de mouse registrados.");
+            System.out.println("Mouse events registered.");
         } catch (Exception e) {
-            System.out.println("Erro ao registrar eventos de mouse: " + e.getMessage());
+            System.out.println("Error registering mouse events: " + e.getMessage());
         }
     }
 
-    // Função principal de desenho
+    /**
+     * Main draw method that handles rendering and updating the view.
+     */
     public void draw() {
-        // Verificação dos renderizadores e cena antes de iniciar a renderização
-        if (cubemapRenderer == null) {
-            System.out.println("Erro: CubemapRenderer não inicializado.");
+        if (!initialized) {
+            System.out.println("Error: System not fully initialized.");
             return;
         }
 
-        if (equirectangularRenderer == null) {
-            System.out.println("Erro: EquirectangularRenderer não inicializado.");
+        if (cubemapRenderer == null || equirectangularRenderer == null || fisheyeDomemaster == null || standardRenderer == null || currentScene == null) {
+            System.out.println("Error: Renderer or scene not initialized.");
             return;
         }
 
-        if (fisheyeDomemaster == null) {
-            System.out.println("Erro: FisheyeDomemaster não inicializado.");
-            return;
-        }
-
-        if (standardRenderer == null) {
-            System.out.println("Erro: StandardRenderer não inicializado.");
-            return;
-        }
-
-        if (currentScene == null) {
-            System.out.println("Erro: currentScene não inicializado.");
-            return;
-        }
-
-        // Depuração da etapa de reset gráfico
-        //System.out.println("Iniciando renderização...");
-
-        clearBackground();  // Limpar e configurar o fundo
-        handleGraphicsReset();  // Verificar se há necessidade de redefinir gráficos
-
-        // Renderiza o cubemap
-        captureCubemap();  // Função para capturar cubemap
-
-        // Depuração de qual visualização está sendo renderizada
-        //System.out.println("Modo de visualização atual: " + getCurrentView());
-
+        clearBackground();
+        handleGraphicsReset(); // Ensure graphics reset is handled
+        captureCubemap();
         renderView();
-       
-        // Desenhar o preview flutuante se estiver ativo
+
         if (showPreview) {
-          drawFloatingPreview();
+            drawFloatingPreview();
         }
 
-        // Enviar saída para Syphon/Spout se habilitado
-        sendOutput();  // Função para enviar imagem para Syphon/Spout
-
-        // Desenha painel de controle e visualizações, se necessário
-        drawControlPanel();  // Função para desenhar controles
+        sendOutput();
+        drawControlPanel();
     }
 
-    // Função para limpar o fundo da tela
+    /**
+     * Clears the background to a transparent color.
+     */
     private void clearBackground() {
-        //System.out.println("Limpando o fundo...");
-        p.background(0, 0, 0, 0);  // Define o fundo como preto com transparência
+        p.background(0, 0, 0, 0);
     }
 
-    // Função para verificar e aplicar resets gráficos
+    /**
+     * Handles resetting the graphics if a reset is pending.
+     */
     private void handleGraphicsReset() {
         if (pendingReset) {
-            //System.out.println("Redefinindo gráficos com nova resolução: " + pendingResolution);
+            System.out.println("Pending reset detected. Changing resolution to: " + pendingResolution);
+            releaseGraphicsResources(); // Libera os recursos gráficos antigos
             resolution = pendingResolution;
-            initializeRenderers();  // Reinicializa os renderizadores com a nova resolução
+            initializeRenderers(); // Inicializa novos recursos gráficos
             pendingReset = false;
+            System.out.println("Graphics reset completed.");
         }
     }
 
-    // Função para capturar o cubemap
+    /**
+     * Captures the cubemap for the current scene.
+     */
     private void captureCubemap() {
-        //System.out.println("Capturando cubemap...");
         if (cubemapRenderer != null) {
             cubemapRenderer.captureCubemap(getPitch(), getYaw(), getRoll(), cameraManager, currentScene);
         } else {
-            System.out.println("Erro: CubemapRenderer não inicializado.");
+            System.out.println("Error: CubemapRenderer not initialized.");
         }
     }
-    
+
+    /**
+     * Displays the given PGraphics object on the screen.
+     *
+     * @param pg the PGraphics object to be displayed
+     */
     void displayView(PGraphics pg) {
-        // Desenha a visualização na tela principal, ajustando o tamanho e centralizando
         float aspectRatio = pg.width / (float) pg.height;
         float displayWidth = p.width;
         float displayHeight = p.width / aspectRatio;
@@ -291,15 +373,14 @@ public class zividomelive {
 
         p.image(pg, (p.width - displayWidth) / 2, (p.height - displayHeight) / 2, displayWidth, displayHeight);
     }
-    
+
+    /**
+     * Updates the render views based on the current view type.
+     */
     private void updateRenderViews() {
-        // Renderiza sempre o equirectangular primeiro para garantir que esteja pronto para o fisheye
         equirectangularRenderer.render(cubemapRenderer.getCubemapFaces());
-        
-        // Aplica o shader Fisheye usando o equirectangular já renderizado
         fisheyeDomemaster.applyShader(equirectangularRenderer.getEquirectangular(), getFov());
 
-        // Renderiza as outras vistas condicionalmente
         switch (getCurrentView()) {
             case CUBEMAP:
                 cubemapViewRenderer.drawCubemapToGraphics(cubemapRenderer.getCubemapFaces());
@@ -310,8 +391,10 @@ public class zividomelive {
         }
     }
 
+    /**
+     * Displays the current view based on the view type.
+     */
     private void displayCurrentView() {
-        // Exibir a visualização com base no modo atual
         switch (getCurrentView()) {
             case CUBEMAP:
                 displayView(cubemapViewRenderer.getCubemap());
@@ -328,165 +411,313 @@ public class zividomelive {
         }
     }
 
+    /**
+     * Renders the view by updating and displaying the current view.
+     */
     private void renderView() {
-        updateRenderViews();  // Atualiza todas as renderizações necessárias
-        displayCurrentView(); // Exibe a vista conforme o modo selecionado
+        updateRenderViews();
+        displayCurrentView();
     }
 
-    // Função para enviar a saída via Syphon ou Spout
+    /**
+     * Sends the output to Syphon or Spout if enabled.
+     */
     private void sendOutput() {
         if (isEnableOutput()) {
             if (syphonServer != null) {
                 syphonServer.sendImage(fisheyeDomemaster.getDomemasterGraphics());
-                //System.out.println("Imagem enviada para Syphon.");
             } else if (spout != null) {
                 spout.sendTexture(fisheyeDomemaster.getDomemasterGraphics());
-                //System.out.println("Textura enviada para Spout.");
             }
         }
     }
 
-    // Função para desenhar o painel de controle
+    /**
+     * Draws the control panel if it is set to be shown.
+     */
     private void drawControlPanel() {
-        //System.out.println("Desenhando painel de controle...");
         p.hint(PConstants.DISABLE_DEPTH_TEST);
-     // Atualizar informações de controle e FPS
         controlManager.updateFpsLabel(p.frameRate);
-        
+
         if (showControlPanel) {
-            controlManager.show();  // Mostra os controles
+            controlManager.show();
         } else {
-            controlManager.hide();  // Esconde os controles
+            controlManager.hide();
         }
         p.hint(PConstants.ENABLE_DEPTH_TEST);
     }
-    
+
+    /**
+     * Draws a floating preview of the fisheye domemaster view.
+     */
     public void drawFloatingPreview() {
-        // Definir o tamanho da pré-visualização flutuante
         float previewWidth = 200f;
         float previewHeight = 200f;
-        float x = p.width - previewWidth; // Usar 'p.width' se 'width' não for reconhecido diretamente
-        float y = p.height - previewHeight; // Usar 'p.height' se 'height' não for reconhecido diretamente
+        float x = p.width - previewWidth;
+        float y = p.height - previewHeight;
 
-        // Obter o gráfico a ser mostrado, neste caso, o domemaster do fisheye
         PGraphics previewGraphics = fisheyeDomemaster.getDomemasterGraphics();
-
-        // Desenhar a pré-visualização flutuante
         p.image(previewGraphics, x, y, previewWidth, previewHeight);
     }
 
+    /**
+     * Handles mouse events for interaction.
+     *
+     * @param event the MouseEvent object representing the mouse event
+     */
     public void mouseEvent(MouseEvent event) {
         if (event.getAction() == MouseEvent.WHEEL) {
             standardRenderer.getCam().mouseWheel(event);
         }
     }
 
+    /**
+     * Handles key press events for interaction.
+     */
     public void keyPressed() {
         if (!controlManager.isNumberboxActive()) {
             if (p.key == 'h') {
                 showControlPanel = !showControlPanel;
-                System.out.println("Alternando visibilidade do painel de controle: " + showControlPanel);
+                System.out.println("Toggling control panel visibility: " + showControlPanel);
             }
             if (p.key == 'm') {
                 setCurrentView(ViewType.values()[(getCurrentView().ordinal() + 1) % ViewType.values().length]);
-                System.out.println("Alternando visualização para: " + getCurrentView());
+                System.out.println("Switching view to: " + getCurrentView());
             }
         }
     }
 
+    /**
+     * Handles control events from the control panel.
+     *
+     * @param theEvent the ControlEvent object representing the control event
+     */
     public void controlEvent(ControlEvent theEvent) {
         if (controlManager != null) {
             controlManager.handleEvent(theEvent);
         }
     }
 
-    // Getters e setters para variáveis globais
-
+    /**
+     * Gets the current fish size.
+     *
+     * @return the current fish size
+     */
     public float getFishSize() {
         return fishSize;
     }
 
+    /**
+     * Sets the fish size.
+     *
+     * @param fishSize the new fish size
+     */
     public void setFishSize(float fishSize) {
         this.fishSize = fishSize;
     }
 
+    /**
+     * Gets the current field of view (FOV).
+     *
+     * @return the current FOV
+     */
     public float getFov() {
         return fov;
     }
 
+    /**
+     * Sets the field of view (FOV).
+     *
+     * @param fov the new FOV
+     */
     public void setFov(float fov) {
         this.fov = fov;
     }
 
+    /**
+     * Gets the current pitch.
+     *
+     * @return the current pitch
+     */
     public float getPitch() {
         return pitch;
     }
 
+    /**
+     * Sets the pitch.
+     *
+     * @param pitch the new pitch
+     */
     public void setPitch(float pitch) {
         this.pitch = pitch;
     }
 
+    /**
+     * Gets the current yaw.
+     *
+     * @return the current yaw
+     */
     public float getYaw() {
         return yaw;
     }
 
+    /**
+     * Sets the yaw.
+     *
+     * @param yaw the new yaw
+     */
     public void setYaw(float yaw) {
         this.yaw = yaw;
     }
 
+    /**
+     * Gets the current roll.
+     *
+     * @return the current roll
+     */
     public float getRoll() {
         return roll;
     }
 
+    /**
+     * Sets the roll.
+     *
+     * @param roll the new roll
+     */
     public void setRoll(float roll) {
         this.roll = roll;
     }
 
+    /**
+     * Gets the current view type.
+     *
+     * @return the current view type
+     */
     public ViewType getCurrentView() {
         return currentView;
     }
 
+    /**
+     * Sets the current view type.
+     *
+     * @param currentView the new view type
+     */
     public void setCurrentView(ViewType currentView) {
         this.currentView = currentView;
     }
 
+    /**
+     * Checks if output is enabled.
+     *
+     * @return true if output is enabled, false otherwise
+     */
     public boolean isEnableOutput() {
         return enableOutput;
     }
 
+    /**
+     * Sets whether output is enabled.
+     *
+     * @param enableOutput true to enable output, false to disable
+     */
     public void setEnableOutput(boolean enableOutput) {
         this.enableOutput = enableOutput;
     }
 
+    /**
+     * Checks if the preview is shown.
+     *
+     * @return true if the preview is shown, false otherwise
+     */
     public boolean isShowPreview() {
         return showPreview;
     }
 
+    /**
+     * Sets whether the preview is shown.
+     *
+     * @param showPreview true to show the preview, false to hide
+     */
     public void setShowPreview(boolean showPreview) {
         this.showPreview = showPreview;
     }
 
+    /**
+     * Resets the controls to their default state.
+     */
     public void resetControls() {
         controlManager.resetControls();
     }
 
-    public void resetGraphics(int newResolution) {
-        pendingReset = true;
-        pendingResolution = newResolution;
+    /**
+     * Disposes of the resources used by the instance.
+     */
+    private void releaseGraphicsResources() {
+        if (cubemapRenderer != null) {
+            cubemapRenderer.dispose();
+            cubemapRenderer = null;
+        }
+        if (equirectangularRenderer != null) {
+            equirectangularRenderer.dispose();
+            equirectangularRenderer = null;
+        }
+        if (standardRenderer != null) {
+            standardRenderer.dispose();
+            standardRenderer = null;
+        }
+        if (fisheyeDomemaster != null) {
+            fisheyeDomemaster.dispose();
+            fisheyeDomemaster = null;
+        }
+        if (cubemapViewRenderer != null) {
+            cubemapViewRenderer.dispose();
+            cubemapViewRenderer = null;
+        }
     }
 
+    /**
+     * Resets the graphics with a new resolution.
+     *
+     * @param newResolution the new resolution to be set
+     */
+    public void resetGraphics(int newResolution) {
+    pendingReset = true;
+    pendingResolution = newResolution;
+    System.out.println("Changing resolution to: " + newResolution); // Imprime a nova resolução no console
+    }
+
+    /**
+     * Gets the current FisheyeDomemaster instance.
+     *
+     * @return the current FisheyeDomemaster instance
+     */
     public FisheyeDomemaster getFisheyeDomemaster() {
         return fisheyeDomemaster;
     }
 
+    /**
+     * Sets the FisheyeDomemaster instance.
+     *
+     * @param fisheyeDomemaster the new FisheyeDomemaster instance
+     */
     public void setFisheyeDomemaster(FisheyeDomemaster fisheyeDomemaster) {
         this.fisheyeDomemaster = fisheyeDomemaster;
     }
 
+    /**
+     * Gets the current PApplet instance.
+     *
+     * @return the current PApplet instance
+     */
     public PApplet getPApplet() {
         return p;
     }
 
+    /**
+     * Checks if the instance is initialized.
+     *
+     * @return true if the instance is initialized, false otherwise
+     */
     public boolean isInitialized() {
         return initialized;
     }

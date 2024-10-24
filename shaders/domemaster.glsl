@@ -1,9 +1,8 @@
-#version 410 core
+#define PROCESSING_COLOR_SHADER
 
 uniform sampler2D equirectangularMap;
 uniform vec2 resolution; // Resolução da tela ou imagem de saída
 uniform float fov; // Campo de visão em graus, permitindo até 360 graus
-out vec4 fragColor;
 
 const float PI = 3.1415926535897932384626433832795;
 
@@ -35,7 +34,7 @@ void main() {
         u = fract(u); // Garante repetição sem exceder limites
         v = clamp(v, 0.0, 1.0); // Evita acesso fora dos limites verticais
 
-        vec4 color = texture(equirectangularMap, vec2(u, v));
-        fragColor = color;
+        vec4 color = texture2D(equirectangularMap, vec2(u, v));
+        gl_FragColor = color;
     }
 }
