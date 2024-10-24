@@ -7,6 +7,8 @@ import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;
 
+import java.net.URL;
+
 public class zividomelive {
 
     private PApplet p;  // Referência para a instância PApplet
@@ -60,6 +62,7 @@ public class zividomelive {
         this.currentScene = scene;  // Define a cena atual
         currentScene.setupScene();  // Chama o setup da cena ao definir
     }
+
 
     public void setup() {
         if (p == null) {
