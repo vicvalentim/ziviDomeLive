@@ -81,13 +81,13 @@ class Scene1 implements Scene {
 
   public void sceneRender(PGraphics pg) {
     pg.beginDraw();
-    pg.background(32);
+    pg.background(22);
     pg.noStroke();
     pg.fill(64, 255, 255, 192);  // Ensure fill color is applied in PGraphics
 
     // Ambient light and spotlight
-    //pg.ambientLight(64, 64, 64);
-    //pg.pointLight(255, 255, 255, 0, 0, 0);
+    pg.ambientLight(64, 64, 64);
+    pg.pointLight(255, 255, 255, 0, 0, 0);
 
     pg.translate(0,0,250);
     pg.rotateX(-PI/2 * (frameCount*0.01));
@@ -141,7 +141,11 @@ class Scene1 implements Scene {
 
       pg.pushMatrix();
       pg.translate(positionX.get(particle), positionY.get(particle), positionZ.get(particle));
-      pg.ellipse(0, 0, mass.get(particle) * 1000, mass.get(particle) * 1000);
+      pg.pushStyle();
+      pg.specular(160);
+      pg.shininess(10);
+      pg.sphereDetail(15);
+      pg.sphere(mass.get(particle) * 500);
       pg.popMatrix();
     }
 
@@ -159,7 +163,7 @@ class Scene1 implements Scene {
   }
 
   void addNewParticle(float x, float y) {
-    if (mass.size() >= 300) {
+    if (mass.size() >= 100) {
       return;
     }
     mass.add(random(0.003f, 0.03f));
