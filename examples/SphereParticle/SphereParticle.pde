@@ -49,7 +49,7 @@ void controlEvent(controlP5.ControlEvent theEvent) {
   ziviDome.controlEvent(theEvent);
 }
 
-// Implementation of Scene1 that uses the Scene interface
+// Implementation of Scene that uses the Scene interface
 class Scene1 implements Scene {
   zividomelive parent;
   PGraphics pg;
@@ -74,13 +74,11 @@ class Scene1 implements Scene {
     birthTime = new ArrayList<Long>();
   }
 
-  @Override
   public void setupScene() {
   noStroke();
   fill(64, 255, 255, 192);  // Set fill color for particles
   }
 
-  @Override
   public void sceneRender(PGraphics pg) {
     pg.beginDraw();
     pg.background(32);
@@ -150,12 +148,10 @@ class Scene1 implements Scene {
     pg.endDraw();
   }
 
-  @Override
   public void keyPressed(char key) {
     // Key response logic
   }
 
-  @Override
   public void mouseEvent(MouseEvent event) {
     if (event.getAction() == MouseEvent.PRESS || event.getAction() == MouseEvent.DRAG) {
       addNewParticle((event.getX())*0.1, (event.getY())*0.1);

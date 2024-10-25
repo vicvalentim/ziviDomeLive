@@ -46,8 +46,9 @@ void keyPressed() {
 // Forward mouse events to the library
 void mouseEvent(processing.event.MouseEvent event) {
   ziviDome.mouseEvent(event);
+  // Optionally call mouseEvent of the current scene
   if (currentScene != null) {
-    currentScene.mouseEvent(event.getX(), event.getY(), event.getButton());
+    currentScene.mouseEvent(event);
   }
 }
 
@@ -64,13 +65,11 @@ class Scene1 implements Scene {
     this.parent = parent;
   }
 
- 
   public void setupScene() {
     // Specific scene setup, if necessary
     println("Scene1 setup completed.");
   }
 
- 
   public void sceneRender(PGraphics pg) {
     pg.ambientLight(128, 128, 128); // Add ambient light
     pg.pushMatrix();
@@ -95,22 +94,14 @@ class Scene1 implements Scene {
     pg.popMatrix();
   }
 
- 
   public void keyPressed(char key) {
     // Implement key response logic, if necessary
     println("Key pressed in Scene1: " + key);
   }
 
- 
-  public void mouseEvent(int mouseX, int mouseY, int button) {
+  public void mouseEvent(MouseEvent event) {
     // Implement mouse event logic, if necessary
-    println("Mouse event in Scene1: " + mouseX + ", " + mouseY + ", button: " + button);
   }
-}
-
-// Forward control events to the library
-void controlEvent(controlP5.ControlEvent theEvent) {
-  ziviDome.controlEvent(theEvent);
 }
 
 // Implementation of Scene2 that uses the Scene interface
@@ -121,12 +112,10 @@ class Scene2 implements Scene {
     this.parent = parent;
   }
 
- 
   public void setupScene() {
     // Specific scene settings, if necessary
   }
 
- 
   public void sceneRender(PGraphics pg) {
     pg.pushMatrix();
     pg.background(25, 25, 112);
@@ -137,15 +126,12 @@ class Scene2 implements Scene {
     pg.popMatrix();
   }
 
- 
   public void keyPressed(char key) {
     // Implement key response logic, if necessary
   }
 
- 
-  public void mouseEvent(int mouseX, int mouseY, int button) {
+  public void mouseEvent(MouseEvent event) {
     // Implement mouse event logic, if necessary
-    println("Mouse event in Scene2: " + mouseX + ", " + mouseY + ", button: " + button);
   }
 
   void drawLabeledBox(PGraphics pg, float size) {

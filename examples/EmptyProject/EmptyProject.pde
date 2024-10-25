@@ -57,22 +57,22 @@ class Scene1 implements Scene {
     this.parent = parent;
   }
 
-  @Override
+
   public void setupScene() {
     // Specific scene setup, if necessary
   }
 
-  @Override
+ 
   public void sceneRender(PGraphics pg) {
     // Scene rendering logic
   }
 
-  @Override
+ 
   public void keyPressed(char key) {
     // Key response logic
   }
 
-  @Override
+ 
   public void mouseEvent(MouseEvent event) {
     // Mouse event logic
   }
