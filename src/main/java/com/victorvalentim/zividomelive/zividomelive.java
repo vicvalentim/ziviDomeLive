@@ -469,6 +469,9 @@ public class zividomelive {
         if (event.getAction() == MouseEvent.WHEEL) {
             standardRenderer.getCam().mouseWheel(event);
         }
+        if (currentScene != null) {
+            currentScene.mouseEvent(event);
+        }
     }
 
     /**
@@ -687,6 +690,16 @@ public class zividomelive {
     }
 
     /**
+     * Sets the current scene to be rendered and updates all relevant components.
+     * @param newScene the new scene to be set as the current scene
+     */
+    public void setCurrentScene(Scene newScene) {
+        this.currentScene = newScene;
+        this.setScene(newScene); // Update the scene in the parent PApplet
+        standardRenderer.setCurrentScene(newScene); // Update the scene in StandardRenderer
+    }
+
+    /**
      * Gets the current FisheyeDomemaster instance.
      *
      * @return the current FisheyeDomemaster instance
@@ -710,7 +723,26 @@ public class zividomelive {
      * @return the current PApplet instance
      */
     public PApplet getPApplet() {
+
         return p;
+    }
+
+     /**
+     * Gets the width of the PApplet window.
+     *
+     * @return the width of the PApplet window
+     */
+    public int getWidth() {
+        return p.width;
+    }
+
+    /**
+     * Gets the height of the PApplet window.
+     *
+     * @return the height of the PApplet window
+     */
+    public int getHeight() {
+        return p.height;
     }
 
     /**
@@ -719,6 +751,7 @@ public class zividomelive {
      * @return true if the instance is initialized, false otherwise
      */
     public boolean isInitialized() {
+
         return initialized;
     }
 }

@@ -1,6 +1,7 @@
 package com.victorvalentim.zividomelive;
 
 import processing.core.PGraphics;
+import processing.event.MouseEvent;
 
 /**
  * The Scene interface defines the structure for a scene in the application.
@@ -30,9 +31,7 @@ public interface Scene {
     /**
      * Handles mouse events.
      *
-     * @param mouseX the x-coordinate of the mouse
-     * @param mouseY the y-coordinate of the mouse
-     * @param button the mouse button that was pressed
+     * @param event the MouseEvent object containing details of the mouse event
      */
-    void mouseEvent(int mouseX, int mouseY, int button);
+    void mouseEvent(MouseEvent event);
 }
