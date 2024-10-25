@@ -57,13 +57,11 @@ class Scene1 implements Scene {
     this.parent = parent;
   }
 
-  @Override
   public void setupScene() {
     // Specific scene setup, if necessary
     println("Scene1 setup completed.");
   }
 
-  @Override
   public void sceneRender(PGraphics pg) {
     pg.pushMatrix();
     pg.background(0, 0, 80, 0);
@@ -86,13 +84,11 @@ class Scene1 implements Scene {
     pg.popMatrix();
   }
 
-  @Override
   public void keyPressed(char key) {
     // Implement key response logic, if necessary
     println("Key pressed in Scene1: " + key);
   }
 
-  @Override
   public void mouseEvent(MouseEvent event) {
     // Implement mouse event logic, if necessary
     println("Mouse event in Scene1: " + event.getX() + ", " + event.getY() + ", button: " + event.getButton());
