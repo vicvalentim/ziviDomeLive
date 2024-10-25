@@ -81,14 +81,16 @@ repositories {
 // The provided example uses Apache Commons Math. Replace or add as needed.
 dependencies {
     // resolve Processing core
-    compileOnly(group = "com.github.micycle1", name = "processing-core-4", version = "4.3.1")
+    //compileOnly(group = "com.github.micycle1", name = "processing-core-4", version = "4.3.1")
     // We are currently resolving from an unofficial, jitpack-enabled, processing4 repository.
     // Eventually, this will change to an official source.
 
     // Bibliotecas locais no sketchbook (ControlP5, Syphon, SpoutProcessing)
-    compileOnly(fileTree("$sketchbookLocation/libraries/controlP5/library"))
-    compileOnly(fileTree("$sketchbookLocation/libraries/Syphon/library"))
-    compileOnly(fileTree("$sketchbookLocation/libraries/spout/library"))
+    compileOnly(fileTree("lib/core.jar"))
+    compileOnly(fileTree("lib/controlP5.jar"))
+    compileOnly(fileTree("lib/spout.jar"))
+    compileOnly(fileTree("lib/Syphon.jar"))
+
 
     // To add a dependency on a Processing library that is installed locally,
     // uncomment the line below, and replace <library folder> with the location of that library
