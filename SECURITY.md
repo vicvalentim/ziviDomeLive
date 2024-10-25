@@ -1,19 +1,18 @@
+
 # Security Policy
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+The following table indicates which versions of the ziviDomeLive library are currently supported with security updates:
 
 | Version | Supported          |
 | ------- | ------------------ |
 | 1.x.x   | :white_check_mark: |
 
-
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+If you discover a vulnerability in the ziviDomeLive library, please report it to us by opening an issue on our GitHub repository. We take all security concerns seriously and will work to address them promptly.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+You can expect to receive an initial response within 72 hours of reporting a vulnerability. We will provide updates on the status of the investigation at regular intervals, and we will notify you of the outcome once the vulnerability is resolved or if further action is needed.
+
+Thank you for helping to keep ziviDomeLive secure.
