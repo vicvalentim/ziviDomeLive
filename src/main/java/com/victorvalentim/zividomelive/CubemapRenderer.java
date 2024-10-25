@@ -60,7 +60,7 @@ public class CubemapRenderer {
     private void configureCameraForFace(PGraphics pg, CameraOrientation orientation, float pitch, float yaw, float roll) {
         PVector eye = new PVector(0, 0, 0);
         pg.camera(eye.x, eye.y, eye.z, orientation.centerX, orientation.centerY, orientation.centerZ, orientation.upX, orientation.upY, orientation.upZ);
-        pg.perspective(PApplet.PI / 2, 1, 0.1f, 20000);
+        pg.perspective(PApplet.PI / 2, 1, 10f, 20000);
         pg.translate(pg.width / 2, pg.height / 2, 0);
         pg.rotateX(pitch);
         pg.rotateY(roll);

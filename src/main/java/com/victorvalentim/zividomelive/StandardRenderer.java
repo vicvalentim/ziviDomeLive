@@ -38,6 +38,14 @@ public class StandardRenderer {
     }
 
     /**
+     * Sets the current scene to be rendered.
+     * @param newScene the new scene to be set as the current scene
+     */
+    public void setCurrentScene(Scene newScene) {
+        this.currentScene = newScene;
+    }
+
+    /**
      * Renders the current scene using the standard view PGraphics object.
      * Updates the camera and applies its settings before rendering the scene.
      */

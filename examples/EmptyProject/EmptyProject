@@ -60,41 +60,20 @@ class Scene1 implements Scene {
   @Override
   public void setupScene() {
     // Specific scene setup, if necessary
-    println("Scene1 setup completed.");
   }
 
   @Override
   public void sceneRender(PGraphics pg) {
-    pg.pushMatrix();
-    pg.background(0, 0, 80, 0);
-    float radius = 700; // Distance from the center
-    int numPillars = 8;
-    float angleStep = TWO_PI / numPillars;
-    int[] colors = {#FF0000, #00FF00, #0000FF, #FFFF00, #FF00FF, #00FFFF, #FFFFFF, #FF8000};
-    float time = millis() / 2000.0; // Time in seconds for animation
-    for (int i = 0; i < numPillars; i++) {
-      float angle = angleStep * i + time; // Add rotation animation
-      float x = sin(angle) * radius;
-      float y = cos(angle) * radius;
-      pg.pushMatrix();
-      pg.translate(x, y, 0);
-      pg.rotateX(time); // Add rotation on the X axis
-      pg.fill(colors[i]);
-      pg.box(200); // Adjust parameters as needed to change the size
-      pg.popMatrix();
-    }
-    pg.popMatrix();
+    // Scene rendering logic
   }
 
   @Override
   public void keyPressed(char key) {
-    // Implement key response logic, if necessary
-    println("Key pressed in Scene1: " + key);
+    // Key response logic
   }
 
   @Override
   public void mouseEvent(MouseEvent event) {
-    // Implement mouse event logic, if necessary
-    println("Mouse event in Scene1: " + event.getX() + ", " + event.getY() + ", button: " + event.getButton());
+    // Mouse event logic
   }
 }
