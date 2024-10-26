@@ -8,9 +8,9 @@ import processing.opengl.*;
  */
 public class EquirectangularRenderer {
     private PGraphics equirectangular;
-    private PShader equirectangularShader;
-    private PApplet parent;
-    private int resolution;
+    private final PShader equirectangularShader;
+    private final PApplet parent;
+    private final int resolution;
 
     /**
      * Constructs an EquirectangularRenderer with the specified resolution, shader, and parent PApplet.

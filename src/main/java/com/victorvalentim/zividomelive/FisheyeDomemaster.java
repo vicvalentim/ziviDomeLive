@@ -1,7 +1,9 @@
 package com.victorvalentim.zividomelive;
 
-import processing.core.*;
-import processing.opengl.*;
+
+import processing.core.PApplet;
+import processing.core.PGraphics;
+import processing.opengl.PShader;
 
 /**
  * The FisheyeDomemaster class handles the rendering of fisheye domemaster projections from equirectangular maps.
@@ -9,10 +11,10 @@ import processing.opengl.*;
 public class FisheyeDomemaster {
     private PGraphics domemaster;
     private PGraphics domemasterSize;
-    private PShader domemasterShader;
-    private int resolution;
+    private final PShader domemasterShader;
+    private final int resolution;
     private float sizePercentage;
-    private PApplet parent;
+    private final PApplet parent;
 
     /**
      * Constructs a FisheyeDomemaster with the specified resolution, shader, and parent PApplet.
@@ -36,7 +38,7 @@ public class FisheyeDomemaster {
             domemaster.dispose();
         }
         domemaster = parent.createGraphics(resolution, resolution, PApplet.P2D);
-        domemaster.smooth(4);
+        domemaster.smooth();
     }
 
     /**
@@ -47,7 +49,7 @@ public class FisheyeDomemaster {
             domemasterSize.dispose();
         }
         domemasterSize = parent.createGraphics(resolution, resolution, PApplet.P2D);
-        domemasterSize.smooth(4);
+        domemasterSize.smooth();
     }
 
     /**
@@ -59,6 +61,7 @@ public class FisheyeDomemaster {
         if (domemasterShader == null) {
             initializeDomemaster();
         }
+        assert domemasterShader != null;
         domemasterShader.set("fov", fov);
     }
 
@@ -93,7 +96,7 @@ public class FisheyeDomemaster {
         setFOV(fov);
 
         domemaster.beginDraw();
-        domemaster.background(0, 0);
+        domemaster.background(0, 0); // Set transparent background
         domemasterShader.set("equirectangularMap", equirectangular);
         domemasterShader.set("resolution", new float[]{domemaster.width, domemaster.height});
         domemaster.shader(domemasterShader);
@@ -102,7 +105,7 @@ public class FisheyeDomemaster {
 
         float adjustedSize = resolution * (sizePercentage / 100.0f);
         domemasterSize.beginDraw();
-        domemasterSize.background(0, 0);
+        domemasterSize.background(0, 0); // Set transparent background
         domemasterSize.image(domemaster, (domemasterSize.width - adjustedSize) / 2, (domemasterSize.height - adjustedSize) / 2, adjustedSize, adjustedSize);
         domemasterSize.endDraw();
     }
