@@ -30,18 +30,22 @@
 
 ## Known Issues
 
-**Disclaimer for Apple Silicon Users**:
-- **Important**: For users on macOS with Apple Silicon (M family), it is recommended to use the Intel version of Processing to ensure full functionality of **Syphon**. The native ARM version of Processing does not currently support Syphon, which may limit the capabilities of the **ziviDomeLive** library.
+>[!IMPORTANT]
+>**Disclaimer for Apple Silicon Users**:
+>>For users on macOS with Apple Silicon processors (M series), it is recommended to use the Intel version of Processing (run via Rosetta 2) to ensure full **Syphon** functionality. The native ARM version of Processing currently lacks Syphon support, which may limit the real-time video-sharing capabilities of the **ziviDomeLive** library.
+>
+>**Disclaimer for Linux Users**:
+>>Due to the absence of a native library for **NDI** in Processing, Linux users will not have access to external integration features, such as those provided by **Syphon** or **Spout** on macOS and Windows.
+>
 
-**Disclaimer for Linux Users**:
-- Due to the absence of a native library for **NDI** in Processing, Linux users will not have access to external integration features, such as those provided by **Syphon** or **Spout** on macOS and Windows.
-
-**OpenGL Error 1282**:
-- Some users may encounter the following OpenGL error in the Processing console:
-   ```
-   OpenGL error 1282 at bot endDraw(): invalid operation
-   ```
-This error is related to specific OpenGL calls within Processing, but it does not impact the functionality of the **ziviDomeLive** library. Your visuals and performance should remain unaffected, and you can safely ignore this warning.
+>[!WARNING]
+>**OpenGL Error 1282**:
+> Some users may encounter the following OpenGL error in the Processing console:
+>   ```
+>   OpenGL error 1282 at bot endDraw(): invalid operation
+>   ```
+>This error is related to specific OpenGL calls within Processing, but it does not impact the functionality of the **ziviDomeLive** library. Your visuals and performance should remain unaffected, and you can safely ignore this warning.
+>
 
 ## Installation
 
@@ -71,6 +75,9 @@ Make sure you have the latest versions of these libraries and place them in your
 
 ## Import Libraries
 
+> [!NOTE]
+> Any project using the ziviDomeLive library must install and declare the library in the header of the Processing sketch to ensure proper functionality.
+> 
 ```java
 import com.victorvalentim.zividomelive.*;
 import controlP5.*;
@@ -79,9 +86,9 @@ import spout.*;
 ```
 
 ## Usage
-
-To use **ziviDomeLive** in your Processing sketch, import the library at the beginning of your code:
-
+> [!NOTE]
+> To use **ziviDomeLive** in your Processing sketch, import the library at the beginning of your code:
+>
 ```java
 zividomelive ziviDome;  // Instance of the ziviDomeLive library
 Scene currentScene;     // The current scene implementing the Scene interface
@@ -104,9 +111,9 @@ void draw() {
 }
 ```
 ## Implementing Scenes
-
-A Scene is an interface that allows you to define different visual environments. Below is an example of how to implement a custom scene:
-
+> [!NOTE]
+> A Scene is an interface that allows you to define different visual environments. Below is an example of how to implement a custom scene:
+>
 ```java
 class Scene1 implements Scene {
   zividomelive parent;
@@ -135,9 +142,9 @@ class Scene1 implements Scene {
 }
 ```
 ## Event Handling
-
-**ziviDomeLive** allows you to forward Processing events, such as key presses and mouse events, to your scene or the library itself:
-
+> [!NOTE]
+> **ziviDomeLive** allows you to forward Processing events, such as key presses and mouse events, to your scene or the library itself:
+>
 ```java
 void keyPressed() {
   ziviDome.keyPressed();
@@ -155,9 +162,9 @@ void controlEvent(controlP5.ControlEvent theEvent) {
 }
 ```
 ## Contributing Development
-
-We welcome contributions to the development of **ziviDomeLive**! Whether it's bug fixes, new features, or improvements to documentation, your help is greatly appreciated.
-
+> [!TIP]
+> We welcome contributions to the development of **ziviDomeLive**! Whether it's bug fixes, new features, or improvements to documentation, your help is greatly appreciated.
+>
 ### Steps to Contribute:
 
 1. **Fork the Repository**:
@@ -199,8 +206,8 @@ Thank you for contributing to **ziviDomeLive**!
 **Developed by [Victor Valentim](https://victorvalentim.com).**
 
 **Affiliations**:
-- CECULT - Universidade Federal do Recôncavo da Bahia
-- PPGARTES - Universidade Federal de Minas Gerais
+- CECULT/UFRB - Universidade Federal do Recôncavo da Bahia
+- PPGARTES/UFMG - Universidade Federal de Minas Gerais
 
 ## License
 
