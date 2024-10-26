@@ -8,7 +8,7 @@ import processing.core.*;
 public class CubemapRenderer {
     private PGraphics[] cubemapFaces;
     private int resolution;
-    private PApplet parent;
+    private final PApplet parent;
 
     /**
      * Constructs a CubemapRenderer with the specified initial resolution and parent PApplet.
