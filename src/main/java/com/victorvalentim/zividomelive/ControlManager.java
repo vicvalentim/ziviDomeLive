@@ -58,16 +58,16 @@ public class ControlManager {
     private void addNumberboxesAndSliders() {
         int yOffset = 40;
         int controlSpacing = 30;
-        addNumberbox("pitch", 10, yOffset, -PApplet.PI, PApplet.PI, parent.getPitch());
-        addSlider("pitch", 10 + 60, yOffset, -PApplet.PI, PApplet.PI, parent.getPitch());
-        addNumberbox("yaw", 10, yOffset + controlSpacing, -PApplet.PI, PApplet.PI, parent.getYaw());
-        addSlider("yaw", 10 + 60, yOffset + controlSpacing, -PApplet.PI, PApplet.PI, parent.getYaw());
-        addNumberbox("roll", 10, yOffset + 2 * controlSpacing, -PApplet.PI, PApplet.PI, parent.getRoll());
-        addSlider("roll", 10 + 60, yOffset + 2 * controlSpacing, -PApplet.PI, PApplet.PI, parent.getRoll());
-        addNumberbox("fov", 10, yOffset + 3 * controlSpacing, 0, 360, parent.getFov());
-        addSlider("fov", 10 + 60, yOffset + 3 * controlSpacing, 0, 360, parent.getFov());
-        addNumberbox("size", 10, yOffset + 4 * controlSpacing, 0, 100, parent.getFishSize());
-        addSlider("size", 10 + 60, yOffset + 4 * controlSpacing, 0, 100, parent.getFishSize());
+        addNumberbox("pitch", yOffset, -PApplet.PI, PApplet.PI, parent.getPitch());
+        addSlider("pitch", yOffset, -PApplet.PI, PApplet.PI, parent.getPitch());
+        addNumberbox("yaw", yOffset + controlSpacing, -PApplet.PI, PApplet.PI, parent.getYaw());
+        addSlider("yaw", yOffset + controlSpacing, -PApplet.PI, PApplet.PI, parent.getYaw());
+        addNumberbox("roll", yOffset + 2 * controlSpacing, -PApplet.PI, PApplet.PI, parent.getRoll());
+        addSlider("roll", yOffset + 2 * controlSpacing, -PApplet.PI, PApplet.PI, parent.getRoll());
+        addNumberbox("fov", yOffset + 3 * controlSpacing, 0, 360, parent.getFov());
+        addSlider("fov", yOffset + 3 * controlSpacing, 0, 360, parent.getFov());
+        addNumberbox("size", yOffset + 4 * controlSpacing, 0, 100, parent.getFishSize());
+        addSlider("size", yOffset + 4 * controlSpacing, 0, 100, parent.getFishSize());
     }
 
     /**
@@ -106,16 +106,15 @@ public class ControlManager {
     /**
      * Adds a number box for controlling values.
      *
-     * @param name the name of the number box
-     * @param x the x position of the number box
-     * @param y the y position of the number box
-     * @param min the minimum value of the number box
-     * @param max the maximum value of the number box
+     * @param name  the name of the number box
+     * @param y     the y position of the number box
+     * @param min   the minimum value of the number box
+     * @param max   the maximum value of the number box
      * @param value the initial value of the number box
      */
-    private void addNumberbox(String name, float x, float y, float min, float max, float value) {
+    private void addNumberbox(String name, float y, float min, float max, float value) {
         Numberbox numberbox = cp5.addNumberbox(name + "Value")
-                .setPosition(x, y)
+                .setPosition((float) 10, y)
                 .setSize(50, 20)
                 .setRange(min, max)
                 .setScrollSensitivity(0.1f)
@@ -136,16 +135,15 @@ public class ControlManager {
     /**
      * Adds a slider for continuous value control.
      *
-     * @param name the name of the slider
-     * @param x the x position of the slider
-     * @param y the y position of the slider
-     * @param min the minimum value of the slider
-     * @param max the maximum value of the slider
+     * @param name  the name of the slider
+     * @param y     the y position of the slider
+     * @param min   the minimum value of the slider
+     * @param max   the maximum value of the slider
      * @param value the initial value of the slider
      */
-    private void addSlider(String name, float x, float y, float min, float max, float value) {
+    private void addSlider(String name, float y, float min, float max, float value) {
         cp5.addSlider(name)
-                .setPosition(x, y)
+                .setPosition((float) 70, y)
                 .setSize(140, 20)
                 .setRange(min, max)
                 .setValue(value)

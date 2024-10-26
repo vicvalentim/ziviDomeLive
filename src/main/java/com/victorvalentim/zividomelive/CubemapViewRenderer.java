@@ -8,9 +8,9 @@ import processing.core.*;
 public class CubemapViewRenderer {
     private int resolution;
     private PGraphics cubemap;
-    private int[] faceRotations = {2, 2, 2, 2, 2, 2};
-    private boolean[] faceInversions = {true, true, true, true, true, true};
-    private PApplet parent;
+    private final int[] faceRotations = {2, 2, 2, 2, 2, 2};
+    private final boolean[] faceInversions = {true, true, true, true, true, true};
+    private final PApplet parent;
 
     /**
      * Constructs a CubemapViewRenderer with the specified parent PApplet and resolution.
@@ -74,12 +74,12 @@ public class CubemapViewRenderer {
 
         cubemap.beginDraw();
         cubemap.background(0, 0);
-        applyTransformations(cubemap, cubemapFaces[3], resolution / 2, 0, resolution / 2, resolution / 2, faceRotations[3], faceInversions[3]);
-        applyTransformations(cubemap, cubemapFaces[1], 0, resolution / 2, resolution / 2, resolution / 2, faceRotations[0], faceInversions[0]);
-        applyTransformations(cubemap, cubemapFaces[4], resolution / 2, resolution / 2, resolution / 2, resolution / 2, faceRotations[4], faceInversions[4]);
-        applyTransformations(cubemap, cubemapFaces[0], resolution, resolution / 2, resolution / 2, resolution / 2, faceRotations[1], faceInversions[1]);
-        applyTransformations(cubemap, cubemapFaces[5], resolution * 3 / 2, resolution / 2, resolution / 2, resolution / 2, faceRotations[5], faceInversions[5]);
-        applyTransformations(cubemap, cubemapFaces[2], resolution / 2, resolution, resolution / 2, resolution / 2, faceRotations[2], faceInversions[2]);
+        applyTransformations(cubemap, cubemapFaces[3], (float) resolution / 2, 0, (float) resolution / 2, (float) resolution / 2, faceRotations[3], faceInversions[3]);
+        applyTransformations(cubemap, cubemapFaces[1], 0, (float) resolution / 2, (float) resolution / 2, (float) resolution / 2, faceRotations[0], faceInversions[0]);
+        applyTransformations(cubemap, cubemapFaces[4], (float) resolution / 2, (float) resolution / 2, (float) resolution / 2, (float) resolution / 2, faceRotations[4], faceInversions[4]);
+        applyTransformations(cubemap, cubemapFaces[0], resolution, (float) resolution / 2, (float) resolution / 2, (float) resolution / 2, faceRotations[1], faceInversions[1]);
+        applyTransformations(cubemap, cubemapFaces[5], (float) (resolution * 3) / 2, (float) resolution / 2, (float) resolution / 2, (float) resolution / 2, faceRotations[5], faceInversions[5]);
+        applyTransformations(cubemap, cubemapFaces[2], (float) resolution / 2, resolution, (float) resolution / 2, (float) resolution / 2, faceRotations[2], faceInversions[2]);
         cubemap.endDraw();
     }
 

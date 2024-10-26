@@ -10,7 +10,7 @@ public class StandardRenderer {
     private PGraphics standardView;
     private Scene currentScene;
     private MouseControlledCamera cam;
-    private PApplet parent;
+    private final PApplet parent;
 
     /**
      * Constructs a StandardRenderer with the specified parent PApplet, width, height, and current scene.
