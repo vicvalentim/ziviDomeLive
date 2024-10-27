@@ -3,12 +3,16 @@ package com.victorvalentim.zividomelive;
 import processing.core.*;
 
 /**
- * The CubemapRenderer class handles the creation and rendering of cubemap faces.
+ * The CubemapRenderer class handles the creation and rendering of cubemap faces with dynamic frustum adjustments.
  */
 public class CubemapRenderer {
     private PGraphics[] cubemapFaces;
     private int resolution;
     private final PApplet parent;
+
+    // Valores padrão para os planos do frustum (podem ser ajustados conforme necessário)
+    final float defaultNearPlane = 0.01f;
+    final float defaultFarPlane = 2000.000f;
 
     /**
      * Constructs a CubemapRenderer with the specified initial resolution and parent PApplet.
@@ -32,15 +36,10 @@ public class CubemapRenderer {
             if (cubemapFaces[i] != null) {
                 cubemapFaces[i].dispose();
             }
-            cubemapFaces[i] = parent.createGraphics(resolution / 2, resolution / 2, PApplet.P3D);
+            cubemapFaces[i] = parent.createGraphics(resolution, resolution, PApplet.P3D);
         }
     }
 
-    /**
-     * Updates the resolution of the cubemap and reinitializes the faces.
-     *
-     * @param newResolution the new resolution to be set
-     */
     void updateResolution(int newResolution) {
         if (this.resolution != newResolution) {
             this.resolution = newResolution;
@@ -48,41 +47,42 @@ public class CubemapRenderer {
         }
     }
 
-    /**
-     * Configures the camera for a specific face of the cubemap.
-     *
-     * @param pg the PGraphics object for the cubemap face
-     * @param orientation the CameraOrientation for the face
-     * @param pitch the pitch angle
-     * @param yaw the yaw angle
-     * @param roll the roll angle
-     */
     private void configureCameraForFace(PGraphics pg, CameraOrientation orientation, float pitch, float yaw, float roll) {
         PVector eye = new PVector(0, 0, 0);
+
+        float dynamicNearPlane = calculateNearPlaneForFace(orientation);
+        float dynamicFarPlane = calculateFarPlaneForFace(orientation);
+        float fieldOfView = calculateFieldOfViewForFace(orientation);
+
         pg.camera(eye.x, eye.y, eye.z, orientation.centerX, orientation.centerY, orientation.centerZ, orientation.upX, orientation.upY, orientation.upZ);
-        pg.perspective(PApplet.PI / 2, 1, 10f, 20000);
-        pg.translate(pg.width / 2, pg.height / 2, 0);
+        pg.perspective(fieldOfView, 1, dynamicNearPlane, dynamicFarPlane);
+
+        pg.translate((float) pg.width / 2, (float) pg.height / 2, 0);
         pg.rotateX(pitch);
         pg.rotateY(roll);
         pg.rotateZ(yaw);
-        pg.translate(-pg.width / 2, -pg.height / 2, 0);
+        pg.translate((float) -pg.width / 2, (float) -pg.height / 2, 0);
     }
 
-    /**
-     * Captures the cubemap by applying camera transformations and rendering the scene.
-     *
-     * @param pitch the pitch angle
-     * @param yaw the yaw angle
-     * @param roll the roll angle
-     * @param cameraManager the CameraManager instance
-     * @param currentScene the current Scene instance
-     */
+    private float calculateNearPlaneForFace(CameraOrientation orientation) {
+        return defaultNearPlane;
+    }
+
+    private float calculateFarPlaneForFace(CameraOrientation orientation) {
+        return defaultFarPlane;
+    }
+
+    private float calculateFieldOfViewForFace(CameraOrientation orientation) {
+        return PApplet.PI / 2;
+    }
+
     void captureCubemap(float pitch, float yaw, float roll, CameraManager cameraManager, Scene currentScene) {
         if (cubemapFaces == null) {
             initializeCubemapFaces();
         }
         for (int i = 0; i < 6; i++) {
             cubemapFaces[i].beginDraw();
+            cubemapFaces[i].background(0,0);
             configureCameraForFace(cubemapFaces[i], cameraManager.getOrientation(i), pitch, yaw, roll);
             if (currentScene != null) {
                 currentScene.sceneRender(cubemapFaces[i]);
@@ -91,11 +91,6 @@ public class CubemapRenderer {
         }
     }
 
-    /**
-     * Returns the cubemap faces for other renderers.
-     *
-     * @return an array of PGraphics objects representing the cubemap faces
-     */
     PGraphics[] getCubemapFaces() {
         if (cubemapFaces == null) {
             initializeCubemapFaces();
@@ -103,8 +98,9 @@ public class CubemapRenderer {
         return cubemapFaces;
     }
 
-    /**
-     * Releases the graphical resources used by the cubemap faces.
+   /**
+     * Disposes of the cubemap faces, releasing any resources associated with them.
+     * This method should be called when the cubemap faces are no longer needed to free up memory.
      */
     public void dispose() {
         if (cubemapFaces != null) {
