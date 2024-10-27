@@ -33,7 +33,6 @@ public class EquirectangularRenderer {
             equirectangular.dispose();
         }
         equirectangular = parent.createGraphics(resolution * 2, resolution, PApplet.P2D);
-        equirectangular.smooth(4);
     }
 
     /**

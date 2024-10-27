@@ -38,7 +38,6 @@ public class FisheyeDomemaster {
             domemaster.dispose();
         }
         domemaster = parent.createGraphics(resolution, resolution, PApplet.P2D);
-        domemaster.smooth();
     }
 
     /**
@@ -49,7 +48,6 @@ public class FisheyeDomemaster {
             domemasterSize.dispose();
         }
         domemasterSize = parent.createGraphics(resolution, resolution, PApplet.P2D);
-        domemasterSize.smooth();
     }
 
     /**

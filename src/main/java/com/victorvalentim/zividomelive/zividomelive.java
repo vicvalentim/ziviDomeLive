@@ -119,6 +119,7 @@ public class zividomelive {
 		System.out.println("Starting setup...");
 
 		try {
+			p.smooth(8);
 			p.frameRate(64);
 			System.out.println("Frame rate set to 64.");
 		} catch (Exception e) {
@@ -172,7 +173,6 @@ public class zividomelive {
 	void setupHints() {
 		p.textureMode(PConstants.NORMAL);
 		p.textureWrap(PConstants.REPEAT);
-		p.hint(PConstants.DISABLE_OPENGL_ERRORS);
 		p.hint(PConstants.ENABLE_TEXTURE_MIPMAPS);
 	}
 
@@ -361,7 +361,7 @@ public class zividomelive {
 	 *
 	 * @param pg the PGraphics object to be displayed
 	 */
-	void displayView(PGraphics pg) {
+	private void displayView(PGraphics pg) {
 		float aspectRatio = pg.width / (float) pg.height;
 		float displayWidth = p.width;
 		float displayHeight = p.width / aspectRatio;
@@ -429,6 +429,58 @@ public class zividomelive {
 			} else if (spout != null) {
 				spout.sendTexture(fisheyeDomemaster.getDomemasterGraphics());
 			}
+		}
+	}
+
+	/**
+	 * Renders the fisheye domemaster view by applying the shader and displaying the view.
+	 * If the FisheyeDomemaster is not initialized, an error message is printed.
+	 */
+	public void renderFisheyeDomemaster() {
+		if (fisheyeDomemaster != null) {
+			fisheyeDomemaster.applyShader(equirectangularRenderer.getEquirectangular(), getFov());
+			displayView(fisheyeDomemaster.getDomemasterGraphics());
+		} else {
+			System.out.println("Error: FisheyeDomemaster not initialized.");
+		}
+	}
+	
+	/**
+	 * Renders the equirectangular view by invoking the EquirectangularRenderer.
+	 * If the EquirectangularRenderer is not initialized, an error message is printed.
+	 */
+	public void renderEquirectangular() {
+		if (equirectangularRenderer != null) {
+			equirectangularRenderer.render(cubemapRenderer.getCubemapFaces());
+			displayView(equirectangularRenderer.getEquirectangular());
+		} else {
+			System.out.println("Error: EquirectangularRenderer not initialized.");
+		}
+	}
+
+	/**
+	 * Renders the cubemap view by drawing the cubemap faces to the graphics and displaying the view.
+	 * If the CubemapViewRenderer is not initialized, an error message is printed.
+	 */
+	public void renderCubemap() {
+		if (cubemapViewRenderer != null) {
+			cubemapViewRenderer.drawCubemapToGraphics(cubemapRenderer.getCubemapFaces());
+			displayView(cubemapViewRenderer.getCubemap());
+		} else {
+			System.out.println("Error: CubemapViewRenderer not initialized.");
+		}
+	}
+
+	/**
+	 * Renders the standard view by invoking the StandardRenderer.
+	 * If the StandardRenderer is not initialized, an error message is printed.
+	 */
+	public void renderStandard() {
+		if (standardRenderer != null) {
+			standardRenderer.render();
+			displayView(standardRenderer.getStandardView());
+		} else {
+			System.out.println("Error: StandardRenderer not initialized.");
 		}
 	}
 
