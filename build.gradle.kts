@@ -86,10 +86,10 @@ dependencies {
     // Eventually, this will change to an official source.
 
     // Bibliotecas locais no sketchbook (ControlP5, Syphon, SpoutProcessing)
-    compileOnly(fileTree("lib/core.jar"))
-    compileOnly(fileTree("lib/controlP5.jar"))
-    compileOnly(fileTree("lib/spout.jar"))
-    compileOnly(fileTree("lib/Syphon.jar"))
+    compileOnly(fileTree("src/main/libs/core.jar"))
+    compileOnly(fileTree("src/main/libs/controlP5.jar"))
+    compileOnly(fileTree("src/main/libs/spout.jar"))
+    compileOnly(fileTree("src/main/libs/Syphon.jar"))
 
 
     // To add a dependency on a Processing library that is installed locally,
@@ -196,7 +196,7 @@ tasks.register("buildReleaseArtifacts") {
         println("Copy assets...")
         copy {
             from("$rootDir")
-            include("shaders/**", "native/**")
+            include("data/**", "native/**")
 
             into("$releaseDirectory/library")
             exclude("*.DS_Store")
