@@ -17,17 +17,18 @@ public class FisheyeDomemaster {
     private final PApplet parent;
 
     /**
-     * Constructs a FisheyeDomemaster with the specified resolution, shader, and parent PApplet.
+     * Constructs a FisheyeDomemaster with the specified resolution, shader files, and parent PApplet.
      *
      * @param resolution the resolution of the domemaster projection
-     * @param shader the PShader object
+     * @param fragmentShaderPath the path to the fragment shader file (.frag)
+     * @param vertexShaderPath the path to the vertex shader file (.vert)
      * @param parent the parent PApplet instance
      */
-    public FisheyeDomemaster(int resolution, PShader shader, PApplet parent) {
+    public FisheyeDomemaster(int resolution,String fragmentShaderPath, String vertexShaderPath, PApplet parent) {
         this.resolution = resolution;
         this.sizePercentage = 100.0f;
         this.parent = parent;
-        this.domemasterShader = shader;
+        this.domemasterShader = parent.loadShader(fragmentShaderPath, vertexShaderPath);
     }
 
     /**
