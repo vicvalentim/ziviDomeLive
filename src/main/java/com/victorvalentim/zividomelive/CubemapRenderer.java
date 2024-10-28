@@ -12,7 +12,7 @@ public class CubemapRenderer {
 
     // Valores padrão para os planos do frustum (podem ser ajustados conforme necessário)
     final float defaultNearPlane = 0.01f;
-    final float defaultFarPlane = 2000.000f;
+    final float defaultFarPlane = 12000.0f;
 
     /**
      * Constructs a CubemapRenderer with the specified initial resolution and parent PApplet.

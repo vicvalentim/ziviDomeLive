@@ -217,22 +217,28 @@ public class zividomelive {
 	/**
 	 * Initializes various renderers required for different views.
 	 */
-
 	void initializeRenderers() {
 		try {
 			System.out.println("Initializing renderers...");
 
-			String equirectangularShaderPath = "data/shaders/equirectangular.glsl";
-			String domemasterShaderPath = "data/shaders/domemaster.glsl";
+			// Paths to shader files
+			String equirectangularVertexShaderPath = "data/shaders/equirectangular.vert";
+			String equirectangularFragmentShaderPath = "data/shaders/equirectangular.frag";
+			String domemasterVertexShaderPath = "data/shaders/domemaster.vert";
+			String domemasterFragmentShaderPath = "data/shaders/domemaster.frag";
 
+			// Load shaders
+			PShader equirectangularShader = p.loadShader(equirectangularFragmentShaderPath, equirectangularVertexShaderPath);
+			PShader domemasterShader = p.loadShader(domemasterFragmentShaderPath, domemasterVertexShaderPath);
+
+			// Initialize renderers asynchronously
 			CompletableFuture<Void> cubemapRendererFuture = CompletableFuture.runAsync(() -> {
 				cubemapRenderer = new CubemapRenderer(resolution, p);
 				System.out.println("CubemapRenderer initialized: " + true);
 			});
 
 			CompletableFuture<Void> equirectangularRendererFuture = CompletableFuture.runAsync(() -> {
-				PShader equirectangularShader = p.loadShader(equirectangularShaderPath);
-				equirectangularRenderer = new EquirectangularRenderer(resolution, equirectangularShader, p);
+				equirectangularRenderer = new EquirectangularRenderer(resolution, equirectangularFragmentShaderPath, equirectangularVertexShaderPath, p);
 				System.out.println("EquirectangularRenderer initialized: " + true);
 			});
 
@@ -242,8 +248,7 @@ public class zividomelive {
 			});
 
 			CompletableFuture<Void> fisheyeDomemasterFuture = CompletableFuture.runAsync(() -> {
-				PShader domemasterShader = p.loadShader(domemasterShaderPath);
-				fisheyeDomemaster = new FisheyeDomemaster(resolution, domemasterShader, p);
+				fisheyeDomemaster = new FisheyeDomemaster(resolution, domemasterFragmentShaderPath, domemasterVertexShaderPath, p);
 				System.out.println("FisheyeDomemaster initialized: " + true);
 			});
 
@@ -252,6 +257,7 @@ public class zividomelive {
 				System.out.println("CubemapViewRenderer initialized: " + true);
 			});
 
+			// Wait for all renderers to be initialized
 			CompletableFuture.allOf(
 					cubemapRendererFuture,
 					equirectangularRendererFuture,
@@ -266,6 +272,7 @@ public class zividomelive {
 			e.printStackTrace();
 		}
 	}
+
 
 	/**
 	 * Sets up Syphon or Spout based on the operating system.
@@ -320,6 +327,22 @@ public class zividomelive {
 			drawFloatingPreview();
 		}
 
+		sendOutput();
+		drawControlPanel();
+	}
+
+	/**
+	 * individual draw method that handles rendering and updating the view.
+	 */
+	private void individualRenderer() {
+		if (!initialized) {
+			System.out.println("Error: System not fully initialized.");
+			return;
+		}
+
+		clearBackground();
+		handleGraphicsReset(); // Ensure graphics reset is handled
+		captureCubemap();
 		sendOutput();
 		drawControlPanel();
 	}
@@ -438,6 +461,8 @@ public class zividomelive {
 	 */
 	public void renderFisheyeDomemaster() {
 		if (fisheyeDomemaster != null) {
+			individualRenderer();
+			equirectangularRenderer.render(cubemapRenderer.getCubemapFaces());
 			fisheyeDomemaster.applyShader(equirectangularRenderer.getEquirectangular(), getFov());
 			displayView(fisheyeDomemaster.getDomemasterGraphics());
 		} else {
@@ -451,6 +476,7 @@ public class zividomelive {
 	 */
 	public void renderEquirectangular() {
 		if (equirectangularRenderer != null) {
+			individualRenderer();
 			equirectangularRenderer.render(cubemapRenderer.getCubemapFaces());
 			displayView(equirectangularRenderer.getEquirectangular());
 		} else {
@@ -464,6 +490,7 @@ public class zividomelive {
 	 */
 	public void renderCubemap() {
 		if (cubemapViewRenderer != null) {
+			individualRenderer();
 			cubemapViewRenderer.drawCubemapToGraphics(cubemapRenderer.getCubemapFaces());
 			displayView(cubemapViewRenderer.getCubemap());
 		} else {
@@ -477,6 +504,7 @@ public class zividomelive {
 	 */
 	public void renderStandard() {
 		if (standardRenderer != null) {
+			individualRenderer();
 			standardRenderer.render();
 			displayView(standardRenderer.getStandardView());
 		} else {

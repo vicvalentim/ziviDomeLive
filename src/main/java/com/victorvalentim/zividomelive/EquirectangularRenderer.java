@@ -13,15 +13,16 @@ public class EquirectangularRenderer {
     private final int resolution;
 
     /**
-     * Constructs an EquirectangularRenderer with the specified resolution, shader, and parent PApplet.
+     * Constructs an EquirectangularRenderer with the specified resolution, shader files, and parent PApplet.
      *
      * @param resolution the resolution of the equirectangular projection
-     * @param shader the PShader object
+     * @param vertexShaderPath the path to the vertex shader file (.vert)
+     * @param fragmentShaderPath the path to the fragment shader file (.frag)
      * @param parent the parent PApplet instance
      */
-    public EquirectangularRenderer(int resolution, PShader shader, PApplet parent) {
+    public EquirectangularRenderer(int resolution, String fragmentShaderPath, String vertexShaderPath, PApplet parent) {
         this.resolution = resolution;
-        this.equirectangularShader = shader;
+        this.equirectangularShader = parent.loadShader(fragmentShaderPath, vertexShaderPath);
         this.parent = parent;
     }
 
