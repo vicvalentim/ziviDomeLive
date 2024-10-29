@@ -8,6 +8,7 @@ import codeanticode.syphon.*;
 import spout.*;
 import java.util.concurrent.*;
 
+
 /**
  * The `zividomelive` class is responsible for managing the rendering and control of a live dome visualization.
  * It integrates with Processing, Syphon, and Spout to provide a comprehensive solution for dome rendering.
@@ -42,6 +43,7 @@ public class zividomelive {
 	private boolean showControlPanel = true;
 	private boolean showPreview = false;
 	private boolean enableOutput = false;
+	private boolean controlPanelShownOnce = false;
 
 	private ControlManager controlManager;
 	private CubemapRenderer cubemapRenderer;
@@ -50,6 +52,7 @@ public class zividomelive {
 	private FisheyeDomemaster fisheyeDomemaster;
 	private CameraManager cameraManager;
 	private CubemapViewRenderer cubemapViewRenderer;
+	private SplashScreen splash;
 
 	private SyphonServer syphonServer;
 	private Spout spout;
@@ -119,7 +122,6 @@ public class zividomelive {
 		System.out.println("Starting setup...");
 
 		try {
-			p.smooth(8);
 			p.frameRate(64);
 			System.out.println("Frame rate set to 64.");
 		} catch (Exception e) {
@@ -150,10 +152,12 @@ public class zividomelive {
 
 		try {
 			registerMouseEvents();
-			System.out.println("Mouse events registered.");
 		} catch (Exception e) {
 			System.out.println("Error registering mouse events: " + e.getMessage());
 		}
+
+		splash = new SplashScreen(p);
+		splash.start();
 
 		System.out.println("Setup completed.");
 	}
@@ -174,7 +178,10 @@ public class zividomelive {
 		p.textureMode(PConstants.NORMAL);
 		p.textureWrap(PConstants.REPEAT);
 		p.hint(PConstants.ENABLE_TEXTURE_MIPMAPS);
+		p.hint(PConstants.ENABLE_DEPTH_TEST);
+		p.hint(PConstants.ENABLE_OPTIMIZED_STROKE);  // Otimiza a renderização de contornos
 	}
+
 
 	/**
 	 * Post-initialization method to set up managers after the initial setup.
@@ -309,32 +316,50 @@ public class zividomelive {
 	 */
 	public void draw() {
 		if (!initialized) {
-			System.out.println("Error: System not fully initialized.");
-			return;
+			p.background(0);
 		}
 
+		// Renderiza o conteúdo principal em segundo plano
+		renderContent();
+
+		// Atualiza e renderiza a splash screen enquanto ativa
+		if (splash != null && splash.showSplash) {
+			clearBackground(); // Limpa o fundo antes de renderizar a splash
+			splash.update();
+			splash.render();
+			showControlPanel = false; // Oculta o painel enquanto a splash está ativa
+			controlPanelShownOnce = false; // Reseta a flag durante a splash
+		} else if (splash != null) {
+			splash = null; // Libera a splash após o fade-out
+
+			// Exibe o painel de controle apenas uma vez
+			if (!controlPanelShownOnce) {
+				showControlPanel = true;
+				controlPanelShownOnce = true; // Define a flag para evitar reaparecimento
+			}
+		}
+	}
+
+	void renderContent() {
+		// Verifica se os renderizadores e a cena foram inicializados
 		if (cubemapRenderer == null || equirectangularRenderer == null || fisheyeDomemaster == null || standardRenderer == null || currentScene == null) {
 			System.out.println("Error: Renderer or scene not initialized.");
 			return;
 		}
 
-		clearBackground();
-		handleGraphicsReset(); // Ensure graphics reset is handled
-		captureCubemap();
-		renderView();
+		clearBackground();         // Limpa o fundo
+		handleGraphicsReset();     // Garante que o reset gráfico seja realizado, se necessário
+		captureCubemap();          // Captura o cubemap para a cena atual
+		renderView();              // Renderiza a visualização principal
 
 		if (showPreview) {
-			drawFloatingPreview();
+			drawFloatingPreview(); // Desenha uma visualização flutuante, se ativada
 		}
-
-		sendOutput();
-		drawControlPanel();
+		sendOutput();              // Envia a saída para Syphon/Spout, se habilitado
+		drawControlPanel();        // Exibe o painel de controle
 	}
 
-	/**
-	 * individual draw method that handles rendering and updating the view.
-	 */
-	private void individualRenderer() {
+	void individualRenderer() {
 		if (!initialized) {
 			System.out.println("Error: System not fully initialized.");
 			return;
@@ -347,10 +372,7 @@ public class zividomelive {
 		drawControlPanel();
 	}
 
-	/**
-	 * Clears the background to a transparent color.
-	 */
-	private void clearBackground() {
+	void clearBackground() {
 		p.background(0, 0, 0, 0);
 	}
 
@@ -546,6 +568,11 @@ public class zividomelive {
 	 * @param event the MouseEvent object representing the mouse event
 	 */
 	public void mouseEvent(MouseEvent event) {
+		if (splash != null && event.getAction() == MouseEvent.PRESS) {
+			splash.mousePressed(); // Inicia o fade-out da splash quando o mouse é pressionado
+		}
+
+		// Permanece com os eventos de mouse originais para interação de cena
 		if (event.getAction() == MouseEvent.WHEEL) {
 			standardRenderer.getCam().mouseWheel(event);
 		}
