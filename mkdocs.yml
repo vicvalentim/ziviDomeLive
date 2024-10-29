@@ -1,5 +1,5 @@
-site_name: ziviDomeLive
-site_url: "https://processing.github.io/ziviDomeLive/"
+site_name: ziviDomeLive - Library Documentation
+site_url: "https://vicvalentim.github.io/ziviDomeLive/"
 
 theme:
   name: material
@@ -14,7 +14,6 @@ theme:
     - navigation.top
     - navigation.footer
 
-
 copyright: MIT Licence.
 
 plugins:
@@ -23,7 +22,12 @@ plugins:
 
 nav:
   - Home: index.md
-  - Get Started: getting-started.md
-  - Develop: develop.md
-  - Release: release.md
+  - Installation: installation.md
+  - Usage: usage.md
+  - Reference:
+      - Overview: api/overview.md
+      - Classes: api/classes.md
+      - Functions: api/functions.md
+  - Examples: examples.md
+  - FAQ: faq.md
   - Troubleshooting: troubleshooting.md
