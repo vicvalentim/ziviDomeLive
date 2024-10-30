@@ -1,171 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/index.html</loc>
+         <loc>https://vicvalentim.github.io/ziviDomeLive/index.html</loc>
          <lastmod>2024-10-30</lastmod>
     </url>
     <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/404.html</loc>
+         <loc>https://vicvalentim.github.io/ziviDomeLive/develop.html</loc>
          <lastmod>2024-10-30</lastmod>
     </url>
     <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/author.html</loc>
+         <loc>https://vicvalentim.github.io/ziviDomeLive/getting-started.html</loc>
          <lastmod>2024-10-30</lastmod>
     </url>
     <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/contributing.html</loc>
+         <loc>https://vicvalentim.github.io/ziviDomeLive/release.html</loc>
          <lastmod>2024-10-30</lastmod>
     </url>
     <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/known-issues.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/license.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/api/core-classes.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/api/helper-functions.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/api/overview.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/api/scene-interface.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/examples/advanced.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/examples/basic.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/getting-started/features.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/getting-started/quickstart.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/installation/dependencies.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/installation/installation-steps.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/installation/requirements.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/usage/basic-usage.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/usage/event-handling.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/usage/external-integration.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/en/usage/scene-management.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/index.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/404.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/author.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/contributing.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/known-issues.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/license.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/api/core-classes.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/api/helper-functions.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/api/overview.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/api/scene-interface.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/examples/advanced.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/examples/basic.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/getting-started/features.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/getting-started/quickstart.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/installation/dependencies.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/installation/installation-steps.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/installation/requirements.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/usage/basic-usage.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/usage/event-handling.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/usage/external-integration.html</loc>
-         <lastmod>2024-10-30</lastmod>
-    </url>
-    <url>
-         <loc>https://vicvalentim.github.io/ziviDomeLive/pt-br/usage/scene-management.html</loc>
+         <loc>https://vicvalentim.github.io/ziviDomeLive/troubleshooting.html</loc>
          <lastmod>2024-10-30</lastmod>
     </url>
 </urlset>
