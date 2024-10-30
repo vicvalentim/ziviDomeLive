@@ -69,28 +69,6 @@ void convert_xyz_to_cube_uv(float x, float y, float z, out int index, out vec2 u
     uv = clamp(0.5 * (vec2(uc, vc) / maxAxis + 1.0), 0.0, 1.0);
 }
 
-vec4 sampleCubemapFace(vec3 dir) {
-    vec2 uvCube;
-    int index;
-
-    // Aplica mapeamento EAC na direção
-    vec3 adjustedDir = applyEACMapping(dir);
-
-    // Converte direção ajustada para face do cubemap e coordenadas UV
-    convert_xyz_to_cube_uv(adjustedDir.x, adjustedDir.y, adjustedDir.z, index, uvCube);
-
-    // Amostra a face correspondente sem interpolação
-    vec4 color;
-    if (index == 0) color = texture(posX, uvCube);
-    else if (index == 1) color = texture(negX, uvCube);
-    else if (index == 2) color = texture(posY, uvCube);
-    else if (index == 3) color = texture(negY, uvCube);
-    else if (index == 4) color = texture(posZ, uvCube);
-    else if (index == 5) color = texture(negZ, uvCube);
-
-    return color;
-}
-
 // Função de interpolação bilinear
 vec4 bilinearInterpolate(sampler2D tex, vec2 uv) {
     vec2 texSize = vec2(textureSize(tex, 0));
@@ -106,6 +84,28 @@ vec4 bilinearInterpolate(sampler2D tex, vec2 uv) {
     vec4 col1 = mix(p01, p11, f.x);
 
     return mix(col0, col1, f.y);
+}
+
+vec4 sampleCubemapFace(vec3 dir) {
+    vec2 uvCube;
+    int index;
+
+    // Aplica mapeamento EAC na direção
+    vec3 adjustedDir = applyEACMapping(dir);
+
+    // Converte direção ajustada para face do cubemap e coordenadas UV
+    convert_xyz_to_cube_uv(adjustedDir.x, adjustedDir.y, adjustedDir.z, index, uvCube);
+
+    // Usa interpolação bilinear na face correspondente
+    vec4 color;
+    if (index == 0) color = bilinearInterpolate(posX, uvCube);
+    else if (index == 1) color = bilinearInterpolate(negX, uvCube);
+    else if (index == 2) color = bilinearInterpolate(posY, uvCube);
+    else if (index == 3) color = bilinearInterpolate(negY, uvCube);
+    else if (index == 4) color = bilinearInterpolate(posZ, uvCube);
+    else if (index == 5) color = bilinearInterpolate(negZ, uvCube);
+
+    return color;
 }
 
 void main() {
