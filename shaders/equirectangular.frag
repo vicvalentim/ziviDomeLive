@@ -126,18 +126,17 @@ void main() {
     vec2 uv = gl_FragCoord.xy / resolution;
     float theta = uv.x * 2.0 * PI;
     float phi = uv.y * PI;
+
+    // Garante que os valores de 'dir' estejam corretos para o cubemap
     vec3 dir = vec3(sin(phi) * sin(theta), cos(phi), sin(phi) * cos(theta));
 
-    // Rotaciona 180 graus ao redor do eixo vertical
+    // Rotaciona 180 graus ao redor do eixo vertical (verifique se isso é realmente necessário)
     dir.x = -dir.x;
     dir.z = -dir.z;
 
-    // Calcula a normal a partir do mapa de alturas
-    vec3 normal = calculateNormalFromHeightMap(uv);
-
-    // Amostra a cor resultante da amostragem direta do cubemap
+    // Amostra a cor diretamente do cubemap usando o mapeamento calculado
     vec4 color = sampleCubemapFace(dir);
 
-    // Ajusta a cor final com base na normal calculada
-    FragColor = color * vec4(normal, 1.0);
+    // Verifica se a cor do cubemap está sendo aplicada corretamente
+    FragColor = color;
 }
