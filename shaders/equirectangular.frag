@@ -2,6 +2,7 @@
 #define PROCESSING_COLOR_SHADER
 
 uniform sampler2D posX, negX, posY, negY, posZ, negZ;
+uniform sampler2D heightMap; // Mapa de alturas em tons de cinza
 uniform vec2 resolution;
 
 const float PI = 3.1415926535897932384626433832795;
@@ -20,6 +21,18 @@ vec3 applyEACMapping(vec3 dir) {
 
     // Converte de volta para coordenadas cartesianas
     return normalize(vec3(sin(eacTheta) * cos(phi), cos(eacTheta), sin(eacTheta) * sin(phi)));
+}
+
+// Função para calcular a normal a partir de um mapa de alturas (grayscale -> Normal Map)
+vec3 calculateNormalFromHeightMap(vec2 uv) {
+    float heightScale = 0.1; // Escala para ajustar o relevo
+    float hL = texture(heightMap, uv + vec2(-0.001, 0.0)).r * heightScale;
+    float hR = texture(heightMap, uv + vec2(0.001, 0.0)).r * heightScale;
+    float hD = texture(heightMap, uv + vec2(0.0, -0.001)).r * heightScale;
+    float hU = texture(heightMap, uv + vec2(0.0, 0.001)).r * heightScale;
+
+    vec3 normal = normalize(vec3(hL - hR, hD - hU, 1.0));
+    return normal;
 }
 
 // Converte coordenadas XYZ para UV e face
@@ -119,9 +132,12 @@ void main() {
     dir.x = -dir.x;
     dir.z = -dir.z;
 
+    // Calcula a normal a partir do mapa de alturas
+    vec3 normal = calculateNormalFromHeightMap(uv);
+
     // Amostra a cor resultante da amostragem direta do cubemap
     vec4 color = sampleCubemapFace(dir);
 
-    // Aplica interpolação bilinear na cor final
-    FragColor = color;
+    // Ajusta a cor final com base na normal calculada
+    FragColor = color * vec4(normal, 1.0);
 }
