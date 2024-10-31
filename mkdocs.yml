@@ -10,34 +10,48 @@ copyright: Copyright &copy; 2024  <a href="https://vicvalentim.com/" target="_bl
 theme:
   name: material
   language: en
+  font:
+    text: Noto Sans
+    code: Noto Mono
 
   palette:
-    # Palette toggle for light mode
-    - media: "(prefers-color-scheme: light)"
-      primary: blue
-      scheme: default
+
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
       toggle:
-        icon: material/weather-sunny 
-        name: Switch to dark mode
-    # Palette toggle for dark mode
-    - media: "(prefers-color-scheme: dark)"
-      primary: blue grey
-      scheme: slate
-      toggle:
-        icon: material/weather-night
+        icon: material/brightness-auto
         name: Switch to light mode
 
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default 
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+
   features:
-    - search.suggest
-    - search.highlight
-    - search.share
-    - content.code.copy
-    - content.code.select
-    - content.code.highlight
-    - content.code.annotate
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
     - navigation.top
+    - toc.integrate
+    - navigation.prune
+    - toc.follow
     - navigation.footer
-    - header.autohide
+
+  icon:
+    repo: fontawesome/brands/github
+    search: material/magnify
+    close: material/close-circle
 
 plugins:
   - search
@@ -88,24 +102,31 @@ markdown_extensions:
   - pymdownx.caret
   - pymdownx.mark
   - pymdownx.tilde
-  - pymdownx.emoji
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.betterem
   - pymdownx.inlinehilite
   - pymdownx.snippets:
       base_path:
-        [
-          "./examples/",
-          "./examples/advanced_usage",
-          "./examples/getting_started",
-        ]
+        - "./examples/"
+        - "./examples/advanced_usage"
+        - "./examples/getting_started"
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
 
 extra:
+  consent:
+    title: "Cookie consent"
+    description: >-
+      We use cookies to recognize your repeated visits and preferences, as well
+      as to measure the effectiveness of our documentation and whether users
+      find what they're searching for. With your consent, you're helping us to
+      make our documentation better.
+    cookies:
+      analytics: Google Analytics
+      custom: Custom cookie
   alternate:
     - name: English
       link: /en/
@@ -113,9 +134,18 @@ extra:
     - name: Português (Brasil)
       link: /pt/
       lang: pt
+  pt_consent:
+    title: "Consentimento de Cookies"
+    description: >-
+      Utilizamos cookies para reconhecer suas visitas e preferências,
+      além de medir a eficácia da nossa documentação. Com seu consentimento,
+      você nos ajuda a melhorar nossa documentação.
 
 extra_css:
-  - assets/extra.css
+  - assets/css/extra.css
+
+extra_javascript:
+  - assets/js/extra.js
 
 # Navegação da documentação
 nav:
