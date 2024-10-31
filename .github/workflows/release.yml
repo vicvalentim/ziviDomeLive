@@ -14,18 +14,44 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: 17
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.5
+
+      - name: Download and Extract Dependencies
+        run: |
+          mkdir -p src/main/libs
+          
+          # Baixa e extrai Syphon
+          curl -L https://github.com/Syphon/Processing/releases/download/latest/Syphon.zip -o Syphon.zip
+          unzip Syphon.zip -d Syphon
+          mv Syphon/Syphon/library/Syphon.jar src/main/libs/
+
+          # Baixa e extrai ControlP5
+          curl -L https://github.com/sojamo/controlp5/releases/download/v2.2.6/controlP5-2.2.6.zip -o controlP5.zip
+          unzip controlP5.zip -d controlP5
+          mv controlP5/controlP5/library/controlP5.jar src/main/libs/
+
+          # Baixa e extrai Spout
+          curl -L https://github.com/leadedge/SpoutProcessing/releases/download/latest/spout.zip -o spout.zip
+          unzip spout.zip -d spout
+          mv spout/spout/library/spout.jar src/main/libs/
+
+          # Limpa os diretórios e arquivos temporários
+          rm -rf Syphon Syphon.zip controlP5 controlP5.zip spout spout.zip
+
       - name: Build with Gradle
         id: build
         run: gradle buildReleaseArtifacts
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
