@@ -1,20 +1,31 @@
-site_name: ziviDomeLive
-site_url: "https://vicvalentim.github.io/ziviDomeLive/"
-use_directory_urls: false  # Para documentação offline
+site_name: ziviDomeLive - Processing Library Documentation
+site_url: https://vicvalentim.github.io/ziviDomeLive/
+repo_url: https://github.com/vicvalentim/ziviDomeLive
+repo_name: "GitHub"
+edit_uri: "blob/main/docs/"
+site_description: "Real-time immersive visuals and 3D rendering framework for fulldome and VR in Processing"
+site_author: "Victor Valentim"
+copyright: Copyright &copy; 2024  <a href="https://vicvalentim.com/" target="_blank">Victor Valentim</a> - MIT License
 
 theme:
   name: material
   language: en
 
   palette:
-    - scheme: slate
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      primary: blue
+      scheme: default
       toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
-    - scheme: default
-      toggle:
-        icon: material/brightness-7
+        icon: material/weather-sunny 
         name: Switch to dark mode
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      primary: blue grey
+      scheme: slate
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
 
   features:
     - search.suggest
@@ -32,16 +43,45 @@ plugins:
   - search
   - offline
   - i18n:
-      docs_structure: folder
+      reconfigure_material: true
+      reconfigure_search: true
+      docs_structure: suffix
       languages:
         - locale: en
           default: true
           name: English
           build: true
         - locale: pt
-          default: false
           name: Português (Brasil)
           build: true
+          site_name: ziviDomeLive - Documentação da Biblioteca Processing
+          site_description: "Framework de visualização imersiva em tempo real e renderização 3D para fulldome e VR em Processing"
+          nav_translations:
+            Home: "Início"
+            Installation: "Instalação"
+            Requirements: "Requisitos"
+            Installation Steps: "Passos de Instalação"
+            Dependencies: "Dependências"
+            Getting Started: "Introdução"
+            Quickstart Guide: "Guia Rápido"
+            Key Features: "Funcionalidades Principais"
+            Usage: "Uso"
+            Basic Usage: "Uso Básico"
+            Scene Management: "Gerenciamento de Cenas"
+            Event Handling: "Manipulação de Eventos"
+            External Integration: "Integração Externa"
+            API Reference: "Referência da API"
+            Overview: "Visão Geral"
+            Core Classes: "Classes Principais"
+            Scene Interface: "Interface de Cena"
+            Helper Functions: "Funções Auxiliares"
+            Examples: "Exemplos"
+            Basic Examples: "Exemplos Básicos"
+            Advanced Examples: "Exemplos Avançados"
+            Contributing: "Contribuindo"
+            Known Issues: "Problemas Conhecidos"
+            Author: "Autor"
+            License: "Licença"
 
 markdown_extensions:
   - admonition
@@ -65,20 +105,13 @@ markdown_extensions:
       line_spans: __span
       pygments_lang_class: true
 
-repo_url: https://github.com/vicvalentim/ziviDomeLive
-repo_name: "GitHub"
-edit_uri: "blob/main/docs/"
-site_description: "Real-time immersive visuals and 3D rendering framework for fulldome and VR in Processing"
-site_author: "Victor Valentim"
-copyright: Copyright &copy; 2024  <a href="https://vicvalentim.com/" target="_blank">Victor Valentim</a> - MIT License
-
 extra:
   alternate:
     - name: English
-      link: /ziviDomeLive/en/
+      link: /en/
       lang: en
     - name: Português (Brasil)
-      link: /ziviDomeLive/pt/
+      link: /pt/
       lang: pt
 
 extra_css:
@@ -86,55 +119,28 @@ extra_css:
 
 # Navegação da documentação
 nav:
-  - en:
-      - Home: en/index.md
-      - Installation:
-          - Requirements: en/installation/requirements.md
-          - Installation Steps: en/installation/installation-steps.md
-          - Dependencies: en/installation/dependencies.md
-      - Getting Started:
-          - Quickstart Guide: en/getting-started/quickstart.md
-          - Key Features: en/getting-started/features.md
-      - Usage:
-          - Basic Usage: en/usage/basic-usage.md
-          - Scene Management: en/usage/scene-management.md
-          - Event Handling: en/usage/event-handling.md
-          - External Integration: en/usage/external-integration.md
-      - API Reference:
-          - Overview: en/api/overview.md
-          - Core Classes: en/api/core-classes.md
-          - Scene Interface: en/api/scene-interface.md
-          - Helper Functions: en/api/helper-functions.md
-      - Examples:
-          - Basic Examples: en/examples/basic.md
-          - Advanced Examples: en/examples/advanced.md
-      - Contributing: en/contributing.md
-      - Known Issues: en/known-issues.md
-      - Author: en/author.md
-      - License: en/license.md
-  - pt:
-      - Home: pt/index.md
-      - Instalação:
-          - Requisitos: pt/installation/requirements.md
-          - Passos de Instalação: pt/installation/installation-steps.md
-          - Dependências: pt/installation/dependencies.md
-      - Introdução:
-          - Guia Rápido: pt/getting-started/quickstart.md
-          - Funcionalidades Principais: pt/getting-started/features.md
-      - Uso:
-          - Uso Básico: pt/usage/basic-usage.md
-          - Gerenciamento de Cenas: pt/usage/scene-management.md
-          - Manipulação de Eventos: pt/usage/event-handling.md
-          - Integração Externa: pt/usage/external-integration.md
-      - Referência da API:
-          - Visão Geral: pt/api/overview.md
-          - Classes Principais: pt/api/core-classes.md
-          - Interface de Cena: pt/api/scene-interface.md
-          - Funções Auxiliares: pt/api/helper-functions.md
-      - Exemplos:
-          - Exemplos Básicos: pt/examples/basic.md
-          - Exemplos Avançados: pt/examples/advanced.md
-      - Contribuindo: pt/contributing.md
-      - Problemas Conhecidos: pt/known-issues.md
-      - Autor: pt/author.md
-      - Licença: pt/license.md
+  - Home: index.md
+  - Installation:
+      - Requirements: installation/requirements.md
+      - Installation Steps: installation/installation-steps.md
+      - Dependencies: installation/dependencies.md
+  - Getting Started:
+      - Quickstart Guide: getting-started/quickstart.md
+      - Key Features: getting-started/features.md
+  - Usage:
+      - Basic Usage: usage/basic-usage.md
+      - Scene Management: usage/scene-management.md
+      - Event Handling: usage/event-handling.md
+      - External Integration: usage/external-integration.md
+  - API Reference:
+      - Overview: api/overview.md
+      - Core Classes: api/core-classes.md
+      - Scene Interface: api/scene-interface.md
+      - Helper Functions: api/helper-functions.md
+  - Examples:
+      - Basic Examples: examples/basic.md
+      - Advanced Examples: examples/advanced.md
+  - Contributing: contributing.md
+  - Known Issues: known-issues.md
+  - Author: author.md
+  - License: license.md
