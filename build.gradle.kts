@@ -41,7 +41,7 @@ group = "com.victorvalentim.zividomelive"
 // - MINOR: Increases when you add new features that are backward-compatible.
 // - PATCH: Increases when you make backward-compatible bug fixes.
 // You can update these numbers as you release new versions of your library.
-version = "1.1.0"
+version = "1.1.1"
 
 // The location of your sketchbook folder. The sketchbook folder holds your installed
 // libraries, tools, and modes. It is needed if you:
@@ -81,12 +81,15 @@ repositories {
 // The provided example uses Apache Commons Math. Replace or add as needed.
 dependencies {
     // resolve Processing core
-    //compileOnly(group = "com.github.micycle1", name = "processing-core-4", version = "4.3.1")
+    compileOnly(group = "com.github.micycle1", name = "processing-core-4", version = "4.3.1")
     // We are currently resolving from an unofficial, jitpack-enabled, processing4 repository.
     // Eventually, this will change to an official source.
 
+    // insert your external dependencies
+    implementation(group = "org.apache.commons", name = "commons-math3", version = "3.6.1")
+    // The provided example uses commons-math3. Replace or add as needed.
+
     // Bibliotecas locais no sketchbook (ControlP5, Syphon, SpoutProcessing)
-    compileOnly(fileTree("src/main/libs/core.jar"))
     compileOnly(fileTree("src/main/libs/controlP5.jar"))
     compileOnly(fileTree("src/main/libs/spout.jar"))
     compileOnly(fileTree("src/main/libs/Syphon.jar"))
