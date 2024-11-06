@@ -1,6 +1,8 @@
 
 # ziviDomeLive
 
+<img src="assets/images/splash.jpg" width="40%" alt="ziviDomeLive - SplashScreen" />
+
 **ziviDomeLive** is a versatile Processing library designed to create immersive visual experiences for fulldome projections, monoscopic VR environments, and interactive installations. It provides a flexible framework to manage scenes, handle 3D rendering, and integrate external controllers or projection technologies like **Syphon** and **Spout**. With its real-time rendering capabilities, **ziviDomeLive** is ideal for planetarium displays, live audiovisual performances, and interactive installations. This documentation will guide you through installation, key features, API references, usage examples, and advanced configurations to maximize the library’s potential.
 
 ---
