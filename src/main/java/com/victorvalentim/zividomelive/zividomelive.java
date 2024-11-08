@@ -4,33 +4,20 @@ import processing.core.*;
 import processing.event.*;
 import processing.opengl.*;
 import controlP5.*;
-import codeanticode.syphon.*;
-import spout.*;
 import java.util.concurrent.*;
-
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- * The `zividomelive` class is responsible for managing the rendering and control of a live dome visualization.
- * It integrates with Processing, Syphon, and Spout to provide a comprehensive solution for dome rendering.
+ * The `zividomelive` class manages rendering and control of a live dome visualization.
+ * It integrates with Processing and `OutputManager` for dome rendering.
  *
- * <p>This class handles the setup, initialization, and rendering of various views including fisheye domemaster,
+ * <p>This class handles setup, initialization, and rendering of fisheye domemaster,
  * equirectangular, cubemap, and standard views. It also manages the control panel and mouse events for interaction.</p>
  *
- * <p>Usage example:</p>
- * <pre>
- * {@code
- * PApplet p = new PApplet();
- * zividomelive domeLive = new zividomelive(p);
- * domeLive.setup();
- * domeLive.draw();
- * }
- * </pre>
- *
- * <p>Note: Ensure that the PApplet instance is properly configured before initializing this class.</p>
- *
- * @see PApplet
- * @see SyphonServer
- * @see Spout
+ * <p>It provides methods to set up the rendering environment, initialize various managers,
+ * handle mouse and key events, and render different views. The class also supports toggling
+ * output methods (NDI, Spout, Syphon) and managing the current scene and view type.</p>
  */
 public class zividomelive {
 
@@ -42,7 +29,7 @@ public class zividomelive {
 	private int resolution = 1024;
 	private boolean showControlPanel = true;
 	private boolean showPreview = false;
-	private boolean enableOutput = false;
+	private final boolean enableOutput = false;
 	private boolean controlPanelShownOnce = false;
 
 	private ControlManager controlManager;
@@ -52,12 +39,9 @@ public class zividomelive {
 	private FisheyeDomemaster fisheyeDomemaster;
 	private CameraManager cameraManager;
 	private CubemapViewRenderer cubemapViewRenderer;
+	private OutputManager outputManager;
 	private SplashScreen splash;
-
-	private SyphonServer syphonServer;
-	private Spout spout;
-
-	private final ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+	private final ExecutorService executorService = ThreadManager.getExecutor();
 
 	/**
 	 * Enum representing the different types of views available.
@@ -76,6 +60,7 @@ public class zividomelive {
 	private ViewType currentView = ViewType.FISHEYE_DOMEMASTER;
 	private boolean pendingReset = false;
 	private int pendingResolution = resolution;
+	private static final Logger LOGGER = Logger.getLogger(zividomelive.class.getName());
 
 	/**
 	 * Constructs a new `zividomelive` instance with the specified PApplet.
@@ -110,7 +95,7 @@ public class zividomelive {
 
 	/**
 	 * Sets up the rendering environment, including frame rate, OpenGL info, texture hints,
-	 * Syphon/Spout setup, and mouse event registration.
+	 * output configuration, and mouse event registration.
 	 *
 	 * @throws IllegalStateException if the PApplet instance is not properly configured
 	 */
@@ -119,48 +104,49 @@ public class zividomelive {
 			throw new IllegalStateException("PApplet instance is not properly configured.");
 		}
 
-		System.out.println("Starting setup...");
+		LOGGER.info("Starting setup...");
 
 		try {
 			p.frameRate(64);
-			System.out.println("Frame rate set to 64.");
+			LOGGER.info("Frame rate set to 64.");
 		} catch (Exception e) {
-			System.out.println("Error setting frame rate: " + e.getMessage());
+			LOGGER.severe("Error setting frame rate: " + e.getMessage());
 		}
 
 		try {
 			printlnOpenGLInfo();
 		} catch (Exception e) {
-			System.out.println("Error printing OpenGL info: " + e.getMessage());
+			LOGGER.severe("Error printing OpenGL info: " + e.getMessage());
 		}
 
 		try {
 			setupHints();
-			System.out.println("Texture hints configured.");
+			LOGGER.info("Texture hints configured.");
 		} catch (Exception e) {
-			System.out.println("Error configuring texture hints: " + e.getMessage());
+			LOGGER.severe("Error configuring texture hints: " + e.getMessage());
 		}
 
 		p.registerMethod("post", this);
 
 		try {
-			setupSyphonOrSpout();
-			System.out.println("Syphon/Spout setup completed.");
-		} catch (Exception e) {
-			System.out.println("Error setting up Syphon/Spout: " + e.getMessage());
-		}
-
-		try {
 			registerMouseEvents();
 		} catch (Exception e) {
-			System.out.println("Error registering mouse events: " + e.getMessage());
+			LOGGER.severe("Error registering mouse events: " + e.getMessage());
+		}
+
+		// Configure and activate OutputManager
+		try {
+			outputManager = new OutputManager(this);
+			LOGGER.info("OutputManager initialized without active outputs.");
+		} catch (Exception e) {
+			LOGGER.severe("Error initializing OutputManager: " + e.getMessage());
 		}
 
 		splash = new SplashScreen(p);
 		splash.start();
-
-		System.out.println("Setup completed.");
+		LOGGER.info("Setup completed.");
 	}
+
 
 	/**
 	 * Prints OpenGL information including version, vendor, and renderer.
@@ -182,7 +168,6 @@ public class zividomelive {
 		p.hint(PConstants.ENABLE_OPTIMIZED_STROKE);  // Otimiza a renderização de contornos
 	}
 
-
 	/**
 	 * Post-initialization method to set up managers after the initial setup.
 	 */
@@ -199,25 +184,24 @@ public class zividomelive {
 	 */
 	public void initializeManagers() {
 		try {
-			System.out.println("Initializing managers...");
+			LOGGER.info("Initializing managers...");
 
 			CompletableFuture<Void> cameraManagerFuture = CompletableFuture.runAsync(() -> {
 				cameraManager = new CameraManager();
-				System.out.println("CameraManager initialized.");
-			});
+				LOGGER.info("CameraManager initialized.");
+			}, ThreadManager.getExecutor());
 
-			CompletableFuture<Void> renderersFuture = CompletableFuture.runAsync(this::initializeRenderers);
+			CompletableFuture<Void> renderersFuture = CompletableFuture.runAsync(this::initializeRenderers, ThreadManager.getExecutor());
 
 			CompletableFuture<Void> controlManagerFuture = CompletableFuture.runAsync(() -> {
 				controlManager = new ControlManager(p, this, resolution);
-				System.out.println("ControlManager initialized.");
-			});
+				LOGGER.info("ControlManager initialized.");
+			}, ThreadManager.getExecutor());
 
 			CompletableFuture.allOf(cameraManagerFuture, renderersFuture, controlManagerFuture).join();
-			System.out.println("Managers initialized successfully.");
+			LOGGER.info("Managers initialized successfully.");
 		} catch (Exception e) {
-			System.out.println("Error initializing managers: " + e.getMessage());
-			e.printStackTrace();
+			LOGGER.log(Level.SEVERE, "Error initializing managers", e);
 		}
 	}
 
@@ -226,7 +210,7 @@ public class zividomelive {
 	 */
 	void initializeRenderers() {
 		try {
-			System.out.println("Initializing renderers...");
+			LOGGER.info("Initializing renderers...");
 
 			// Paths to shader files
 			String equirectangularVertexShaderPath = "data/shaders/equirectangular.vert";
@@ -234,34 +218,34 @@ public class zividomelive {
 			String domemasterVertexShaderPath = "data/shaders/domemaster.vert";
 			String domemasterFragmentShaderPath = "data/shaders/domemaster.frag";
 
-			// Load shaders
-			PShader equirectangularShader = p.loadShader(equirectangularFragmentShaderPath, equirectangularVertexShaderPath);
-			PShader domemasterShader = p.loadShader(domemasterFragmentShaderPath, domemasterVertexShaderPath);
+			// Load shaders asynchronously
+			CompletableFuture<PShader> equirectangularShaderFuture = CompletableFuture.supplyAsync(() -> p.loadShader(equirectangularFragmentShaderPath, equirectangularVertexShaderPath), ThreadManager.getExecutor());
+			CompletableFuture<PShader> domemasterShaderFuture = CompletableFuture.supplyAsync(() -> p.loadShader(domemasterFragmentShaderPath, domemasterVertexShaderPath), ThreadManager.getExecutor());
 
 			// Initialize renderers asynchronously
 			CompletableFuture<Void> cubemapRendererFuture = CompletableFuture.runAsync(() -> {
 				cubemapRenderer = new CubemapRenderer(resolution, p);
-				System.out.println("CubemapRenderer initialized: " + true);
+				LOGGER.info("CubemapRenderer initialized.");
 			});
 
 			CompletableFuture<Void> equirectangularRendererFuture = CompletableFuture.runAsync(() -> {
 				equirectangularRenderer = new EquirectangularRenderer(resolution, equirectangularFragmentShaderPath, equirectangularVertexShaderPath, p);
-				System.out.println("EquirectangularRenderer initialized: " + true);
+				LOGGER.info("EquirectangularRenderer initialized.");
 			});
 
 			CompletableFuture<Void> standardRendererFuture = CompletableFuture.runAsync(() -> {
 				standardRenderer = new StandardRenderer(p, p.width, p.height, currentScene);
-				System.out.println("StandardRenderer initialized: " + true);
+				LOGGER.info("StandardRenderer initialized.");
 			});
 
 			CompletableFuture<Void> fisheyeDomemasterFuture = CompletableFuture.runAsync(() -> {
 				fisheyeDomemaster = new FisheyeDomemaster(resolution, domemasterFragmentShaderPath, domemasterVertexShaderPath, p);
-				System.out.println("FisheyeDomemaster initialized: " + true);
+				LOGGER.info("FisheyeDomemaster initialized.");
 			});
 
 			CompletableFuture<Void> cubemapViewRendererFuture = CompletableFuture.runAsync(() -> {
 				cubemapViewRenderer = new CubemapViewRenderer(p, resolution);
-				System.out.println("CubemapViewRenderer initialized: " + true);
+				LOGGER.info("CubemapViewRenderer initialized.");
 			});
 
 			// Wait for all renderers to be initialized
@@ -273,29 +257,9 @@ public class zividomelive {
 					cubemapViewRendererFuture
 			).join();
 
-			System.out.println("Renderers initialized successfully.");
+			LOGGER.info("Renderers initialized successfully.");
 		} catch (Exception e) {
-			System.out.println("Error initializing renderers: " + e.getMessage());
-			e.printStackTrace();
-		}
-	}
-
-
-	/**
-	 * Sets up Syphon or Spout based on the operating system.
-	 */
-	void setupSyphonOrSpout() {
-		try {
-			String os = System.getProperty("os.name").toLowerCase();
-			if (os.contains("mac")) {
-				syphonServer = new SyphonServer(p, "ziviDomeLive Syphon");
-				System.out.println("SyphonServer initialized for macOS.");
-			} else if (os.contains("win")) {
-				spout = new Spout(p);
-				System.out.println("Spout initialized for Windows.");
-			}
-		} catch (Exception e) {
-			System.out.println("Error setting up Syphon/Spout: " + e.getMessage());
+			LOGGER.log(Level.SEVERE, "Error initializing renderers", e);
 		}
 	}
 
@@ -303,12 +267,14 @@ public class zividomelive {
 	 * Registers mouse events for interaction.
 	 */
 	void registerMouseEvents() {
-		try {
-			p.registerMethod("mouseEvent", this);
-			System.out.println("Mouse events registered.");
-		} catch (Exception e) {
-			System.out.println("Error registering mouse events: " + e.getMessage());
-		}
+		executorService.submit(() -> {
+			try {
+				p.registerMethod("mouseEvent", this);
+				LOGGER.info("Mouse events registered.");
+			} catch (Exception e) {
+				LOGGER.log(Level.SEVERE, "Error registering mouse events", e);
+			}
+		});
 	}
 
 	/**
@@ -351,11 +317,11 @@ public class zividomelive {
 		handleGraphicsReset();     // Garante que o reset gráfico seja realizado, se necessário
 		captureCubemap();          // Captura o cubemap para a cena atual
 		renderView();              // Renderiza a visualização principal
+		outputManager.sendOutput(); // Envia a saída para os métodos de saída ativados
 
 		if (showPreview) {
 			drawFloatingPreview(); // Desenha uma visualização flutuante, se ativada
 		}
-		sendOutput();              // Envia a saída para Syphon/Spout, se habilitado
 		drawControlPanel();        // Exibe o painel de controle
 	}
 
@@ -366,10 +332,10 @@ public class zividomelive {
 		}
 
 		clearBackground();
-		handleGraphicsReset(); // Ensure graphics reset is handled
+		handleGraphicsReset(); // Garante que o reset gráfico seja realizado
 		captureCubemap();
-		sendOutput();
-		drawControlPanel();
+		outputManager.sendOutput(); // Envia a saída para os métodos de saída ativados
+		drawControlPanel();         // Exibe o painel de controle
 	}
 
 	void clearBackground() {
@@ -381,12 +347,12 @@ public class zividomelive {
 	 */
 	private void handleGraphicsReset() {
 		if (pendingReset) {
-			System.out.println("Pending reset detected. Changing resolution to: " + pendingResolution);
+			LOGGER.info("Pending reset detected. Changing resolution to: " + pendingResolution);
 			releaseGraphicsResources(); // Libera os recursos gráficos antigos
 			resolution = pendingResolution;
 			initializeRenderers(); // Inicializa novos recursos gráficos
 			pendingReset = false;
-			System.out.println("Graphics reset completed.");
+			LOGGER.info("Graphics reset completed.");
 		}
 	}
 
@@ -402,20 +368,26 @@ public class zividomelive {
 	}
 
 	/**
-	 * Displays the given PGraphics object on the screen.
+	 * Displays the given PGraphics object on the screen at a proportionate size.
+	 * Reduces the rendering scale based on screen size to improve FPS.
 	 *
 	 * @param pg the PGraphics object to be displayed
 	 */
 	private void displayView(PGraphics pg) {
+		// Proporção de aspecto do buffer PGraphics
 		float aspectRatio = pg.width / (float) pg.height;
-		float displayWidth = p.width;
-		float displayHeight = p.width / aspectRatio;
 
+		// Ajusta a largura e altura de exibição para coincidir com a tela
+		float displayWidth = p.width;
+		float displayHeight = displayWidth / aspectRatio;
+
+		// Ajusta a altura e largura se a altura calculada for maior que a altura da tela
 		if (displayHeight > p.height) {
 			displayHeight = p.height;
-			displayWidth = p.height * aspectRatio;
+			displayWidth = displayHeight * aspectRatio;
 		}
 
+		// Exibe o PGraphics no centro da tela ajustado para proporção
 		p.image(pg, (p.width - displayWidth) / 2, (p.height - displayHeight) / 2, displayWidth, displayHeight);
 	}
 
@@ -465,19 +437,6 @@ public class zividomelive {
 	}
 
 	/**
-	 * Sends the output to Syphon or Spout if enabled.
-	 */
-	private void sendOutput() {
-		if (isEnableOutput()) {
-			if (syphonServer != null) {
-				syphonServer.sendImage(fisheyeDomemaster.getDomemasterGraphics());
-			} else if (spout != null) {
-				spout.sendTexture(fisheyeDomemaster.getDomemasterGraphics());
-			}
-		}
-	}
-
-	/**
 	 * Renders the fisheye domemaster view by applying the shader and displaying the view.
 	 * If the FisheyeDomemaster is not initialized, an error message is printed.
 	 */
@@ -491,7 +450,7 @@ public class zividomelive {
 			System.out.println("Error: FisheyeDomemaster not initialized.");
 		}
 	}
-	
+
 	/**
 	 * Renders the equirectangular view by invoking the EquirectangularRenderer.
 	 * If the EquirectangularRenderer is not initialized, an error message is printed.
@@ -563,6 +522,63 @@ public class zividomelive {
 	}
 
 	/**
+	 * Disposes of the resources used by the instance.
+	 */
+	private void releaseGraphicsResources() {
+		if (cubemapRenderer != null) {
+			cubemapRenderer.dispose();
+			cubemapRenderer = null;
+		}
+		if (equirectangularRenderer != null) {
+			equirectangularRenderer.dispose();
+			equirectangularRenderer = null;
+		}
+		if (standardRenderer != null) {
+			standardRenderer.dispose();
+			standardRenderer = null;
+		}
+		if (fisheyeDomemaster != null) {
+			fisheyeDomemaster.dispose();
+			fisheyeDomemaster = null;
+		}
+		if (cubemapViewRenderer != null) {
+			cubemapViewRenderer.dispose();
+			cubemapViewRenderer = null;
+		}
+	}
+
+	/**
+	 * Resets the graphics with a new resolution.
+	 *
+	 * @param newResolution the new resolution to be set
+	 */
+	public void resetGraphics(int newResolution) {
+		pendingReset = true;
+		pendingResolution = newResolution;
+		LOGGER.info("Changing resolution to: " + newResolution); // Log the new resolution
+		ThreadManager.getExecutor().submit(() -> {
+			try {
+				// Simulate some delay or processing if needed
+				Thread.sleep(100);
+				LOGGER.info("Resolution change processed.");
+			} catch (InterruptedException e) {
+				LOGGER.log(Level.SEVERE, "Error during resolution change processing", e);
+				Thread.currentThread().interrupt();
+			}
+		});
+	}
+
+	/**
+	 * Sets the current scene to be rendered and updates all relevant components.
+	 * @param newScene the new scene to be set as the current scene
+	 */
+	public void setCurrentScene(Scene newScene) {
+		this.currentScene = newScene;
+		this.setScene(newScene); // Update the scene in the parent PApplet
+		standardRenderer.setCurrentScene(newScene); // Update the scene in StandardRenderer
+	}
+
+	/**
 	 * Handles mouse events for interaction.
 	 *
 	 * @param event the MouseEvent object representing the mouse event
@@ -588,11 +604,11 @@ public class zividomelive {
 		if (!controlManager.isNumberboxActive()) {
 			if (p.key == 'h') {
 				showControlPanel = !showControlPanel;
-				System.out.println("Toggling control panel visibility: " + showControlPanel);
+				LOGGER.info("Toggling control panel visibility: " + showControlPanel);
 			}
 			if (p.key == 'm') {
 				setCurrentView(ViewType.values()[(getCurrentView().ordinal() + 1) % ViewType.values().length]);
-				System.out.println("Switching view to: " + getCurrentView());
+				LOGGER.info("Switching view to: " + getCurrentView());
 			}
 		}
 	}
@@ -603,9 +619,24 @@ public class zividomelive {
 	 * @param theEvent the ControlEvent object representing the control event
 	 */
 	public void controlEvent(ControlEvent theEvent) {
-		if (controlManager != null) {
-			controlManager.handleEvent(theEvent);
-		}
+		ThreadManager.getExecutor().submit(() -> {
+			if (controlManager != null) {
+				try {
+					controlManager.handleEvent(theEvent);
+				} catch (Exception e) {
+					LOGGER.log(Level.SEVERE, "Error handling control event", e);
+				}
+			}
+		});
+	}
+
+	/**
+	 * Returns the instance of the OutputManager.
+	 *
+	 * @return the OutputManager instance
+	 */
+	public OutputManager getOutputManager() {
+		return outputManager;
 	}
 
 	/**
@@ -722,18 +753,11 @@ public class zividomelive {
 	 * @return true if output is enabled, false otherwise
 	 */
 	public boolean isEnableOutput() {
-		return enableOutput;
+		return outputManager.isNdiEnabled() || outputManager.isSpoutEnabled() || outputManager.isSyphonEnabled();
 	}
 
-	/**
-	 * Sets whether output is enabled.
-	 *
-	 * @param enableOutput true to enable output, false to disable
-	 */
-	public void setEnableOutput(boolean enableOutput) {
-		this.enableOutput = enableOutput;
-	}
 
+	
 	/**
 	 * Checks if the preview is shown.
 	 *
@@ -760,50 +784,12 @@ public class zividomelive {
 	}
 
 	/**
-	 * Disposes of the resources used by the instance.
-	 */
-	private void releaseGraphicsResources() {
-		if (cubemapRenderer != null) {
-			cubemapRenderer.dispose();
-			cubemapRenderer = null;
-		}
-		if (equirectangularRenderer != null) {
-			equirectangularRenderer.dispose();
-			equirectangularRenderer = null;
-		}
-		if (standardRenderer != null) {
-			standardRenderer.dispose();
-			standardRenderer = null;
-		}
-		if (fisheyeDomemaster != null) {
-			fisheyeDomemaster.dispose();
-			fisheyeDomemaster = null;
-		}
-		if (cubemapViewRenderer != null) {
-			cubemapViewRenderer.dispose();
-			cubemapViewRenderer = null;
-		}
-	}
-
-	/**
-	 * Resets the graphics with a new resolution.
+	 * Sets the FisheyeDomemaster instance.
 	 *
-	 * @param newResolution the new resolution to be set
+	 * @param fisheyeDomemaster the new FisheyeDomemaster instance
 	 */
-	public void resetGraphics(int newResolution) {
-		pendingReset = true;
-		pendingResolution = newResolution;
-		System.out.println("Changing resolution to: " + newResolution); // Imprime a nova resolução no console
-	}
-
-	/**
-	 * Sets the current scene to be rendered and updates all relevant components.
-	 * @param newScene the new scene to be set as the current scene
-	 */
-	public void setCurrentScene(Scene newScene) {
-		this.currentScene = newScene;
-		this.setScene(newScene); // Update the scene in the parent PApplet
-		standardRenderer.setCurrentScene(newScene); // Update the scene in StandardRenderer
+	public void setFisheyeDomemaster(FisheyeDomemaster fisheyeDomemaster) {
+		this.fisheyeDomemaster = fisheyeDomemaster;
 	}
 
 	/**
@@ -816,12 +802,27 @@ public class zividomelive {
 	}
 
 	/**
-	 * Sets the FisheyeDomemaster instance.
-	 *
-	 * @param fisheyeDomemaster the new FisheyeDomemaster instance
+	 * Returns the instance of the EquirectangularRenderer.
+	 * @return the EquirectangularRenderer instance.
 	 */
-	public void setFisheyeDomemaster(FisheyeDomemaster fisheyeDomemaster) {
-		this.fisheyeDomemaster = fisheyeDomemaster;
+	public EquirectangularRenderer getEquirectangularRenderer() {
+		return equirectangularRenderer;
+	}
+
+	/**
+	 * Returns the instance of the CubemapViewRenderer.
+	 * @return the CubemapViewRenderer instance.
+	 */
+	public CubemapViewRenderer getCubemapViewRenderer() {
+		return cubemapViewRenderer;
+	}
+
+	/**
+	 * Returns the instance of the StandardRenderer.
+	 * @return the StandardRenderer instance.
+	 */
+	public StandardRenderer getStandardRenderer() {
+		return standardRenderer;
 	}
 
 	/**
