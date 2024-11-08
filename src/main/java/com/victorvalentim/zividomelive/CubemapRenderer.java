@@ -1,11 +1,19 @@
 package com.victorvalentim.zividomelive;
 
 import processing.core.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * The CubemapRenderer class handles the creation and rendering of cubemap faces with dynamic frustum adjustments.
  */
 public class CubemapRenderer {
+    private static final Logger LOGGER = Logger.getLogger(CubemapRenderer.class.getName()); // Logger para a classe
+
+    private final ExecutorService executor; // Pool de threads dinâmico para cálculos
     private PGraphics[] cubemapFaces;
     private int resolution;
     private final PApplet parent;
@@ -13,6 +21,16 @@ public class CubemapRenderer {
     // Valores padrão para os planos do frustum (podem ser ajustados conforme necessário)
     final float defaultNearPlane = 0.01f;
     final float defaultFarPlane = 22000.0f;
+
+    // Variáveis para armazenar os resultados dos cálculos de frustum
+    private volatile float cachedNearPlane;
+    private volatile float cachedFarPlane;
+    private volatile float cachedFieldOfView;
+
+    // Futuros para cálculos assíncronos
+    private Future<Float> nearPlaneFuture;
+    private Future<Float> farPlaneFuture;
+    private Future<Float> fieldOfViewFuture;
 
     /**
      * Constructs a CubemapRenderer with the specified initial resolution and parent PApplet.
@@ -23,6 +41,10 @@ public class CubemapRenderer {
     CubemapRenderer(int initialResolution, PApplet parent) {
         this.parent = parent;
         this.resolution = initialResolution;
+        int numThreads = Runtime.getRuntime().availableProcessors(); // Detecta o número de núcleos
+        this.executor = Executors.newFixedThreadPool(numThreads); // Cria o pool de threads dinâmico
+        initializeCubemapFaces();
+        calculateFrustumParametersAsync(); // Cálculo inicial
     }
 
     /**
@@ -47,15 +69,26 @@ public class CubemapRenderer {
         }
     }
 
+    /**
+     * Configura a câmera para cada face usando parâmetros de frustum calculados.
+     */
     private void configureCameraForFace(PGraphics pg, CameraOrientation orientation, float pitch, float yaw, float roll) {
         PVector eye = new PVector(0, 0, 0);
 
-        float dynamicNearPlane = calculateNearPlaneForFace(orientation);
-        float dynamicFarPlane = calculateFarPlaneForFace(orientation);
-        float fieldOfView = calculateFieldOfViewForFace(orientation);
+        // Certifique-se de que os parâmetros foram calculados antes de configurar a câmera
+        if (nearPlaneFuture.isDone() && farPlaneFuture.isDone() && fieldOfViewFuture.isDone()) {
+            try {
+                cachedNearPlane = nearPlaneFuture.get();
+                cachedFarPlane = farPlaneFuture.get();
+                cachedFieldOfView = fieldOfViewFuture.get();
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Erro ao obter valores de frustum para a configuração da câmera", e);
+            }
+        }
 
+        // Configura a câmera e perspectiva com os valores calculados
         pg.camera(eye.x, eye.y, eye.z, orientation.centerX, orientation.centerY, orientation.centerZ, orientation.upX, orientation.upY, orientation.upZ);
-        pg.perspective(fieldOfView, 1, dynamicNearPlane, dynamicFarPlane);
+        pg.perspective(cachedFieldOfView, 1, cachedNearPlane, cachedFarPlane);
 
         pg.translate((float) pg.width / 2, (float) pg.height / 2, 0);
         pg.rotateX(pitch);
@@ -64,25 +97,41 @@ public class CubemapRenderer {
         pg.translate((float) -pg.width / 2, (float) -pg.height / 2, 0);
     }
 
-    private float calculateNearPlaneForFace(CameraOrientation orientation) {
+    /**
+     * Inicia o cálculo assíncrono dos parâmetros do frustum.
+     */
+    private void calculateFrustumParametersAsync() {
+        // Cálculo assíncrono dos parâmetros para evitar recalcular a cada face
+        nearPlaneFuture = executor.submit(this::calculateNearPlaneForFace);
+        farPlaneFuture = executor.submit(this::calculateFarPlaneForFace);
+        fieldOfViewFuture = executor.submit(this::calculateFieldOfViewForFace);
+    }
+
+    /**
+     * Métodos de cálculo paralelizados para parâmetros de frustum.
+     */
+    private float calculateNearPlaneForFace() {
         return defaultNearPlane;
     }
 
-    private float calculateFarPlaneForFace(CameraOrientation orientation) {
+    private float calculateFarPlaneForFace() {
         return defaultFarPlane;
     }
 
-    private float calculateFieldOfViewForFace(CameraOrientation orientation) {
+    private float calculateFieldOfViewForFace() {
         return PApplet.PI / 2;
     }
 
+    /**
+     * Captures each face of the cubemap using calculated camera parameters.
+     */
     void captureCubemap(float pitch, float yaw, float roll, CameraManager cameraManager, Scene currentScene) {
         if (cubemapFaces == null) {
             initializeCubemapFaces();
         }
         for (int i = 0; i < 6; i++) {
             cubemapFaces[i].beginDraw();
-            cubemapFaces[i].background(0,0);
+            cubemapFaces[i].background(0, 0);
             configureCameraForFace(cubemapFaces[i], cameraManager.getOrientation(i), pitch, yaw, roll);
             if (currentScene != null) {
                 currentScene.sceneRender(cubemapFaces[i]);
@@ -98,9 +147,8 @@ public class CubemapRenderer {
         return cubemapFaces;
     }
 
-   /**
-     * Disposes of the cubemap faces, releasing any resources associated with them.
-     * This method should be called when the cubemap faces are no longer needed to free up memory.
+    /**
+     * Disposes of the cubemap faces and shuts down the thread pool to free up resources.
      */
     public void dispose() {
         if (cubemapFaces != null) {
@@ -110,6 +158,9 @@ public class CubemapRenderer {
                 }
             }
             cubemapFaces = null;
+        }
+        if (executor != null) {
+            executor.shutdown(); // Encerra o pool de threads
         }
     }
 }
