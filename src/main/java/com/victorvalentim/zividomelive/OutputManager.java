@@ -9,8 +9,8 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.logging.Logger;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 
 /**
  * The `OutputManager` class manages the output of frames to various systems such as NDI, Spout, and Syphon.
@@ -41,6 +41,7 @@ public class OutputManager {
 	private final AtomicInteger bufferIndex = new AtomicInteger(0);
 	private int lastWidth = 0;
 	private int lastHeight = 0;
+	private DevolayVideoFrame reusableFrame; // Reusable NDI video frame
 	private final int THREAD_COUNT = Runtime.getRuntime().availableProcessors();
 
 	/**
@@ -69,6 +70,7 @@ public class OutputManager {
 	private void initNDI() {
 		if (!ndiEnabled && ndiSender == null) {
 			ndiSender = new DevolaySender("ziviDomeLive NDI Output");
+			reusableFrame = new DevolayVideoFrame(); // Initialize reusable frame
 			ndiEnabled = true;
 			logger.info("NDI output initialized.");
 		}
@@ -198,7 +200,6 @@ public class OutputManager {
 		int bufferSize = width * height * 4;
 
 		// Adjust buffer if resolution changes or buffers aren't initialized
-		// Two buffers to handle frame flipping
 		int BUFFER_COUNT = 2;
 		if (width != lastWidth || height != lastHeight || ndiBuffers == null) {
 			ndiBuffers = new ByteBuffer[BUFFER_COUNT];
@@ -210,7 +211,6 @@ public class OutputManager {
 			lastHeight = height;
 		}
 
-		// Use current buffer for frame
 		ByteBuffer ndiBuffer = ndiBuffers[bufferIndex.getAndIncrement() % BUFFER_COUNT];
 		ndiBuffer.clear();
 
@@ -224,15 +224,14 @@ public class OutputManager {
 
 		ndiBuffer.flip();
 
-		DevolayVideoFrame videoFrame = new DevolayVideoFrame();
-		videoFrame.setResolution(width, height);
-		videoFrame.setData(ndiBuffer);
-		videoFrame.setFourCCType(DevolayFrameFourCCType.RGBA);
-		videoFrame.setLineStride(width * 4);
-		videoFrame.setFormatType(DevolayFrameFormatType.INTERLEAVED);
-		videoFrame.setFrameRate(60, 1);
+		reusableFrame.setResolution(width, height); // Reusable frame setup
+		reusableFrame.setData(ndiBuffer);
+		reusableFrame.setFourCCType(DevolayFrameFourCCType.RGBA);
+		reusableFrame.setLineStride(width * 4);
+		reusableFrame.setFormatType(DevolayFrameFormatType.INTERLEAVED);
+		reusableFrame.setFrameRate(60, 1);
 
-		return videoFrame;
+		return reusableFrame;
 	}
 
 	/**
@@ -256,7 +255,6 @@ public class OutputManager {
 					int argb = pg.pixels[j];
 					int index = j * 4;
 
-					// Direct copy of RGBA values as PGraphics uses ARGB format
 					buffer.put(index, (byte) ((argb >> 16) & 0xFF));   // Red
 					buffer.put(index + 1, (byte) ((argb >> 8) & 0xFF)); // Green
 					buffer.put(index + 2, (byte) (argb & 0xFF));        // Blue
@@ -276,7 +274,8 @@ public class OutputManager {
 		shutdownNDI();
 		shutdownSpout();
 		shutdownSyphon();
-		logger.info("All output services have been shut down.");
+		ThreadManager.shutdown(); // Ensures executor is shut down
+		logger.info("All output services and thread pool have been shut down.");
 	}
 
 	/**
@@ -286,6 +285,7 @@ public class OutputManager {
 		if (ndiSender != null) {
 			ndiSender.close();
 			ndiSender = null;
+			reusableFrame = null; // Clears reusable frame
 			logger.info("NDI output shut down.");
 		}
 	}
