@@ -6,7 +6,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -17,23 +16,9 @@ import java.util.logging.Logger;
  */
 public class ThreadManager {
 
-	private static final Logger LOGGER = Logger.getLogger(ThreadManager.class.getName());
+	private static final Logger LOGGER = LogManager.getLogger(); // Using LogManager for centralized logging
 	private static final int NUM_THREADS = Runtime.getRuntime().availableProcessors();
 	private static final ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
-
-	static {
-		// Remove os handlers do logger pai para evitar que mensagens sejam exibidas no console
-		Logger rootLogger = Logger.getLogger("");
-		for (var handler : rootLogger.getHandlers()) {
-			rootLogger.removeHandler(handler);
-		}
-
-		// Configura o LOGGER para não exibir mensagens
-		LOGGER.setUseParentHandlers(false);
-		ConsoleHandler consoleHandler = new ConsoleHandler();
-		consoleHandler.setLevel(Level.OFF); // Define o nível para OFF
-		LOGGER.addHandler(consoleHandler);
-	}
 
 	private ThreadManager() {
 		// Private constructor to prevent instantiation
@@ -141,4 +126,3 @@ public class ThreadManager {
 		return executor;
 	}
 }
-
