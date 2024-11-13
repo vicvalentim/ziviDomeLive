@@ -19,7 +19,7 @@ import java.util.logging.Logger;
  */
 public class OutputManager {
 
-	private final Logger logger = Logger.getLogger(OutputManager.class.getName());
+	private final Logger logger = LogManager.getLogger();
 	private zividomelive.ViewType currentView;
 	private zividomelive.ViewType ndiView;
 	private zividomelive.ViewType spoutView;
