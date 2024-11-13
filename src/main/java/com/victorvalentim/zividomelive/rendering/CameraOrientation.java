@@ -1,4 +1,4 @@
-package com.victorvalentim.zividomelive;
+package com.victorvalentim.zividomelive.rendering;
 
 /**
  * The CameraOrientation class represents the orientation of a camera in 3D space.

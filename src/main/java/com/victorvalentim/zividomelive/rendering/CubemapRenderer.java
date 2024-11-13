@@ -1,5 +1,6 @@
-package com.victorvalentim.zividomelive;
+package com.victorvalentim.zividomelive.rendering;
 
+import com.victorvalentim.zividomelive.Scene;
 import processing.core.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -38,7 +39,7 @@ public class CubemapRenderer {
      * @param initialResolution the initial resolution of the cubemap faces
      * @param parent the parent PApplet instance
      */
-    CubemapRenderer(int initialResolution, PApplet parent) {
+	public CubemapRenderer(int initialResolution, PApplet parent) {
         this.parent = parent;
         this.resolution = initialResolution;
         int numThreads = Runtime.getRuntime().availableProcessors(); // Detecta o número de núcleos
@@ -123,9 +124,15 @@ public class CubemapRenderer {
     }
 
     /**
-     * Captures each face of the cubemap using calculated camera parameters.
+     * Captures the six faces of the cubemap based on the camera's orientation.
+     *
+     * @param pitch The pitch angle of the camera.
+     * @param yaw The yaw angle of the camera.
+     * @param roll The roll angle of the camera.
+     * @param cameraManager The camera manager that handles the camera orientations.
+     * @param currentScene The current scene being rendered.
      */
-    void captureCubemap(float pitch, float yaw, float roll, CameraManager cameraManager, Scene currentScene) {
+	public void captureCubemap(float pitch, float yaw, float roll, CameraManager cameraManager, Scene currentScene) {
         if (cubemapFaces == null) {
             initializeCubemapFaces();
         }
@@ -140,7 +147,13 @@ public class CubemapRenderer {
         }
     }
 
-    PGraphics[] getCubemapFaces() {
+   /**
+     * Returns the array of cubemap faces. If the cubemap faces have not been
+     * initialized, this method will initialize them first.
+     *
+     * @return an array of PGraphics representing the cubemap faces
+     */
+    public PGraphics[] getCubemapFaces() {
         if (cubemapFaces == null) {
             initializeCubemapFaces();
         }

@@ -1,4 +1,4 @@
-package com.victorvalentim.zividomelive;
+package com.victorvalentim.zividomelive.rendering;
 
 import processing.core.*;
 
@@ -18,7 +18,7 @@ public class CubemapViewRenderer {
      * @param parent the parent PApplet instance
      * @param resolution the resolution of the cubemap
      */
-    CubemapViewRenderer(PApplet parent, int resolution) {
+	public CubemapViewRenderer(PApplet parent, int resolution) {
         this.parent = parent;
         this.resolution = resolution;
     }
@@ -50,7 +50,7 @@ public class CubemapViewRenderer {
      *
      * @return the PGraphics object representing the cubemap
      */
-    PGraphics getCubemap() {
+	public PGraphics getCubemap() {
         if (cubemap == null) {
             initializeCubemap();
         }
@@ -62,7 +62,7 @@ public class CubemapViewRenderer {
      *
      * @param cubemapFaces an array of PGraphics objects representing the cubemap faces
      */
-    void drawCubemapToGraphics(PGraphics[] cubemapFaces) {
+	public void drawCubemapToGraphics(PGraphics[] cubemapFaces) {
         if (cubemapFaces == null || cubemapFaces.length != 6) {
             System.out.println("Error: Invalid cubemapFaces.");
             return;

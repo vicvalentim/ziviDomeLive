@@ -1,5 +1,6 @@
-package com.victorvalentim.zividomelive;
+package com.victorvalentim.zividomelive.rendering;
 
+import com.victorvalentim.zividomelive.Scene;
 import processing.core.*;
 
 /**
@@ -20,7 +21,7 @@ public class StandardRenderer {
      * @param height the height of the standard view
      * @param currentScene the current scene to be rendered
      */
-    StandardRenderer(PApplet parent, int width, int height, Scene currentScene) {
+	public StandardRenderer(PApplet parent, int width, int height, Scene currentScene) {
         this.parent = parent;
         this.currentScene = currentScene;
         this.standardView = null;
@@ -49,7 +50,7 @@ public class StandardRenderer {
      * Renders the current scene using the standard view PGraphics object.
      * Updates the camera and applies its settings before rendering the scene.
      */
-    void render() {
+	public void render() {
         if (standardView == null) {
             initializeStandardView(parent.width, parent.height);
         }
@@ -71,7 +72,7 @@ public class StandardRenderer {
      *
      * @return the PGraphics object representing the standard view
      */
-    PGraphics getStandardView() {
+	public PGraphics getStandardView() {
         if (standardView == null) {
             initializeStandardView(parent.width, parent.height);
         }

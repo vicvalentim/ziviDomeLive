@@ -1,4 +1,4 @@
-package com.victorvalentim.zividomelive;
+package com.victorvalentim.zividomelive.management;
 
 import java.io.IOException;
 import java.util.logging.*;

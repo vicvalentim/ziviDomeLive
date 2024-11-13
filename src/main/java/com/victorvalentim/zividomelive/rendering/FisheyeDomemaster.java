@@ -1,4 +1,4 @@
-package com.victorvalentim.zividomelive;
+package com.victorvalentim.zividomelive.rendering;
 
 
 import processing.core.PApplet;
@@ -79,7 +79,7 @@ public class FisheyeDomemaster {
      * @param equirectangular the PGraphics object representing the equirectangular map
      * @param fov the field of view to use for the shader
      */
-    void applyShader(PGraphics equirectangular, float fov) {
+	public void applyShader(PGraphics equirectangular, float fov) {
         if (equirectangular == null) {
             System.out.println("Equirectangular PGraphics is null.");
             return;

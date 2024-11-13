@@ -1,4 +1,4 @@
-package com.victorvalentim.zividomelive;
+package com.victorvalentim.zividomelive.rendering;
 
 import processing.core.*;
 import processing.event.MouseEvent;
@@ -78,7 +78,7 @@ public class MouseControlledCamera {
      *
      * @param event the MouseEvent containing the wheel movement
      */
-    void mouseWheel(MouseEvent event) {
+	public void mouseWheel(MouseEvent event) {
         float e = event.getCount();
         zoom(e);
     }
