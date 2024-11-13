@@ -1,4 +1,4 @@
-package com.victorvalentim.zividomelive;
+package com.victorvalentim.zividomelive.rendering;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +13,7 @@ public class CameraManager {
     /**
      * Constructs a CameraManager and initializes the camera orientations.
      */
-    CameraManager() {
+	public CameraManager() {
         initializeOrientations();
     }
 

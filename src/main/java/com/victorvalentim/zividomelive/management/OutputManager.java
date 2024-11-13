@@ -1,5 +1,6 @@
-package com.victorvalentim.zividomelive;
+package com.victorvalentim.zividomelive.management;
 
+import com.victorvalentim.zividomelive.zividomelive;
 import me.walkerknapp.devolay.*;
 import processing.core.PGraphics;
 import codeanticode.syphon.SyphonServer;

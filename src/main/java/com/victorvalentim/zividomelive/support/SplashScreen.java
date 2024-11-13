@@ -1,4 +1,4 @@
-package com.victorvalentim.zividomelive;
+package com.victorvalentim.zividomelive.support;
 
 import processing.core.PApplet;
 import processing.core.PConstants;
@@ -9,11 +9,15 @@ import processing.core.PGraphics;
  * a central rotating sphere, orbiting cubes, and a library title.
  */
 public class SplashScreen {
+
+    /**
+     * A boolean flag to determine whether the splash screen should be shown.
+     */
+    public boolean showSplash;
     int opacity = 255;
     float orbitRadius = 160;
     int numCubes = 13;
     float[] speeds;
-    boolean showSplash = true;
     boolean fading = false;
     long startTime;
     int displayDuration = 7000;

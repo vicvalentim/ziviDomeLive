@@ -1,5 +1,6 @@
-package com.victorvalentim.zividomelive;
+package com.victorvalentim.zividomelive.management;
 
+import com.victorvalentim.zividomelive.zividomelive;
 import controlP5.*;
 import processing.core.*;
 import processing.event.KeyEvent;
@@ -323,7 +324,10 @@ public class ControlManager {
         viewModeDropdown.onClick(event -> viewModeDropdown.bringToFront());
     }
 
-    void resetControls() {
+    /**
+     * Resets all the controls to their default state.
+     */
+    public void resetControls() {
         String[] controlNames = {"pitch", "yaw", "roll", "fov", "size"};
         float[] defaultValues = {0.0f, 0.0f, 0.0f, 210.0f, 100.0f};
         for (int i = 0; i < controlNames.length; i++) {
@@ -331,11 +335,17 @@ public class ControlManager {
         }
     }
 
-    void show() {
+    /**
+     * Shows the control panel.
+     */
+    public void show() {
         cp5.show();
     }
 
-    void hide() {
+    /**
+     * Hides the control panel.
+     */
+    public void hide() {
         cp5.hide();
     }
 

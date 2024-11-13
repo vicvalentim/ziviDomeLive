@@ -1,5 +1,8 @@
 package com.victorvalentim.zividomelive;
 
+import com.victorvalentim.zividomelive.management.*;
+import com.victorvalentim.zividomelive.rendering.*;
+import com.victorvalentim.zividomelive.support.*;
 import processing.core.*;
 import processing.event.*;
 import processing.opengl.*;
