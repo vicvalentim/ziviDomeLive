@@ -1,4 +1,4 @@
-package com.victorvalentim.zividomelive.management;
+package com.victorvalentim.zividomelive.support;
 
 import java.io.IOException;
 import java.util.logging.*;
@@ -14,38 +14,41 @@ public class LogManager {
 
 	private LogManager() {}
 
+	/**
+	 * Configures the global logger with a custom format and handlers.
+	 */
 	private static void configureLogger() {
 		if (isConfigured) return;
 
 		globalLogger.setLevel(Level.ALL);
 
-		// Remove handlers para evitar duplicação
+		// Remove existing handlers to prevent duplicates
 		Handler[] handlers = globalLogger.getHandlers();
 		for (Handler handler : handlers) {
 			globalLogger.removeHandler(handler);
 		}
 
-		// Configuração do ConsoleHandler
+		// Create and configure ConsoleHandler
 		ConsoleHandler consoleHandler = new ConsoleHandler();
 		consoleHandler.setLevel(Level.ALL);
-		consoleHandler.setFormatter(new SimpleFormatter());
+		consoleHandler.setFormatter(new CustomFormatter());
 		globalLogger.addHandler(consoleHandler);
 
-		// Configuração do FileHandler
+		// Create and configure FileHandler
 		try {
 			FileHandler fileHandler = new FileHandler("ziviDomeLive.log", true);
 			fileHandler.setLevel(Level.ALL);
-			fileHandler.setFormatter(new SimpleFormatter());
+			fileHandler.setFormatter(new CustomFormatter());
 			globalLogger.addHandler(fileHandler);
 		} catch (IOException e) {
 			System.err.println("FileHandler configuration failed. Logs will only appear in the console.");
 		}
 
-		// Filtro para ignorar mensagens duplicadas usando lambda
+		// Filter to ignore duplicate messages
 		globalLogger.setFilter(record -> {
 			String message = record.getMessage();
 			if (message.equals(lastLogMessage)) {
-				return false; // Ignora mensagens duplicadas
+				return false; // Ignore duplicate messages
 			}
 			lastLogMessage = message;
 			return true;
@@ -65,5 +68,20 @@ public class LogManager {
 			configureLogger();
 		}
 		return globalLogger;
+	}
+
+	/**
+	 * A custom formatter for log messages with a clean, minimal design.
+	 */
+	private static class CustomFormatter extends Formatter {
+		@Override
+		public String format(LogRecord record) {
+			StringBuilder sb = new StringBuilder();
+			sb.append("[")
+					.append(record.getLevel().getLocalizedName())
+					.append("] ");
+			sb.append(formatMessage(record)).append("\n");
+			return sb.toString();
+		}
 	}
 }

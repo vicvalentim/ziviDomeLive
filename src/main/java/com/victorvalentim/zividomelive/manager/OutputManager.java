@@ -1,5 +1,7 @@
-package com.victorvalentim.zividomelive.management;
+package com.victorvalentim.zividomelive.manager;
 
+import com.victorvalentim.zividomelive.support.LogManager;
+import com.victorvalentim.zividomelive.support.ThreadManager;
 import com.victorvalentim.zividomelive.zividomelive;
 import me.walkerknapp.devolay.*;
 import processing.core.PGraphics;

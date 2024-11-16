@@ -1,4 +1,4 @@
-package com.victorvalentim.zividomelive.rendering;
+package com.victorvalentim.zividomelive.render.modes;
 
 import processing.core.*;
 

@@ -1,4 +1,4 @@
-package com.victorvalentim.zividomelive.rendering;
+package com.victorvalentim.zividomelive.render.camera;
 
 import processing.core.*;
 import processing.event.MouseEvent;
@@ -23,7 +23,7 @@ public class MouseControlledCamera {
     /**
      * Constructs a MouseControlledCamera with default settings.
      */
-    MouseControlledCamera() {
+	public MouseControlledCamera() {
         position = new PVector(0, 0, distance);
         center = new PVector(0, 0, 0);
         up = new PVector(0, 1, 0);
@@ -34,7 +34,7 @@ public class MouseControlledCamera {
      *
      * @param pg the PGraphics object to apply the camera view to
      */
-    void apply(PGraphics pg) {
+	public void apply(PGraphics pg) {
         pg.camera(position.x, position.y, position.z, center.x, center.y, center.z, up.x, up.y, up.z);
     }
 
@@ -43,7 +43,7 @@ public class MouseControlledCamera {
      *
      * @param p the PApplet instance to get mouse input from
      */
-    void update(PApplet p) {
+	public void update(PApplet p) {
         if (isLeftMousePressed(p)) {
             if (!dragging) {
                 dragging = true;

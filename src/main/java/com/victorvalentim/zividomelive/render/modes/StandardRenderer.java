@@ -1,6 +1,7 @@
-package com.victorvalentim.zividomelive.rendering;
+package com.victorvalentim.zividomelive.render.modes;
 
 import com.victorvalentim.zividomelive.Scene;
+import com.victorvalentim.zividomelive.render.camera.MouseControlledCamera;
 import processing.core.*;
 
 /**
