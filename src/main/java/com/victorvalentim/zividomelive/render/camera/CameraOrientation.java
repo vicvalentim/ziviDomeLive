@@ -1,4 +1,4 @@
-package com.victorvalentim.zividomelive.rendering;
+package com.victorvalentim.zividomelive.render.camera;
 
 /**
  * The CameraOrientation class represents the orientation of a camera in 3D space.
@@ -6,8 +6,12 @@ package com.victorvalentim.zividomelive.rendering;
  */
 public class CameraOrientation {
     float eyeX, eyeY, eyeZ;
-    float centerX, centerY, centerZ;
-    float upX, upY, upZ;
+    public float centerX;
+	public float centerY;
+	public float centerZ;
+    public float upX;
+	public float upY;
+	public float upZ;
 
     /**
      * Constructs a CameraOrientation with the specified parameters.

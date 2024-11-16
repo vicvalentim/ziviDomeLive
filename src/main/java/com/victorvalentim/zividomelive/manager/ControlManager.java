@@ -1,4 +1,4 @@
-package com.victorvalentim.zividomelive.management;
+package com.victorvalentim.zividomelive.manager;
 
 import com.victorvalentim.zividomelive.zividomelive;
 import controlP5.*;

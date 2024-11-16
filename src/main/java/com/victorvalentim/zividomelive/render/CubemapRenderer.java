@@ -1,6 +1,8 @@
-package com.victorvalentim.zividomelive.rendering;
+package com.victorvalentim.zividomelive.render;
 
 import com.victorvalentim.zividomelive.Scene;
+import com.victorvalentim.zividomelive.render.camera.CameraManager;
+import com.victorvalentim.zividomelive.render.camera.CameraOrientation;
 import processing.core.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

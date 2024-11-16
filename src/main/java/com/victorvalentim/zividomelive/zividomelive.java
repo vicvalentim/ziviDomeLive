@@ -1,7 +1,12 @@
 package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.management.*;
-import com.victorvalentim.zividomelive.rendering.*;
+import com.victorvalentim.zividomelive.manager.*;
+import com.victorvalentim.zividomelive.render.*;
+import com.victorvalentim.zividomelive.render.camera.CameraManager;
+import com.victorvalentim.zividomelive.render.modes.CubemapViewRenderer;
+import com.victorvalentim.zividomelive.render.modes.EquirectangularRenderer;
+import com.victorvalentim.zividomelive.render.modes.FisheyeDomemaster;
+import com.victorvalentim.zividomelive.render.modes.StandardRenderer;
 import com.victorvalentim.zividomelive.support.*;
 import processing.core.*;
 import processing.event.*;
@@ -63,7 +68,8 @@ public class zividomelive {
 	private ViewType currentView = ViewType.FISHEYE_DOMEMASTER;
 	private boolean pendingReset = false;
 	private int pendingResolution = resolution;
-	private static final Logger LOGGER = Logger.getLogger(zividomelive.class.getName());
+	private static final Logger LOGGER = LogManager.getLogger();
+
 
 	/**
 	 * Constructs a new `zividomelive` instance with the specified PApplet.

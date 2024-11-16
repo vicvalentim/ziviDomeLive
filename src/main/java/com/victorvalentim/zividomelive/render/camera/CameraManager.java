@@ -1,4 +1,4 @@
-package com.victorvalentim.zividomelive.rendering;
+package com.victorvalentim.zividomelive.render.camera;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +36,7 @@ public class CameraManager {
      * @param index the index of the desired CameraOrientation
      * @return the CameraOrientation at the specified index
      */
-    CameraOrientation getOrientation(int index) {
+	public CameraOrientation getOrientation(int index) {
         return orientations.get(index);
     }
 }
