@@ -1,13 +1,14 @@
 package com.victorvalentim.zividomelive.render.modes;
 
 import processing.core.*;
+import processing.opengl.PGraphicsOpenGL;
 
 /**
  * The CubemapViewRenderer class handles the creation and rendering of cubemap views.
  */
 public class CubemapViewRenderer {
     private int resolution;
-    private PGraphics cubemap;
+    private PGraphicsOpenGL cubemap;
     private final int[] faceRotations = {2, 2, 2, 2, 2, 2};
     private final boolean[] faceInversions = {true, true, true, true, true, true};
     private final PApplet parent;
@@ -30,7 +31,7 @@ public class CubemapViewRenderer {
         if (cubemap != null) {
             cubemap.dispose();
         }
-        cubemap = parent.createGraphics(resolution * 2, resolution * 3 / 2, PApplet.P2D);
+        cubemap = (PGraphicsOpenGL) parent.createGraphics(resolution * 2, resolution * 3 / 2, PApplet.P2D);
     }
 
     /**
@@ -50,11 +51,11 @@ public class CubemapViewRenderer {
      *
      * @return the PGraphics object representing the cubemap
      */
-	public PGraphics getCubemap() {
+    public PGraphicsOpenGL getCubemap() {
         if (cubemap == null) {
             initializeCubemap();
         }
-        return cubemap;
+        return (PGraphicsOpenGL) cubemap;
     }
 
     /**
@@ -62,7 +63,7 @@ public class CubemapViewRenderer {
      *
      * @param cubemapFaces an array of PGraphics objects representing the cubemap faces
      */
-	public void drawCubemapToGraphics(PGraphics[] cubemapFaces) {
+    public void drawCubemapToGraphics(PGraphicsOpenGL[] cubemapFaces) {
         if (cubemapFaces == null || cubemapFaces.length != 6) {
             System.out.println("Error: Invalid cubemapFaces.");
             return;
@@ -95,7 +96,7 @@ public class CubemapViewRenderer {
      * @param rotation the number of 90-degree rotations to apply
      * @param invert whether to apply horizontal inversion
      */
-    void applyTransformations(PGraphics target, PGraphics face, float x, float y, float w, float h, int rotation, boolean invert) {
+    void applyTransformations(PGraphicsOpenGL target, PGraphicsOpenGL face, float x, float y, float w, float h, int rotation, boolean invert) {
         target.pushMatrix();
         target.translate(x + w / 2, y + h / 2);
 

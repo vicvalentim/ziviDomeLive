@@ -2,28 +2,29 @@ package com.victorvalentim.zividomelive.render.camera;
 
 import processing.core.*;
 import processing.event.MouseEvent;
+import processing.opengl.PGraphicsOpenGL;
 
 /**
  * The MouseControlledCamera class provides a camera that can be controlled using the mouse.
  * It allows for rotation around a center point and zooming in and out.
  */
-public class MouseControlledCamera {
-    PVector position;
-    PVector center;
-    PVector up;
-    float sensitivity = 0.005f;
-    float zoomSensitivity = 10;
-    float distance = 1500;
-    float angleX = PConstants.PI / 2;
-    float angleY = 0;
-    boolean dragging = false;
-    float minDistance = 100;
-    float maxDistance = 5000;
+public class MouseControlledCamera implements PConstants {
+    private final PVector position;
+    private final PVector center;
+    private final PVector up;
 
-    /**
+    private float distance = 1500;
+    private float angleX = PI / 2;
+    private float angleY = 0;
+
+    private int lastMouseX = -1; // Tracks the previous mouse X position
+    private int lastMouseY = -1; // Tracks the previous mouse Y position
+    private boolean dragging = false;
+
+	/**
      * Constructs a MouseControlledCamera with default settings.
      */
-	public MouseControlledCamera() {
+    public MouseControlledCamera() {
         position = new PVector(0, 0, distance);
         center = new PVector(0, 0, 0);
         up = new PVector(0, 1, 0);
@@ -34,29 +35,16 @@ public class MouseControlledCamera {
      *
      * @param pg the PGraphics object to apply the camera view to
      */
-	public void apply(PGraphics pg) {
+    public void apply(PGraphicsOpenGL pg) {
         pg.camera(position.x, position.y, position.z, center.x, center.y, center.z, up.x, up.y, up.z);
     }
 
     /**
-     * Updates the camera's position based on mouse input.
+     * Updates the camera's position based on the current angles and distance.
      *
-     * @param p the PApplet instance to get mouse input from
+     * @param parent the PApplet instance used for calculations
      */
-	public void update(PApplet p) {
-        if (isLeftMousePressed(p)) {
-            if (!dragging) {
-                dragging = true;
-                return;
-            }
-            float dx = (p.mouseX - p.pmouseX) * sensitivity;
-            float dy = (p.mouseY - p.pmouseY) * sensitivity;
-            angleX += dx;
-            angleY += dy;
-        } else {
-            dragging = false;
-        }
-
+    public void update(PApplet parent) {
         float cosAngleY = PApplet.cos(angleY);
         position.x = center.x + distance * PApplet.cos(angleX) * cosAngleY;
         position.y = center.y + distance * PApplet.sin(angleY);
@@ -64,53 +52,83 @@ public class MouseControlledCamera {
     }
 
     /**
-     * Adjusts the distance for zooming, constrained between min and max distances.
+     * Handles mouse events including zoom, drag for rotation, and release for resetting drag state.
      *
-     * @param delta the amount to zoom
+     * @param event the MouseEvent object containing details of the mouse event
      */
-    void zoom(float delta) {
-        distance -= delta * zoomSensitivity;
-        distance = PApplet.constrain(distance, minDistance, maxDistance);
-    }
+    public void mouseEvent(MouseEvent event) {
+        switch (event.getAction()) {
+            case MouseEvent.WHEEL:
+                zoom(event.getCount());
+                break;
 
-    /**
-     * Handles zooming using the mouse wheel.
-     *
-     * @param event the MouseEvent containing the wheel movement
-     */
-	public void mouseWheel(MouseEvent event) {
-        float e = event.getCount();
-        zoom(e);
-    }
+            case MouseEvent.DRAG:
+                handleDrag(event);
+                break;
 
-    /**
-     * Updates the camera angles when the mouse is dragged.
-     *
-     * @param p the PApplet instance to get mouse input from
-     */
-    void mouseDragged(PApplet p) {
-        if (isLeftMousePressed(p)) {
-            float dx = (p.mouseX - p.pmouseX) * sensitivity;
-            float dy = (p.mouseY - p.pmouseY) * sensitivity;
-            angleX += dx;
-            angleY += dy;
+            case MouseEvent.RELEASE:
+                dragging = false;
+                lastMouseX = -1; // Reset last mouse positions
+                lastMouseY = -1;
+                break;
+
+            default:
+                break;
         }
     }
 
     /**
-     * Resets the dragging flag when the mouse is released.
+     * Handles dragging to rotate the camera.
+     *
+     * @param event the MouseEvent object containing drag details
      */
-    void mouseReleased() {
-        dragging = false;
+    private void handleDrag(MouseEvent event) {
+        if (isLeftMousePressed(event)) {
+            if (!dragging) {
+                dragging = true;
+                lastMouseX = event.getX();
+                lastMouseY = event.getY();
+                return;
+            }
+
+            float dx = event.getX() - lastMouseX;
+            float dy = event.getY() - lastMouseY;
+			// Controls the camera rotation speed
+			float sensitivity = 0.005f;
+			angleX += dx * sensitivity;
+            angleY += dy * sensitivity;
+
+            // Clamp the vertical angle to avoid flipping the camera
+            angleY = PApplet.constrain(angleY, -HALF_PI, HALF_PI);
+
+            lastMouseX = event.getX();
+            lastMouseY = event.getY();
+        }
     }
 
     /**
-     * Checks if the left mouse button is pressed.
+     * Adjusts the distance for zooming, constrained between min and max distances.
      *
-     * @param p the PApplet instance to get mouse input from
+     * @param delta the amount to zoom
+     */
+    private void zoom(float delta) {
+		// Controls the zoom speed
+		float zoomSensitivity = 10f;
+		distance -= delta * zoomSensitivity;
+		// Minimum zoom distance
+		float minDistance = 100f;
+		// Maximum zoom distance
+		float maxDistance = 5000f;
+		distance = PApplet.constrain(distance, minDistance, maxDistance);
+    }
+
+    /**
+     * Checks if the left mouse button is pressed during a mouse event.
+     *
+     * @param event the MouseEvent to check
      * @return true if the left mouse button is pressed, false otherwise
      */
-    private boolean isLeftMousePressed(PApplet p) {
-        return p.mousePressed && p.mouseButton == PConstants.LEFT;
+    private boolean isLeftMousePressed(MouseEvent event) {
+        return event.getButton() == LEFT;
     }
 }

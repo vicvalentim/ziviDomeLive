@@ -4,8 +4,10 @@ import com.victorvalentim.zividomelive.support.LogManager;
 import com.victorvalentim.zividomelive.support.ThreadManager;
 import com.victorvalentim.zividomelive.zividomelive;
 import me.walkerknapp.devolay.*;
+import processing.core.PConstants;
 import processing.core.PGraphics;
 import codeanticode.syphon.SyphonServer;
+import processing.opengl.PGraphicsOpenGL;
 import spout.Spout;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -13,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
 /**
@@ -20,7 +23,7 @@ import java.util.logging.Logger;
  * It handles the initialization, configuration, and frame sending for these output methods.
  * Depending on the operating system, it sets up either Spout (Windows) or Syphon (macOS).
  */
-public class OutputManager {
+public class OutputManager implements PConstants {
 
 	private final Logger logger = LogManager.getLogger();
 	private zividomelive.ViewType currentView;
@@ -145,7 +148,7 @@ public class OutputManager {
 	 *
 	 * @param viewType the view type to prepare
 	 */
-	public void prepareOutput(zividomelive.ViewType viewType) {
+	private void prepareOutput(zividomelive.ViewType viewType) {
 		switch (viewType) {
 			case FISHEYE_DOMEMASTER:
 				outputGraphics = parent.getFisheyeDomemaster().getDomemasterGraphics();
@@ -168,12 +171,12 @@ public class OutputManager {
 	public void sendOutput() {
 		if (ndiEnabled && ndiSender != null) {
 			prepareOutput(ndiView);
-			DevolayVideoFrame ndiFrame = createNDIFrame(outputGraphics);
+			AtomicReference<DevolayVideoFrame> ndiFrame = new AtomicReference<>(createNDIFrame((PGraphicsOpenGL) outputGraphics));
 
 			ThreadManager.submitRunnable(() -> {
 				synchronized (this) {
 					if (ndiSender != null) {
-						ndiSender.sendVideoFrameAsync(ndiFrame);
+						ndiSender.sendVideoFrameAsync(ndiFrame.get());
 					}
 				}
 			});
@@ -196,13 +199,12 @@ public class OutputManager {
 	 * @param pg the PGraphics instance containing the image data
 	 * @return the created NDI video frame
 	 */
-	private synchronized DevolayVideoFrame createNDIFrame(PGraphics pg) {
+	private synchronized DevolayVideoFrame createNDIFrame(PGraphicsOpenGL pg) {
 		pg.loadPixels();
 		int width = pg.width;
 		int height = pg.height;
 		int bufferSize = width * height * 4;
 
-		// Adjust buffer if resolution changes or buffers aren't initialized
 		int BUFFER_COUNT = 2;
 		if (width != lastWidth || height != lastHeight || ndiBuffers == null) {
 			ndiBuffers = new ByteBuffer[BUFFER_COUNT];
@@ -227,7 +229,7 @@ public class OutputManager {
 
 		ndiBuffer.flip();
 
-		reusableFrame.setResolution(width, height); // Reusable frame setup
+		reusableFrame.setResolution(width, height);
 		reusableFrame.setData(ndiBuffer);
 		reusableFrame.setFourCCType(DevolayFrameFourCCType.RGBA);
 		reusableFrame.setLineStride(width * 4);
@@ -244,7 +246,7 @@ public class OutputManager {
 	 * @param buffer the buffer to write pixel data into
 	 * @return a list of tasks to be executed for pixel copying
 	 */
-	private List<Callable<Void>> prepareTasks(PGraphics pg, ByteBuffer buffer) {
+	private List<Callable<Void>> prepareTasks(PGraphicsOpenGL pg, ByteBuffer buffer) {
 		int pixelCount = pg.pixels.length;
 		int blockSize = pixelCount / THREAD_COUNT;
 		List<Callable<Void>> tasks = new ArrayList<>();
@@ -372,5 +374,23 @@ public class OutputManager {
 	public void setSyphonView(zividomelive.ViewType view) {
 		this.syphonView = view;
 		logger.info("Syphon view set to " + view);
+	}
+
+	/**
+	 * Checks if any output method (NDI, Spout, or Syphon) is currently active.
+	 *
+	 * @return true if any output method is enabled, false otherwise
+	 */
+	public boolean isActive() {
+		return ndiEnabled || spoutEnabled || syphonEnabled;
+	}
+
+	/**
+	 * Stops all output methods and shuts down the OutputManager.
+	 * This method ensures that all resources are released and
+	 * the thread pool is properly shut down.
+	 */
+	public void stopOutput() {
+		shutdownOutputs();
 	}
 }

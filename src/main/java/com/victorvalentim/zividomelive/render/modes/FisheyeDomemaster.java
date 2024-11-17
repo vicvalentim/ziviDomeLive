@@ -3,6 +3,7 @@ package com.victorvalentim.zividomelive.render.modes;
 
 import processing.core.PApplet;
 import processing.core.PGraphics;
+import processing.opengl.PGraphicsOpenGL;
 import processing.opengl.PShader;
 
 /**
@@ -38,7 +39,7 @@ public class FisheyeDomemaster {
         if (domemaster != null) {
             domemaster.dispose();
         }
-        domemaster = parent.createGraphics(resolution, resolution, PApplet.P2D);
+        domemaster = (PGraphicsOpenGL) parent.createGraphics(resolution, resolution, PApplet.P2D);
     }
 
     /**
@@ -48,7 +49,7 @@ public class FisheyeDomemaster {
         if (domemasterSize != null) {
             domemasterSize.dispose();
         }
-        domemasterSize = parent.createGraphics(resolution, resolution, PApplet.P2D);
+        domemasterSize = (PGraphicsOpenGL) parent.createGraphics(resolution, resolution, PApplet.P2D);
     }
 
     /**
@@ -79,7 +80,7 @@ public class FisheyeDomemaster {
      * @param equirectangular the PGraphics object representing the equirectangular map
      * @param fov the field of view to use for the shader
      */
-	public void applyShader(PGraphics equirectangular, float fov) {
+    public void applyShader(PGraphicsOpenGL equirectangular, float fov) {
         if (equirectangular == null) {
             System.out.println("Equirectangular PGraphics is null.");
             return;
@@ -114,11 +115,11 @@ public class FisheyeDomemaster {
      *
      * @return the PGraphics object representing the domemaster projection
      */
-    public PGraphics getDomemasterGraphics() {
+    public PGraphicsOpenGL getDomemasterGraphics() {
         if (domemasterSize == null) {
             initializeDomemasterSize();
         }
-        return domemasterSize;
+        return (PGraphicsOpenGL) domemasterSize;
     }
 
     /**

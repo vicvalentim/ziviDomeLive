@@ -3,13 +3,14 @@ package com.victorvalentim.zividomelive.render.modes;
 import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.render.camera.MouseControlledCamera;
 import processing.core.*;
+import processing.opengl.PGraphicsOpenGL;
 
 /**
  * The StandardRenderer class handles the rendering of a standard view using a PGraphics object.
  * It utilizes a MouseControlledCamera for camera control and a Scene interface for rendering the scene.
  */
 public class StandardRenderer {
-    private PGraphics standardView;
+    private PGraphicsOpenGL standardView;
     private Scene currentScene;
     private MouseControlledCamera cam;
     private final PApplet parent;
@@ -36,7 +37,7 @@ public class StandardRenderer {
         if (standardView != null) {
             standardView.dispose();
         }
-        standardView = parent.createGraphics(width, height, PApplet.P3D);
+        standardView = (PGraphicsOpenGL) parent.createGraphics(width, height, PApplet.P3D);
     }
 
     /**
@@ -51,7 +52,7 @@ public class StandardRenderer {
      * Renders the current scene using the standard view PGraphics object.
      * Updates the camera and applies its settings before rendering the scene.
      */
-	public void render() {
+    public void render() {
         if (standardView == null) {
             initializeStandardView(parent.width, parent.height);
         }
@@ -73,7 +74,7 @@ public class StandardRenderer {
      *
      * @return the PGraphics object representing the standard view
      */
-	public PGraphics getStandardView() {
+    public PGraphicsOpenGL getStandardView() {
         if (standardView == null) {
             initializeStandardView(parent.width, parent.height);
         }

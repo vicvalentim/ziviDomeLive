@@ -3,21 +3,24 @@ package com.victorvalentim.zividomelive.render;
 import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.render.camera.CameraManager;
 import com.victorvalentim.zividomelive.render.camera.CameraOrientation;
+import com.victorvalentim.zividomelive.support.LogManager;
+import com.victorvalentim.zividomelive.support.ThreadManager;
 import processing.core.*;
+import processing.opengl.PGraphicsOpenGL;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * The CubemapRenderer class handles the creation and rendering of cubemap faces with dynamic frustum adjustments.
  */
-public class CubemapRenderer {
-    private static final Logger LOGGER = Logger.getLogger(CubemapRenderer.class.getName()); // Logger para a classe
+public class CubemapRenderer implements PConstants {
+    private final ExecutorService executorService = ThreadManager.getExecutor(); // Logger para a classe
 
     private final ExecutorService executor; // Pool de threads dinâmico para cálculos
-    private PGraphics[] cubemapFaces;
+    private PGraphicsOpenGL[] cubemapFaces;
     private int resolution;
     private final PApplet parent;
 
@@ -34,6 +37,8 @@ public class CubemapRenderer {
     private Future<Float> nearPlaneFuture;
     private Future<Float> farPlaneFuture;
     private Future<Float> fieldOfViewFuture;
+
+    private static final Logger LOGGER = LogManager.getLogger();
 
     /**
      * Constructs a CubemapRenderer with the specified initial resolution and parent PApplet.
@@ -55,13 +60,13 @@ public class CubemapRenderer {
      */
     private void initializeCubemapFaces() {
         if (cubemapFaces == null) {
-            cubemapFaces = new PGraphics[6];
+            cubemapFaces = new PGraphicsOpenGL[6];
         }
         for (int i = 0; i < 6; i++) {
             if (cubemapFaces[i] != null) {
                 cubemapFaces[i].dispose();
             }
-            cubemapFaces[i] = parent.createGraphics(resolution, resolution, PApplet.P3D);
+            cubemapFaces[i] = (PGraphicsOpenGL) parent.createGraphics(resolution, resolution, P3D);
         }
     }
 
@@ -75,7 +80,7 @@ public class CubemapRenderer {
     /**
      * Configura a câmera para cada face usando parâmetros de frustum calculados.
      */
-    private void configureCameraForFace(PGraphics pg, CameraOrientation orientation, float pitch, float yaw, float roll) {
+    private void configureCameraForFace(PGraphicsOpenGL pg, CameraOrientation orientation, float pitch, float yaw, float roll) {
         PVector eye = new PVector(0, 0, 0);
 
         // Certifique-se de que os parâmetros foram calculados antes de configurar a câmera
@@ -85,7 +90,7 @@ public class CubemapRenderer {
                 cachedFarPlane = farPlaneFuture.get();
                 cachedFieldOfView = fieldOfViewFuture.get();
             } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Erro ao obter valores de frustum para a configuração da câmera", e);
+                LOGGER.severe("Erro ao obter valores de frustum para a configuração da câmera");
             }
         }
 
@@ -134,7 +139,7 @@ public class CubemapRenderer {
      * @param cameraManager The camera manager that handles the camera orientations.
      * @param currentScene The current scene being rendered.
      */
-	public void captureCubemap(float pitch, float yaw, float roll, CameraManager cameraManager, Scene currentScene) {
+    public void captureCubemap(float pitch, float yaw, float roll, CameraManager cameraManager, Scene currentScene) {
         if (cubemapFaces == null) {
             initializeCubemapFaces();
         }
@@ -155,12 +160,12 @@ public class CubemapRenderer {
      *
      * @return an array of PGraphics representing the cubemap faces
      */
-    public PGraphics[] getCubemapFaces() {
-        if (cubemapFaces == null) {
-            initializeCubemapFaces();
-        }
-        return cubemapFaces;
-    }
+   public PGraphicsOpenGL[] getCubemapFaces() {
+       if (cubemapFaces == null) {
+           initializeCubemapFaces();
+       }
+       return cubemapFaces;
+   }
 
     /**
      * Disposes of the cubemap faces and shuts down the thread pool to free up resources.

@@ -2,18 +2,14 @@ package com.victorvalentim.zividomelive;
 
 import com.victorvalentim.zividomelive.manager.*;
 import com.victorvalentim.zividomelive.render.*;
-import com.victorvalentim.zividomelive.render.camera.CameraManager;
-import com.victorvalentim.zividomelive.render.modes.CubemapViewRenderer;
-import com.victorvalentim.zividomelive.render.modes.EquirectangularRenderer;
-import com.victorvalentim.zividomelive.render.modes.FisheyeDomemaster;
-import com.victorvalentim.zividomelive.render.modes.StandardRenderer;
+import com.victorvalentim.zividomelive.render.camera.*;
+import com.victorvalentim.zividomelive.render.modes.*;
 import com.victorvalentim.zividomelive.support.*;
 import processing.core.*;
 import processing.event.*;
 import processing.opengl.*;
 import controlP5.*;
 import java.util.concurrent.*;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -27,7 +23,7 @@ import java.util.logging.Logger;
  * handle mouse and key events, and render different views. The class also supports toggling
  * output methods (NDI, Spout, Syphon) and managing the current scene and view type.</p>
  */
-public class zividomelive {
+public class zividomelive implements PConstants {
 
 	private final PApplet p;
 	private boolean initialized = false;
@@ -49,6 +45,7 @@ public class zividomelive {
 	private CubemapViewRenderer cubemapViewRenderer;
 	private OutputManager outputManager;
 	private SplashScreen splash;
+	private SceneManager sceneManager;
 	private final ExecutorService executorService = ThreadManager.getExecutor();
 
 	/**
@@ -82,14 +79,20 @@ public class zividomelive {
 			throw new IllegalArgumentException("PApplet instance cannot be null.");
 		}
 		this.p = p;
+
 		welcome();
+		registerEventHandlers();
+		this.sceneManager = new SceneManager();
 	}
 
 	/**
 	 * Prints a welcome message indicating that the library has been initialized.
 	 */
 	private void welcome() {
-		System.out.println("[ziviDomeLive] Library initialized.");
+		String libraryName = LibraryMetadata.get("name");
+		String libraryVersion = LibraryMetadata.get("prettyVersion");
+		String authors = LibraryMetadata.get("authors");
+		System.out.printf("[%s] %s by %s%n", libraryName, libraryVersion, authors);
 	}
 
 	/**
@@ -98,8 +101,15 @@ public class zividomelive {
 	 * @param scene the Scene instance to be set
 	 */
 	public void setScene(Scene scene) {
-		this.currentScene = scene;
-		currentScene.setupScene();
+		if (scene == null) {
+			LOGGER.warning("Cannot set a null scene.");
+			return;
+		}
+		sceneManager.registerScene(scene);
+		currentScene = sceneManager.getCurrentScene();
+		if (currentScene != null) {
+			currentScene.setupScene();
+		}
 	}
 
 	/**
@@ -116,14 +126,14 @@ public class zividomelive {
 		LOGGER.info("Starting setup...");
 
 		try {
-			p.frameRate(64);
-			LOGGER.info("Frame rate set to 64.");
+			p.frameRate(70);
+			LOGGER.info("Frame rate set to 70.");
 		} catch (Exception e) {
 			LOGGER.severe("Error setting frame rate: " + e.getMessage());
 		}
 
 		try {
-			printlnOpenGLInfo();
+			printOpenGLInfo(p);
 		} catch (Exception e) {
 			LOGGER.severe("Error printing OpenGL info: " + e.getMessage());
 		}
@@ -135,15 +145,6 @@ public class zividomelive {
 			LOGGER.severe("Error configuring texture hints: " + e.getMessage());
 		}
 
-		p.registerMethod("post", this);
-
-		try {
-			registerMouseEvents();
-		} catch (Exception e) {
-			LOGGER.severe("Error registering mouse events: " + e.getMessage());
-		}
-
-		// Configure and activate OutputManager
 		try {
 			outputManager = new OutputManager(this);
 			LOGGER.info("OutputManager initialized without active outputs.");
@@ -151,41 +152,57 @@ public class zividomelive {
 			LOGGER.severe("Error initializing OutputManager: " + e.getMessage());
 		}
 
-		splash = new SplashScreen(p);
-		splash.start();
+		try {
+			splash = new SplashScreen(p);
+			splash.start();
+			LOGGER.info("SplashScreen initialized and started successfully.");
+		} catch (Exception e) {
+			LOGGER.severe("Error initializing or starting SplashScreen: " + e.getMessage());
+		}
+
+		// Load DefaultScene if no scene is set
+		if (currentScene == null) {
+			try {
+				currentScene = new com.victorvalentim.zividomelive.scene.DefaultScene(p);
+				currentScene.setupScene();
+				LOGGER.info("DefaultScene loaded successfully as the initial scene.");
+			} catch (Exception e) {
+				LOGGER.severe("Error initializing DefaultScene: " + e.getMessage());
+			}
+		}
 		LOGGER.info("Setup completed.");
 	}
 
 
+
 	/**
 	 * Prints OpenGL information including version, vendor, and renderer.
+	 *
+	 * @param p the PApplet instance used for rendering
 	 */
-	void printlnOpenGLInfo() {
-		PApplet.println(PGraphicsOpenGL.OPENGL_VERSION);
-		PApplet.println(PGraphicsOpenGL.OPENGL_VENDOR);
-		PApplet.println(PGraphicsOpenGL.OPENGL_RENDERER);
+	public void printOpenGLInfo(PApplet p) {
+		if (p.g instanceof PGraphicsOpenGL pgl) {
+			PGL pglContext = pgl.beginPGL();
+
+			System.out.println("OpenGL Version: " + pglContext.getString(PGL.VERSION));
+			System.out.println("OpenGL Vendor: " + pglContext.getString(PGL.VENDOR));
+			System.out.println("OpenGL Renderer: " + pglContext.getString(PGL.RENDERER));
+
+			pgl.endPGL();
+		} else {
+			LOGGER.severe("The current renderer is not OpenGL.");
+		}
 	}
 
 	/**
 	 * Configures texture hints for the rendering environment.
 	 */
 	void setupHints() {
-		p.textureMode(PConstants.NORMAL);
-		p.textureWrap(PConstants.REPEAT);
-		p.hint(PConstants.ENABLE_TEXTURE_MIPMAPS);
-		p.hint(PConstants.ENABLE_DEPTH_TEST);
-		p.hint(PConstants.ENABLE_OPTIMIZED_STROKE);  // Otimiza a renderização de contornos
-	}
-
-	/**
-	 * Post-initialization method to set up managers after the initial setup.
-	 */
-	public void post() {
-		if (!initialized) {
-			initializeManagers();
-			initialized = true;
-			p.unregisterMethod("post", this);
-		}
+		p.textureMode(NORMAL);
+		p.textureWrap(REPEAT);
+		p.hint(ENABLE_TEXTURE_MIPMAPS);
+		p.hint(ENABLE_DEPTH_TEST);
+		p.hint(ENABLE_OPTIMIZED_STROKE);
 	}
 
 	/**
@@ -210,7 +227,7 @@ public class zividomelive {
 			CompletableFuture.allOf(cameraManagerFuture, renderersFuture, controlManagerFuture).join();
 			LOGGER.info("Managers initialized successfully.");
 		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, "Error initializing managers", e);
+			LOGGER.severe("Error initializing managers");
 		}
 	}
 
@@ -268,22 +285,8 @@ public class zividomelive {
 
 			LOGGER.info("Renderers initialized successfully.");
 		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, "Error initializing renderers", e);
+			LOGGER.severe("Error initializing renderers");
 		}
-	}
-
-	/**
-	 * Registers mouse events for interaction.
-	 */
-	void registerMouseEvents() {
-		executorService.submit(() -> {
-			try {
-				p.registerMethod("mouseEvent", this);
-				LOGGER.info("Mouse events registered.");
-			} catch (Exception e) {
-				LOGGER.log(Level.SEVERE, "Error registering mouse events", e);
-			}
-		});
 	}
 
 	/**
@@ -318,7 +321,7 @@ public class zividomelive {
 	void renderContent() {
 		// Verifica se os renderizadores e a cena foram inicializados
 		if (cubemapRenderer == null || equirectangularRenderer == null || fisheyeDomemaster == null || standardRenderer == null || currentScene == null) {
-			System.out.println("Error: Renderer or scene not initialized.");
+			LOGGER.severe("Error: Renderer or scene not initialized.");
 			return;
 		}
 
@@ -336,7 +339,7 @@ public class zividomelive {
 
 	void individualRenderer() {
 		if (!initialized) {
-			System.out.println("Error: System not fully initialized.");
+			LOGGER.severe("Error: System not fully initialized.");
 			return;
 		}
 
@@ -372,7 +375,7 @@ public class zividomelive {
 		if (cubemapRenderer != null) {
 			cubemapRenderer.captureCubemap(getPitch(), getYaw(), getRoll(), cameraManager, currentScene);
 		} else {
-			System.out.println("Error: CubemapRenderer not initialized.");
+			LOGGER.severe("Error: CubemapRenderer not initialized.");
 		}
 	}
 
@@ -382,21 +385,16 @@ public class zividomelive {
 	 *
 	 * @param pg the PGraphics object to be displayed
 	 */
-	private void displayView(PGraphics pg) {
-		// Proporção de aspecto do buffer PGraphics
+	private void displayView(PGraphicsOpenGL pg) {
 		float aspectRatio = pg.width / (float) pg.height;
-
-		// Ajusta a largura e altura de exibição para coincidir com a tela
 		float displayWidth = p.width;
 		float displayHeight = displayWidth / aspectRatio;
 
-		// Ajusta a altura e largura se a altura calculada for maior que a altura da tela
 		if (displayHeight > p.height) {
 			displayHeight = p.height;
 			displayWidth = displayHeight * aspectRatio;
 		}
 
-		// Exibe o PGraphics no centro da tela ajustado para proporção
 		p.image(pg, (p.width - displayWidth) / 2, (p.height - displayHeight) / 2, displayWidth, displayHeight);
 	}
 
@@ -456,7 +454,7 @@ public class zividomelive {
 			fisheyeDomemaster.applyShader(equirectangularRenderer.getEquirectangular(), getFov());
 			displayView(fisheyeDomemaster.getDomemasterGraphics());
 		} else {
-			System.out.println("Error: FisheyeDomemaster not initialized.");
+			LOGGER.severe("Error: FisheyeDomemaster not initialized.");
 		}
 	}
 
@@ -470,7 +468,7 @@ public class zividomelive {
 			equirectangularRenderer.render(cubemapRenderer.getCubemapFaces());
 			displayView(equirectangularRenderer.getEquirectangular());
 		} else {
-			System.out.println("Error: EquirectangularRenderer not initialized.");
+			LOGGER.severe("Error: EquirectangularRenderer not initialized.");
 		}
 	}
 
@@ -484,7 +482,7 @@ public class zividomelive {
 			cubemapViewRenderer.drawCubemapToGraphics(cubemapRenderer.getCubemapFaces());
 			displayView(cubemapViewRenderer.getCubemap());
 		} else {
-			System.out.println("Error: CubemapViewRenderer not initialized.");
+			LOGGER.severe("Error: CubemapViewRenderer not initialized.");
 		}
 	}
 
@@ -498,7 +496,7 @@ public class zividomelive {
 			standardRenderer.render();
 			displayView(standardRenderer.getStandardView());
 		} else {
-			System.out.println("Error: StandardRenderer not initialized.");
+			LOGGER.severe("Error: StandardRenderer not initialized.");
 		}
 	}
 
@@ -506,7 +504,7 @@ public class zividomelive {
 	 * Draws the control panel if it is set to be shown.
 	 */
 	private void drawControlPanel() {
-		p.hint(PConstants.DISABLE_DEPTH_TEST);
+		p.hint(DISABLE_DEPTH_TEST);
 		controlManager.updateFpsLabel(p.frameRate);
 
 		if (showControlPanel) {
@@ -514,7 +512,7 @@ public class zividomelive {
 		} else {
 			controlManager.hide();
 		}
-		p.hint(PConstants.ENABLE_DEPTH_TEST);
+		p.hint(ENABLE_DEPTH_TEST);
 	}
 
 	/**
@@ -526,7 +524,7 @@ public class zividomelive {
 		float x = p.width - previewWidth;
 		float y = p.height - previewHeight;
 
-		PGraphics previewGraphics = fisheyeDomemaster.getDomemasterGraphics();
+		PGraphicsOpenGL previewGraphics = fisheyeDomemaster.getDomemasterGraphics();
 		p.image(previewGraphics, x, y, previewWidth, previewHeight);
 	}
 
@@ -571,7 +569,7 @@ public class zividomelive {
 				Thread.sleep(100);
 				LOGGER.info("Resolution change processed.");
 			} catch (InterruptedException e) {
-				LOGGER.log(Level.SEVERE, "Error during resolution change processing", e);
+				LOGGER.severe("Error during resolution change processing");
 				Thread.currentThread().interrupt();
 			}
 		});
@@ -588,55 +586,146 @@ public class zividomelive {
 	}
 
 	/**
-	 * Handles mouse events for interaction.
-	 *
-	 * @param event the MouseEvent object representing the mouse event
+	 * Registers event handlers with the Processing sketch and verifies success for each method.
 	 */
-	public void mouseEvent(MouseEvent event) {
-		if (splash != null && event.getAction() == MouseEvent.PRESS) {
-			splash.mousePressed(); // Inicia o fade-out da splash quando o mouse é pressionado
+	private void registerEventHandlers() {
+		boolean allSuccess = true;
+
+		if (registerMethod("pre")) allSuccess = false;
+		if (registerMethod("draw")) allSuccess = false;
+		if (registerMethod("post")) allSuccess = false;
+		if (registerMethod("mouseEvent")) allSuccess = false;
+		if (registerMethod("keyEvent")) allSuccess = false;
+		if (registerMethod("stop")) allSuccess = false;
+		if (registerMethod("resume")) allSuccess = false;
+		if (registerMethod("pause")) allSuccess = false;
+		if (registerMethod("dispose")) allSuccess = false;
+
+		if (allSuccess) {
+			LOGGER.info("All event handlers registered successfully.");
+		} else {
+			LOGGER.warning("One or more event handlers failed to register. Check logs for details.");
+		}
+	}
+
+	/**
+	 * Helper method to register a specific method and log its success or failure.
+	 *
+	 * @param methodName the name of the method to register
+	 * @return true if registration is successful, false otherwise
+	 */
+	private boolean registerMethod(String methodName) {
+		try {
+			p.registerMethod(methodName, this);
+			LOGGER.info("Successfully registered method: " + methodName);
+			return false;
+		} catch (Exception e) {
+			LOGGER.severe("Failed to register method: " + methodName + ". Error: " + e.getMessage());
+			return true;
+		}
+	}
+
+	/**
+	 * Handles key events for interaction.
+	 * This method must be registered using p.registerMethod("keyEvent", this).
+	 *
+	 * @param event the KeyEvent object containing details of the key event
+	 */
+	public void keyEvent(processing.event.KeyEvent event) {
+		if (event.getAction() == KeyEvent.PRESS) { // Apenas trata eventos de tecla pressionada
+			if (!controlManager.isNumberboxActive()) {
+				// Primeiro, processa as teclas padrão
+				switch (event.getKey()) {
+					case 'h':
+						showControlPanel = !showControlPanel;
+						LOGGER.info("Toggling control panel visibility: " + showControlPanel);
+						break;
+
+					case 'm':
+						setCurrentView(ViewType.values()[(getCurrentView().ordinal() + 1) % ViewType.values().length]);
+						LOGGER.info("Switching view to: " + getCurrentView());
+						break;
+				}
+
+				// Em seguida, processa as teclas de navegação (LEFT e RIGHT)
+				switch (event.getKeyCode()) {
+					case PConstants.LEFT:
+						if (sceneManager != null) {
+							sceneManager.previousScene();
+							currentScene = sceneManager.getCurrentScene();
+							if (currentScene != null) {
+								currentScene.setupScene();
+								LOGGER.info("Switched to the previous scene: " + currentScene.getName());
+							} else {
+								LOGGER.warning("No previous scene available.");
+							}
+						}
+						break;
+
+					case PConstants.RIGHT:
+						if (sceneManager != null) {
+							sceneManager.nextScene();
+							currentScene = sceneManager.getCurrentScene();
+							if (currentScene != null) {
+								currentScene.setupScene();
+								LOGGER.info("Switched to the next scene: " + currentScene.getName());
+							} else {
+								LOGGER.warning("No next scene available.");
+							}
+						}
+						break;
+
+					default:
+						break;
+				}
+			}
 		}
 
-		// Permanece com os eventos de mouse originais para interação de cena
-		if (event.getAction() == MouseEvent.WHEEL) {
-			standardRenderer.getCam().mouseWheel(event);
+		// Encaminha o evento para a cena atual
+		if (currentScene != null) {
+			currentScene.keyEvent(event);
 		}
+	}
+
+
+	/**
+	 * Handles mouse events for interaction.
+	 * This method must be registered using p.registerMethod("mouseEvent", this).
+	 *
+	 * @param event the MouseEvent object containing details of the mouse event
+	 */
+	public void mouseEvent(MouseEvent event) {
+		int x = event.getX();
+		int y = event.getY();
+
+		if (splash != null && event.getAction() == MouseEvent.PRESS) {
+			splash.mousePressed();
+		}
+
 		if (currentScene != null) {
 			currentScene.mouseEvent(event);
 		}
-	}
 
-	/**
-	 * Handles key press events for interaction.
-	 */
-	public void keyPressed() {
-		if (!controlManager.isNumberboxActive()) {
-			if (p.key == 'h') {
-				showControlPanel = !showControlPanel;
-				LOGGER.info("Toggling control panel visibility: " + showControlPanel);
-			}
-			if (p.key == 'm') {
-				setCurrentView(ViewType.values()[(getCurrentView().ordinal() + 1) % ViewType.values().length]);
-				LOGGER.info("Switching view to: " + getCurrentView());
-			}
+		if (standardRenderer != null) {
+			standardRenderer.getCam().mouseEvent(event);
 		}
 	}
 
 	/**
-	 * Handles control events from the control panel.
+	 * Handles control events from the ControlP5 library.
+	 * This method must be registered using p.registerMethod("controlEvent", this).
 	 *
-	 * @param theEvent the ControlEvent object representing the control event
+	 * @param theEvent the ControlEvent object containing details of the control event
 	 */
 	public void controlEvent(ControlEvent theEvent) {
-		ThreadManager.getExecutor().submit(() -> {
-			if (controlManager != null) {
-				try {
-					controlManager.handleEvent(theEvent);
-				} catch (Exception e) {
-					LOGGER.log(Level.SEVERE, "Error handling control event", e);
-				}
-			}
-		});
+		if (controlManager != null) {
+			controlManager.handleEvent(theEvent);
+		}
+
+		// Forward the event to the current scene, if one exists
+		if (currentScene != null) {
+			currentScene.controlEvent(theEvent);
+		}
 	}
 
 	/**
@@ -765,8 +854,6 @@ public class zividomelive {
 		return outputManager.isNdiEnabled() || outputManager.isSpoutEnabled() || outputManager.isSyphonEnabled();
 	}
 
-
-	
 	/**
 	 * Checks if the preview is shown.
 	 *
@@ -870,5 +957,120 @@ public class zividomelive {
 	public boolean isInitialized() {
 
 		return initialized;
+	}
+
+	/**
+	 * Sets the SceneManager instance for managing multiple scenes.
+	 * Initializes the first scene as the current scene.
+	 *
+	 * @param sceneManager the SceneManager instance to manage scenes
+	 */
+	public void setSceneManager(SceneManager sceneManager) {
+		if (sceneManager == null || sceneManager.getSceneCount() == 0) {
+			LOGGER.severe("SceneManager is null or contains no scenes.");
+			return;
+		}
+		this.sceneManager = sceneManager;
+		setScene(sceneManager.getCurrentScene());
+	}
+
+	/**
+	 * Returns the current SceneManager instance.
+	 *
+	 * @return the current SceneManager
+	 */
+	public SceneManager getSceneManager() {
+		return sceneManager;
+	}
+
+	/**
+	 * Method called before each draw call.
+	 */
+	public void pre() {
+		// Garantir que os managers estejam inicializados antes de renderizar
+		if (!initialized) {
+			LOGGER.warning("Render skipped: Managers not initialized.");
+			return;
+		}
+
+		// Atualizar qualquer estado global ou cenas antes do desenho
+		if (currentScene != null) {
+			currentScene.update(); // Atualiza o estado da cena atual
+		}
+	}
+
+	/**
+	 * Post-initialization method to set up managers after the initial setup.
+	 */
+	public void post() {
+		if (!initialized) {
+			initializeManagers();
+			initialized = true;
+			p.unregisterMethod("post", this);
+		}
+	}
+
+	/**
+	 * Stops all processes and releases resources.
+	 */
+	public void stop() {
+		LOGGER.info("Stopping all processes...");
+		if (outputManager != null) {
+			outputManager.shutdownOutputs();
+		}
+		if (executorService != null && !executorService.isShutdown()) {
+			executorService.shutdownNow();
+		}
+		LOGGER.info("All processes stopped.");
+	}
+
+	/**
+	 * Resumes processes after a pause.
+	 */
+	public void resume() {
+		LOGGER.info("Resuming processes...");
+		if (outputManager != null && !outputManager.isActive()) {
+			outputManager.sendOutput();
+		}
+		LOGGER.info("Processes resumed.");
+	}
+
+	/**
+	 * Pauses all processes.
+	 */
+	public void pause() {
+		LOGGER.info("Pausing processes...");
+		if (outputManager != null) {
+			outputManager.stopOutput();
+		}
+		LOGGER.info("Processes paused.");
+	}
+
+	/**
+	 * Releases resources and cleans up before the application exits.
+	 */
+	public void dispose() {
+		LOGGER.info("Disposing resources...");
+
+		releaseGraphicsResources();
+
+		// Libera managers
+		if (outputManager != null) {
+			outputManager.shutdownOutputs();
+			outputManager = null;
+		}
+		if (controlManager != null) {
+			controlManager.dispose();
+			controlManager = null;
+		}
+		if (cameraManager != null) {
+			cameraManager.dispose();
+			cameraManager = null;
+		}
+
+		if (executorService != null && !executorService.isShutdown()) {
+			executorService.shutdownNow();
+		}
+		LOGGER.info("Resources disposed successfully.");
 	}
 }

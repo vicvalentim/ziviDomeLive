@@ -20,41 +20,82 @@ public class LogManager {
 	private static void configureLogger() {
 		if (isConfigured) return;
 
+		// Desativa o uso de handlers do logger pai
+		globalLogger.setUseParentHandlers(false);
+
 		globalLogger.setLevel(Level.ALL);
 
-		// Remove existing handlers to prevent duplicates
+		// Remove handlers existentes para evitar duplicatas
 		Handler[] handlers = globalLogger.getHandlers();
 		for (Handler handler : handlers) {
 			globalLogger.removeHandler(handler);
 		}
 
-		// Create and configure ConsoleHandler
+		// Configurações de ConsoleHandler
 		ConsoleHandler consoleHandler = new ConsoleHandler();
 		consoleHandler.setLevel(Level.ALL);
 		consoleHandler.setFormatter(new CustomFormatter());
 		globalLogger.addHandler(consoleHandler);
 
-		// Create and configure FileHandler
+		// Configurações de FileHandler com validação de diretório
 		try {
-			FileHandler fileHandler = new FileHandler("ziviDomeLive.log", true);
-			fileHandler.setLevel(Level.ALL);
-			fileHandler.setFormatter(new CustomFormatter());
+			FileHandler fileHandler = getFileHandler();
 			globalLogger.addHandler(fileHandler);
 		} catch (IOException e) {
 			System.err.println("FileHandler configuration failed. Logs will only appear in the console.");
+			e.printStackTrace();
 		}
 
-		// Filter to ignore duplicate messages
+		// Filtro para ignorar mensagens duplicadas
 		globalLogger.setFilter(record -> {
 			String message = record.getMessage();
 			if (message.equals(lastLogMessage)) {
-				return false; // Ignore duplicate messages
+				return false; // Ignora mensagens duplicadas
 			}
 			lastLogMessage = message;
 			return true;
 		});
 
 		isConfigured = true;
+	}
+
+	/**
+	 * Configures and returns a FileHandler with appropriate directory and file handling.
+	 *
+	 * @return the configured FileHandler
+	 * @throws IOException if the directory or file cannot be created
+	 */
+	private static FileHandler getFileHandler() throws IOException {
+		String logDirectory;
+		String logFile;
+
+		// Define o local do log baseado no sistema operacional
+		if (System.getProperty("os.name").toLowerCase().contains("win")) {
+			logDirectory = System.getProperty("user.home") + "\\zividomelive\\logs";
+			logFile = logDirectory + "\\ziviDomeLive.log";
+		} else {
+			logDirectory = "/tmp/zividomelive/logs";
+			logFile = logDirectory + "/ziviDomeLive.log";
+		}
+
+		java.io.File directory = new java.io.File(logDirectory);
+
+		// Verifica e cria o diretório, se necessário
+		if (!directory.exists() && !directory.mkdirs()) {
+			throw new IOException("Failed to create log directory: " + logDirectory);
+		}
+
+		// Garante que o arquivo de log seja criado
+		java.io.File logFileObject = new java.io.File(logFile);
+		if (!logFileObject.exists() && !logFileObject.createNewFile()) {
+			throw new IOException("Failed to create log file: " + logFile);
+		}
+
+		// Configura o FileHandler
+		FileHandler fileHandler = new FileHandler(logFile, true); // true para anexar ao log existente
+		fileHandler.setLevel(Level.ALL);
+		fileHandler.setFormatter(new CustomFormatter());
+		return fileHandler;
 	}
 
 	/**
@@ -76,12 +117,10 @@ public class LogManager {
 	private static class CustomFormatter extends Formatter {
 		@Override
 		public String format(LogRecord record) {
-			StringBuilder sb = new StringBuilder();
-			sb.append("[")
-					.append(record.getLevel().getLocalizedName())
-					.append("] ");
-			sb.append(formatMessage(record)).append("\n");
-			return sb.toString();
+			return "[" +
+					record.getLevel().getLocalizedName() +
+					"] " +
+					formatMessage(record) + "\n";
 		}
 	}
 }

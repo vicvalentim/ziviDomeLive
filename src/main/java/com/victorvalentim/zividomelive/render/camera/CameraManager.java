@@ -39,4 +39,11 @@ public class CameraManager {
 	public CameraOrientation getOrientation(int index) {
         return orientations.get(index);
     }
+
+	/**
+     * Disposes of the CameraManager by clearing the list of camera orientations.
+     */
+    public void dispose() {
+        orientations.clear();
+    }
 }
