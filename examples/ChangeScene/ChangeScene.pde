@@ -26,21 +26,27 @@ void draw() {
   ziviDome.draw();
 }
 
-// Forward key events to the library and switch scenes
-void keyPressed() {
-  ziviDome.keyPressed();
+// Forward key events to the library
+void keyEvent(processing.event.KeyEvent event) {
+  ziviDome.keyEvent(event);
+
+  // Optionally forward key events to the current scene
   if (currentScene != null) {
-    currentScene.keyPressed(key);
+    currentScene.keyEvent(event);
   }
-  switch (key) {
-    case 'i':
-      currentScene = new Scene1(ziviDome);
-      break;
-    case 'o':
-      currentScene = new Scene2(ziviDome);
-      break;
+
+  // Example of switching scenes based on specific key inputs
+  if (event.getAction() == KeyEvent.PRESS) {
+    switch (event.getKey()) {
+      case 'i':
+        currentScene = new Scene1(ziviDome);
+        break;
+      case 'o':
+        currentScene = new Scene2(ziviDome);
+        break;
+    }
+    ziviDome.setCurrentScene(currentScene);
   }
-  ziviDome.setCurrentScene(currentScene);
 }
 
 // Forward mouse events to the library
@@ -70,7 +76,11 @@ class Scene1 implements Scene {
     println("Scene1 setup completed.");
   }
 
-  public void sceneRender(PGraphics pg) {
+  public void update() {
+    // Implement scene update logic, if necessary
+  }
+
+  public void sceneRender(PGraphicsOpenGL pg) {
     pg.ambientLight(128, 128, 128); // Add ambient light
     pg.pushMatrix();
     pg.background(0, 0, 80, 0);
@@ -93,15 +103,6 @@ class Scene1 implements Scene {
     }
     pg.popMatrix();
   }
-
-  public void keyPressed(char key) {
-    // Implement key response logic, if necessary
-    println("Key pressed in Scene1: " + key);
-  }
-
-  public void mouseEvent(MouseEvent event) {
-    // Implement mouse event logic, if necessary
-  }
 }
 
 // Implementation of Scene2 that uses the Scene interface
@@ -116,7 +117,11 @@ class Scene2 implements Scene {
     // Specific scene settings, if necessary
   }
 
-  public void sceneRender(PGraphics pg) {
+  public void update() {
+      // Implement scene update logic, if necessary
+  }
+
+  public void sceneRender(PGraphicsOpenGL pg) {
     pg.pushMatrix();
     pg.background(25, 25, 112);
     pg.pushMatrix();
@@ -126,15 +131,7 @@ class Scene2 implements Scene {
     pg.popMatrix();
   }
 
-  public void keyPressed(char key) {
-    // Implement key response logic, if necessary
-  }
-
-  public void mouseEvent(MouseEvent event) {
-    // Implement mouse event logic, if necessary
-  }
-
-  void drawLabeledBox(PGraphics pg, float size) {
+  void drawLabeledBox(PGraphicsOpenGL pg, float size) {
     pg.pushMatrix();
     // Front (+Z)
     pg.pushMatrix();
@@ -174,7 +171,7 @@ class Scene2 implements Scene {
     pg.popMatrix();
   }
 
-  void drawFaceWithMesh(PGraphics pg, float size, String label, int faceColor) {
+  void drawFaceWithMesh(PGraphicsOpenGL pg, float size, String label, int faceColor) {
     pg.fill(faceColor);
     pg.beginShape();
     pg.vertex(-size / 2, -size / 2, 0);

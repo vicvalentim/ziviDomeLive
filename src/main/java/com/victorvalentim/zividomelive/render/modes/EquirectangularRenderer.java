@@ -33,7 +33,7 @@ public class EquirectangularRenderer {
         if (equirectangular != null) {
             equirectangular.dispose();
         }
-        equirectangular = parent.createGraphics(resolution * 2, resolution, PApplet.P2D);
+        equirectangular = (PGraphicsOpenGL) parent.createGraphics(resolution * 2, resolution, PApplet.P2D);
     }
 
     /**
@@ -41,7 +41,7 @@ public class EquirectangularRenderer {
      *
      * @param faces an array of PGraphics objects representing the cubemap faces
      */
-    public void render(PGraphics[] faces) {
+    public void render(PGraphicsOpenGL[] faces) {
         if (equirectangular == null) {
             initializeEquirectangular();
         }
@@ -65,11 +65,11 @@ public class EquirectangularRenderer {
      *
      * @return the PGraphics object representing the equirectangular projection
      */
-    public PGraphics getEquirectangular() {
+    public PGraphicsOpenGL getEquirectangular() {
         if (equirectangular == null) {
             initializeEquirectangular();
         }
-        return equirectangular;
+        return (PGraphicsOpenGL) equirectangular;
     }
 
     /**

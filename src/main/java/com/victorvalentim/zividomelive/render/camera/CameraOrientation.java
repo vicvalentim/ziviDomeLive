@@ -5,12 +5,49 @@ package com.victorvalentim.zividomelive.render.camera;
  * It includes the position of the camera, the point it is looking at, and the up direction.
  */
 public class CameraOrientation {
-    float eyeX, eyeY, eyeZ;
-    public float centerX;
+    /**
+	 * The x-coordinate of the camera eye position.
+	 */
+	float eyeX;
+
+	/**
+	 * The y-coordinate of the camera eye position.
+	 */
+	float eyeY;
+
+	/**
+	 * The z-coordinate of the camera eye position.
+	 */
+	float eyeZ;
+
+	/**
+	 * The x-coordinate of the point the camera is looking at.
+	 */
+	public float centerX;
+
+	/**
+	 * The y-coordinate of the point the camera is looking at.
+	 */
 	public float centerY;
+
+	/**
+	 * The z-coordinate of the point the camera is looking at.
+	 */
 	public float centerZ;
-    public float upX;
+
+	/**
+	 * The x-component of the camera's up direction.
+	 */
+	public float upX;
+
+	/**
+	 * The y-component of the camera's up direction.
+	 */
 	public float upY;
+
+	/**
+	 * The z-component of the camera's up direction.
+	 */
 	public float upZ;
 
     /**

@@ -383,6 +383,13 @@ public class ControlManager {
     }
 
     /**
+     * Disposes of the ControlManager by releasing all resources and clearing the ControlP5 instance.
+     */
+    public void dispose() {
+        cp5.dispose();
+    }
+
+    /**
      * The NumberboxInput class handles text input for a Numberbox control.
      * It allows users to type in values directly and updates the Numberbox accordingly.
      */
