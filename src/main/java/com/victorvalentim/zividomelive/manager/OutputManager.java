@@ -5,7 +5,6 @@ import com.victorvalentim.zividomelive.support.ThreadManager;
 import com.victorvalentim.zividomelive.zividomelive;
 import me.walkerknapp.devolay.*;
 import processing.core.PConstants;
-import processing.core.PGraphics;
 import codeanticode.syphon.SyphonServer;
 import processing.opengl.PGraphicsOpenGL;
 import spout.Spout;
@@ -40,7 +39,7 @@ public class OutputManager implements PConstants {
 	private boolean spoutEnabled = false;
 	private boolean syphonEnabled = false;
 
-	private PGraphics outputGraphics;
+	private PGraphicsOpenGL outputGraphics;
 	private final boolean isMacOS;
 	private final boolean isWindows;
 	private ByteBuffer[] ndiBuffers;
@@ -171,7 +170,7 @@ public class OutputManager implements PConstants {
 	public void sendOutput() {
 		if (ndiEnabled && ndiSender != null) {
 			prepareOutput(ndiView);
-			AtomicReference<DevolayVideoFrame> ndiFrame = new AtomicReference<>(createNDIFrame((PGraphicsOpenGL) outputGraphics));
+			AtomicReference<DevolayVideoFrame> ndiFrame = new AtomicReference<>(createNDIFrame(outputGraphics));
 
 			ThreadManager.submitRunnable(() -> {
 				synchronized (this) {
