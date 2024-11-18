@@ -98,11 +98,11 @@ public class CubemapRenderer implements PConstants {
         pg.camera(eye.x, eye.y, eye.z, orientation.centerX, orientation.centerY, orientation.centerZ, orientation.upX, orientation.upY, orientation.upZ);
         pg.perspective(cachedFieldOfView, 1, cachedNearPlane, cachedFarPlane);
 
-        pg.translate((float) pg.width / 2, (float) pg.height / 2, 0);
+        pg.translate(0, 0, 0);
         pg.rotateX(pitch);
         pg.rotateY(roll);
         pg.rotateZ(yaw);
-        pg.translate((float) -pg.width / 2, (float) -pg.height / 2, 0);
+        pg.translate(0, 0, 0);
     }
 
     /**
