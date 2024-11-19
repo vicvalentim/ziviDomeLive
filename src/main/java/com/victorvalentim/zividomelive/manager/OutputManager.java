@@ -6,15 +6,16 @@ import com.victorvalentim.zividomelive.zividomelive;
 import me.walkerknapp.devolay.*;
 import processing.core.PConstants;
 import codeanticode.syphon.SyphonServer;
+import processing.opengl.PGL;
 import processing.opengl.PGraphicsOpenGL;
 import spout.Spout;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.IntBuffer;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
 /**
@@ -43,7 +44,6 @@ public class OutputManager implements PConstants {
 	private final boolean isMacOS;
 	private final boolean isWindows;
 	private ByteBuffer[] ndiBuffers;
-	private final AtomicInteger bufferIndex = new AtomicInteger(0);
 	private int lastWidth = 0;
 	private int lastHeight = 0;
 	private DevolayVideoFrame reusableFrame; // Reusable NDI video frame
@@ -170,12 +170,12 @@ public class OutputManager implements PConstants {
 	public void sendOutput() {
 		if (ndiEnabled && ndiSender != null) {
 			prepareOutput(ndiView);
-			AtomicReference<DevolayVideoFrame> ndiFrame = new AtomicReference<>(createNDIFrame(outputGraphics));
+			DevolayVideoFrame ndiFrame = createNDIFrame(outputGraphics);
 
 			ThreadManager.submitRunnable(() -> {
 				synchronized (this) {
 					if (ndiSender != null) {
-						ndiSender.sendVideoFrameAsync(ndiFrame.get());
+						ndiSender.sendVideoFrameAsync(ndiFrame);
 					}
 				}
 			});
@@ -193,32 +193,40 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * Creates an NDI video frame from the provided PGraphics in RGBA format, using a buffer flip technique.
+	 * Creates an NDI video frame from the provided PGraphics in RGBA format, using the OpenGL texture directly.
 	 *
 	 * @param pg the PGraphics instance containing the image data
 	 * @return the created NDI video frame
 	 */
 	private synchronized DevolayVideoFrame createNDIFrame(PGraphicsOpenGL pg) {
-		pg.loadPixels();
 		int width = pg.width;
 		int height = pg.height;
-		int bufferSize = width * height * 4;
 
-		int BUFFER_COUNT = 2;
-		if (width != lastWidth || height != lastHeight || ndiBuffers == null) {
-			ndiBuffers = new ByteBuffer[BUFFER_COUNT];
-			for (int i = 0; i < BUFFER_COUNT; i++) {
-				ndiBuffers[i] = ByteBuffer.allocateDirect(bufferSize);
-				ndiBuffers[i].order(ByteOrder.LITTLE_ENDIAN);
-			}
-			lastWidth = width;
-			lastHeight = height;
-		}
+		// Get the OpenGL texture ID
+		int textureID = pg.getTexture().glName;
 
-		ByteBuffer ndiBuffer = ndiBuffers[bufferIndex.getAndIncrement() % BUFFER_COUNT];
-		ndiBuffer.clear();
+		// Create a Pixel Buffer Object (PBO) for efficient pixel transfer
+		IntBuffer pboIDs = IntBuffer.allocate(1);
+		PGL pgl = pg.beginPGL();
+		pgl.genBuffers(1, pboIDs);
+		int pboID = pboIDs.get(0);
+		pgl.bindBuffer(PGL.PIXEL_PACK_BUFFER, pboID);
+		pgl.bufferData(PGL.PIXEL_PACK_BUFFER, width * height * 4, null, PGL.STREAM_READ);
 
-		List<Callable<Void>> tasks = prepareTasks(pg, ndiBuffer);
+		// Bind the texture and read pixels into the PBO
+		pg.beginDraw();
+		pgl = pg.beginPGL();
+		pgl.bindTexture(PGL.TEXTURE_2D, textureID);
+		pgl.readPixels(0, 0, width, height, PGL.RGBA, PGL.UNSIGNED_BYTE, 0);
+		pg.endPGL();
+		pg.endDraw();
+
+		// Map the PBO to a ByteBuffer
+		ByteBuffer buffer = pgl.mapBuffer(PGL.PIXEL_PACK_BUFFER, PGL.READ_ONLY);
+		buffer.order(ByteOrder.LITTLE_ENDIAN);
+
+		// Prepare tasks for parallel processing
+		List<Callable<Void>> tasks = prepareTasks(pg, buffer);
 
 		try {
 			ThreadManager.getExecutor().invokeAll(tasks);
@@ -226,27 +234,27 @@ public class OutputManager implements PConstants {
 			logger.severe("Error in parallel pixel copy: " + e.getMessage());
 		}
 
-		ndiBuffer.flip();
+		// Unmap the PBO but do not delete it immediately to avoid blocking
+		pgl.unmapBuffer(PGL.PIXEL_PACK_BUFFER);
+		pgl.bindBuffer(PGL.PIXEL_PACK_BUFFER, 0);
+		pgl.deleteBuffers(1, IntBuffer.wrap(new int[]{pboID}));
+
+		buffer.flip();
 
 		reusableFrame.setResolution(width, height);
-		reusableFrame.setData(ndiBuffer);
+		reusableFrame.setData(buffer);
 		reusableFrame.setFourCCType(DevolayFrameFourCCType.RGBA);
 		reusableFrame.setLineStride(width * 4);
 		reusableFrame.setFormatType(DevolayFrameFormatType.INTERLEAVED);
-		reusableFrame.setFrameRate(60, 1);
+		reusableFrame.setFrameRate(150, 1);
 
 		return reusableFrame;
 	}
 
-	/**
-	 * Prepares the list of tasks for processing pixels in parallel without color conversion.
-	 *
-	 * @param pg the PGraphics instance containing the pixel data
-	 * @param buffer the buffer to write pixel data into
-	 * @return a list of tasks to be executed for pixel copying
-	 */
 	private List<Callable<Void>> prepareTasks(PGraphicsOpenGL pg, ByteBuffer buffer) {
-		int pixelCount = pg.pixels.length;
+		int width = pg.width;
+		int height = pg.height;
+		int pixelCount = width * height;
 		int blockSize = pixelCount / THREAD_COUNT;
 		List<Callable<Void>> tasks = new ArrayList<>();
 
@@ -256,16 +264,30 @@ public class OutputManager implements PConstants {
 
 			tasks.add(() -> {
 				for (int j = start; j < end; j++) {
-					int argb = pg.pixels[j];
-					int index = j * 4;
+					int x = j % width;
+					int y = j / width;
+					int index = (y * width + x) * 4;
 
-					buffer.put(index, (byte) ((argb >> 16) & 0xFF));   // Red
-					buffer.put(index + 1, (byte) ((argb >> 8) & 0xFF)); // Green
-					buffer.put(index + 2, (byte) (argb & 0xFF));        // Blue
-					buffer.put(index + 3, (byte) ((argb >> 24) & 0xFF)); // Alpha
+					// Read pixel data from the PBO
+					byte r = buffer.get(index);
+					byte g = buffer.get(index + 1);
+					byte b = buffer.get(index + 2);
+					byte a = buffer.get(index + 3);
+
+					// Write pixel data back to the buffer
+					buffer.put(index, r);
+					buffer.put(index + 1, g);
+					buffer.put(index + 2, b);
+					buffer.put(index + 3, a);
 				}
 				return null;
 			});
+		}
+
+		try {
+			ThreadManager.getExecutor().invokeAll(tasks);
+		} catch (Exception e) {
+			logger.severe("Error in parallel pixel copy: " + e.getMessage());
 		}
 
 		return tasks;
