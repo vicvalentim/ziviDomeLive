@@ -1,13 +1,54 @@
-package com.victorvalentim.zividomelive;
+package com.victorvalentim.zividomelive.render.camera;
 
 /**
  * The CameraOrientation class represents the orientation of a camera in 3D space.
  * It includes the position of the camera, the point it is looking at, and the up direction.
  */
 public class CameraOrientation {
-    float eyeX, eyeY, eyeZ;
-    float centerX, centerY, centerZ;
-    float upX, upY, upZ;
+    /**
+	 * The x-coordinate of the camera eye position.
+	 */
+	float eyeX;
+
+	/**
+	 * The y-coordinate of the camera eye position.
+	 */
+	float eyeY;
+
+	/**
+	 * The z-coordinate of the camera eye position.
+	 */
+	float eyeZ;
+
+	/**
+	 * The x-coordinate of the point the camera is looking at.
+	 */
+	public float centerX;
+
+	/**
+	 * The y-coordinate of the point the camera is looking at.
+	 */
+	public float centerY;
+
+	/**
+	 * The z-coordinate of the point the camera is looking at.
+	 */
+	public float centerZ;
+
+	/**
+	 * The x-component of the camera's up direction.
+	 */
+	public float upX;
+
+	/**
+	 * The y-component of the camera's up direction.
+	 */
+	public float upY;
+
+	/**
+	 * The z-component of the camera's up direction.
+	 */
+	public float upZ;
 
     /**
      * Constructs a CameraOrientation with the specified parameters.

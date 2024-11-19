@@ -1,5 +1,6 @@
-package com.victorvalentim.zividomelive;
+package com.victorvalentim.zividomelive.manager;
 
+import com.victorvalentim.zividomelive.zividomelive;
 import controlP5.*;
 import processing.core.*;
 import processing.event.KeyEvent;
@@ -30,9 +31,11 @@ public class ControlManager {
     PApplet p;
 
     // Layout configuration
+    // Layout configuration
     private final int controlSpacing = 35;
     private final int controlHeight = 20;
-    private final int labelOffset = 30;
+    private final int initialYOffset = 20;
+    private int currentYOffset;
 
     /**
      * Constructs a ControlManager with the specified PApplet, parent object, and base resolution.
@@ -46,24 +49,30 @@ public class ControlManager {
         this.parent = parent;
         this.baseResolution = baseResolution;
         cp5 = new ControlP5(p);
+        this.currentYOffset = initialYOffset;
 
-        int currentYOffset = 20;
-
+        // Initialize and increment Y offset
         initializeControls(currentYOffset);
         currentYOffset += controlSpacing;
 
+        // Add number boxes and sliders
         addNumberboxesAndSliders(currentYOffset);
         currentYOffset += 5 * controlSpacing;
 
+        // Add buttons
         addButtons(currentYOffset);
         currentYOffset += 2 * controlSpacing;
 
+        // Add dropdown lists
         addDropdownLists(currentYOffset);
         currentYOffset += 2 * controlSpacing;
 
-        addOutputToggles(currentYOffset); // Add toggles in a separate section
-        addOutputViewDropdowns(currentYOffset + 3 * controlSpacing); // Add view mode dropdowns below toggles
+        // Add toggles and output view dropdowns
+        addOutputToggles(currentYOffset);
+        currentYOffset += 2 * controlSpacing;
+        addOutputViewDropdowns(currentYOffset);
 
+        // Reset controls to default state
         resetControls();
     }
 
@@ -207,8 +216,6 @@ public class ControlManager {
         yOffset += controlSpacing;
 
         spoutViewDropdown = createViewDropdown("Spout View", yOffset, viewModes, view -> parent.getOutputManager().setSpoutView(view));
-        yOffset += controlSpacing;
-
         syphonViewDropdown = createViewDropdown("Syphon View", yOffset, viewModes, view -> parent.getOutputManager().setSyphonView(view));
 
         toggleDropdownVisibility();
@@ -323,7 +330,10 @@ public class ControlManager {
         viewModeDropdown.onClick(event -> viewModeDropdown.bringToFront());
     }
 
-    void resetControls() {
+    /**
+     * Resets all the controls to their default state.
+     */
+    public void resetControls() {
         String[] controlNames = {"pitch", "yaw", "roll", "fov", "size"};
         float[] defaultValues = {0.0f, 0.0f, 0.0f, 210.0f, 100.0f};
         for (int i = 0; i < controlNames.length; i++) {
@@ -331,11 +341,17 @@ public class ControlManager {
         }
     }
 
-    void show() {
+    /**
+     * Shows the control panel.
+     */
+    public void show() {
         cp5.show();
     }
 
-    void hide() {
+    /**
+     * Hides the control panel.
+     */
+    public void hide() {
         cp5.hide();
     }
 
@@ -370,6 +386,13 @@ public class ControlManager {
                 parent.getFisheyeDomemaster().setSizePercentage(value);
                 break;
         }
+    }
+
+    /**
+     * Disposes of the ControlManager by releasing all resources and clearing the ControlP5 instance.
+     */
+    public void dispose() {
+        cp5.dispose();
     }
 
     /**

@@ -1,25 +1,29 @@
-package com.victorvalentim.zividomelive;
+package com.victorvalentim.zividomelive.support;
 
 import processing.core.PApplet;
 import processing.core.PConstants;
-import processing.core.PGraphics;
+import processing.opengl.PGraphicsOpenGL;
 
 /**
  * The SplashScreen class is responsible for rendering an animated splash screen with
  * a central rotating sphere, orbiting cubes, and a library title.
  */
 public class SplashScreen {
+
+    /**
+     * A boolean flag to determine whether the splash screen should be shown.
+     */
+    public boolean showSplash;
     int opacity = 255;
     float orbitRadius = 160;
     int numCubes = 13;
     float[] speeds;
-    boolean showSplash = true;
     boolean fading = false;
     long startTime;
     int displayDuration = 7000;
     PApplet p;
-    PGraphics backgroundLayer; // Camada para o fundo gradiente
-    PGraphics animationLayer;  // Camada para os elementos animados
+    PGraphicsOpenGL backgroundLayer; // Camada para o fundo gradiente
+    PGraphicsOpenGL animationLayer;  // Camada para os elementos animados
 
     /**
      * Constructs a SplashScreen instance.
@@ -32,8 +36,8 @@ public class SplashScreen {
         for (int i = 0; i < numCubes; i++) {
             speeds[i] = 0.0008f + p.random(-0.0002f, 0.0002f);
         }
-        backgroundLayer = p.createGraphics(p.width, p.height, PConstants.P3D);
-        animationLayer = p.createGraphics(p.width, p.height, PConstants.P3D);
+        backgroundLayer = (PGraphicsOpenGL) p.createGraphics(p.width, p.height, PConstants.P3D);
+        animationLayer = (PGraphicsOpenGL) p.createGraphics(p.width, p.height, PConstants.P3D);
     }
 
     /**
@@ -84,7 +88,7 @@ public class SplashScreen {
         animationLayer.beginDraw();
         animationLayer.clear();
         animationLayer.noFill();
-        animationLayer.strokeWeight(1);
+        animationLayer.strokeWeight(2.0f);
 
         float rotationAngleX = PApplet.radians(p.millis() * 0.02f);
         float rotationAngleY = PApplet.radians(p.millis() * 0.015f);
