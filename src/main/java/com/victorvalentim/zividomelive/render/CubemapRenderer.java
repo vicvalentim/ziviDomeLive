@@ -5,7 +5,10 @@ import com.victorvalentim.zividomelive.render.camera.CameraManager;
 import com.victorvalentim.zividomelive.render.camera.CameraOrientation;
 import com.victorvalentim.zividomelive.support.LogManager;
 import com.victorvalentim.zividomelive.support.ThreadManager;
-import processing.core.*;
+import processing.core.PApplet;
+import processing.core.PConstants;
+import processing.core.PGraphics;
+import processing.core.PVector;
 import processing.opengl.PGraphicsOpenGL;
 
 import java.util.concurrent.ExecutorService;
@@ -14,45 +17,45 @@ import java.util.concurrent.Future;
 import java.util.logging.Logger;
 
 /**
- * The CubemapRenderer class handles the creation and rendering of cubemap faces with dynamic frustum adjustments.
+ * CubemapRenderer class handles the rendering of cubemap faces using Processing's PGraphicsOpenGL.
+ * It supports asynchronous calculation of frustum parameters and multi-threaded rendering.
  */
 public class CubemapRenderer implements PConstants {
-    private final ExecutorService executorService = ThreadManager.getExecutor(); // Logger para a classe
+    private static final int NUM_FACES = 6;
+    private static final float DEFAULT_NEAR_PLANE = 0.01f;
+    private static final float DEFAULT_FAR_PLANE = 22000.0f;
+    private static final Logger LOGGER = LogManager.getLogger();
 
-    private final ExecutorService executor; // Pool de threads dinâmico para cálculos
+    // Thread manager can be used to obtain a shared executor
+    private final ExecutorService sharedExecutor = ThreadManager.getExecutor();
+    private final ExecutorService executor;
     private PGraphicsOpenGL[] cubemapFaces;
     private int resolution;
     private final PApplet parent;
 
-    // Valores padrão para os planos do frustum (podem ser ajustados conforme necessário)
-    final float defaultNearPlane = 0.01f;
-    final float defaultFarPlane = 22000.0f;
-
-    // Variáveis para armazenar os resultados dos cálculos de frustum
+    // Cached frustum parameters
     private volatile float cachedNearPlane;
     private volatile float cachedFarPlane;
     private volatile float cachedFieldOfView;
 
-    // Futuros para cálculos assíncronos
+    // Futures for asynchronous calculations
     private Future<Float> nearPlaneFuture;
     private Future<Float> farPlaneFuture;
     private Future<Float> fieldOfViewFuture;
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
     /**
      * Constructs a CubemapRenderer with the specified initial resolution and parent PApplet.
      *
-     * @param initialResolution the initial resolution of the cubemap faces
+     * @param initialResolution the initial resolution for cubemap faces
      * @param parent the parent PApplet instance
      */
-	public CubemapRenderer(int initialResolution, PApplet parent) {
+    public CubemapRenderer(int initialResolution, PApplet parent) {
         this.parent = parent;
         this.resolution = initialResolution;
-        int numThreads = Runtime.getRuntime().availableProcessors(); // Detecta o número de núcleos
-        this.executor = Executors.newFixedThreadPool(numThreads); // Cria o pool de threads dinâmico
+        int numThreads = Runtime.getRuntime().availableProcessors();
+        this.executor = Executors.newFixedThreadPool(numThreads);
         initializeCubemapFaces();
-        calculateFrustumParametersAsync(); // Cálculo inicial
+        calculateFrustumParametersAsync();
     }
 
     /**
@@ -60,9 +63,9 @@ public class CubemapRenderer implements PConstants {
      */
     private void initializeCubemapFaces() {
         if (cubemapFaces == null) {
-            cubemapFaces = new PGraphicsOpenGL[6];
+            cubemapFaces = new PGraphicsOpenGL[NUM_FACES];
         }
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < NUM_FACES; i++) {
             if (cubemapFaces[i] != null) {
                 cubemapFaces[i].dispose();
             }
@@ -70,6 +73,11 @@ public class CubemapRenderer implements PConstants {
         }
     }
 
+    /**
+     * Updates the resolution and reinitializes the cubemap faces if needed.
+     *
+     * @param newResolution the new resolution for cubemap faces
+     */
     void updateResolution(int newResolution) {
         if (this.resolution != newResolution) {
             this.resolution = newResolution;
@@ -78,72 +86,66 @@ public class CubemapRenderer implements PConstants {
     }
 
     /**
-     * Configura a câmera para cada face usando parâmetros de frustum calculados.
+     * Configures the camera for each cubemap face using asynchronously calculated frustum parameters.
      */
     private void configureCameraForFace(PGraphicsOpenGL pg, CameraOrientation orientation, float pitch, float yaw, float roll) {
         PVector eye = new PVector(0, 0, 0);
-
-        // Certifique-se de que os parâmetros foram calculados antes de configurar a câmera
-        if (nearPlaneFuture.isDone() && farPlaneFuture.isDone() && fieldOfViewFuture.isDone()) {
-            try {
-                cachedNearPlane = nearPlaneFuture.get();
-                cachedFarPlane = farPlaneFuture.get();
-                cachedFieldOfView = fieldOfViewFuture.get();
-            } catch (Exception e) {
-                LOGGER.severe("Erro ao obter valores de frustum para a configuração da câmera");
-            }
+        try {
+            // Wait for the asynchronous calculations to complete
+            cachedNearPlane = nearPlaneFuture.get();
+            cachedFarPlane = farPlaneFuture.get();
+            cachedFieldOfView = fieldOfViewFuture.get();
+        } catch (Exception e) {
+            LOGGER.severe("Error retrieving frustum parameters: " + e.getMessage());
+            return;
         }
 
-        // Configura a câmera e perspectiva com os valores calculados
-        pg.camera(eye.x, eye.y, eye.z, orientation.centerX, orientation.centerY, orientation.centerZ, orientation.upX, orientation.upY, orientation.upZ);
+        pg.camera(eye.x, eye.y, eye.z, orientation.centerX, orientation.centerY, orientation.centerZ,
+                  orientation.upX, orientation.upY, orientation.upZ);
         pg.perspective(cachedFieldOfView, 1, cachedNearPlane, cachedFarPlane);
 
+        // The following translations are redundant if they are (0,0,0); remove if not needed
         pg.translate(0, 0, 0);
         pg.rotateX(pitch);
         pg.rotateY(roll);
         pg.rotateZ(yaw);
-        pg.translate(0, 0, 0);
     }
 
     /**
-     * Inicia o cálculo assíncrono dos parâmetros do frustum.
+     * Starts asynchronous calculation of frustum parameters.
      */
     private void calculateFrustumParametersAsync() {
-        // Cálculo assíncrono dos parâmetros para evitar recalcular a cada face
-        nearPlaneFuture = executor.submit(this::calculateNearPlaneForFace);
-        farPlaneFuture = executor.submit(this::calculateFarPlaneForFace);
-        fieldOfViewFuture = executor.submit(this::calculateFieldOfViewForFace);
+        nearPlaneFuture = executor.submit(this::calculateNearPlane);
+        farPlaneFuture  = executor.submit(this::calculateFarPlane);
+        fieldOfViewFuture = executor.submit(this::calculateFieldOfView);
     }
 
-    /**
-     * Métodos de cálculo paralelizados para parâmetros de frustum.
-     */
-    private float calculateNearPlaneForFace() {
-        return defaultNearPlane;
+    private float calculateNearPlane() {
+        return DEFAULT_NEAR_PLANE;
     }
 
-    private float calculateFarPlaneForFace() {
-        return defaultFarPlane;
+    private float calculateFarPlane() {
+        return DEFAULT_FAR_PLANE;
     }
 
-    private float calculateFieldOfViewForFace() {
+    private float calculateFieldOfView() {
         return PApplet.PI / 2;
     }
 
     /**
-     * Captures the six faces of the cubemap based on the camera's orientation.
+     * Captures the cubemap faces based on the camera orientation.
      *
-     * @param pitch The pitch angle of the camera.
-     * @param yaw The yaw angle of the camera.
-     * @param roll The roll angle of the camera.
-     * @param cameraManager The camera manager that handles the camera orientations.
-     * @param currentScene The current scene being rendered.
+     * @param pitch the pitch angle
+     * @param yaw the yaw angle
+     * @param roll the roll angle
+     * @param cameraManager manager for camera orientations
+     * @param currentScene the current scene to render
      */
     public void captureCubemap(float pitch, float yaw, float roll, CameraManager cameraManager, Scene currentScene) {
         if (cubemapFaces == null) {
             initializeCubemapFaces();
         }
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < NUM_FACES; i++) {
             cubemapFaces[i].beginDraw();
             cubemapFaces[i].background(0, 0);
             configureCameraForFace(cubemapFaces[i], cameraManager.getOrientation(i), pitch, yaw, roll);
@@ -154,21 +156,20 @@ public class CubemapRenderer implements PConstants {
         }
     }
 
-   /**
-     * Returns the array of cubemap faces. If the cubemap faces have not been
-     * initialized, this method will initialize them first.
+    /**
+     * Returns an array of cubemap faces.
      *
-     * @return an array of PGraphics representing the cubemap faces
+     * @return an array containing the current PGraphics cubemap faces
      */
-   public PGraphicsOpenGL[] getCubemapFaces() {
-       if (cubemapFaces == null) {
-           initializeCubemapFaces();
-       }
-       return cubemapFaces;
-   }
+    public PGraphicsOpenGL[] getCubemapFaces() {
+        if (cubemapFaces == null) {
+            initializeCubemapFaces();
+        }
+        return cubemapFaces;
+    }
 
     /**
-     * Disposes of the cubemap faces and shuts down the thread pool to free up resources.
+     * Disposes of cubemap faces and shuts down the executor to free up resources.
      */
     public void dispose() {
         if (cubemapFaces != null) {
@@ -180,7 +181,7 @@ public class CubemapRenderer implements PConstants {
             cubemapFaces = null;
         }
         if (executor != null) {
-            executor.shutdown(); // Encerra o pool de threads
+            executor.shutdown();
         }
     }
 }
