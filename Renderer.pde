@@ -1,30 +1,31 @@
 import processing.opengl.*;
+import processing.opengl.PGL;
 
 class Renderer {
   private PApplet pApplet;
   private ArrayList<Planet> planets;
   private PShape skySphere;
   
-  // Parâmetros e controle de câmera
+  // Controle de câmera
   private float cameraRotationX, cameraRotationY, cameraDistance;
   private PVector cameraTarget;
+  
+  // Modo de renderização: 0 = Wireframe, 1 = Solid, 2 = Textured
+  private int renderingMode = 2;
   
   Renderer(PApplet pApplet, ArrayList<Planet> planets, PShape skySphere) {
     this.pApplet = pApplet;
     this.planets = planets;
     this.skySphere = skySphere;
     
-    // Valores iniciais para a câmera
     cameraRotationX = PI / 16;
     cameraRotationY = 0;
     cameraDistance = 100;
     cameraTarget = new PVector(0, 0, 0);
-    
-    pApplet.println("[Renderer] Initialized: cameraDistance=" + cameraDistance + 
-                      ", cameraRotationX=" + cameraRotationX + ", cameraRotationY=" + cameraRotationY);
+    pApplet.println("Renderer initialized: distance=" + cameraDistance + 
+                      ", rotX=" + cameraRotationX + ", rotY=" + cameraRotationY);
   }
   
-  // Configura a câmera usando as funções do PGraphicsOpenGL
   public void setupCamera(PGraphicsOpenGL pg) {
     pg.translate(0, 0, cameraDistance);
     pg.rotateX(cameraRotationX);
@@ -32,7 +33,6 @@ class Renderer {
     pg.translate(-cameraTarget.x, -cameraTarget.y, -cameraTarget.z);
   }
   
-  // Desenha a iluminação
   public void drawLighting(PGraphicsOpenGL pg) {
     pg.ambientLight(100, 100, 100);
     if (planets.size() > 0) {
@@ -42,7 +42,6 @@ class Renderer {
     }
   }
   
-  // Desenha as órbitas dos planetas
   public void drawPlanetOrbits(PGraphicsOpenGL pg) {
     pg.noFill();
     pg.strokeWeight(1.5f);
@@ -58,18 +57,16 @@ class Renderer {
     }
   }
   
-  // Desenha os planetas e as luas
   public void drawPlanetsAndMoons(PGraphicsOpenGL pg, boolean showLabels, boolean showMoonOrbits) {
     for (Planet p : planets) {
-      p.display(pg, showLabels, false);
+      p.display(pg, showLabels, false, renderingMode);
       for (Moon m : p.moons) {
         if (showMoonOrbits) m.displayOrbit(pg);
-        m.display(pg, showLabels);
+        m.display(pg, showLabels, renderingMode);
       }
     }
   }
   
-  // Desenha o sky sphere (fundo)
   public void drawSkySphere(PGraphicsOpenGL pg) {
     pg.pushMatrix();
       // Centraliza o sky sphere na posição do Sol
@@ -77,11 +74,11 @@ class Renderer {
       PVector sunPos = sol.getDrawPosition();
       pg.translate(sunPos.x, sunPos.y, sunPos.z);
       
-      // Combina a rotação do Sol com parte da rotação da câmera para dar uma sensação de fundo "fixo" mas dinâmico
+      // Combina a rotação do Sol com parte da rotação da câmera
       float combinedRotationY = sol.rotationAngle + cameraRotationY * 0.5f;
       pg.rotateY(combinedRotationY);
       
-      // Usa PGL para desabilitar o culling e renderizar as faces internas
+      // Usando PGL para desabilitar o culling e renderizar as faces internas
       PGL pgl = pg.beginPGL();
       pgl.disable(PGL.CULL_FACE);
       pg.endPGL();
@@ -89,20 +86,16 @@ class Renderer {
       pg.scale(-NEPTUNE_DIST * PIXELS_PER_AU * 2.0f);
       pg.shape(skySphere);
       
-      // Restaura o culling de faces
       pgl = pg.beginPGL();
       pgl.enable(PGL.CULL_FACE);
       pg.endPGL();
-      
     pg.popMatrix();
   }
   
-  // Atualiza o alvo da câmera (por exemplo, via movimento do mouse ou via transição)
   public void updateCameraTarget(PVector newTarget) {
     cameraTarget.lerp(newTarget, 0.01f);
   }
   
-  // Métodos getters e setters para os parâmetros de câmera
   public void setCameraRotation(float rotX, float rotY) {
     cameraRotationX = rotX;
     cameraRotationY = rotY;
@@ -128,34 +121,29 @@ class Renderer {
     this.planets = planets;
   }
   
-  // Exemplo: retorna o valor padrão de ROTATION_FACTOR (definido nas constantes)
-  public float getRotationFactor() {
-    return ROTATION_FACTOR;
+  public void setRenderingMode(int mode) {
+    renderingMode = mode;
   }
   
-  // Método de navegação "goTo" para interpolar os parâmetros da câmera de forma suave
+  public int getRenderingMode() {
+    return renderingMode;
+  }
+  
   public void goTo(PVector newTarget, float newRotX, float newRotY, float newDistance) {
-    float smoothing = 0.05f;  // Determina a velocidade da transição (ajuste conforme necessário)
-    
-    // Interpola o alvo (cameraTarget) usando uma transição suave (lerp)
+    float smoothing = 0.05f;  // Velocidade da transição
     cameraTarget.lerp(newTarget, smoothing);
-    // Transição suave para as rotações e a distância (zoom)
     cameraRotationX = lerp(cameraRotationX, newRotX, smoothing);
     cameraRotationY = lerp(cameraRotationY, newRotY, smoothing);
     cameraDistance = lerp(cameraDistance, newDistance, smoothing);
   }
-
-  // Função de interpolação linear
+  
   private float lerp(float start, float stop, float amt) {
     return start + (stop - start) * amt;
   }
   
-  // Método dispose para liberar referências
   public void dispose() {
     skySphere = null;
     cameraTarget = null;
     planets = null;
-    pApplet.println("[Renderer] dispose() called; resources released.");
   }
-  
 }

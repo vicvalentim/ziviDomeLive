@@ -5,6 +5,9 @@ class Scene1 implements Scene {
   private zividomelive parent;
   private PApplet pApplet;
   private ArrayList<Planet> planets;
+
+  // Instância dos parâmetros dinâmicos
+  private SimParams simParams;
   
   // Módulos responsáveis pela configuração, física e renderização
   private TextureManager textureManager;
@@ -16,22 +19,12 @@ class Scene1 implements Scene {
   private float timeScale = 1.0f; // aceleração do tempo (em dias simulados)
   private boolean showOrbits = true;
   private boolean showMoonOrbits = true;
-  private boolean showLabels = true;
+  private boolean showLabels = false;
   private int selectedPlanet = -1;
   
   // Controle de câmera – dados que serão repassados para o Renderer
   private int prevMouseX, prevMouseY;
   private PVector cameraTarget = new PVector(0, 0, 0);
-  
-  // Parâmetros visuais e de escalas
-  private float planetAmplification = 8.0f;
-  private float globalScale = 1.0f;
-  private float bodyScale = 1.0f;
-  private float rotationFactor = 0.2f;
-
-  
-  // Variável de gravidade calculada com base nas constantes globais
-  private final float gravityFactor = G_AU * SOL_MASS / (365.25f * 365.25f);
   
   // Lock para sincronização
   private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
@@ -40,12 +33,15 @@ class Scene1 implements Scene {
   Scene1(zividomelive parent, PApplet pApplet) {
     this.parent = parent;
     this.pApplet = pApplet;
+
+    // Inicializa os parâmetros dinâmicos da simulação
+    simParams = new SimParams();
     
     // Inicializa o gerenciador de texturas e pré-carrega as texturas básicas
     textureManager = new TextureManager(pApplet);
     textureManager.preloadTextures(new String[] { "2k_sun.jpg", "background.jpg" });
     
-    // Carrega a configuração do sistema solar (planetas, luas e sky sphere) a partir do JSON
+    // Cria o ConfigLoader (que usa os parâmetros globais definidos em SimParams)
     configLoader = new ConfigLoader(pApplet, textureManager);
     planets = configLoader.loadConfiguration();
     
@@ -53,21 +49,21 @@ class Scene1 implements Scene {
     physicsEngine = new PhysicsEngine(pApplet, planets);
     renderer = new Renderer(pApplet, planets, configLoader.getSkySphere());
     
-    // Configura a câmera
+    // Configura a câmera, usando constantes para conversão
     configureCamera();
     
     // Inicia a thread de física
     startPhysicsThread();
   }
   
-  // Atualiza a câmera utilizando as constantes
+  // Configura a câmera utilizando constantes (p.ex.: NEPTUNE_DIST, PIXELS_PER_AU, SUN_VISUAL_RADIUS)
   private void configureCamera() {
     float neptuneCenter = NEPTUNE_DIST * PIXELS_PER_AU;
     float neptuneDrawPos = neptuneCenter + SUN_VISUAL_RADIUS;
     renderer.setCameraDistance(neptuneDrawPos * 1.2f);
   }
   
-  // Inicia uma thread que chama periodicamente o método update do PhysicsEngine
+  // Inicia uma thread que chama periodicamente o update do PhysicsEngine
   private void startPhysicsThread() {
     Thread physicsThread = new Thread(new Runnable() {
       public void run() {
@@ -98,7 +94,7 @@ class Scene1 implements Scene {
     }
   }
   
-  // -------------------------- Métodos da Interface Scene --------------------------
+  // --------------------- Métodos da Interface Scene ---------------------
   
   // setupScene: relê a configuração e reinicializa os módulos, se necessário
   public void setupScene() {
@@ -112,9 +108,9 @@ class Scene1 implements Scene {
     }
   }
   
-  // update: atualizações não físicas podem ser implementadas aqui, se necessário
+  // update: atualizações não físicas podem ser implementadas aqui (exemplo: tracking do planeta selecionado)
   public void update() {
-    trackSelectedPlanet();  // Atualiza continuamente o alvo da câmera
+    trackSelectedPlanet();
   }
   
   // sceneRender: delega a renderização à classe Renderer
@@ -133,15 +129,14 @@ class Scene1 implements Scene {
       rwLock.readLock().unlock();
     }
   }
-
+  
   private void trackSelectedPlanet() {
     if (selectedPlanet >= 0 && selectedPlanet < planets.size()) {
       Planet target = planets.get(selectedPlanet);
-      // Usa a posição atual do planeta para atualizar o alvo da câmera
       renderer.goTo(target.getDrawPosition(), renderer.getCameraRotationX(), renderer.getCameraRotationY(), renderer.getCameraDistance());
     }
   }
-
+  
   public void keyEvent(processing.event.KeyEvent event) {
     if (event.getAction() == processing.event.KeyEvent.PRESS) {
       char key = event.getKey();
@@ -149,22 +144,35 @@ class Scene1 implements Scene {
         case ' ':
           resetView();
           break;
-        case 'a':  // Aumenta a amplificação dos planetas
-          planetAmplification *= 1.1f;
-          pApplet.println("planetAmplification: " + planetAmplification);
+        // Ajuste da amplificação dos planetas – agora usa SimParams
+        case 'G':
+          simParams.globalScale *= 1.1f;
+          pApplet.println("globalScale: " + simParams.globalScale);
           break;
-        case 'z':  // Diminui a amplificação dos planetas
-          planetAmplification /= 1.1f;
-          pApplet.println("planetAmplification: " + planetAmplification);
+        case 'g':
+          simParams.globalScale /= 1.1f;
+          pApplet.println("globalScale: " + simParams.globalScale);
           break;
-        case 'G':  // Aumenta a escala global
-          globalScale *= 1.1f;
-          pApplet.println("globalScale: " + globalScale);
+        case 'a':
+          simParams.planetAmplification *= 1.1f;
+          pApplet.println("planetAmplification: " + simParams.planetAmplification);
           break;
-        case 'g':  // Diminui a escala global
-          globalScale /= 1.1f;
-          pApplet.println("globalScale: " + globalScale);
+        case 'z':
+          simParams.planetAmplification /= 1.1f;
+          pApplet.println("planetAmplification: " + simParams.planetAmplification);
           break;
+          case 'w':
+        renderer.setRenderingMode(0);
+        pApplet.println("Render Mode: WIREFRAME");
+        break;
+      case 's':
+        renderer.setRenderingMode(1);
+        pApplet.println("Render Mode: SOLID");
+        break;
+      case 't':
+        renderer.setRenderingMode(2);
+        pApplet.println("Render Mode: TEXTURED");
+        break;
         case '+':
           timeScale *= 1.2f;
           break;
@@ -180,16 +188,14 @@ class Scene1 implements Scene {
         case 'p':
           showMoonOrbits = !showMoonOrbits;
           break;
+        // Para rotação, se necessário (pode ser mantida ou implementada via constantes)
         case 'r':
-          rotationFactor *= 0.8f;
-          pApplet.println("rotationFactor reduzido para: " + rotationFactor);
+          pApplet.println("rotationFactor adjustment not implemented here; use ROTATION_FACTOR if needed");
           break;
         case 'R':
-          rotationFactor *= 1.2f;
-          pApplet.println("rotationFactor aumentado para: " + rotationFactor);
+          pApplet.println("rotationFactor adjustment not implemented here; use ROTATION_FACTOR if needed");
           break;
         default:
-          // Se a tecla é um dígito, seleciona o planeta correspondente (1 para o índice 0, etc.)
           if (Character.isDigit(key)) {
             int num = Character.getNumericValue(key);
             if (num > 0 && num <= planets.size()) {
@@ -200,7 +206,7 @@ class Scene1 implements Scene {
       }
     }
   }
-
+  
   public void mouseEvent(processing.event.MouseEvent event) {
     switch (event.getAction()) {
       case MouseEvent.PRESS:
@@ -210,7 +216,6 @@ class Scene1 implements Scene {
       case MouseEvent.DRAG:
         float dx = (event.getX() - prevMouseX) * 0.01f;
         float dy = (event.getY() - prevMouseY) * 0.01f;
-        // Atualiza a rotação da câmera através do Renderer:
         float newRotX = renderer.getCameraRotationX() + dy;
         float newRotY = renderer.getCameraRotationY() + dx;
         renderer.setCameraRotation(newRotX, newRotY);
@@ -218,33 +223,27 @@ class Scene1 implements Scene {
         prevMouseY = event.getY();
         break;
       case MouseEvent.WHEEL:
-        // Atualiza a distância da câmera via Renderer
         renderer.setCameraDistance(renderer.getCameraDistance() + event.getCount() * 0.01f);
         break;
     }
   }
-
+  
   private void resetView() {
-      // Apenas reseta a câmera, sem recarregar a configuração dos planetas.
-      renderer.setCameraRotation(-PI / 16, 0);
-      renderer.setCameraDistance(500);
-      pApplet.println("[Scene1] Reset view: Camera reset, but configuration remains unchanged.");
+    // Apenas reseta a câmera, sem recarregar a configuração dos planetas.
+    renderer.setCameraRotation(-PI / 16, 0);
+    renderer.setCameraDistance(500);
+    pApplet.println("[Scene1] Reset view: Camera reset, configuration unchanged.");
   }
-
+  
   public void dispose() {
-    // Libera o TextureManager e seu cache
     if (textureManager != null) {
       textureManager.clear();
       textureManager = null;
     }
-    
-    // Libera o ConfigLoader, se houver recursos alocados
     if (configLoader != null) {
       configLoader.dispose();
       configLoader = null;
     }
-    
-    // Libera os planetas e chama o dispose() individual de cada um
     if (planets != null) {
       for (Planet p : planets) {
         p.dispose();
@@ -252,23 +251,15 @@ class Scene1 implements Scene {
       planets.clear();
       planets = null;
     }
-    
-    // Libera o módulo de física
     physicsEngine = null;
-    
-    // Libera o Renderer
     if (renderer != null) {
       renderer.dispose();
       renderer = null;
     }
-    
     System.out.println("Disposing resources for scene: " + getName());
   }
-
-  // Retorna o nome da cena
+  
   public String getName() {
     return "Sistema Solar Físico";
   }
 }
-  
-
