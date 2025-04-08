@@ -1,0 +1,449 @@
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+class Scene1 implements Scene {
+  // Instâncias e configuração geral da simulação
+  private zividomelive parent;
+  private PApplet pApplet;
+  private ArrayList<Planet> planets;
+  private float timeScale = 1.0f; // aceleração do tempo (em dias simulados)
+  private boolean showOrbits = true;
+  private boolean showMoonOrbits = true;
+  private boolean showLabels = true;
+  private int selectedPlanet = -1;
+  
+  // Controle de câmera
+  private float cameraRotationX = PI / 16;
+  private float cameraRotationY = 0;
+  private float cameraDistance = 500;
+  private int prevMouseX, prevMouseY;
+  private PVector cameraTarget = new PVector(0, 0, 0);
+
+  // Vetores temporários para cálculos
+  private final PVector tempVec1 = new PVector();
+  private final PVector tempVec2 = new PVector();
+  private final PVector tempVec3 = new PVector();
+  private final PVector tempVec4 = new PVector();
+
+  // Gerenciamento de texturas
+  private TextureManager textureManager;
+  private PShape skySphere;
+  private PImage skyTexture;
+  
+  // Escalas e parâmetros de renderização
+  private float planetAmplification = 6.0f;
+  private float rotationFactor = ROTATION_FACTOR;
+  private float globalScale = 1.0f;
+  private float bodyScale = 1.0f;
+  
+  // Declaração de gravityFactor usando as constantes globais
+  private float gravityFactor;
+
+
+  // Lock para sincronização
+  private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
+  
+  // Construtor
+  Scene1(zividomelive parent, PApplet pApplet) {
+    this.parent = parent;
+    this.pApplet = pApplet;
+
+    gravityFactor = G_AU * SOL_MASS / (365.25f * 365.25f);
+    
+    // Inicializa o TextureManager e pré-carrega as texturas
+    textureManager = new TextureManager(pApplet);
+    // Pré-carrega texturas básicas
+    textureManager.preloadTextures(new String[] { "2k_sun.jpg", "background.jpg" });
+    
+    // Carrega a configuração a partir do JSON
+    loadConfiguration();
+    
+    configureCamera();
+    
+    // Inicia a thread de física
+    Thread physicsThread = new Thread(new Runnable() {
+      public void run() {
+        physicsLoop();
+      }
+    });
+    physicsThread.start();
+  }
+  
+  private void configureCamera() {
+    float neptuneCenter = NEPTUNE_DIST * PIXELS_PER_AU;
+    float neptuneDrawPos = neptuneCenter + SUN_VISUAL_RADIUS;
+    cameraDistance = neptuneDrawPos * 1.2f;
+  }
+  
+  // Carrega a configuração da simulação a partir de config.json
+  private void loadConfiguration() {
+    // Carrega o arquivo JSON da pasta data
+    JSONObject config = pApplet.loadJSONObject("solar.json");
+    
+    // Inicializa o array de planetas
+    planets = new ArrayList<Planet>();
+    
+    // Carrega os dados dos planetas
+    JSONArray planetsArray = config.getJSONArray("planets");
+    for (int i = 0; i < planetsArray.size(); i++) {
+      JSONObject pd = planetsArray.getJSONObject(i);
+      float mass = pd.getFloat("mass");
+      float distance = pd.getFloat("distance");
+      JSONArray colArray = pd.getJSONArray("color");
+      color col = pApplet.color(colArray.getInt(0), colArray.getInt(1), colArray.getInt(2));
+      String name = pd.getString("name");
+      float ratio = pd.getFloat("ratio");
+      float rotationPeriod = pd.getFloat("rotationPeriod");
+      float orbitInclination = radians(pd.getFloat("orbitInclination"));
+      float axisTilt = radians(pd.getFloat("axisTilt"));
+      
+      // Se for o Sol, cria-o com a textura apropriada
+      if (name.equals("Sol")) {
+        PImage sunTexture = textureManager.getTexture("2k_sun.jpg");
+        planets.add(new Planet(pApplet, SOL_MASS, SUN_VISUAL_RADIUS * bodyScale,
+                               new PVector(), new PVector(), pApplet.color(255, 255, 0), "Sol",
+                               rotationPeriod, orbitInclination, 0, sunTexture));
+      } else {
+        addPlanetWithPhysics(mass, distance, col, name, ratio, rotationPeriod, orbitInclination, axisTilt);
+      }
+    }
+    
+    // Carrega os dados das luas
+    JSONArray moonsArray = config.getJSONArray("moons");
+    for (int i = 0; i < moonsArray.size(); i++) {
+      JSONObject md = moonsArray.getJSONObject(i);
+      String planetName = md.getString("planetName");
+      String moonName = md.getString("moonName");
+      float moonSizeRatio = md.getFloat("moonSizeRatio");
+      float orbitFactor = md.getFloat("orbitFactor");
+      float inclination = radians(md.getFloat("inclination"));
+      float eccentricity = md.getFloat("eccentricity");
+      float argumentPeriapsis = radians(md.getFloat("argumentPeriapsis"));
+      boolean alignWithPlanetAxis = md.getBoolean("alignWithPlanetAxis");
+      
+      Planet parentPlanet = getPlanetByName(planetName);
+      if (parentPlanet != null) {
+        addMoonToPlanet(parentPlanet, moonName, moonSizeRatio, orbitFactor, inclination, eccentricity, argumentPeriapsis, alignWithPlanetAxis);
+      }
+    }
+    
+    // Configura o skySphere com a textura de fundo
+    skyTexture = textureManager.getTexture("background.jpg");
+    skySphere = pApplet.createShape(PConstants.SPHERE, 1);
+    skySphere.setTexture(skyTexture);
+    skySphere.setStroke(false);
+    skySphere.setFill(pApplet.color(255));
+  }
+  
+  private Planet getPlanetByName(String name) {
+    rwLock.readLock().lock();
+    try {
+      for (Planet p : planets) {
+        if (p.name.equals(name)) return p;
+      }
+      return null;
+    } finally {
+      rwLock.readLock().unlock();
+    }
+  }
+  
+  // Método para criar planetas utilizando os dados do JSON
+  private Planet addPlanetWithPhysics(
+      float mass,
+      float distanceAU,
+      color col,
+      String name,
+      float planetRatio,
+      float rotationPeriod,
+      float orbitInclination,
+      float axisTilt) {
+    float r_px = distanceAU * PIXELS_PER_AU;
+    float v_AU_per_year = pApplet.sqrt(G_AU / distanceAU);
+    float v_AU_per_day  = v_AU_per_year / 365.25f;
+    float orbitalVelocity = v_AU_per_day * PIXELS_PER_AU;
+    
+    PVector pos = new PVector(r_px, 0, 0);
+    PVector vel = new PVector(0, 0, -orbitalVelocity);
+    
+    PMatrix3D rotationMatrix = new PMatrix3D();
+    rotationMatrix.rotateX(orbitInclination);
+    pos = rotationMatrix.mult(pos, null);
+    vel = rotationMatrix.mult(vel, null);
+    
+    float baseRadius = SUN_VISUAL_RADIUS * planetRatio;
+    float drawRadius = baseRadius * planetAmplification * globalScale;
+    
+    // Cria o planeta (para planetas que não são o Sol, a textura é null)
+    Planet planet = new Planet(pApplet, mass, drawRadius, pos, vel, col, name, rotationPeriod, orbitInclination, axisTilt, null);
+    planet.orbitRadius = r_px;
+    planet.orbitInclination = orbitInclination;
+    planet.anomaly = 0;
+    
+    rwLock.writeLock().lock();
+    try {
+      planets.add(planet);
+    } finally {
+      rwLock.writeLock().unlock();
+    }
+    return planet;
+  }
+  
+  // Método para criar uma lua para um planeta
+  private void addMoonToPlanet(
+      Planet planet, String moonName, float moonSizeRatio, float orbitFactor,
+      float inclination, float eccentricity, float argumentPeriapsis,
+      boolean alignWithPlanetAxis) {
+    float factorMultiplier;
+    if (orbitFactor <= 7.0f) {
+      factorMultiplier = 1.5f;
+    } else if (orbitFactor <= 25.0f) {
+      factorMultiplier = 1.2f;
+    } else if (orbitFactor <= 70.0f) {
+      factorMultiplier = 0.65f;
+    } else {
+      factorMultiplier = 0.15f;
+    }
+    orbitFactor *= factorMultiplier;
+    
+    float orbitDistance = planet.radius * (1 + (orbitFactor / MOON_ORBIT_CALIBRATION));
+    float r_AU = orbitDistance / PIXELS_PER_AU;
+    float v_AU = pApplet.sqrt(G_AU * planet.mass / r_AU);
+    float v_pixels = v_AU / 365.25f * PIXELS_PER_AU;
+    
+    PVector moonPos = new PVector(orbitDistance, 0, 0);
+    PVector moonVel = new PVector(0, 0, -v_pixels);
+    
+    planet.addMoon(new Moon(
+        pApplet,
+        1e-7f, moonSizeRatio, orbitFactor,
+        moonPos, moonVel,
+        pApplet.color(200, 200, 200),
+        moonName, planet,
+        inclination, eccentricity, argumentPeriapsis,
+        alignWithPlanetAxis,
+        PIXELS_PER_AU,
+        G_AU,
+        MOON_ORBIT_CALIBRATION
+    ));
+  }
+  
+  public void update() {
+    rwLock.readLock().lock();
+    try {
+      updateCameraTarget();
+    } finally {
+      rwLock.readLock().unlock();
+    }
+  }
+  
+  public void physicsLoop() {
+    while (true) {
+      rwLock.writeLock().lock();
+      try {
+        Planet sol = planets.get(0);
+        float dt = timeScale * 0.1f;
+        for (int i = 1; i < planets.size(); i++) {
+          Planet p = planets.get(i);
+          updatePlanetPhysics(p, dt, sol);
+          p.updateRotation(dt);
+          p.updateMoons(dt);
+        }
+        updateCameraTarget();
+      } finally {
+        rwLock.writeLock().unlock();
+      }
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException e) {}
+    }
+  }
+  
+  private void updatePlanetPhysics(Planet p, float dt, Planet sol) {
+    PVector.sub(sol.position, p.position, tempVec1);
+    float rSq_px = tempVec1.magSq();
+    float r_px = pApplet.sqrt(rSq_px);
+    float r_AU = r_px / PIXELS_PER_AU;
+    float invRSq = 1.0f / (r_AU * r_AU);
+    float aMag = gravityFactor * PIXELS_PER_AU * invRSq;
+    
+    tempVec2.set(tempVec1).normalize().mult(aMag);
+    tempVec4.set(tempVec2);
+    
+    PVector.mult(p.velocity, dt, tempVec3);
+    tempVec2.mult(0.5f * dt * dt);
+    tempVec3.add(tempVec2);
+    p.position.add(tempVec3);
+    
+    PVector.sub(sol.position, p.position, tempVec1);
+    float rSq_px_new = tempVec1.magSq();
+    float r_px_new = pApplet.sqrt(rSq_px_new);
+    float r_AU_new = r_px_new / PIXELS_PER_AU;
+    float invRSq_new = 1.0f / (r_AU_new * r_AU_new);
+    float aMag_new = gravityFactor * PIXELS_PER_AU * invRSq_new;
+    tempVec1.normalize().mult(aMag_new);
+    
+    tempVec4.add(tempVec1).mult(0.5f * dt);
+    p.velocity.add(tempVec4);
+    p.acceleration.set(tempVec1);
+  }
+  
+  private void updateCameraTarget() {
+    if (selectedPlanet >= 0) {
+      Planet p = planets.get(selectedPlanet);
+      cameraTarget.lerp(p.getDrawPosition(), 0.01f);
+    } else {
+      cameraTarget.lerp(new PVector(0, 0, 0), 0.01f);
+    }
+  }
+  
+  public void sceneRender(PGraphicsOpenGL pg) {
+    rwLock.readLock().lock();
+    try {
+      pg.background(0, 10, 20);
+      pg.pushMatrix();
+        drawSkySphere(pg);
+        setupCamera(pg);
+        drawLighting(pg);
+        if (showOrbits) drawPlanetOrbits(pg);
+        drawPlanetsAndMoons(pg);
+      pg.popMatrix();
+    } finally {
+      rwLock.readLock().unlock();
+    }
+  }
+  
+  private void setupCamera(PGraphicsOpenGL pg) {
+    pg.translate(0, 0, cameraDistance);
+    pg.rotateX(cameraRotationX);
+    pg.rotateY(cameraRotationY);
+    pg.translate(-cameraTarget.x, -cameraTarget.y, -cameraTarget.z);
+  }
+  
+  private void drawLighting(PGraphicsOpenGL pg) {
+    pg.ambientLight(30, 30, 30);
+    Planet sol = planets.get(0);
+    PVector sunPos = sol.getDrawPosition();
+    pg.pointLight(255, 255, 220, sunPos.x, sunPos.y, sunPos.z);
+  }
+  
+  private void drawPlanetOrbits(PGraphicsOpenGL pg) {
+    pg.noFill();
+    pg.strokeWeight(1.5f);
+    pg.stroke(200, 200, 255, 150);
+    for (int i = 1; i < planets.size(); i++) {
+      Planet p = planets.get(i);
+      pg.pushMatrix();
+        pg.rotateX(PI / 2);
+        pg.rotateX(p.orbitInclination);
+        float orbitalRadius = p.orbitRadius + SUN_VISUAL_RADIUS;
+        pg.ellipse(0, 0, orbitalRadius * 2, orbitalRadius * 2);
+      pg.popMatrix();
+    }
+  }
+  
+  private void drawPlanetsAndMoons(PGraphicsOpenGL pg) {
+    for (Planet p : planets) {
+      p.display(pg, showLabels, selectedPlanet == planets.indexOf(p));
+      for (Moon m : p.moons) {
+        if (showMoonOrbits) m.displayOrbit(pg);
+        m.display(pg, showLabels);
+      }
+    }
+  }
+  
+  private void drawSkySphere(PGraphicsOpenGL pg) {
+    pg.pushMatrix();
+      Planet sol = planets.get(0);
+      PVector sunPos = sol.getDrawPosition();
+      pg.translate(sunPos.x, sunPos.y, sunPos.z);
+      float solAngle = sol.rotationAngle;
+      pg.rotateY(solAngle);
+      pg.scale(-NEPTUNE_DIST * PIXELS_PER_AU * 2.0f);
+      pg.shape(skySphere);
+    pg.popMatrix();
+  }
+  
+  public void keyEvent(processing.event.KeyEvent event) {
+    if (event.getAction() == KeyEvent.PRESS) {
+      switch (event.getKey()) {
+        case ' ':
+          resetView();
+          break;
+        case 's':
+          globalScale *= 0.8f;
+          setupScene();
+          break;
+        case 'S':
+          globalScale *= 1.2f;
+          setupScene();
+          break;
+        case '+':
+          timeScale *= 1.2f;
+          break;
+        case '-':
+          timeScale *= 0.8f;
+          break;
+        case 'a':
+          planetAmplification *= 1.1f;
+          setupScene();
+          break;
+        case 'z':
+          planetAmplification /= 1.1f;
+          setupScene();
+          break;
+        case 'o':
+          showOrbits = !showOrbits;
+          break;
+        case 'l':
+          showLabels = !showLabels;
+          break;
+        case 'p':
+          showMoonOrbits = !showMoonOrbits;
+          break;
+        case 'r':
+          rotationFactor *= 0.8f;
+          println("rotationFactor reduzido para: " + rotationFactor);
+          break;
+        case 'R':
+          rotationFactor *= 1.2f;
+          println("rotationFactor aumentado para: " + rotationFactor);
+          break;
+        case '1': case '2': case '3': case '4': case '5': 
+        case '6': case '7': case '8': case '9':
+          int num = Character.getNumericValue(event.getKey());
+          if (num <= planets.size()) selectedPlanet = num - 1;
+          break;
+      }
+    }
+  }
+  
+  public void mouseEvent(processing.event.MouseEvent event) {
+    switch (event.getAction()) {
+      case MouseEvent.PRESS:
+        prevMouseX = event.getX();
+        prevMouseY = event.getY();
+        break;
+      case MouseEvent.DRAG:
+        float dx = (event.getX() - prevMouseX) * 0.01f;
+        float dy = (event.getY() - prevMouseY) * 0.01f;
+        cameraRotationY += dx;
+        cameraRotationX = pApplet.constrain(cameraRotationX + dy, -PI / 2, PI / 2);
+        prevMouseX = event.getX();
+        prevMouseY = event.getY();
+        break;
+      case MouseEvent.WHEEL:
+        cameraDistance += event.getCount() * 0.1;
+        cameraDistance = pApplet.constrain(cameraDistance, -1000000, 1000000);
+        break;
+    }
+  }
+  
+  private void resetView() {
+    setupScene();
+    cameraRotationX = -PI / 16;
+    cameraRotationY = 0;
+  }
+  
+  public String getName() {
+    return "Sistema Solar Físico";
+  }
+}

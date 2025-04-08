@@ -1,0 +1,282 @@
+{
+    "planets": [
+        {
+            "name": "Sol",
+            "mass": 1.0,
+            "distance": 0.0,
+            "color": [
+                255,
+                255,
+                0
+            ],
+            "ratio": 1.0,
+            "rotationPeriod": 25.0,
+            "orbitInclination": 7.0,
+            "axisTilt": 0.0
+        },
+        {
+            "name": "Mercúrio",
+            "mass": 1.65e-7,
+            "distance": 0.39,
+            "color": [
+                200,
+                150,
+                100
+            ],
+            "ratio": 0.00351,
+            "rotationPeriod": 58.67,
+            "orbitInclination": 7.0,
+            "axisTilt": 3.38
+        },
+        {
+            "name": "Vênus",
+            "mass": 2.45e-6,
+            "distance": 0.72,
+            "color": [
+                210,
+                180,
+                140
+            ],
+            "ratio": 0.00870,
+            "rotationPeriod": -243.0,
+            "orbitInclination": 3.4,
+            "axisTilt": 3.86
+        },
+        {
+            "name": "Terra",
+            "mass": 3.00e-6,
+            "distance": 1.0,
+            "color": [
+                100,
+                100,
+                255
+            ],
+            "ratio": 0.00916,
+            "rotationPeriod": 1.0,
+            "orbitInclination": 0.0,
+            "axisTilt": 7.155
+        },
+        {
+            "name": "Marte",
+            "mass": 3.21e-7,
+            "distance": 1.52,
+            "color": [
+                255,
+                100,
+                50
+            ],
+            "ratio": 0.00487,
+            "rotationPeriod": 1.03,
+            "orbitInclination": 1.85,
+            "axisTilt": 5.65
+        },
+        {
+            "name": "Júpiter",
+            "mass": 9.54e-4,
+            "distance": 5.20,
+            "color": [
+                240,
+                200,
+                150
+            ],
+            "ratio": 0.1005,
+            "rotationPeriod": 0.42,
+            "orbitInclination": 1.3,
+            "axisTilt": 6.09
+        },
+        {
+            "name": "Saturno",
+            "mass": 2.86e-4,
+            "distance": 9.58,
+            "color": [
+                220,
+                220,
+                150
+            ],
+            "ratio": 0.0837,
+            "rotationPeriod": 0.46,
+            "orbitInclination": 2.49,
+            "axisTilt": 5.51
+        },
+        {
+            "name": "Urano",
+            "mass": 4.37e-5,
+            "distance": 19.22,
+            "color": [
+                150,
+                200,
+                255
+            ],
+            "ratio": 0.0365,
+            "rotationPeriod": 0.71,
+            "orbitInclination": 0.77,
+            "axisTilt": 6.48
+        },
+        {
+            "name": "Netuno",
+            "mass": 5.15e-5,
+            "distance": 30.07,
+            "color": [
+                100,
+                150,
+                255
+            ],
+            "ratio": 0.0354,
+            "rotationPeriod": 0.67,
+            "orbitInclination": 1.77,
+            "axisTilt": 6.43
+        }
+    ],
+    "moons": [
+        {
+            "planetName": "Terra",
+            "moonName": "Lua",
+            "moonSizeRatio": 0.27,
+            "orbitFactor": 60.4,
+            "inclination": 5.145,
+            "eccentricity": 0.0549,
+            "argumentPeriapsis": 0.0,
+            "alignWithPlanetAxis": false
+        },
+        {
+            "planetName": "Marte",
+            "moonName": "Phobos",
+            "moonSizeRatio": 0.015,
+            "orbitFactor": 2.77,
+            "inclination": 1.08,
+            "eccentricity": 0.0151,
+            "argumentPeriapsis": 0.0,
+            "alignWithPlanetAxis": true
+        },
+        {
+            "planetName": "Marte",
+            "moonName": "Deimos",
+            "moonSizeRatio": 0.010,
+            "orbitFactor": 6.92,
+            "inclination": 1.79,
+            "eccentricity": 0.0005,
+            "argumentPeriapsis": 0.0,
+            "alignWithPlanetAxis": true
+        },
+        {
+            "planetName": "Júpiter",
+            "moonName": "Io",
+            "moonSizeRatio": 0.0261,
+            "orbitFactor": 6.04,
+            "inclination": 0.04,
+            "eccentricity": 0.004,
+            "argumentPeriapsis": 0.0,
+            "alignWithPlanetAxis": true
+        },
+        {
+            "planetName": "Júpiter",
+            "moonName": "Europa",
+            "moonSizeRatio": 0.0223,
+            "orbitFactor": 9.60,
+            "inclination": 0.47,
+            "eccentricity": 0.009,
+            "argumentPeriapsis": 0.0,
+            "alignWithPlanetAxis": true
+        },
+        {
+            "planetName": "Júpiter",
+            "moonName": "Ganimedes",
+            "moonSizeRatio": 0.0376,
+            "orbitFactor": 15.3,
+            "inclination": 0.18,
+            "eccentricity": 0.001,
+            "argumentPeriapsis": 0.0,
+            "alignWithPlanetAxis": true
+        },
+        {
+            "planetName": "Júpiter",
+            "moonName": "Calisto",
+            "moonSizeRatio": 0.0345,
+            "orbitFactor": 26.94,
+            "inclination": 0.19,
+            "eccentricity": 0.007,
+            "argumentPeriapsis": 0.0,
+            "alignWithPlanetAxis": true
+        },
+        {
+            "planetName": "Saturno",
+            "moonName": "Titan",
+            "moonSizeRatio": 0.0429,
+            "orbitFactor": 20.37,
+            "inclination": 0.33,
+            "eccentricity": 0.0292,
+            "argumentPeriapsis": 0.0,
+            "alignWithPlanetAxis": true
+        },
+        {
+            "planetName": "Urano",
+            "moonName": "Miranda",
+            "moonSizeRatio": 0.02,
+            "orbitFactor": 5.12,
+            "inclination": 4.34,
+            "eccentricity": 0.0013,
+            "argumentPeriapsis": 0.0,
+            "alignWithPlanetAxis": true
+        },
+        {
+            "planetName": "Urano",
+            "moonName": "Ariel",
+            "moonSizeRatio": 0.025,
+            "orbitFactor": 7.54,
+            "inclination": 0.04,
+            "eccentricity": 0.0012,
+            "argumentPeriapsis": 0.0,
+            "alignWithPlanetAxis": true
+        },
+        {
+            "planetName": "Urano",
+            "moonName": "Umbriel",
+            "moonSizeRatio": 0.03,
+            "orbitFactor": 10.5,
+            "inclination": 0.13,
+            "eccentricity": 0.0039,
+            "argumentPeriapsis": 0.0,
+            "alignWithPlanetAxis": true
+        },
+        {
+            "planetName": "Urano",
+            "moonName": "Titania",
+            "moonSizeRatio": 0.035,
+            "orbitFactor": 17.2,
+            "inclination": 0.08,
+            "eccentricity": 0.0011,
+            "argumentPeriapsis": 0.0,
+            "alignWithPlanetAxis": true
+        },
+        {
+            "planetName": "Urano",
+            "moonName": "Oberon",
+            "moonSizeRatio": 0.035,
+            "orbitFactor": 23.0,
+            "inclination": 0.07,
+            "eccentricity": 0.0014,
+            "argumentPeriapsis": 0.0,
+            "alignWithPlanetAxis": true
+        },
+        {
+            "planetName": "Netuno",
+            "moonName": "Triton",
+            "moonSizeRatio": 0.05,
+            "orbitFactor": 134.1,
+            "inclination": 157.3,
+            "eccentricity": 1.6e-5,
+            "argumentPeriapsis": 0.0,
+            "alignWithPlanetAxis": false
+        },
+        {
+            "planetName": "Netuno",
+            "moonName": "Nereida",
+            "moonSizeRatio": 0.015,
+            "orbitFactor": 360.136,
+            "inclination": 7.23,
+            "eccentricity": 0.7512,
+            "argumentPeriapsis": 0.0,
+            "alignWithPlanetAxis": false
+        }
+    ]
+}
