@@ -135,9 +135,8 @@ public class Planet {
             pg.rotateY(rotationAngle);
 
             // Calcula o fator de escala dinâmico:
-            // O tamanho base (radius) é ajustado com os fatores globalScale e planetAmplification
             float baseSize = selected ? radius * 1.1f : radius;
-            float scaleFactor = baseSize * globalScale * planetAmplification;
+            float scaleFactor = baseSize;
 
             // Configura o shape: se for o Sol, usa a textura; para os demais, usa a cor
             if (name.equals("Sol")) {

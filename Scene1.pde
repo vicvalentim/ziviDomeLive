@@ -126,7 +126,7 @@ class Scene1 implements Scene {
         renderer.setupCamera(pg);
         renderer.drawLighting(pg);
         if (showOrbits) renderer.drawPlanetOrbits(pg);
-        renderer.drawPlanetsAndMoons(pg, showLabels, showMoonOrbits, globalScale, planetAmplification);
+        renderer.drawPlanetsAndMoons(pg, showLabels, showMoonOrbits);
         renderer.drawSkySphere(pg);
       pg.popMatrix();
     } finally {
