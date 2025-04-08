@@ -22,8 +22,8 @@ class Renderer {
     cameraRotationY = 0;
     cameraDistance = 100;
     cameraTarget = new PVector(0, 0, 0);
-    pApplet.println("Renderer initialized: distance=" + cameraDistance + 
-                      ", rotX=" + cameraRotationX + ", rotY=" + cameraRotationY);
+    pApplet.println("Renderer initialized: distance = " + cameraDistance 
+                      + ", rotX = " + cameraRotationX + ", rotY = " + cameraRotationY);
   }
   
   public void setupCamera(PGraphicsOpenGL pg) {
@@ -74,11 +74,11 @@ class Renderer {
       PVector sunPos = sol.getDrawPosition();
       pg.translate(sunPos.x, sunPos.y, sunPos.z);
       
-      // Combina a rotação do Sol com parte da rotação da câmera
+      // Combina a rotação do Sol com a rotação da câmera para obter um efeito dinâmico
       float combinedRotationY = sol.rotationAngle + cameraRotationY * 0.5f;
       pg.rotateY(combinedRotationY);
       
-      // Usando PGL para desabilitar o culling e renderizar as faces internas
+      // Usa PGL para desabilitar o culling e renderizar as faces internas
       PGL pgl = pg.beginPGL();
       pgl.disable(PGL.CULL_FACE);
       pg.endPGL();
@@ -129,8 +129,9 @@ class Renderer {
     return renderingMode;
   }
   
+  // Método de navegação "goTo" para interpolar a câmera suavemente
   public void goTo(PVector newTarget, float newRotX, float newRotY, float newDistance) {
-    float smoothing = 0.05f;  // Velocidade da transição
+    float smoothing = 0.05f;  // Velocidade de transição
     cameraTarget.lerp(newTarget, smoothing);
     cameraRotationX = lerp(cameraRotationX, newRotX, smoothing);
     cameraRotationY = lerp(cameraRotationY, newRotY, smoothing);

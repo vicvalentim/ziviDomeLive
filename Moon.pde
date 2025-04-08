@@ -1,6 +1,3 @@
-// -------------------------------------------------
-// Classe Moon com atualização incremental de ângulo
-// -------------------------------------------------
 public class Moon {
   private PApplet pApplet;
   private final float pixelsPerAU;
@@ -27,12 +24,14 @@ public class Moon {
   // Matriz de rotação pré-calculada
   PMatrix3D rotationMatrix;
   
-  // Variáveis para atualização incremental do ângulo orbital
+  // Variáveis para atualização do ângulo orbital
   float orbitalAngle;
   float cosOrbital, sinOrbital;
   
-  // PShape para renderização
-  PShape shape;
+  // Cache do PShape para renderização
+  private PShape shapeWire;
+  private PShape shapeSolid;
+  private boolean shapesCached = false;
   
   public Moon(PApplet pApplet,
               float mass,
@@ -81,9 +80,15 @@ public class Moon {
     cosOrbital = PApplet.cos(orbitalAngle);
     sinOrbital = PApplet.sin(orbitalAngle);
     
-    shape = pApplet.createShape(SPHERE, 1);
-    shape.disableStyle(); // Força o uso dos comandos atuais do PGraphics
-    shape.setFill(col);
+    // Inicializa o cache do shape
+    shapeWire = pApplet.createShape(SPHERE, 1);
+    shapeWire.disableStyle();
+    
+    shapeSolid = pApplet.createShape(SPHERE, 1);
+    shapeSolid.disableStyle();
+    shapeSolid.setFill(col);
+    
+    shapesCached = true;
   }
   
   public void update(float dt, PVector parentPos, PVector parentVel) {
@@ -141,7 +146,7 @@ public class Moon {
   
   /**
    * Exibe a lua conforme o modo de renderização.
-   * renderingMode: 0 = Wireframe, 1 = Solid, 2 = Textured.
+   * renderingMode: 0 = Wireframe, 1 = Solid, 2 = Textured (normalmente, luas caem no modo solid)
    */
   public void display(PGraphicsOpenGL pg, boolean showLabel, int renderingMode) {
     pg.pushMatrix();
@@ -149,18 +154,17 @@ public class Moon {
       pg.translate(d.x, d.y, d.z);
       pg.scale(getDrawnRadius());
       
-      // Cria o shape e força o estilo atual (para garantir que comandos como noFill() sejam aplicados)
       PShape myShape = pApplet.createShape(SPHERE, 1);
       myShape.disableStyle();
       
-      if (renderingMode == 0) {  // WIREFRAME: somente stroke, sem fill.
+      if (renderingMode == 0) {  // WIREFRAME
         pg.noFill();
         pg.stroke(255);
-      } else if (renderingMode == 1) {  // SOLID: somente fill, sem stroke.
+      } else if (renderingMode == 1) {  // SOLID
         pg.noStroke();
         pg.fill(col);
         myShape.setFill(col);
-      } else if (renderingMode == 2) {  // TEXTURED: para luas, geralmente fallback para SOLID.
+      } else if (renderingMode == 2) {  // TEXTURED: para luas, fallback para solid
         pg.noStroke();
         pg.fill(col);
         myShape.setFill(col);
@@ -185,13 +189,16 @@ public class Moon {
         pg.text(name, 0, -getDrawnRadius() - 5);
       pg.popMatrix();
     }
-    
     pg.resetShader();
   }
   
   public void dispose() {
-    if (shape != null) {
-      shape = null;
+    if (shapesCached) {
+      shapeWire.disableStyle();
+      shapeSolid.disableStyle();
+      shapeWire = null;
+      shapeSolid = null;
+      shapesCached = false;
     }
   }
 }
