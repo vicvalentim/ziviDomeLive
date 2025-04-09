@@ -4,6 +4,7 @@ import processing.opengl.*;
 public class Sun {
   private PApplet pApplet;
   private float radius;
+  private float mass;  // ← Agora vindo do ConfigLoader
   private PVector position;
   private color col;
   private float rotationAngle = 0;
@@ -12,9 +13,10 @@ public class Sun {
   private PShape shape;
   private int renderingMode = 2;
 
-  public Sun(PApplet pApplet, float radius, PVector position, color col, PImage texture) {
+  public Sun(PApplet pApplet, float radius, float mass, PVector position, color col, PImage texture) {
     this.pApplet = pApplet;
     this.radius = radius;
+    this.mass = mass;  // ← Recebido diretamente
     this.position = position.copy();
     this.col = col;
     this.texture = texture;
@@ -82,7 +84,7 @@ public class Sun {
   public void buildShape(PApplet p, ShapeManager shapeManager) {
     shape = shapeManager.getShape("Sun", renderingMode, texture);
     if (renderingMode == 1) {
-      shape.setFill(col); // aplica cor sólida no modo sólido
+      shape.setFill(col);
     }
   }
 
@@ -92,6 +94,10 @@ public class Sun {
 
   public float getRadius() {
     return radius;
+  }
+
+  public float getMass() {
+    return mass;
   }
 
   public void dispose() {

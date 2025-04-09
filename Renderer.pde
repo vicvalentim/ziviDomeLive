@@ -47,7 +47,7 @@ class Renderer {
   }
 
   public void drawLighting(PGraphicsOpenGL pg) {
-    pg.ambientLight(15, 15, 15);
+    pg.ambientLight(40, 40, 40);
     if (sun != null) {
       PVector sunPos = sun.getPosition();
       pg.pointLight(255, 255, 220, sunPos.x, sunPos.y, sunPos.z);

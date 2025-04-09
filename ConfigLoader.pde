@@ -28,7 +28,7 @@ class ConfigLoader {
     planetTextureMap.put("Moon", "2k_moon.jpg");
   }
 
-  // Novo método para carregar o Sol separado
+  // Carrega o Sol a partir do arquivo JSON
   Sun loadSun() {
     lock.readLock().lock();
     try {
@@ -36,7 +36,7 @@ class ConfigLoader {
       JSONObject sunObj = config.getJSONObject("sun");
 
       String name = sunObj.getString("name");
-      float mass = sunObj.getFloat("mass");
+      float mass = sunObj.getFloat("mass"); // ← Valor da massa do JSON
       JSONArray colArray = sunObj.getJSONArray("color");
       color col = pApplet.color(colArray.getInt(0), colArray.getInt(1), colArray.getInt(2));
       float ratio = sunObj.getFloat("ratio");
@@ -50,7 +50,9 @@ class ConfigLoader {
         texture = textureManager.getTexture(planetTextureMap.get(name));
       }
 
-      return new Sun(pApplet, radius, new PVector(0, 0, 0), col, texture);
+      // Usa o novo construtor com massa
+      return new Sun(pApplet, radius, mass, new PVector(0, 0, 0), col, texture);
+
     } finally {
       lock.readLock().unlock();
     }
@@ -85,12 +87,22 @@ class ConfigLoader {
           ringTexture = textureManager.getTexture("2k_saturn_ring_alpha.png");
         }
 
+        // --- Correção: aplica apenas a inclinação orbital (sem rotateX(HALF_PI)) ---
+        PVector pos = new PVector(distance * PIXELS_PER_AU, 0, 0);
+        float v_AU = pApplet.sqrt(G_AU / distance);
+        PVector vel = new PVector(0, 0, -v_AU * PIXELS_PER_AU / 365.25f);
+
+        PMatrix3D rotationMatrix = new PMatrix3D();
+        rotationMatrix.rotateX(orbitInclination);  // aplica só a inclinação orbital
+        pos = rotationMatrix.mult(pos, null);
+        vel = rotationMatrix.mult(vel, null);
+
         Planet p = new Planet(
           pApplet,
           mass,
           SUN_VISUAL_RADIUS * ratio,
-          new PVector(distance * PIXELS_PER_AU, 0, 0),
-          new PVector(0, 0, -pApplet.sqrt(G_AU / distance) / 365.25f * PIXELS_PER_AU),
+          pos,
+          vel,
           col,
           name,
           rotationPeriod,
@@ -102,6 +114,7 @@ class ConfigLoader {
         planets.add(p);
       }
 
+      // --- Carrega luas e aplica órbitas ---
       JSONArray moonsArray = config.getJSONArray("moons");
       for (int i = 0; i < moonsArray.size(); i++) {
         JSONObject md = moonsArray.getJSONObject(i);
@@ -121,6 +134,7 @@ class ConfigLoader {
         }
       }
 
+      // --- Cria sky sphere ---
       skyTexture = textureManager.getTexture("eso0932a.jpg");
       skySphere = pApplet.createShape(PConstants.SPHERE, 1);
       skySphere.setTexture(skyTexture);
@@ -133,6 +147,7 @@ class ConfigLoader {
     }
   }
 
+  // Adiciona uma lua a um planeta
   private void addMoonToPlanet(Planet planet, String moonName, float moonSizeRatio, float orbitFactor,
                                 float inclination, float eccentricity, float argumentPeriapsis,
                                 boolean alignWithPlanetAxis) {
