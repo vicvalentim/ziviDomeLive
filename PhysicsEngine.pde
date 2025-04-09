@@ -1,6 +1,7 @@
 class PhysicsEngine {
   private PApplet pApplet;
   private ArrayList<Planet> planets;
+  private Sun sun;  // Mudança: Agora usamos o Sun como um objeto separado
   private float timeScale;
   private final float gravityFactor; // Nova definição
 
@@ -10,42 +11,45 @@ class PhysicsEngine {
   private final PVector tempVec3 = new PVector();
   private final PVector tempVec4 = new PVector();
 
-  PhysicsEngine(PApplet pApplet, ArrayList<Planet> planets) {
+  PhysicsEngine(PApplet pApplet, ArrayList<Planet> planets, Sun sun) {
     this.pApplet = pApplet;
     this.planets = planets;
+    this.sun = sun; // Inicializa a instância do Sol
     timeScale = 1.0f;
     // Inicializa o gravityFactor usando constantes globais
     this.gravityFactor = G_AU * SOL_MASS / (365.25f * 365.25f);
   }
   
   public void update(float dt) {
-    if (planets.size() == 0) return;
-    Planet sol = planets.get(0);
-    for (int i = 1; i < planets.size(); i++) {
+    if (planets.size() == 0 || sun == null) return;  // Verifica se o Sol está presente
+    for (int i = 0; i < planets.size(); i++) {
       Planet p = planets.get(i);
-      updatePlanetPhysics(p, dt, sol);
+      updatePlanetPhysics(p, dt, sun);  // Passa o Sol separado para o cálculo da física
       p.updateRotation(dt);
       p.updateMoons(dt);
     }
   }
   
-  private void updatePlanetPhysics(Planet p, float dt, Planet sol) {
-    PVector.sub(sol.position, p.position, tempVec1);
+  private void updatePlanetPhysics(Planet p, float dt, Sun sun) {
+    // Calcular a distância e a gravidade entre o Sol e o planeta
+    PVector.sub(sun.getPosition(), p.position, tempVec1);
     float rSq_px = tempVec1.magSq();
     float r_px = pApplet.sqrt(rSq_px);
     float r_AU = r_px / PIXELS_PER_AU;
     float invRSq = 1.0f / (r_AU * r_AU);
-    float aMag = gravityFactor * PIXELS_PER_AU * invRSq;
+    float aMag = gravityFactor * PIXELS_PER_AU * invRSq;  // Aceleração gravitacional
     
     tempVec2.set(tempVec1).normalize().mult(aMag);
     tempVec4.set(tempVec2);
     
+    // Atualização da posição do planeta
     PVector velocityDt = PVector.mult(p.velocity, dt);
     tempVec2.mult(0.5f * dt * dt);
     tempVec3.set(velocityDt).add(tempVec2);
     p.position.add(tempVec3);
     
-    PVector.sub(sol.position, p.position, tempVec1);
+    // Atualiza a velocidade do planeta
+    PVector.sub(sun.getPosition(), p.position, tempVec1);
     float rSq_px_new = tempVec1.magSq();
     float r_px_new = pApplet.sqrt(rSq_px_new);
     float r_AU_new = r_px_new / PIXELS_PER_AU;

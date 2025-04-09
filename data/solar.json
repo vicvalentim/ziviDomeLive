@@ -1,21 +1,19 @@
 {
+    "sun": {
+        "name": "Sun",
+        "mass": 1.0,
+        "color": [
+            255,
+            255,
+            0
+        ],
+        "ratio": 1.0,
+        "rotationPeriod": 25.0,
+        "axisTilt": 0.0
+    },
     "planets": [
         {
-            "name": "Sol",
-            "mass": 1.0,
-            "distance": 0.0,
-            "color": [
-                255,
-                255,
-                0
-            ],
-            "ratio": 1.0,
-            "rotationPeriod": 25.0,
-            "orbitInclination": 7.0,
-            "axisTilt": 0.0
-        },
-        {
-            "name": "Mercúrio",
+            "name": "Mercury",
             "mass": 1.65e-7,
             "distance": 0.39,
             "color": [
@@ -29,7 +27,7 @@
             "axisTilt": 3.38
         },
         {
-            "name": "Vênus",
+            "name": "Venus",
             "mass": 2.45e-6,
             "distance": 0.72,
             "color": [
@@ -43,7 +41,7 @@
             "axisTilt": 3.86
         },
         {
-            "name": "Terra",
+            "name": "Earth",
             "mass": 3.00e-6,
             "distance": 1.0,
             "color": [
@@ -57,7 +55,7 @@
             "axisTilt": 7.155
         },
         {
-            "name": "Marte",
+            "name": "Mars",
             "mass": 3.21e-7,
             "distance": 1.52,
             "color": [
@@ -71,7 +69,7 @@
             "axisTilt": 5.65
         },
         {
-            "name": "Júpiter",
+            "name": "Jupiter",
             "mass": 9.54e-4,
             "distance": 5.20,
             "color": [
@@ -85,7 +83,7 @@
             "axisTilt": 6.09
         },
         {
-            "name": "Saturno",
+            "name": "Saturn",
             "mass": 2.86e-4,
             "distance": 9.58,
             "color": [
@@ -99,7 +97,7 @@
             "axisTilt": 5.51
         },
         {
-            "name": "Urano",
+            "name": "Uranus",
             "mass": 4.37e-5,
             "distance": 19.22,
             "color": [
@@ -113,7 +111,7 @@
             "axisTilt": 6.48
         },
         {
-            "name": "Netuno",
+            "name": "Neptune",
             "mass": 5.15e-5,
             "distance": 30.07,
             "color": [
@@ -129,8 +127,8 @@
     ],
     "moons": [
         {
-            "planetName": "Terra",
-            "moonName": "Lua",
+            "planetName": "Earth",
+            "moonName": "Moon",
             "moonSizeRatio": 0.27,
             "orbitFactor": 60.4,
             "inclination": 5.145,
@@ -139,7 +137,7 @@
             "alignWithPlanetAxis": false
         },
         {
-            "planetName": "Marte",
+            "planetName": "Mars",
             "moonName": "Phobos",
             "moonSizeRatio": 0.015,
             "orbitFactor": 2.77,
@@ -149,7 +147,7 @@
             "alignWithPlanetAxis": true
         },
         {
-            "planetName": "Marte",
+            "planetName": "Mars",
             "moonName": "Deimos",
             "moonSizeRatio": 0.010,
             "orbitFactor": 6.92,
@@ -159,7 +157,7 @@
             "alignWithPlanetAxis": true
         },
         {
-            "planetName": "Júpiter",
+            "planetName": "Jupiter",
             "moonName": "Io",
             "moonSizeRatio": 0.0261,
             "orbitFactor": 6.04,
@@ -169,7 +167,7 @@
             "alignWithPlanetAxis": true
         },
         {
-            "planetName": "Júpiter",
+            "planetName": "Jupiter",
             "moonName": "Europa",
             "moonSizeRatio": 0.0223,
             "orbitFactor": 9.60,
@@ -179,8 +177,8 @@
             "alignWithPlanetAxis": true
         },
         {
-            "planetName": "Júpiter",
-            "moonName": "Ganimedes",
+            "planetName": "Jupiter",
+            "moonName": "Ganymede",
             "moonSizeRatio": 0.0376,
             "orbitFactor": 15.3,
             "inclination": 0.18,
@@ -189,8 +187,8 @@
             "alignWithPlanetAxis": true
         },
         {
-            "planetName": "Júpiter",
-            "moonName": "Calisto",
+            "planetName": "Jupiter",
+            "moonName": "Callisto",
             "moonSizeRatio": 0.0345,
             "orbitFactor": 26.94,
             "inclination": 0.19,
@@ -199,7 +197,7 @@
             "alignWithPlanetAxis": true
         },
         {
-            "planetName": "Saturno",
+            "planetName": "Saturn",
             "moonName": "Titan",
             "moonSizeRatio": 0.0429,
             "orbitFactor": 20.37,
@@ -209,7 +207,7 @@
             "alignWithPlanetAxis": true
         },
         {
-            "planetName": "Urano",
+            "planetName": "Uranus",
             "moonName": "Miranda",
             "moonSizeRatio": 0.02,
             "orbitFactor": 5.12,
@@ -219,7 +217,7 @@
             "alignWithPlanetAxis": true
         },
         {
-            "planetName": "Urano",
+            "planetName": "Uranus",
             "moonName": "Ariel",
             "moonSizeRatio": 0.025,
             "orbitFactor": 7.54,
@@ -229,7 +227,7 @@
             "alignWithPlanetAxis": true
         },
         {
-            "planetName": "Urano",
+            "planetName": "Uranus",
             "moonName": "Umbriel",
             "moonSizeRatio": 0.03,
             "orbitFactor": 10.5,
@@ -239,7 +237,7 @@
             "alignWithPlanetAxis": true
         },
         {
-            "planetName": "Urano",
+            "planetName": "Uranus",
             "moonName": "Titania",
             "moonSizeRatio": 0.035,
             "orbitFactor": 17.2,
@@ -249,7 +247,7 @@
             "alignWithPlanetAxis": true
         },
         {
-            "planetName": "Urano",
+            "planetName": "Uranus",
             "moonName": "Oberon",
             "moonSizeRatio": 0.035,
             "orbitFactor": 23.0,
@@ -259,7 +257,7 @@
             "alignWithPlanetAxis": true
         },
         {
-            "planetName": "Netuno",
+            "planetName": "Neptune",
             "moonName": "Triton",
             "moonSizeRatio": 0.05,
             "orbitFactor": 134.1,
@@ -269,8 +267,8 @@
             "alignWithPlanetAxis": false
         },
         {
-            "planetName": "Netuno",
-            "moonName": "Nereida",
+            "planetName": "Neptune",
+            "moonName": "Nereid",
             "moonSizeRatio": 0.015,
             "orbitFactor": 360.136,
             "inclination": 7.23,

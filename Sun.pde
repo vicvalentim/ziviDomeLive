@@ -1,0 +1,101 @@
+import processing.core.*;
+import processing.opengl.*;
+
+public class Sun {
+  private PApplet pApplet;
+  private float radius;
+  private PVector position;
+  private color col;
+  private float rotationAngle = 0;
+  private float rotationSpeed = 0.01f;
+  private PImage texture;
+  private PShape shape;
+  private int renderingMode = 2;
+
+  public Sun(PApplet pApplet, float radius, PVector position, color col, PImage texture) {
+    this.pApplet = pApplet;
+    this.radius = radius;
+    this.position = position.copy();
+    this.col = col;
+    this.texture = texture;
+  }
+
+  public void update(float dt) {
+    rotationAngle += rotationSpeed * dt;
+  }
+
+  public void display(PGraphicsOpenGL pg, boolean showLabel, ShaderManager shaderManager) {
+    pg.pushMatrix();
+    pg.translate(position.x, position.y, position.z);
+    pg.rotateY(rotationAngle);
+    pg.scale(radius);
+
+    if (renderingMode == 0) {
+      pg.noFill();
+      pg.stroke(WIREFRAME_COLOR);
+      pg.strokeWeight(WIREFRAME_STROKE_WEIGHT);
+    } else if (renderingMode == 2) {
+      PShader sunShader = shaderManager.getShader("sun");
+      if (sunShader != null) {
+        pg.shader(sunShader);
+      } else {
+        pg.fill(col);
+      }
+      pg.noStroke();
+    } else {
+      pg.fill(col);
+      pg.noStroke();
+    }
+
+    if (shape != null) {
+      pg.shape(shape);
+    }
+
+    pg.resetShader();
+    pg.popMatrix();
+
+    if (showLabel) {
+      drawLabel(pg);
+    }
+  }
+
+  private void drawLabel(PGraphicsOpenGL pg) {
+    pg.pushMatrix();
+    PVector labelPos = position.copy();
+    labelPos.y -= (radius * 1.2f);
+    pg.translate(labelPos.x, labelPos.y, labelPos.z);
+    pg.fill(255);
+    pg.textSize(pApplet.max(10, radius * 0.4f));
+    pg.textAlign(PConstants.CENTER, PConstants.BOTTOM);
+    pg.text("Sun", 0, 0);
+    pg.popMatrix();
+  }
+
+  public void setRenderingMode(int mode) {
+    this.renderingMode = mode;
+  }
+
+  public int getRenderingMode() {
+    return renderingMode;
+  }
+
+  public void buildShape(PApplet p, ShapeManager shapeManager) {
+    shape = shapeManager.getShape("Sun", renderingMode, texture);
+    if (renderingMode == 1) {
+      shape.setFill(col); // aplica cor sólida no modo sólido
+    }
+  }
+
+  public PVector getPosition() {
+    return position.copy();
+  }
+
+  public float getRadius() {
+    return radius;
+  }
+
+  public void dispose() {
+    shape = null;
+    texture = null;
+  }
+}

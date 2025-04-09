@@ -1,3 +1,7 @@
+import processing.core.*;
+import processing.opengl.*;
+import java.util.ArrayList;
+
 public class Planet {
   private PApplet pApplet;
   float mass;
@@ -18,16 +22,14 @@ public class Planet {
 
   boolean hasRings = false;
   private float rotationFactor = 0.2f;
-  PImage sunTexture;
+  PImage texture;
+  PImage ringTexture;
 
-  // Cache de formas
-  private PShape shapeWire, shapeSolid, shapeTextured;
-  private boolean shapesCached = false;
-
-  private PShape saturnRingsShape;
   private float ringRotationAngle = 0;
   private float ringRotationSpeed = 0.05f;
+  private PShape saturnRingsShape;
   private int cachedRingMode = -1;
+  private int renderingMode = 2;
 
   public Planet(PApplet pApplet,
                 float m,
@@ -39,7 +41,8 @@ public class Planet {
                 float rotationPeriod,
                 float orbitInclination,
                 float axisTilt,
-                PImage sunTexture) {
+                PImage texture,
+                PImage ringTexture) {
     this.pApplet = pApplet;
     mass = m;
     radius = r;
@@ -50,31 +53,16 @@ public class Planet {
     name = n;
     moons = new ArrayList<Moon>();
     rotationAngle = 0;
-    rotationSpeed = TWO_PI / rotationPeriod;
+    rotationSpeed = PApplet.TWO_PI / rotationPeriod;
     orbitRadius = pos.mag();
     this.orbitInclination = orbitInclination;
     this.axisTilt = axisTilt;
-    this.sunTexture = sunTexture;
+    this.texture = texture;
+    this.ringTexture = ringTexture;
 
-    if (n.equals("Saturno")) {
+    if (name.equals("Saturn")) {
       hasRings = true;
     }
-  }
-
-  private void cacheShapes() {
-    shapeWire = pApplet.createShape(SPHERE, 1);
-    shapeWire.disableStyle();
-
-    shapeSolid = pApplet.createShape(SPHERE, 1);
-    shapeSolid.disableStyle();
-
-    shapeTextured = pApplet.createShape(SPHERE, 1);
-    shapeTextured.disableStyle();
-    if (sunTexture != null) {
-      shapeTextured.setTexture(sunTexture);
-    }
-
-    shapesCached = true;
   }
 
   public void updateRotation(float dt) {
@@ -86,7 +74,7 @@ public class Planet {
 
   public void updateMoons(float dt) {
     for (Moon m : moons) {
-      m.update(dt, position, velocity);
+      m.update(dt, getDrawPosition(), velocity);
     }
   }
 
@@ -95,59 +83,50 @@ public class Planet {
   }
 
   public PVector getDrawPosition() {
-    if (name.equals("Sol")) {
-      return position.copy();
-    } else {
-      PVector d = position.copy();
-      if (d.mag() > 0) {
-        d.setMag(d.mag() + SUN_VISUAL_RADIUS);
-      }
-      return d;
+    PVector d = position.copy();
+    if (d.mag() > 0) {
+      d.setMag(d.mag() + SUN_VISUAL_RADIUS);
     }
+    return d;
   }
 
-  public void display(PGraphicsOpenGL pg, boolean showLabel, boolean selected, int renderingMode) {
+  public void display(PGraphicsOpenGL pg, boolean showLabel, boolean selected, int renderingMode,
+                      ShapeManager shapeManager, ShaderManager shaderManager) {
     pg.pushMatrix();
     PVector d = getDrawPosition();
     pg.translate(d.x, d.y, d.z);
 
-    // Renderiza os anéis de Saturno antes do planeta
     if (hasRings) {
-        drawSaturnRings(pg, renderingMode);
+      drawSaturnRings(pg, renderingMode);
     }
 
-    // Rotação do planeta
     pg.rotateZ(axisTilt);
     pg.rotateY(rotationAngle);
 
     float scaleFactor = selected ? radius * 1.1f : radius;
     pg.scale(scaleFactor);
 
-    if (!shapesCached) cacheShapes();
+    PShape shape = shapeManager.getShape(name, renderingMode, texture);
 
-    // Seleciona e desenha a forma conforme o modo de renderização
     if (renderingMode == 0) {
       pg.noFill();
-      pg.stroke(255);
-      pg.shape(shapeWire);
+      pg.stroke(WIREFRAME_COLOR);
+      pg.strokeWeight(WIREFRAME_STROKE_WEIGHT);
     } else if (renderingMode == 1) {
       pg.noStroke();
       pg.fill(col);
-      pg.shape(shapeSolid);
     } else if (renderingMode == 2) {
       pg.noStroke();
-      if (name.equals("Sol") && sunTexture != null) {
-        pg.shape(shapeTextured);
+      if (texture != null) {
+        PShader shader = shaderManager.getShader("planet");
+        if (shader != null) pg.shader(shader);
       } else {
         pg.fill(col);
-        pg.shape(shapeSolid);
       }
-    } else {
-      pg.noStroke();
-      pg.fill(col);
-      pg.shape(shapeSolid);
     }
 
+    pg.shape(shape);
+    pg.resetShader();
     pg.popMatrix();
 
     if (showLabel) {
@@ -162,8 +141,19 @@ public class Planet {
       pg.text(name, 0, 0);
       pg.popMatrix();
     }
+  }
 
-    pg.resetShader();
+  private void drawLabel(PGraphicsOpenGL pg) {
+    pg.pushMatrix();
+    PVector labelPos = getDrawPosition();
+    labelPos.y -= (radius + 5);
+    pg.translate(labelPos.x, labelPos.y, labelPos.z);
+    float labelSize = pApplet.max(10, radius * 0.5f);
+    pg.fill(255);
+    pg.textSize(labelSize);
+    pg.textAlign(PConstants.CENTER, PConstants.BOTTOM);
+    pg.text(name, 0, 0);
+    pg.popMatrix();
   }
 
   private void drawSaturnRings(PGraphicsOpenGL pg, int renderingMode) {
@@ -174,8 +164,8 @@ public class Planet {
 
     pg.pushMatrix();
     pg.rotateZ(axisTilt);
-    if (axisTilt > HALF_PI) {
-      pg.rotateY(PI);
+    if (axisTilt > PApplet.HALF_PI) {
+      pg.rotateY(PApplet.PI);
     }
     pg.rotateY(ringRotationAngle);
     pg.shape(saturnRingsShape);
@@ -185,6 +175,7 @@ public class Planet {
   private void buildSaturnRingsShape(int renderingMode) {
     saturnRingsShape = pApplet.createShape();
     saturnRingsShape.beginShape(PConstants.QUAD_STRIP);
+    saturnRingsShape.textureMode(PConstants.NORMAL);
 
     if (renderingMode == 0) {
       saturnRingsShape.noFill();
@@ -200,16 +191,8 @@ public class Planet {
     int ringSegments = 90;
     float step = (outerRingRatio - innerRingRatio) / ringBands;
 
-    float[] gapCenters = {
-      117500f / 60000f,
-      133600f / 60000f,
-      136500f / 60000f
-    };
-    float[] gapWidths = {
-      4800f / 60000f,
-      325f / 60000f,
-      42f / 60000f
-    };
+    float[] gapCenters = {117500f / 60000f, 133600f / 60000f, 136500f / 60000f};
+    float[] gapWidths = {4800f / 60000f, 325f / 60000f, 42f / 60000f};
 
     for (int i = 0; i < ringBands; i++) {
       float r1Ratio = innerRingRatio + i * step;
@@ -231,6 +214,9 @@ public class Planet {
       float r1 = radius * r1Ratio;
       float r2 = radius * r2Ratio;
 
+      float u1 = 0.5f + (r1Ratio - 1.75f) * 0.5f;
+      float u2 = 0.5f + (r2Ratio - 1.75f) * 0.5f;
+
       if (renderingMode == 1) {
         float wave = PApplet.sin(i * 0.3f);
         float alphaFactor = 0.6f + 0.4f * wave;
@@ -238,23 +224,52 @@ public class Planet {
         int base = (int)PApplet.lerp(240, 255, PApplet.sin(i * 0.2f) * 0.5f + 0.5f);
         saturnRingsShape.fill(base, base, base, alpha);
       } else if (renderingMode == 2) {
-        saturnRingsShape.fill(255, 255, 255, 180);
+        saturnRingsShape.fill(255);
       }
 
       for (int j = 0; j <= ringSegments; j++) {
         float angle = PApplet.TWO_PI * j / ringSegments;
         float cosA = PApplet.cos(angle);
         float sinA = PApplet.sin(angle);
-        saturnRingsShape.vertex(r1 * cosA, 0, r1 * sinA);
-        saturnRingsShape.vertex(r2 * cosA, 0, r2 * sinA);
+        saturnRingsShape.vertex(r1 * cosA, 0, r1 * sinA, u1, 0.0f);
+        saturnRingsShape.vertex(r2 * cosA, 0, r2 * sinA, u2, 1.0f);
       }
     }
 
     saturnRingsShape.endShape();
+
+    if (renderingMode == 2 && ringTexture != null) {
+      saturnRingsShape.setTexture(ringTexture);
+    }
+  }
+
+  public void setRenderingMode(int mode) {
+    this.renderingMode = mode;
+  }
+
+  public int getRenderingMode() {
+    return renderingMode;
+  }
+
+  public void buildShape(PApplet p, ShapeManager shapeManager) {
+    // Cria ou atualiza a forma no cache
+    shapeManager.buildShape(name, renderingMode, texture);
+
+    // Aplica a cor no modo sólido
+    if (renderingMode == 1) {
+      PShape shape = shapeManager.getShape(name, renderingMode, texture);
+      if (shape != null) {
+        shape.setFill(col);
+      }
+    }
+
+    // Força reconstrução dos anéis se necessário
+    if (hasRings && ringTexture != null && renderingMode == 2) {
+      cachedRingMode = -1;
+    }
   }
 
   public void dispose() {
-    shapeWire = shapeSolid = shapeTextured = null;
     if (moons != null) {
       for (Moon m : moons) m.dispose();
       moons.clear();

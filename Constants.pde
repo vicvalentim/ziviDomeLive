@@ -3,7 +3,7 @@ final float G_AU = 39.478f;            // Constante gravitacional em UA³/(M☉�
 final float SOL_MASS = 1.0f;           // Massa do Sol (normalizada)
 
 // Conversão de unidades
-final float PIXELS_PER_AU = 5f;        // Conversão: 1 UA = 5 px 
+final float PIXELS_PER_AU = 8.0f;        // Conversão: 1 UA = 5 px 
 
 // Distâncias reais dos planetas (em UA)
 final float MERCURY_DIST = 0.39f;
@@ -26,6 +26,10 @@ final float URANUS_RATIO   = 0.0365f;
 final float NEPTUNE_RATIO  = 0.0354f;
 
 // Parâmetros visuais e de renderização
-final float SUN_VISUAL_RADIUS = 1f;
+final float SUN_VISUAL_RADIUS = 3.0f;
 final float MOON_ORBIT_CALIBRATION = 12.0f;
-final float ROTATION_FACTOR = 0.2f;
+final float ROTATION_FACTOR = 1.0f;
+
+// Estilo visual para modo wireframe
+final int WIREFRAME_COLOR = 0xFFFFFFFF;       // Branco
+final float WIREFRAME_STROKE_WEIGHT = 1.0f;   // Espessura da linha
