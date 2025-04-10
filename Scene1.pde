@@ -59,31 +59,35 @@ class Scene1 implements Scene {
 
   private void startPhysicsThread() {
     Thread physicsThread = new Thread(() -> {
-      long lastTime = System.currentTimeMillis();
+      long lastTime = System.nanoTime();
+
       while (true) {
-        long currentTime = System.currentTimeMillis();
-        float dt = (currentTime - lastTime) / 1000.0f;
+        long currentTime = System.nanoTime();
+        float dt = (currentTime - lastTime) / 1_000_000_000.0f; // segundos
         lastTime = currentTime;
 
         rwLock.writeLock().lock();
         try {
           float scaledDt = dt * timeScale;
           physicsEngine.update(scaledDt);
-          sun.update(scaledDt);
-          updateCameraTarget();
+          sun.update(scaledDt); // rotação solar
+          updateCameraTarget(); // interpolação do destino da câmera
         } finally {
           rwLock.writeLock().unlock();
         }
 
         try {
-          Thread.sleep(10);
+          Thread.sleep(5); // menor latência para maior precisão
         } catch (InterruptedException ignored) {}
       }
     });
+
     physicsThread.setName("PhysicsThread");
+    physicsThread.setDaemon(true); // encerra com o programa
     physicsThread.setPriority(Thread.NORM_PRIORITY);
     physicsThread.start();
   }
+
 
   private void updateCameraTarget() {
     if (selectedPlanet == 0 && sun != null) {
@@ -124,7 +128,7 @@ class Scene1 implements Scene {
         renderer.drawLighting(pg);
         if (showOrbits) renderer.drawPlanetOrbits(pg);
         renderer.drawPlanetsAndMoons(pg, showLabels, showMoonOrbits, shapeManager, shaderManager);
-        renderer.drawSkySphere(pg);
+        renderer.drawSkySphere(pg, renderer.getRenderingMode());
       pg.popMatrix();
     } finally {
       rwLock.readLock().unlock();
@@ -206,8 +210,8 @@ class Scene1 implements Scene {
   }
 
   private void resetView() {
-    renderer.setCameraRotation(-PI / 16, 0);
-    renderer.setCameraDistance(500);
+    renderer.setCameraRotation(PI / 16, 0);
+    renderer.setCameraDistance(20);
   }
 
   public void dispose() {

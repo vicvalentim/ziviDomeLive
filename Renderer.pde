@@ -28,7 +28,7 @@ class Renderer {
 
     cameraRotationX = PI / 16;
     cameraRotationY = 0;
-    cameraDistance = 100;
+    cameraDistance = 20;
     cameraTarget = new PVector(0, 0, 0);
     pApplet.println("Renderer initialized: distance = " + cameraDistance 
                       + ", rotX = " + cameraRotationX + ", rotY = " + cameraRotationY);
@@ -47,7 +47,7 @@ class Renderer {
   }
 
   public void drawLighting(PGraphicsOpenGL pg) {
-    pg.ambientLight(40, 40, 40);
+    pg.ambientLight(15, 15, 15);
     if (sun != null) {
       PVector sunPos = sun.getPosition();
       pg.pointLight(255, 255, 220, sunPos.x, sunPos.y, sunPos.z);
@@ -81,7 +81,9 @@ class Renderer {
     }
   }
 
-  public void drawSkySphere(PGraphicsOpenGL pg) {
+public void drawSkySphere(PGraphicsOpenGL pg, int renderingMode) {
+    if (renderingMode != 2) return; // ← Só renderiza no modo TEXTURIZADO
+
     pg.pushMatrix();
       if (sun != null) {
         PVector sunPos = sun.getPosition();
@@ -97,6 +99,8 @@ class Renderer {
       PShader skyShader = shaderManager.getShader("sky");
       if (skyShader != null) {
         pg.shader(skyShader);
+      } else {
+        pg.noLights(); // Fallback simples caso não tenha shader
       }
 
       pg.scale(-NEPTUNE_DIST * PIXELS_PER_AU * 2.0f);

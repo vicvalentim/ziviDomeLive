@@ -6,9 +6,9 @@ public class ShapeManager {
   private final HashMap<String, PShape> texturedShapes = new HashMap<>();
 
   // Detalhes configuráveis
-  private int lowDetail = 48;
-  private int mediumDetail = 64;
-  private int highDetail = 100;
+  private int lowDetail = 32;
+  private int mediumDetail = 48;
+  private int highDetail = 64;
 
   public ShapeManager(PApplet pApplet) {
     this.pApplet = pApplet;
