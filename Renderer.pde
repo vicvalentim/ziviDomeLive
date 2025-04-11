@@ -6,10 +6,12 @@ class Renderer {
   private ArrayList<Planet> planets;
   private PShape skySphere;
   private Sun sun;
+  
 
   // Gerenciadores de formas e shaders
   private ShapeManager shapeManager;
   private ShaderManager shaderManager;
+  private SimParams simParams;
 
   // Controle de câmera
   private float cameraRotationX, cameraRotationY, cameraDistance;
@@ -19,12 +21,13 @@ class Renderer {
   private int renderingMode = 2;
 
   Renderer(PApplet pApplet, ArrayList<Planet> planets, PShape skySphere,
-           ShapeManager shapeManager, ShaderManager shaderManager) {
+           ShapeManager shapeManager, ShaderManager shaderManager,  SimParams simParams) {
     this.pApplet = pApplet;
     this.planets = planets;
     this.skySphere = skySphere;
     this.shapeManager = shapeManager;
     this.shaderManager = shaderManager;
+    this.simParams = simParams;
 
     cameraRotationX = PI / 16;
     cameraRotationY = 0;
@@ -62,7 +65,7 @@ class Renderer {
       pg.pushMatrix();
         pg.rotateX(PI / 2);
         pg.rotateX(p.orbitInclination);
-        float orbitalRadius = p.orbitRadius + SUN_VISUAL_RADIUS;
+        float orbitalRadius = (p.orbitRadius + SUN_VISUAL_RADIUS) * simParams.globalScale;
         pg.ellipse(0, 0, orbitalRadius * 2, orbitalRadius * 2);
       pg.popMatrix();
     }
@@ -71,12 +74,14 @@ class Renderer {
   public void drawPlanetsAndMoons(PGraphicsOpenGL pg, boolean showLabels, boolean showMoonOrbits,
                                   ShapeManager shapeManager, ShaderManager shaderManager) {
     for (Planet p : planets) {
-      p.display(pg, showLabels, false, renderingMode, shapeManager, shaderManager);
+      float sunRadius = (sun != null) ? sun.getRadius() : SUN_VISUAL_RADIUS;
+      p.display(pg, showLabels, false, renderingMode, shapeManager, shaderManager, sunRadius);
+      
       for (Moon m : p.moons) {
         if (showMoonOrbits) {
-          m.displayOrbit(pg);
+          m.displayOrbit(pg, sunRadius);
         }
-        m.display(pg, showLabels, renderingMode, shapeManager, shaderManager);
+        m.display(pg, showLabels, renderingMode, shapeManager, shaderManager, sunRadius);
       }
     }
   }
@@ -103,7 +108,7 @@ public void drawSkySphere(PGraphicsOpenGL pg, int renderingMode) {
         pg.noLights(); // Fallback simples caso não tenha shader
       }
 
-      pg.scale(-NEPTUNE_DIST * PIXELS_PER_AU * 2.0f);
+      pg.scale(-NEPTUNE_DIST * PIXELS_PER_AU * 2.0f * simParams.globalScale);
       pg.shape(skySphere);
 
       pg.resetShader();

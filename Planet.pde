@@ -12,6 +12,10 @@ public class Planet {
   color col;
   String name;
   ArrayList<Moon> moons;
+  private float baseRatio;
+  private PVector initialPosition;
+  private PVector initialVelocity;
+  private SimParams simParams;
 
   float rotationAngle;
   float rotationSpeed;
@@ -42,7 +46,8 @@ public class Planet {
                 float orbitInclination,
                 float axisTilt,
                 PImage texture,
-                PImage ringTexture) {
+                PImage ringTexture,
+                SimParams simParams) {
     this.pApplet = pApplet;
     mass = m;
     radius = r;
@@ -59,6 +64,10 @@ public class Planet {
     this.axisTilt = axisTilt;
     this.texture = texture;
     this.ringTexture = ringTexture;
+    this.baseRatio = radius / SUN_VISUAL_RADIUS;
+    this.initialPosition = pos.copy();
+    this.initialVelocity = vel.copy();
+    this.simParams = simParams;
 
     if (name.equals("Saturn")) {
       hasRings = true;
@@ -72,9 +81,9 @@ public class Planet {
     }
   }
 
-  public void updateMoons(float dt) {
+  public void updateMoons(float dt, float sunRadius) {
     for (Moon m : moons) {
-      m.update(dt, getDrawPosition(), velocity);
+      m.update(dt, getDrawPosition(sunRadius), velocity);
     }
   }
 
@@ -82,18 +91,38 @@ public class Planet {
     moons.add(m);
   }
 
-  public PVector getDrawPosition() {
-    PVector d = position.copy();
-    if (d.mag() > 0) {
-      d.setMag(d.mag() + SUN_VISUAL_RADIUS);
+  public PVector getDrawPosition(float sunRadius) {
+    PVector scaledPos = PVector.mult(position, simParams.globalScale);
+    if (scaledPos.mag() > 0) {
+      scaledPos.setMag(scaledPos.mag() + sunRadius);
     }
-    return d;
+    return scaledPos;
+  }
+
+
+  public void applyScalingFactors(SimParams simParams) {
+    // Aplica escala visual ao raio
+    this.radius = SUN_VISUAL_RADIUS * baseRatio * simParams.globalScale * simParams.planetAmplification;
+
+    // Recalcula o raio orbital visual
+    this.orbitRadius = position.mag(); // ← Mantém posição atual, sem resetar
+
+    // Marca que os anéis devem ser reconstruídos (usam o novo radius)
+    if (hasRings) {
+      cachedRingMode = -1;
+      saturnRingsShape = null; // ← garante rebuild completo
+    }
+
+    // Atualiza luas também
+    for (Moon m : moons) {
+      m.applyScalingFactors(simParams);
+    }
   }
 
   public void display(PGraphicsOpenGL pg, boolean showLabel, boolean selected, int renderingMode,
-                      ShapeManager shapeManager, ShaderManager shaderManager) {
+                    ShapeManager shapeManager, ShaderManager shaderManager, float sunRadius) {
     pg.pushMatrix();
-    PVector d = getDrawPosition();
+    PVector d = getDrawPosition(sunRadius);
     pg.translate(d.x, d.y, d.z);
 
     if (hasRings) {
@@ -131,7 +160,7 @@ public class Planet {
 
     if (showLabel) {
       pg.pushMatrix();
-      PVector labelPos = getDrawPosition();
+      PVector labelPos = getDrawPosition(sunRadius);
       labelPos.y -= (radius + 5);
       pg.translate(labelPos.x, labelPos.y, labelPos.z);
       float labelSize = pApplet.max(10, radius * 0.5f);
@@ -143,9 +172,8 @@ public class Planet {
     }
   }
 
-  private void drawLabel(PGraphicsOpenGL pg) {
-    pg.pushMatrix();
-    PVector labelPos = getDrawPosition();
+  private void drawLabel(PGraphicsOpenGL pg, float sunRadius) {
+    PVector labelPos = getDrawPosition(sunRadius);
     labelPos.y -= (radius + 5);
     pg.translate(labelPos.x, labelPos.y, labelPos.z);
     float labelSize = pApplet.max(10, radius * 0.5f);
@@ -241,6 +269,10 @@ public class Planet {
     if (renderingMode == 2 && ringTexture != null) {
       saturnRingsShape.setTexture(ringTexture);
     }
+  }
+
+  public float getScaledRadius() {
+    return radius; // já está escalado com globalScale e planetAmplification
   }
 
   public void setRenderingMode(int mode) {

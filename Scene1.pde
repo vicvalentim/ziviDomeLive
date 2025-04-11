@@ -35,12 +35,12 @@ class Scene1 implements Scene {
 
     loadAllShaders();
 
-    configLoader = new ConfigLoader(pApplet, textureManager);
+    configLoader = new ConfigLoader(pApplet, textureManager, simParams);
     sun = configLoader.loadSun(); // ← Sol como objeto autônomo
     planets = configLoader.loadConfiguration();
 
     physicsEngine = new PhysicsEngine(pApplet, planets, sun);
-    renderer = new Renderer(pApplet, planets, configLoader.getSkySphere(), shapeManager, shaderManager);
+    renderer = new Renderer(pApplet, planets, configLoader.getSkySphere(), shapeManager, shaderManager, simParams);
     renderer.setSun(sun);
 
     configureCamera();
@@ -88,12 +88,13 @@ class Scene1 implements Scene {
     physicsThread.start();
   }
 
-
   private void updateCameraTarget() {
+    float sunRadius = sun.getRadius(); // usa o raio visual atualizado do Sol
     if (selectedPlanet == 0 && sun != null) {
       renderer.updateCameraTarget(sun.getPosition());
     } else if (selectedPlanet > 0 && selectedPlanet - 1 < planets.size()) {
-      renderer.updateCameraTarget(planets.get(selectedPlanet - 1).getDrawPosition());
+      Planet target = planets.get(selectedPlanet - 1);
+      renderer.updateCameraTarget(target.getDrawPosition(sunRadius));
     } else {
       renderer.updateCameraTarget(new PVector(0, 0, 0));
     }
@@ -139,8 +140,9 @@ class Scene1 implements Scene {
     if (selectedPlanet == 0 && sun != null) {
       renderer.goTo(sun.getPosition(), renderer.getCameraRotationX(), renderer.getCameraRotationY(), renderer.getCameraDistance());
     } else if (selectedPlanet > 0 && selectedPlanet - 1 < planets.size()) {
+      float sunRadius = sun.getRadius(); // ✅ Consistente com escala global
       Planet target = planets.get(selectedPlanet - 1);
-      renderer.goTo(target.getDrawPosition(), renderer.getCameraRotationX(), renderer.getCameraRotationY(), renderer.getCameraDistance());
+      renderer.goTo(target.getDrawPosition(sunRadius), renderer.getCameraRotationX(), renderer.getCameraRotationY(), renderer.getCameraDistance());
     }
   }
 
@@ -159,16 +161,34 @@ class Scene1 implements Scene {
     }
   }
 
+  private void applyScalingFactors() {
+    rwLock.writeLock().lock();
+    try {
+      if (sun != null) {
+        sun.applyScalingFactors(simParams);
+      }
+
+      if (planets != null) {
+        for (Planet p : planets) {
+          p.applyScalingFactors(simParams);
+        }
+      }
+
+    } finally {
+      rwLock.writeLock().unlock();
+    }
+  }
+
   public void keyEvent(processing.event.KeyEvent event) {
     if (event.getAction() != processing.event.KeyEvent.PRESS) return;
 
     char key = event.getKey();
     switch (key) {
       case ' ': resetView(); break;
-      case 'G': simParams.globalScale *= 1.1f; break;
-      case 'g': simParams.globalScale /= 1.1f; break;
-      case 'a': simParams.planetAmplification *= 1.1f; break;
-      case 'z': simParams.planetAmplification /= 1.1f; break;
+      case 'G': simParams.globalScale *= 1.1f; applyScalingFactors(); break;
+      case 'g': simParams.globalScale /= 1.1f; applyScalingFactors(); break;
+      case 'a': simParams.planetAmplification *= 1.1f; applyScalingFactors(); break;
+      case 'z': simParams.planetAmplification /= 1.1f; applyScalingFactors(); break;
       case 'w': changeRenderingMode(0); break;
       case 's': changeRenderingMode(1); break;
       case 't': changeRenderingMode(2); break;

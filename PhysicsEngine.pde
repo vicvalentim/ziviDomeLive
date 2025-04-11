@@ -80,7 +80,8 @@ class PhysicsEngine {
     // Atualizações adicionais sincronizadas (rotação e luas)
     synchronized (p) {
       p.updateRotation(dt);
-      p.updateMoons(dt);
+      float sunRadius = SUN_VISUAL_RADIUS * p.simParams.globalScale;
+      p.updateMoons(dt, sunRadius); // ← correção aqui
     }
   }
 

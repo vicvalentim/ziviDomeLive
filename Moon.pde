@@ -1,8 +1,14 @@
 import processing.core.*;
 import processing.opengl.*;
 
+/**
+ * Representa uma lua que orbita um planeta.
+ * A Moon depende completamente de Planet para escala visual, posição e massa orbital.
+ * Nenhuma constante como SUN_VISUAL_RADIUS é usada diretamente.
+ */
 public class Moon {
   private PApplet pApplet;
+  private SimParams simParams;
   private final float pixelsPerAU;
   private final float G_AU;
   private final float moonOrbitCalibration;
@@ -13,7 +19,6 @@ public class Moon {
   PVector position;
   PVector velocity;
   PVector acceleration;
-  float orbitAngle = 0;
   color col;
   String name;
   Planet parent;
@@ -28,8 +33,8 @@ public class Moon {
   float orbitalAngle;
   float cosOrbital, sinOrbital;
 
-  private int renderingMode = 2; // 0: wireframe, 1: solid, 2: textured
-  private PImage texture; // textura opcional por lua
+  private int renderingMode = 2;
+  private PImage texture;
 
   public Moon(PApplet pApplet,
               float mass,
@@ -48,10 +53,6 @@ public class Moon {
               float G_AU,
               float moonOrbitCalibration) {
     this.pApplet = pApplet;
-    this.pixelsPerAU = pixelsPerAU;
-    this.G_AU = G_AU;
-    this.moonOrbitCalibration = moonOrbitCalibration;
-
     this.mass = mass;
     this.moonSizeRatio = moonSizeRatio;
     this.moonOrbitFactor = moonOrbitFactor;
@@ -61,81 +62,75 @@ public class Moon {
     this.col = col;
     this.name = name;
     this.parent = parent;
+    this.simParams = parent.simParams;
     this.inclination = inclination;
     this.eccentricity = eccentricity;
     this.argumentPeriapsis = argumentPeriapsis;
     this.alignWithPlanetAxis = alignWithPlanetAxis;
+    this.pixelsPerAU = pixelsPerAU;
+    this.G_AU = G_AU;
+    this.moonOrbitCalibration = moonOrbitCalibration;
 
-    rotationMatrix = new PMatrix3D();
-    if (alignWithPlanetAxis) {
-      rotationMatrix.rotate(parent.axisTilt, 0, 0, 1);
-    } else {
-      rotationMatrix.rotate(argumentPeriapsis, 0, 1, 0);
-      rotationMatrix.rotate(inclination, 1, 0, 0);
-    }
+    resetRotationMatrix();
 
-    orbitalAngle = PApplet.atan2(position.z, position.x);
+    orbitalAngle = PApplet.atan2(pos.z, pos.x);
     cosOrbital = PApplet.cos(orbitalAngle);
     sinOrbital = PApplet.sin(orbitalAngle);
   }
 
   public void update(float dt, PVector parentPos, PVector parentVel) {
-    float r_AU_physical = (parent.radius * moonOrbitFactor) / pixelsPerAU;
-    float v_AU_per_day = PApplet.sqrt(G_AU * parent.mass / r_AU_physical);
-    float v_pixels_per_day = v_AU_per_day * pixelsPerAU;
-
-    float r_px_visual = parent.radius * (1 + (moonOrbitFactor / moonOrbitCalibration));
-    float deltaAngle = (v_pixels_per_day / r_px_visual) * dt;
+    float v_pixels_per_day = PApplet.sqrt(G_AU * parent.mass / getPhysicalOrbitRadiusAU()) * pixelsPerAU;
+    float deltaAngle = (v_pixels_per_day / getVisualOrbitRadius()) * dt;
 
     float cosDelta = PApplet.cos(deltaAngle);
     float sinDelta = PApplet.sin(deltaAngle);
     float newCos = cosOrbital * cosDelta - sinOrbital * sinDelta;
     float newSin = sinOrbital * cosDelta + cosOrbital * sinDelta;
+
     cosOrbital = newCos;
     sinOrbital = newSin;
     orbitalAngle += deltaAngle;
 
-    float newX = r_px_visual * cosOrbital;
-    float newZ = r_px_visual * sinOrbital;
+    position.set(computePositionFromAngle(orbitalAngle));
+    velocity.set(computeTangentialVelocityFromAngle(orbitalAngle));
+  }
 
-    PVector tempVec1 = new PVector(newX, 0, newZ);
-    rotationMatrix.mult(tempVec1, tempVec1);
-    position.set(tempVec1);
-
-    tempVec1.set(-cosOrbital, 0, sinOrbital);
-    rotationMatrix.mult(tempVec1, tempVec1);
-    tempVec1.normalize().mult(v_pixels_per_day);
-    velocity.set(tempVec1);
+  public void applyScalingFactors(SimParams simParams) {
+    float angle = PApplet.atan2(position.z, position.x);
+    position.set(computePositionFromAngle(angle));
+    velocity.set(computeTangentialVelocityFromAngle(angle));
   }
 
   public float getDrawnRadius() {
-    return parent.radius * moonSizeRatio;
+    return parent.getScaledRadius() * moonSizeRatio;
   }
 
-  public PVector getDrawPosition() {
-    return PVector.add(parent.getDrawPosition(), position);
+  public PVector getDrawPosition(float sunRadius) {
+    return PVector.add(parent.getDrawPosition(sunRadius), position);
   }
 
-  public void displayOrbit(PGraphicsOpenGL pg) {
+  public void displayOrbit(PGraphicsOpenGL pg, float sunRadius) {
     pg.pushMatrix();
-    PVector parentDraw = parent.getDrawPosition();
+    PVector parentDraw = parent.getDrawPosition(sunRadius);
     pg.translate(parentDraw.x, parentDraw.y, parentDraw.z);
     pg.rotateX(PConstants.HALF_PI);
-    float orbitRadius = parent.radius * (1 + (moonOrbitFactor / moonOrbitCalibration));
+
+    float r_visual = getVisualOrbitRadius();
+
     pg.noFill();
     pg.stroke(150, 150, 255, 150);
     pg.strokeWeight(1);
-    pg.ellipse(0, 0, orbitRadius * 2, orbitRadius * 2);
+    pg.ellipse(0, 0, r_visual * 2, r_visual * 2);
     pg.popMatrix();
   }
 
   public void display(PGraphicsOpenGL pg, boolean showLabel,
                       int renderingMode, ShapeManager shapeManager,
-                      ShaderManager shaderManager) {
+                      ShaderManager shaderManager, float sunRadius) {
     this.renderingMode = renderingMode;
 
     pg.pushMatrix();
-    PVector d = getDrawPosition();
+    PVector d = getDrawPosition(sunRadius);
     pg.translate(d.x, d.y, d.z);
     pg.scale(getDrawnRadius());
 
@@ -163,13 +158,13 @@ public class Moon {
     pg.popMatrix();
 
     if (showLabel) {
-      drawLabel(pg);
+      drawLabel(pg, sunRadius);
     }
   }
 
-  private void drawLabel(PGraphicsOpenGL pg) {
+  private void drawLabel(PGraphicsOpenGL pg, float sunRadius) {
     pg.pushMatrix();
-    PVector labelPos = getDrawPosition();
+    PVector labelPos = getDrawPosition(sunRadius);
     labelPos.y -= (getDrawnRadius() + 5);
     pg.translate(labelPos.x, labelPos.y, labelPos.z);
     float labelSize = pApplet.max(10, getDrawnRadius() * 0.5f);
@@ -178,6 +173,41 @@ public class Moon {
     pg.textAlign(PConstants.CENTER, PConstants.BOTTOM);
     pg.text(name, 0, -getDrawnRadius() - 5);
     pg.popMatrix();
+  }
+
+  // ---------- Encapsulamento Estrutural ----------
+
+  private float getVisualOrbitRadius() {
+    return parent.getScaledRadius() * (1 + moonOrbitFactor / moonOrbitCalibration);
+  }
+
+  private float getPhysicalOrbitRadiusAU() {
+    return (parent.getScaledRadius() * moonOrbitFactor) / pixelsPerAU;
+  }
+
+  private PVector computePositionFromAngle(float angle) {
+    float r_px_visual = getVisualOrbitRadius();
+    PVector pos = new PVector(PApplet.cos(angle) * r_px_visual, 0, PApplet.sin(angle) * r_px_visual);
+    rotationMatrix.mult(pos, pos);
+    return pos;
+  }
+
+  private PVector computeTangentialVelocityFromAngle(float angle) {
+    float v_pixels_per_day = PApplet.sqrt(G_AU * parent.mass / getPhysicalOrbitRadiusAU()) * pixelsPerAU;
+    PVector tangent = new PVector(-PApplet.sin(angle), 0, PApplet.cos(angle));
+    rotationMatrix.mult(tangent, tangent);
+    tangent.normalize().mult(v_pixels_per_day);
+    return tangent;
+  }
+
+  public void resetRotationMatrix() {
+    rotationMatrix = new PMatrix3D();
+    if (alignWithPlanetAxis) {
+      rotationMatrix.rotate(parent.axisTilt, 0, 0, 1);
+    } else {
+      rotationMatrix.rotate(argumentPeriapsis, 0, 1, 0);
+      rotationMatrix.rotate(inclination, 1, 0, 0);
+    }
   }
 
   public void setRenderingMode(int mode) {

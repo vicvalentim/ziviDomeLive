@@ -3,15 +3,17 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 class ConfigLoader {
   PApplet pApplet;
   TextureManager textureManager;
+  SimParams simParams; 
   private PShape skySphere;
   private PImage skyTexture;
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   private final HashMap<String, String> planetTextureMap = new HashMap<>();
 
-  ConfigLoader(PApplet pApplet, TextureManager textureManager) {
+  ConfigLoader(PApplet pApplet, TextureManager textureManager, SimParams simParams) {
     this.pApplet = pApplet;
     this.textureManager = textureManager;
+    this.simParams = simParams;
     initializeTextureMap();
   }
 
@@ -43,7 +45,7 @@ class ConfigLoader {
       float rotationPeriod = sunObj.getFloat("rotationPeriod");
       float axisTilt = radians(sunObj.getFloat("axisTilt"));
 
-      float radius = SUN_VISUAL_RADIUS * ratio;
+      float radius = SUN_VISUAL_RADIUS * ratio * simParams.globalScale;
 
       PImage texture = null;
       if (planetTextureMap.containsKey(name)) {
@@ -87,10 +89,11 @@ class ConfigLoader {
           ringTexture = textureManager.getTexture("2k_saturn_ring_alpha.png");
         }
 
-        // --- Correção: aplica apenas a inclinação orbital (sem rotateX(HALF_PI)) ---
-        PVector pos = new PVector(distance * PIXELS_PER_AU, 0, 0);
+        // --- Cria posição e velocidade ---
+        PVector pos = new PVector(distance * PIXELS_PER_AU * simParams.globalScale, 0, 0);
         float v_AU = pApplet.sqrt(G_AU / distance);
-        PVector vel = new PVector(0, 0, -v_AU * PIXELS_PER_AU / 365.25f);
+        PVector vel = new PVector(0, 0, -v_AU * PIXELS_PER_AU * simParams.globalScale / 365.25f);
+
 
         PMatrix3D rotationMatrix = new PMatrix3D();
         rotationMatrix.rotateX(orbitInclination);  // aplica só a inclinação orbital
@@ -100,7 +103,7 @@ class ConfigLoader {
         Planet p = new Planet(
           pApplet,
           mass,
-          SUN_VISUAL_RADIUS * ratio,
+          SUN_VISUAL_RADIUS * ratio * simParams.globalScale * simParams.planetAmplification,
           pos,
           vel,
           col,
@@ -109,7 +112,8 @@ class ConfigLoader {
           orbitInclination,
           axisTilt,
           texture,
-          ringTexture
+          ringTexture,
+          simParams
         );
         planets.add(p);
       }

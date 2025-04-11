@@ -4,6 +4,7 @@ import processing.opengl.*;
 public class Sun {
   private PApplet pApplet;
   private float radius;
+  private float baseRatio;
   private float mass;  // ← Agora vindo do ConfigLoader
   private PVector position;
   private color col;
@@ -16,10 +17,18 @@ public class Sun {
   public Sun(PApplet pApplet, float radius, float mass, PVector position, color col, PImage texture) {
     this.pApplet = pApplet;
     this.radius = radius;
-    this.mass = mass;  // ← Recebido diretamente
+    this.mass = mass;
     this.position = position.copy();
     this.col = col;
     this.texture = texture;
+
+    // Salva o ratio base com relação ao SUN_VISUAL_RADIUS para futura reescala
+    this.baseRatio = radius / SUN_VISUAL_RADIUS;
+  }
+
+  // Novo método para reescalar o raio com base em simParams
+  public void applyScalingFactors(SimParams simParams) {
+    this.radius = SUN_VISUAL_RADIUS * baseRatio * simParams.globalScale;
   }
 
   public void update(float dt) {
@@ -83,7 +92,7 @@ public class Sun {
 
   public void buildShape(PApplet p, ShapeManager shapeManager) {
     shape = shapeManager.getShape("Sun", renderingMode, texture);
-    if (renderingMode == 1) {
+    if (renderingMode == 1 && shape != null) {
       shape.setFill(col);
     }
   }
