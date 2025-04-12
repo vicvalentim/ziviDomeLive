@@ -1,19 +1,18 @@
+import processing.core.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 class PhysicsEngine {
   private final PApplet pApplet;
   private final ArrayList<Planet> planets;
-  private final Sun sun;  // Agora o Sol é um objeto separado
+  private final Sun sun;
   private float timeScale;
   private final float gravityFactor;
-
   private final int availableThreads;
 
-  // Vetores temporários (thread-local não é necessário com paralelismo simples por tarefa)
+  private final ExecutorService executor;
+
   private final ThreadLocal<PVector> tempVec1 = ThreadLocal.withInitial(PVector::new);
   private final ThreadLocal<PVector> tempVec2 = ThreadLocal.withInitial(PVector::new);
   private final ThreadLocal<PVector> tempVec3 = ThreadLocal.withInitial(PVector::new);
@@ -26,25 +25,26 @@ class PhysicsEngine {
     this.timeScale = 1.0f;
     this.gravityFactor = G_AU * SOL_MASS / (365.25f * 365.25f);
     this.availableThreads = Runtime.getRuntime().availableProcessors();
+
+    executor = Executors.newFixedThreadPool(availableThreads);
   }
 
   public void update(float dt) {
-    if (planets == null || sun == null || planets.size() == 0) return;
-    updatePlanetsParallel(planets, dt);
-  }
+    if (planets == null || sun == null || planets.isEmpty()) return;
 
-  private void updatePlanetsParallel(ArrayList<Planet> planets, float dt) {
-    ExecutorService executor = Executors.newFixedThreadPool(availableThreads);
+    List<Callable<Void>> tasks = new ArrayList<>();
     for (Planet p : planets) {
-      executor.submit(() -> updatePlanetPhysics(p, dt, sun));
+      tasks.add(() -> {
+        updatePlanetPhysics(p, dt, sun);
+        return null;
+      });
     }
 
-    // Espera todos os planetas terminarem sua atualização
-    executor.shutdown();
     try {
-      executor.awaitTermination(1, TimeUnit.SECONDS);
+      executor.invokeAll(tasks);
     } catch (InterruptedException e) {
-      System.err.println("[PhysicsEngine] Erro ao aguardar tarefas físicas: " + e.getMessage());
+      Thread.currentThread().interrupt();
+      System.err.println("[PhysicsEngine] Atualização interrompida: " + e.getMessage());
     }
   }
 
@@ -67,9 +67,8 @@ class PhysicsEngine {
     temp2.mult(0.5f * dt * dt * PIXELS_PER_AU);
     temp3.set(velocityDt).add(temp2);
 
-    // Alteração aqui com a atualização do cache:
     p.position.add(temp3);
-    p.drawPositionDirty = true;  // ← Integração do cache
+    p.drawPositionDirty = true;
 
     PVector.sub(sunPos, p.position, temp1);
     float r_AU_new = temp1.mag() / PIXELS_PER_AU;
@@ -80,12 +79,11 @@ class PhysicsEngine {
     p.velocity.add(temp4);
     p.acceleration.set(temp1);
 
-    // Atualizações adicionais sincronizadas (rotação e luas)
     synchronized (p) {
       p.updateRotation(dt);
       float sunRadius = SUN_VISUAL_RADIUS * p.simParams.globalScale;
-        PVector drawPos = p.getDrawPosition(sunRadius); // já calcula aqui
-        p.updateMoons(dt, drawPos, p.velocity);         // passa como argumento
+      PVector drawPos = p.getDrawPosition(sunRadius);
+      p.updateMoons(dt, drawPos, p.velocity);
     }
   }
 
@@ -98,6 +96,15 @@ class PhysicsEngine {
   }
 
   public void dispose() {
-    // Nenhum recurso explícito para limpar
+    executor.shutdown();
+    try {
+      if (!executor.awaitTermination(2, TimeUnit.SECONDS)) {
+        executor.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      executor.shutdownNow();
+      Thread.currentThread().interrupt();
+      System.err.println("[PhysicsEngine] Executor interrompido durante shutdown.");
+    }
   }
 }

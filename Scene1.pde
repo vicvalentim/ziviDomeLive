@@ -21,8 +21,10 @@ class Scene1 implements Scene {
   private int selectedPlanet = -1;
 
   private int prevMouseX, prevMouseY;
-  private PVector cameraTarget = new PVector(0, 0, 0);
   private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
+
+  // DeltaTime
+  private long lastUpdateTime = System.nanoTime();
 
   Scene1(zividomelive parent, PApplet pApplet) {
     this.parent = parent;
@@ -36,7 +38,7 @@ class Scene1 implements Scene {
     loadAllShaders();
 
     configLoader = new ConfigLoader(pApplet, textureManager, simParams);
-    sun = configLoader.loadSun(); // ← Sol como objeto autônomo
+    sun = configLoader.loadSun();
     planets = configLoader.loadConfiguration();
 
     physicsEngine = new PhysicsEngine(pApplet, planets, sun);
@@ -44,11 +46,9 @@ class Scene1 implements Scene {
     renderer.setSun(sun);
 
     configureCamera();
-    startPhysicsThread();
   }
 
   private void loadAllShaders() {
-    // shaderManager.loadShader(...);
     pApplet.println("[Scene1] Shaders carregados com sucesso.");
   }
 
@@ -57,39 +57,28 @@ class Scene1 implements Scene {
     renderer.setCameraDistance(neptuneDrawPos * 1.2f);
   }
 
-  private void startPhysicsThread() {
-    Thread physicsThread = new Thread(() -> {
-      long lastTime = System.nanoTime();
+  private float calculateDeltaTimeInSeconds() {
+    long currentTime = System.nanoTime();
+    float dt = (currentTime - lastUpdateTime) / 1_000_000_000.0f;
+    lastUpdateTime = currentTime;
+    return dt;
+  }
 
-      while (true) {
-        long currentTime = System.nanoTime();
-        float dt = (currentTime - lastTime) / 1_000_000_000.0f; // segundos
-        lastTime = currentTime;
-
-        rwLock.writeLock().lock();
-        try {
-          float scaledDt = dt * timeScale;
-          physicsEngine.update(scaledDt);
-          sun.update(scaledDt); // rotação solar
-          updateCameraTarget(); // interpolação do destino da câmera
-        } finally {
-          rwLock.writeLock().unlock();
-        }
-
-        try {
-          Thread.sleep(5); // menor latência para maior precisão
-        } catch (InterruptedException ignored) {}
-      }
-    });
-
-    physicsThread.setName("PhysicsThread");
-    physicsThread.setDaemon(true); // encerra com o programa
-    physicsThread.setPriority(Thread.NORM_PRIORITY);
-    physicsThread.start();
+  public void update() {
+    rwLock.writeLock().lock();
+    try {
+      float dt = calculateDeltaTimeInSeconds() * timeScale;
+      physicsEngine.update(dt);
+      sun.update(dt);
+      updateCameraTarget();
+      trackSelectedPlanet();
+    } finally {
+      rwLock.writeLock().unlock();
+    }
   }
 
   private void updateCameraTarget() {
-    float sunRadius = sun.getRadius(); // usa o raio visual atualizado do Sol
+    float sunRadius = sun.getRadius();
     if (selectedPlanet == 0 && sun != null) {
       renderer.updateCameraTarget(sun.getPosition());
     } else if (selectedPlanet > 0 && selectedPlanet - 1 < planets.size()) {
@@ -100,22 +89,14 @@ class Scene1 implements Scene {
     }
   }
 
-  public void setupScene() {
-    rwLock.writeLock().lock();
-    try {
-      sun = configLoader.loadSun();
-      sun.buildShape(pApplet, shapeManager);
-      planets = configLoader.loadConfiguration();
-      physicsEngine = new PhysicsEngine(pApplet, planets, sun);
-      renderer.setSun(sun);
-      renderer.setPlanets(planets);
-    } finally {
-      rwLock.writeLock().unlock();
+  private void trackSelectedPlanet() {
+    if (selectedPlanet == 0 && sun != null) {
+      renderer.goTo(sun.getPosition(), renderer.getCameraRotationX(), renderer.getCameraRotationY(), renderer.getCameraDistance());
+    } else if (selectedPlanet > 0 && selectedPlanet - 1 < planets.size()) {
+      float sunRadius = sun.getRadius();
+      Planet target = planets.get(selectedPlanet - 1);
+      renderer.goTo(target.getDrawPosition(sunRadius), renderer.getCameraRotationX(), renderer.getCameraRotationY(), renderer.getCameraDistance());
     }
-  }
-
-  public void update() {
-    trackSelectedPlanet();
   }
 
   public void sceneRender(PGraphicsOpenGL pg) {
@@ -136,13 +117,17 @@ class Scene1 implements Scene {
     }
   }
 
-  private void trackSelectedPlanet() {
-    if (selectedPlanet == 0 && sun != null) {
-      renderer.goTo(sun.getPosition(), renderer.getCameraRotationX(), renderer.getCameraRotationY(), renderer.getCameraDistance());
-    } else if (selectedPlanet > 0 && selectedPlanet - 1 < planets.size()) {
-      float sunRadius = sun.getRadius(); // ✅ Consistente com escala global
-      Planet target = planets.get(selectedPlanet - 1);
-      renderer.goTo(target.getDrawPosition(sunRadius), renderer.getCameraRotationX(), renderer.getCameraRotationY(), renderer.getCameraDistance());
+  public void setupScene() {
+    rwLock.writeLock().lock();
+    try {
+      sun = configLoader.loadSun();
+      sun.buildShape(pApplet, shapeManager);
+      planets = configLoader.loadConfiguration();
+      physicsEngine = new PhysicsEngine(pApplet, planets, sun);
+      renderer.setSun(sun);
+      renderer.setPlanets(planets);
+    } finally {
+      rwLock.writeLock().unlock();
     }
   }
 
@@ -150,7 +135,6 @@ class Scene1 implements Scene {
     renderer.setRenderingMode(mode);
     sun.setRenderingMode(mode);
     sun.buildShape(pApplet, shapeManager);
-
     for (Planet p : planets) {
       p.setRenderingMode(mode);
       p.buildShape(pApplet, shapeManager);
@@ -164,16 +148,10 @@ class Scene1 implements Scene {
   private void applyScalingFactors() {
     rwLock.writeLock().lock();
     try {
-      if (sun != null) {
-        sun.applyScalingFactors(simParams);
-      }
-
+      if (sun != null) sun.applyScalingFactors(simParams);
       if (planets != null) {
-        for (Planet p : planets) {
-          p.applyScalingFactors(simParams);
-        }
+        for (Planet p : planets) p.applyScalingFactors(simParams);
       }
-
     } finally {
       rwLock.writeLock().unlock();
     }
@@ -201,11 +179,8 @@ class Scene1 implements Scene {
       default:
         if (Character.isDigit(key)) {
           int num = Character.getNumericValue(key);
-          if (num == 1) {
-            selectedPlanet = 0;
-          } else if (num > 1 && num <= planets.size() + 1) {
-            selectedPlanet = num - 1;
-          }
+          if (num == 1) selectedPlanet = 0;
+          else if (num > 1 && num <= planets.size() + 1) selectedPlanet = num - 1;
         }
         break;
     }
@@ -231,7 +206,7 @@ class Scene1 implements Scene {
   }
 
   private void resetView() {
-    renderer.setCameraRotation(PI / 16, 0);
+    renderer.setCameraRotation(PConstants.PI / 16, 0);
     renderer.setCameraDistance(20);
   }
 
@@ -253,13 +228,17 @@ class Scene1 implements Scene {
       sun.dispose();
       sun = null;
     }
-    physicsEngine = null;
+    if (physicsEngine != null) {
+      physicsEngine.dispose();
+      physicsEngine = null;
+    }
     if (renderer != null) {
       renderer.dispose();
       renderer = null;
     }
     shapeManager = null;
     shaderManager = null;
+
     System.out.println("Disposing resources for scene: " + getName());
   }
 
