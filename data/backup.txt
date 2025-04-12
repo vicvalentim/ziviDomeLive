@@ -128,7 +128,7 @@ class Scene1 implements Scene {
     
     // Configura o skySphere com a textura de fundo
     skyTexture = textureManager.getTexture("background.jpg");
-    skySphere = pApplet.createShape(PConstants.SPHERE, 1);
+    skySphere = pApplet.createShape(SPHERE, 1);
     skySphere.setTexture(skyTexture);
     skySphere.setStroke(false);
     skySphere.setFill(pApplet.color(255));

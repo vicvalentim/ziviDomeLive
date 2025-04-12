@@ -35,6 +35,19 @@ public class Planet {
   private int cachedRingMode = -1;
   private int renderingMode = 2;
 
+  // Cache para posição visual
+  private final PVector cachedDrawPosition = new PVector();
+  private float cachedSunRadius = -1;
+  private boolean drawPositionDirty = true;
+
+  // Cache para forma e label
+  private PShape cachedShape;
+  private int cachedRenderingMode = -1;
+  private float cachedLabelSize = -1;
+  private float cachedRadius = -1;
+
+
+
   public Planet(PApplet pApplet,
                 float m,
                 float r,
@@ -87,40 +100,55 @@ public class Planet {
     }
   }
 
+  /**
+  * Atualiza as luas usando a posição visual do planeta já calculada.
+  * Útil para evitar recalcular getDrawPosition() múltiplas vezes por frame.
+  */
+  public void updateMoons(float dt, PVector drawPos, PVector velocity) {
+    for (Moon m : moons) {
+      m.update(dt, drawPos, velocity);
+    }
+  }
+
   public void addMoon(Moon m) {
     moons.add(m);
   }
 
   public PVector getDrawPosition(float sunRadius) {
-    PVector scaledPos = PVector.mult(position, simParams.globalScale);
-    if (scaledPos.mag() > 0) {
-      scaledPos.setMag(scaledPos.mag() + sunRadius);
+    if (drawPositionDirty || cachedSunRadius != sunRadius) {
+      cachedDrawPosition.set(position).mult(simParams.globalScale);
+      if (cachedDrawPosition.mag() > 0) {
+        cachedDrawPosition.setMag(cachedDrawPosition.mag() + sunRadius);
+      }
+      cachedSunRadius = sunRadius;
+      drawPositionDirty = false;
     }
-    return scaledPos;
+    return cachedDrawPosition;
   }
 
+  public void setPosition(PVector newPosition) {
+    position.set(newPosition);
+    drawPositionDirty = true;
+  }
 
   public void applyScalingFactors(SimParams simParams) {
-    // Aplica escala visual ao raio
     this.radius = SUN_VISUAL_RADIUS * baseRatio * simParams.globalScale * simParams.planetAmplification;
+    this.orbitRadius = position.mag();
 
-    // Recalcula o raio orbital visual
-    this.orbitRadius = position.mag(); // ← Mantém posição atual, sem resetar
-
-    // Marca que os anéis devem ser reconstruídos (usam o novo radius)
     if (hasRings) {
       cachedRingMode = -1;
-      saturnRingsShape = null; // ← garante rebuild completo
+      saturnRingsShape = null;
     }
 
-    // Atualiza luas também
     for (Moon m : moons) {
       m.applyScalingFactors(simParams);
     }
+
+    drawPositionDirty = true; // ← Sugestão extra para segurança máxima do cache
   }
 
   public void display(PGraphicsOpenGL pg, boolean showLabel, boolean selected, int renderingMode,
-                    ShapeManager shapeManager, ShaderManager shaderManager, float sunRadius) {
+                      ShapeManager shapeManager, ShaderManager shaderManager, float sunRadius) {
     pg.pushMatrix();
     PVector d = getDrawPosition(sunRadius);
     pg.translate(d.x, d.y, d.z);
@@ -135,7 +163,8 @@ public class Planet {
     float scaleFactor = selected ? radius * 1.1f : radius;
     pg.scale(scaleFactor);
 
-    PShape shape = shapeManager.getShape(name, renderingMode, texture);
+    // Usa o shape cacheado
+    PShape shape = getCachedShape(shapeManager);
 
     if (renderingMode == 0) {
       pg.noFill();
@@ -159,29 +188,48 @@ public class Planet {
     pg.popMatrix();
 
     if (showLabel) {
-      pg.pushMatrix();
-      PVector labelPos = getDrawPosition(sunRadius);
-      labelPos.y -= (radius + 5);
-      pg.translate(labelPos.x, labelPos.y, labelPos.z);
-      float labelSize = pApplet.max(10, radius * 0.5f);
-      pg.fill(255);
-      pg.textSize(labelSize);
-      pg.textAlign(PConstants.CENTER, PConstants.BOTTOM);
-      pg.text(name, 0, 0);
-      pg.popMatrix();
+      drawLabel(pg, sunRadius, d);
     }
   }
 
-  private void drawLabel(PGraphicsOpenGL pg, float sunRadius) {
-    PVector labelPos = getDrawPosition(sunRadius);
+  private void drawLabel(PGraphicsOpenGL pg, float sunRadius, PVector drawPos) {
+    pg.pushMatrix();
+    PVector labelPos = drawPos.copy();
     labelPos.y -= (radius + 5);
     pg.translate(labelPos.x, labelPos.y, labelPos.z);
-    float labelSize = pApplet.max(10, radius * 0.5f);
+    
+    // Usa o tamanho cacheado para a label
     pg.fill(255);
-    pg.textSize(labelSize);
+    pg.textSize(getCachedLabelSize());
     pg.textAlign(PConstants.CENTER, PConstants.BOTTOM);
     pg.text(name, 0, 0);
     pg.popMatrix();
+  }
+
+  /**
+  * Atualiza e retorna o shape cacheado do planeta.
+  */
+  private PShape getCachedShape(ShapeManager shapeManager) {
+    if (cachedShape == null || cachedRenderingMode != renderingMode) {
+      cachedShape = shapeManager.getShape(name, renderingMode, texture);
+      cachedRenderingMode = renderingMode;
+
+      if (renderingMode == 1 && cachedShape != null) {
+        cachedShape.setFill(col);
+      }
+    }
+    return cachedShape;
+  }
+
+  /**
+  * Cache para tamanho da label, dependente do raio atual.
+  */
+  private float getCachedLabelSize() {
+    if (cachedRadius != radius) {
+      cachedLabelSize = pApplet.max(10, radius * 0.5f);
+      cachedRadius = radius;
+    }
+    return cachedLabelSize;
   }
 
   private void drawSaturnRings(PGraphicsOpenGL pg, int renderingMode) {
@@ -202,8 +250,8 @@ public class Planet {
 
   private void buildSaturnRingsShape(int renderingMode) {
     saturnRingsShape = pApplet.createShape();
-    saturnRingsShape.beginShape(PConstants.QUAD_STRIP);
-    saturnRingsShape.textureMode(PConstants.NORMAL);
+    saturnRingsShape.beginShape(QUAD_STRIP);
+    saturnRingsShape.textureMode(NORMAL);
 
     if (renderingMode == 0) {
       saturnRingsShape.noFill();

@@ -36,6 +36,23 @@ public class Moon {
   private int renderingMode = 2;
   private PImage texture;
 
+
+  // Cache para posição visual
+  private final PVector cachedDrawPosition = new PVector();
+  private float cachedSunRadius = -1;
+  private boolean drawPositionDirty = true;
+
+  // Cache para forma e label e órbitas
+  private PShape cachedShape;
+  private int cachedRenderingMode = -1;
+
+  private float cachedLabelSize = -1;
+  private float cachedMoonRadius = -1;
+
+  private float cachedVisualOrbitRadius = -1;
+  private float cachedParentRadius = -1;
+
+
   public Moon(PApplet pApplet,
               float mass,
               float moonSizeRatio,
@@ -78,6 +95,7 @@ public class Moon {
     sinOrbital = PApplet.sin(orbitalAngle);
   }
 
+  // exemplo de aplicação na sua função update:
   public void update(float dt, PVector parentPos, PVector parentVel) {
     float v_pixels_per_day = PApplet.sqrt(G_AU * parent.mass / getPhysicalOrbitRadiusAU()) * pixelsPerAU;
     float deltaAngle = (v_pixels_per_day / getVisualOrbitRadius()) * dt;
@@ -93,12 +111,16 @@ public class Moon {
 
     position.set(computePositionFromAngle(orbitalAngle));
     velocity.set(computeTangentialVelocityFromAngle(orbitalAngle));
+
+    drawPositionDirty = true; // ← Marca o cache como sujo
   }
+
 
   public void applyScalingFactors(SimParams simParams) {
     float angle = PApplet.atan2(position.z, position.x);
     position.set(computePositionFromAngle(angle));
     velocity.set(computeTangentialVelocityFromAngle(angle));
+    drawPositionDirty = true; // ← Marca o cache como sujo
   }
 
   public float getDrawnRadius() {
@@ -106,7 +128,12 @@ public class Moon {
   }
 
   public PVector getDrawPosition(float sunRadius) {
-    return PVector.add(parent.getDrawPosition(sunRadius), position);
+    if (drawPositionDirty || cachedSunRadius != sunRadius) {
+      cachedDrawPosition.set(parent.getDrawPosition(sunRadius)).add(position);
+      cachedSunRadius = sunRadius;
+      drawPositionDirty = false;
+    }
+    return cachedDrawPosition;
   }
 
   public void displayOrbit(PGraphicsOpenGL pg, float sunRadius) {
@@ -115,7 +142,8 @@ public class Moon {
     pg.translate(parentDraw.x, parentDraw.y, parentDraw.z);
     pg.rotateX(PConstants.HALF_PI);
 
-    float r_visual = getVisualOrbitRadius();
+    // Usa raio visual cacheado da órbita
+    float r_visual = getCachedVisualOrbitRadius();
 
     pg.noFill();
     pg.stroke(150, 150, 255, 150);
@@ -134,7 +162,8 @@ public class Moon {
     pg.translate(d.x, d.y, d.z);
     pg.scale(getDrawnRadius());
 
-    PShape shape = shapeManager.getShape(name, renderingMode, texture);
+    // Usa shape cacheado
+    PShape shape = getCachedShape(shapeManager);
 
     if (renderingMode == 0) {
       pg.noFill();
@@ -158,21 +187,60 @@ public class Moon {
     pg.popMatrix();
 
     if (showLabel) {
-      drawLabel(pg, sunRadius);
+      drawLabel(pg, sunRadius, d);
     }
   }
 
-  private void drawLabel(PGraphicsOpenGL pg, float sunRadius) {
+  private void drawLabel(PGraphicsOpenGL pg, float sunRadius, PVector drawPos) {
     pg.pushMatrix();
-    PVector labelPos = getDrawPosition(sunRadius);
+    PVector labelPos = drawPos.copy();
     labelPos.y -= (getDrawnRadius() + 5);
     pg.translate(labelPos.x, labelPos.y, labelPos.z);
-    float labelSize = pApplet.max(10, getDrawnRadius() * 0.5f);
+
+    // Usa tamanho cacheado para a label
     pg.fill(255);
-    pg.textSize(labelSize);
+    pg.textSize(getCachedLabelSize());
     pg.textAlign(PConstants.CENTER, PConstants.BOTTOM);
     pg.text(name, 0, -getDrawnRadius() - 5);
     pg.popMatrix();
+  }
+
+
+  // --- Métodos de Cache ---
+
+  /**
+  * Retorna o shape cacheado da lua.
+  */
+  private PShape getCachedShape(ShapeManager shapeManager) {
+    if (cachedShape == null || cachedRenderingMode != renderingMode) {
+      cachedShape = shapeManager.getShape(name, renderingMode, texture);
+      cachedRenderingMode = renderingMode;
+    }
+    return cachedShape;
+  }
+
+  /**
+  * Retorna o tamanho cacheado da label, dependente do raio atual da lua.
+  */
+  private float getCachedLabelSize() {
+    float drawnRadius = getDrawnRadius();
+    if (cachedMoonRadius != drawnRadius) {
+      cachedLabelSize = pApplet.max(10, drawnRadius * 0.5f);
+      cachedMoonRadius = drawnRadius;
+    }
+    return cachedLabelSize;
+  }
+
+  /**
+  * Retorna o raio visual cacheado da órbita da lua.
+  */
+  private float getCachedVisualOrbitRadius() {
+    float currentParentRadius = parent.getScaledRadius();
+    if (cachedParentRadius != currentParentRadius) {
+      cachedVisualOrbitRadius = currentParentRadius * (1 + moonOrbitFactor / moonOrbitCalibration);
+      cachedParentRadius = currentParentRadius;
+    }
+    return cachedVisualOrbitRadius;
   }
 
   // ---------- Encapsulamento Estrutural ----------

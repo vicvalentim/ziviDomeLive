@@ -66,7 +66,10 @@ class PhysicsEngine {
     PVector velocityDt = PVector.mult(p.velocity, dt);
     temp2.mult(0.5f * dt * dt * PIXELS_PER_AU);
     temp3.set(velocityDt).add(temp2);
+
+    // Alteração aqui com a atualização do cache:
     p.position.add(temp3);
+    p.drawPositionDirty = true;  // ← Integração do cache
 
     PVector.sub(sunPos, p.position, temp1);
     float r_AU_new = temp1.mag() / PIXELS_PER_AU;
@@ -81,7 +84,8 @@ class PhysicsEngine {
     synchronized (p) {
       p.updateRotation(dt);
       float sunRadius = SUN_VISUAL_RADIUS * p.simParams.globalScale;
-      p.updateMoons(dt, sunRadius); // ← correção aqui
+        PVector drawPos = p.getDrawPosition(sunRadius); // já calcula aqui
+        p.updateMoons(dt, drawPos, p.velocity);         // passa como argumento
     }
   }
 

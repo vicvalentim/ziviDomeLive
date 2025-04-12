@@ -140,7 +140,7 @@ class ConfigLoader {
 
       // --- Cria sky sphere ---
       skyTexture = textureManager.getTexture("8k_stars_milky_way.jpg");
-      skySphere = pApplet.createShape(PConstants.SPHERE, 1);
+      skySphere = pApplet.createShape(SPHERE, 1);
       skySphere.setTexture(skyTexture);
       skySphere.setStroke(false);
       skySphere.setFill(pApplet.color(255));

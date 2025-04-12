@@ -185,10 +185,11 @@ class Scene1 implements Scene {
     char key = event.getKey();
     switch (key) {
       case ' ': resetView(); break;
-      case 'G': simParams.globalScale *= 1.1f; applyScalingFactors(); break;
-      case 'g': simParams.globalScale /= 1.1f; applyScalingFactors(); break;
+      case 'G': simParams.globalScale *= 1.1f; simParams.planetAmplification = 1.0f; applyScalingFactors(); break;
+      case 'g': simParams.globalScale /= 1.1f; simParams.planetAmplification = 1.0f; applyScalingFactors(); break;
       case 'a': simParams.planetAmplification *= 1.1f; applyScalingFactors(); break;
       case 'z': simParams.planetAmplification /= 1.1f; applyScalingFactors(); break;
+      case 'r': simParams.globalScale = 1.0f; simParams.planetAmplification = 1.0f; applyScalingFactors(); pApplet.println("[Scene1] Escala global e amplificação resetadas."); break;
       case 'w': changeRenderingMode(0); break;
       case 's': changeRenderingMode(1); break;
       case 't': changeRenderingMode(2); break;

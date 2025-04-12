@@ -77,7 +77,7 @@ public class Sun {
     pg.translate(labelPos.x, labelPos.y, labelPos.z);
     pg.fill(255);
     pg.textSize(pApplet.max(10, radius * 0.4f));
-    pg.textAlign(PConstants.CENTER, PConstants.BOTTOM);
+    pg.textAlign(CENTER, BOTTOM);
     pg.text("Sun", 0, 0);
     pg.popMatrix();
   }

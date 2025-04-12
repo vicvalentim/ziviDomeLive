@@ -53,7 +53,7 @@ public class ShapeManager {
 
   private PShape createSphereShape(int detail, boolean fill, boolean stroke, PImage tex) {
     pApplet.sphereDetail(detail);
-    PShape s = pApplet.createShape(PConstants.SPHERE, 1);
+    PShape s = pApplet.createShape(SPHERE, 1);
     s.setStroke(stroke);
     if (stroke) {
       s.setStrokeWeight(WIREFRAME_STROKE_WEIGHT);  // Usa a espessura global do wireframe
