@@ -192,15 +192,36 @@ class Scene1 implements Scene {
         prevMouseX = event.getX();
         prevMouseY = event.getY();
         break;
+
       case MouseEvent.DRAG:
         float dx = (event.getX() - prevMouseX) * 0.01f;
         float dy = (event.getY() - prevMouseY) * 0.01f;
-        renderer.setCameraRotation(renderer.getCameraRotationX() + dy, renderer.getCameraRotationY() + dx);
+        renderer.setCameraRotation(
+          renderer.getCameraRotationX() + dy,
+          renderer.getCameraRotationY() + dx
+        );
         prevMouseX = event.getX();
         prevMouseY = event.getY();
         break;
+
       case MouseEvent.WHEEL:
-        renderer.setCameraDistance(renderer.getCameraDistance() + event.getCount() * 0.01f);
+        float scroll = event.getCount();
+
+        // 🔍 Detecção heurística de scroll contínuo (trackpad)
+        boolean isTrackpad = Math.abs(scroll) < 1.0f;
+
+        float zoomFactor;
+        if (isTrackpad) {
+          // Mais sensível, resolução contínua
+          zoomFactor = scroll * 0.5f;
+        } else {
+          // Bolinha tradicional: incremento fixo
+          zoomFactor = scroll * 2.0f;
+        }
+
+        renderer.setCameraDistance(
+          PApplet.constrain(renderer.getCameraDistance() + zoomFactor, -100000.0f, 100000.0f)
+        );
         break;
     }
   }
