@@ -5,6 +5,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ShaderManager {
+  private static final String SHADER_PATH = "data/shader/";
+  private static final String DEFAULT_TEXTURE_UNIFORM = "texSampler";
+
   private final PApplet pApplet;
   private final HashMap<String, PShader> shaders = new HashMap<>();
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -14,10 +17,11 @@ public class ShaderManager {
     this.pApplet = pApplet;
   }
 
-  // Carrega shader separado: vertex + fragment
-  public void loadShader(String name, String fragPath, String vertPath) {
+  public void loadShader(String name, String fragFile, String vertFile) {
     lock.writeLock().lock();
     try {
+      String fragPath = SHADER_PATH + fragFile;
+      String vertPath = SHADER_PATH + vertFile;
       PShader shader = pApplet.loadShader(fragPath, vertPath);
       shaders.put(name, shader);
     } finally {
@@ -25,23 +29,21 @@ public class ShaderManager {
     }
   }
 
-  // Suporte legado para shader unificado (.glsl)
-  public void loadUnifiedShader(String name, String unifiedPath) {
+  public void loadUnifiedShader(String name, String unifiedFile) {
     lock.writeLock().lock();
     try {
-      PShader shader = pApplet.loadShader(unifiedPath);
+      String path = SHADER_PATH + unifiedFile;
+      PShader shader = pApplet.loadShader(path);
       shaders.put(name, shader);
     } finally {
       lock.writeLock().unlock();
     }
   }
 
-  // Enfileira carregamento unificado de forma segura
   public void queueUnifiedShaderLoad(String name, String unifiedPath) {
     renderQueue.add(() -> loadUnifiedShader(name, unifiedPath));
   }
 
-  // Executa shaders pendentes para carregamento
   public void executePending() {
     Runnable task;
     while ((task = renderQueue.poll()) != null) {
@@ -49,7 +51,6 @@ public class ShaderManager {
     }
   }
 
-  // Retorna o shader pelo nome
   public PShader getShader(String name) {
     lock.readLock().lock();
     try {
@@ -59,7 +60,6 @@ public class ShaderManager {
     }
   }
 
-  // Aplica shader ao contexto gráfico
   public void applyShader(PGraphicsOpenGL pg, String name) {
     PShader shader = getShader(name);
     if (shader != null) {
@@ -67,12 +67,17 @@ public class ShaderManager {
     }
   }
 
-  // Remove o shader atual do contexto
+  public void setTexture(String shaderName, PImage texture) {
+    PShader shader = getShader(shaderName);
+    if (shader != null && texture != null) {
+      shader.set(DEFAULT_TEXTURE_UNIFORM, texture);
+    }
+  }
+
   public void resetShader(PGraphicsOpenGL pg) {
     pg.resetShader();
   }
 
-  // Uniformes auxiliares
   public void setUniform(String shaderName, String uniformName, float value) {
     PShader shader = getShader(shaderName);
     if (shader != null) {
@@ -87,7 +92,6 @@ public class ShaderManager {
     }
   }
 
-  // Libera memória dos shaders
   public void dispose() {
     lock.writeLock().lock();
     try {

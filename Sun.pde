@@ -46,9 +46,10 @@ public class Sun {
       pg.stroke(WIREFRAME_COLOR);
       pg.strokeWeight(WIREFRAME_STROKE_WEIGHT);
     } else if (renderingMode == 2) {
-      PShader sunShader = shaderManager.getShader("sun");
-      if (sunShader != null) {
-        pg.shader(sunShader);
+      PShader shader = shaderManager.getShader("sun");
+      if (shader != null && texture != null) {
+        shader.set("texSampler", texture); // ⚠️ crucial para o sampler funcionar
+        pg.shader(shader);
       } else {
         pg.fill(col);
       }
@@ -91,11 +92,25 @@ public class Sun {
   }
 
   public void buildShape(PApplet p, ShapeManager shapeManager) {
+    // Obtém o shape do sol, de acordo com o modo de renderização e texturização desejado
     shape = shapeManager.getShape("Sun", renderingMode, texture);
+    
+    // Caso o modo sólido seja usado, aplica a cor base
     if (renderingMode == 1 && shape != null) {
       shape.setFill(col);
     }
+    
+    // Configuração dos parâmetros de material para simular auto-iluminação e realces intensos:
+    // Ajuste a tonalidade base do sol
+    //shape.setAmbient(p.color(255, 200, 0));
+    // Reflexos intensos e concentrados
+    //shape.setSpecular(p.color(255, 255, 255));
+    // Auto-iluminação: faz o sol "brilhar" internamente
+    //shape.setEmissive(p.color(255, 255, 255));
+    // Valor alto para concentrar os brilhos
+    //shape.setShininess(100.0);
   }
+
 
   public PVector getPosition() {
     return position.copy();

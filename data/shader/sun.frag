@@ -1,54 +1,36 @@
-#version 410
+#version 410 core
 
-uniform sampler2D texSampler;  // <- Nome alterado aqui
-uniform float time;
-uniform vec3 lightColor;
+in vec2 vTexCoord;     // Coordenada de textura interpolada do vértice (normalizada: 0.0 a 1.0)
+out vec4 fragColor;    // Cor final do fragmento
 
-in vec3 vNormal;
-in vec3 vPosition;
-in vec2 vTexCoord;
+uniform float time;    // Uniform para controle temporal (animação)
 
-out vec4 fragColor;
-
-float hash(vec2 p) {
-  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-}
-float noise(vec2 p) {
-  vec2 i = floor(p);
-  vec2 f = fract(p);
-  vec2 u = f*f*(3.0 - 2.0*f);
-  return mix(
-    mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), u.x),
-    mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
-    u.y
-  );
-}
-float plasma(vec2 uv, float t) {
-  float n = 0.0;
-  float scale = 1.0;
-  for (int i = 0; i < 4; i++) {
-    n += noise(uv * scale + t * 0.1) / scale;
-    scale *= 2.0;
-  }
-  return n;
+// Função de pseudo-noise simples para variação (não é um noise real, mas serve para introduzir irregularidades)
+float pseudoNoise(vec2 st) {
+    return fract(sin(dot(st, vec2(12.9898,78.233))) * 43758.5453123);
 }
 
 void main() {
-  vec3 N = normalize(vNormal);
-  vec3 viewDir = normalize(-vPosition);
-  float intensity = pow(dot(N, viewDir), 2.0);
-
-  vec2 uv = vTexCoord * 4.0;
-
-  float p = plasma(uv, time);
-
-  // <- Atualizado aqui:
-  vec3 texColor = texture(texSampler, vTexCoord).rgb;
-
-  float corona = smoothstep(0.7, 1.0, length(vTexCoord - 0.5)) * 0.4;
-
-  vec3 emissive = texColor * 1.2 + vec3(p * 0.3, p * 0.15, 0.05);
-  emissive += corona * vec3(1.0, 0.85, 0.3);
-
-  fragColor = vec4(emissive * lightColor * (1.2 + intensity), 1.0);
+    // Ajusta as coordenadas para centralizar o efeito (centro em (0.5, 0.5))
+    vec2 st = vTexCoord - vec2(0.5);
+    
+    // Calcula a distância radial a partir do centro; o fator 2.0 pode ser ajustado para "espalhar" a influência do gradiente
+    float radius = length(st) * 2.0;
+    
+    // Cria um gradiente suave: maior intensidade no centro, decaindo suavemente para as bordas
+    float gradient = smoothstep(1.0, 0.0, radius);
+    
+    // Aplica um efeito de pulsação, simulando variações dinâmicas na intensidade emissiva
+    float pulsation = 0.1 * sin(time * 3.0);
+    gradient += pulsation;
+    
+    // Incorpora uma leve variação utilizando pseudoNoise para simular irregularidades na "superfície" do sol
+    float noise = pseudoNoise(vTexCoord * 10.0 + time);
+    float noiseFactor = mix(0.9, 1.1, noise);
+    
+    // Define a cor base do sol, típica em tons amarelos/laranjas
+    vec3 sunColor = vec3(1.0, 0.8, 0.0);
+    
+    // Combina os efeitos de gradiente, pulsação e variação de noise para simular a emissão
+    fragColor = vec4(sunColor * gradient * noiseFactor, 1.0);
 }

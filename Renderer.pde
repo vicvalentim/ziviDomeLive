@@ -86,36 +86,50 @@ class Renderer {
     }
   }
 
-public void drawSkySphere(PGraphicsOpenGL pg, int renderingMode) {
-    if (renderingMode != 2) return; // ← Só renderiza no modo TEXTURIZADO
+  public void drawSkySphere(PGraphicsOpenGL pg, int renderingMode) {
+    if (renderingMode != 2) return; // ← Apenas modo texturizado
 
     pg.pushMatrix();
-      if (sun != null) {
-        PVector sunPos = sun.getPosition();
-        pg.translate(sunPos.x, sunPos.y, sunPos.z);
-        float combinedRotationY = cameraRotationY * 0.5f;
-        pg.rotateY(combinedRotationY);
+
+    if (sun != null) {
+      PVector sunPos = sun.getPosition();
+      pg.translate(sunPos.x, sunPos.y, sunPos.z);
+      float combinedRotationY = cameraRotationY * 0.5f;
+      pg.rotateY(combinedRotationY);
+    }
+
+    PGL pgl = pg.beginPGL();
+    pgl.disable(PGL.CULL_FACE);
+    pg.endPGL();
+
+    boolean shaderApplied = false;
+    PShader skyShader = shaderManager.getShader("sky_hdri");
+
+    if (skyShader != null) {
+      try {
+        shaderManager.applyShader(pg, "sky_hdri");
+        shaderApplied = true;
+      } catch (Exception e) {
+        System.err.println("[drawSkySphere] Falha ao aplicar shader 'sky_hdri': " + e.getMessage());
       }
+    }
 
-      PGL pgl = pg.beginPGL();
-      pgl.disable(PGL.CULL_FACE);
-      pg.endPGL();
+    if (!shaderApplied) {
+      pg.noLights(); // Fallback seguro
+      pg.textureMode(NORMAL);
+      pg.fill(255); // Garante que a textura fique visível
+    }
 
-      PShader skyShader = shaderManager.getShader("sky");
-      if (skyShader != null) {
-        pg.shader(skyShader);
-      } else {
-        pg.noLights(); // Fallback simples caso não tenha shader
-      }
+    float skyScale = -NEPTUNE_DIST * PIXELS_PER_AU * 2.0f * simParams.globalScale;
+    pg.scale(skyScale);
+    pg.shape(skySphere);
 
-      pg.scale(-NEPTUNE_DIST * PIXELS_PER_AU * 2.0f * simParams.globalScale);
-      pg.shape(skySphere);
+    pg.resetShader();
 
-      pg.resetShader();
+    pgl = pg.beginPGL();
+    pgl.enable(PGL.CULL_FACE);
+    pg.endPGL();
 
-      pgl = pg.beginPGL();
-      pgl.enable(PGL.CULL_FACE);
-      pg.endPGL();
     pg.popMatrix();
   }
 

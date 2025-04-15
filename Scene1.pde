@@ -38,6 +38,7 @@ class Scene1 implements Scene {
     loadAllShaders();
 
     configLoader = new ConfigLoader(pApplet, textureManager, simParams);
+    configLoader.sendTexturesToShaderManager(shaderManager);
     sun = configLoader.loadSun();
     planets = configLoader.loadConfiguration();
 
@@ -49,8 +50,34 @@ class Scene1 implements Scene {
   }
 
   private void loadAllShaders() {
-    pApplet.println("[Scene1] Shaders carregados com sucesso.");
+    pApplet.println("[Scene1] Iniciando carregamento de shaders...");
+
+    boolean allShadersOk = true;
+
+    //allShadersOk &= tryLoadShader("planet", "planet.frag", "common.vert");
+    //allShadersOk &= tryLoadShader("sun", "sun.frag", "common.vert");
+    //allShadersOk &= tryLoadShader("rings", "rings.frag", "common.vert");
+    //allShadersOk &= tryLoadShader("sky_hdri", "sky_hdri.frag", "sky_hdri.vert");
+
+    if (allShadersOk) {
+      pApplet.println("[Scene1] Todos os shaders carregados com sucesso.");
+    } else {
+      pApplet.println("[Scene1] ⚠️ Nem todos os shaders foram carregados corretamente. Verifique o log acima.");
+    }
   }
+
+  // Função auxiliar com tratamento de exceções
+  private boolean tryLoadShader(String name, String fragFile, String vertFile) {
+    try {
+      shaderManager.loadShader(name, fragFile, vertFile);
+      pApplet.println("[Shader] ✔ '" + name + "' carregado de " + fragFile + " + " + vertFile);
+      return true;
+    } catch (Exception e) {
+      pApplet.println("[Shader] ❌ Falha ao carregar shader '" + name + "': " + e.getMessage());
+      return false;
+    }
+  }
+
 
   private void configureCamera() {
     float neptuneDrawPos = NEPTUNE_DIST * PIXELS_PER_AU + SUN_VISUAL_RADIUS;

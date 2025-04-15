@@ -1,18 +1,25 @@
-#version 410
+#version 410 core
 
-// Vertex Shader para mapeamento equiretangular da esfera celeste
+// Uniforms que Processing tipicamente envia:
+//   - "transform" costuma ser a matriz (projection * modelview)
+//   - "modelview" e "projection" podem aparecer, dependendo do modo
+uniform mat4 transform;
 
+// Atributos de vértice que Processing envia por padrão:
 in vec4 position;
+in vec3 normal;
+in vec2 texcoord;
 
-out vec3 vDirection;
-
-uniform mat4 modelview;
-uniform mat4 projection;
+// Passamos as coordenadas de textura para o fragment
+out vec2 vTexCoord;
 
 void main() {
-  // Converte o vértice para direção de visualização
-  vec4 worldPos = modelview * position;
-  vDirection = normalize(worldPos.xyz);
-
-  gl_Position = projection * worldPos;
+  // Usamos a matriz 'transform' (projection * modelview)
+  gl_Position = transform * position;
+  
+  // Para um simples sample equiretangular, podemos usar
+  // as texcoords geradas pelo createShape(SPHERE, ...).
+  // Se você quiser calcular manualmente, pode usar a vPosition e
+  // derivar (u,v) via atan2, etc. 
+  vTexCoord = texcoord;
 }

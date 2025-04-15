@@ -151,14 +151,48 @@ class ConfigLoader {
     }
   }
 
+  public void sendTexturesToShaderManager(ShaderManager shaderManager) {
+  lock.readLock().lock();
+  try {
+    // Envia textura do céu
+    if (skyTexture != null) {
+      shaderManager.setTexture("sky_hdri", skyTexture);
+    }
+
+    // Envia textura do Sol
+    String sunFile = planetTextureMap.get("Sun");
+    if (sunFile != null) {
+      PImage sunTex = textureManager.getTexture(sunFile);
+      if (sunTex != null) shaderManager.setTexture("sun", sunTex);
+    }
+
+    // Envia texturas de todos os planetas e luas para o shader "planet"
+    for (String name : planetTextureMap.keySet()) {
+      String texFile = planetTextureMap.get(name);
+      PImage tex = textureManager.getTexture(texFile);
+      if (tex != null) {
+        shaderManager.setTexture("planet", tex); // ou usar name como chave, se shaders forem específicos
+      }
+    }
+
+    // Textura dos anéis de Saturno
+    PImage saturnRing = textureManager.getTexture("2k_saturn_ring_alpha.png");
+    if (saturnRing != null) {
+      shaderManager.setTexture("rings", saturnRing);
+    }
+  } finally {
+    lock.readLock().unlock();
+  }
+}
+
   // Adiciona uma lua a um planeta
   private void addMoonToPlanet(Planet planet, String moonName, float moonSizeRatio, float orbitFactor,
                                 float inclination, float eccentricity, float argumentPeriapsis,
                                 boolean alignWithPlanetAxis) {
     float factorMultiplier;
-    if (orbitFactor <= 7.0f) {
+    if (orbitFactor <= 6.0f) {
       factorMultiplier = 1.5f;
-    } else if (orbitFactor <= 25.0f) {
+    } else if (orbitFactor <= 21.0f) {
       factorMultiplier = 1.2f;
     } else if (orbitFactor <= 70.0f) {
       factorMultiplier = 0.65f;

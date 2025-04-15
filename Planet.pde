@@ -239,6 +239,7 @@ public class Planet {
     }
 
     pg.pushMatrix();
+    noLights();
     pg.rotateZ(axisTilt);
     if (axisTilt > PApplet.HALF_PI) {
       pg.rotateY(PApplet.PI);
