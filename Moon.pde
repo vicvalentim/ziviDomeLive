@@ -2,299 +2,253 @@ import processing.core.*;
 import processing.opengl.*;
 
 /**
- * Representa uma lua que orbita um planeta.
- * A Moon depende completamente de Planet para escala visual, posição e massa orbital.
- * Nenhuma constante como SUN_VISUAL_RADIUS é usada diretamente.
+ * Moon — implementa CelestialBody, lógica de órbita elíptica e display.
  */
-public class Moon {
-  private PApplet pApplet;
-  private SimParams simParams;
-  private final float pixelsPerAU;
-  private final float G_AU;
-  private final float moonOrbitCalibration;
+public class Moon implements CelestialBody {
+    // ——————————————— Física ———————————————
+    private final float massSolar;             // M☉
+    private final float radiusAU;              // semi-eixo maior em AU
+    private final float rotationPeriodDays;    // dias
+    private final PVector positionAU;          // AU
+    private final PVector velocityAU;          // AU/dia
+    private CelestialBody centralBody;         // planeta pai
 
-  float mass;
-  float moonSizeRatio;
-  float moonOrbitFactor;
-  PVector position;
-  PVector velocity;
-  PVector acceleration;
-  color col;
-  String name;
-  Planet parent;
+    // elementos orbitais
+    private final float perihelionAU;
+    private final float aphelionAU;
+    private final float eccentricity;
+    private final float inclinationRad;
+    private final float argumentOfPeriapsisRad;
+    private final boolean alignWithPlanetAxis;
 
-  float inclination;
-  float eccentricity;
-  float argumentPeriapsis;
-  boolean alignWithPlanetAxis;
+    // ——————————————— Display ———————————————
+    private final PApplet pApplet;
+    private final SimParams simParams;
+    private final String name;
+    private final color displayColor;
+    private final PImage texture;
+    private int renderingMode = 2;
 
-  PMatrix3D rotationMatrix;
+    private float radiusPx;                    // px
+    private final float baseRatio;             // (raio da Lua) / (raio do Sol)
+    private float rotationAngle = 0;
+    private final float rotationSpeed;         // rad/dia
 
-  float orbitalAngle;
-  float cosOrbital, sinOrbital;
+    // caches
+    private final PVector cachedDrawPosition = new PVector();
+    private float cachedCentralRadius = -1;
+    private boolean drawPositionDirty = true;
 
-  private int renderingMode = 2;
-  private PImage texture;
+    private PShape cachedShape;
+    private int cachedRenderingMode = -1;
 
+    private int cachedOrbitMode = -1;
+    private float cachedSemiMajor = -1, cachedSemiMinor = -1, cachedFocus = -1;
 
-  // Cache para posição visual
-  private final PVector cachedDrawPosition = new PVector();
-  private float cachedSunRadius = -1;
-  private boolean drawPositionDirty = true;
+    private float cachedLabelSize = -1, cachedRadiusForLabel = -1;
 
-  // Cache para forma e label e órbitas
-  private PShape cachedShape;
-  private int cachedRenderingMode = -1;
+    /** Construtor unificado */
+    public Moon(PApplet pApplet,
+                SimParams simParams,
+                float massSolar,
+                float radiusAU,
+                float sunRadiusAU,            // novo parâmetro
+                float rotationPeriodDays,
+                PVector initialPosAU,
+                PVector initialVelAU,
+                String name,
+                color displayColor,
+                PImage texture,
+                CelestialBody centralBody,
+                float inclinationRad,
+                float argumentOfPeriapsisRad,
+                boolean alignWithPlanetAxis,
+                float perihelionAU,
+                float aphelionAU,
+                float eccentricity) {
+        this.pApplet               = pApplet;
+        this.simParams             = simParams;
+        this.massSolar             = massSolar;
+        this.radiusAU              = radiusAU;
+        this.rotationPeriodDays    = rotationPeriodDays;
+        this.positionAU            = initialPosAU.copy();
+        this.velocityAU            = initialVelAU.copy();
+        this.name                  = name;
+        this.displayColor          = displayColor;
+        this.texture               = texture;
+        this.centralBody           = centralBody;
+        this.inclinationRad        = inclinationRad;
+        this.argumentOfPeriapsisRad= argumentOfPeriapsisRad;
+        this.alignWithPlanetAxis   = alignWithPlanetAxis;
+        this.perihelionAU          = perihelionAU;
+        this.aphelionAU             = aphelionAU;
+        this.eccentricity          = eccentricity;
 
-  private float cachedLabelSize = -1;
-  private float cachedMoonRadius = -1;
+        this.rotationSpeed = PApplet.TWO_PI / rotationPeriodDays;
+        this.baseRatio     = radiusAU / sunRadiusAU;  // corrigido aqui
 
-  private float cachedVisualOrbitRadius = -1;
-  private float cachedParentRadius = -1;
-
-
-  public Moon(PApplet pApplet,
-              float mass,
-              float moonSizeRatio,
-              float moonOrbitFactor,
-              PVector pos,
-              PVector vel,
-              color col,
-              String name,
-              Planet parent,
-              float inclination,
-              float eccentricity,
-              float argumentPeriapsis,
-              boolean alignWithPlanetAxis,
-              float pixelsPerAU,
-              float G_AU,
-              float moonOrbitCalibration) {
-    this.pApplet = pApplet;
-    this.mass = mass;
-    this.moonSizeRatio = moonSizeRatio;
-    this.moonOrbitFactor = moonOrbitFactor;
-    this.position = pos.copy();
-    this.velocity = vel.copy();
-    this.acceleration = new PVector();
-    this.col = col;
-    this.name = name;
-    this.parent = parent;
-    this.simParams = parent.simParams;
-    this.inclination = inclination;
-    this.eccentricity = eccentricity;
-    this.argumentPeriapsis = argumentPeriapsis;
-    this.alignWithPlanetAxis = alignWithPlanetAxis;
-    this.pixelsPerAU = pixelsPerAU;
-    this.G_AU = G_AU;
-    this.moonOrbitCalibration = moonOrbitCalibration;
-
-    resetRotationMatrix();
-
-    orbitalAngle = PApplet.atan2(pos.z, pos.x);
-    cosOrbital = PApplet.cos(orbitalAngle);
-    sinOrbital = PApplet.sin(orbitalAngle);
-  }
-
-  // exemplo de aplicação na sua função update:
-  public void update(float dt, PVector parentPos, PVector parentVel) {
-    float v_pixels_per_day = PApplet.sqrt(G_AU * parent.mass / getPhysicalOrbitRadiusAU()) * pixelsPerAU;
-    float deltaAngle = (v_pixels_per_day / getVisualOrbitRadius()) * dt;
-
-    float cosDelta = PApplet.cos(deltaAngle);
-    float sinDelta = PApplet.sin(deltaAngle);
-    float newCos = cosOrbital * cosDelta - sinOrbital * sinDelta;
-    float newSin = sinOrbital * cosDelta + cosOrbital * sinDelta;
-
-    cosOrbital = newCos;
-    sinOrbital = newSin;
-    orbitalAngle += deltaAngle;
-
-    position.set(computePositionFromAngle(orbitalAngle));
-    velocity.set(computeTangentialVelocityFromAngle(orbitalAngle));
-
-    drawPositionDirty = true; // ← Marca o cache como sujo
-  }
-
-
-  public void applyScalingFactors(SimParams simParams) {
-    float angle = PApplet.atan2(position.z, position.x);
-    position.set(computePositionFromAngle(angle));
-    velocity.set(computeTangentialVelocityFromAngle(angle));
-    drawPositionDirty = true; // ← Marca o cache como sujo
-  }
-
-  public float getDrawnRadius() {
-    return parent.getScaledRadius() * moonSizeRatio;
-  }
-
-  public PVector getDrawPosition(float sunRadius) {
-    if (drawPositionDirty || cachedSunRadius != sunRadius) {
-      cachedDrawPosition.set(parent.getDrawPosition(sunRadius)).add(position);
-      cachedSunRadius = sunRadius;
-      drawPositionDirty = false;
-    }
-    return cachedDrawPosition;
-  }
-
-  public void displayOrbit(PGraphicsOpenGL pg, float sunRadius) {
-    pg.pushMatrix();
-    PVector parentDraw = parent.getDrawPosition(sunRadius);
-    pg.translate(parentDraw.x, parentDraw.y, parentDraw.z);
-    pg.rotateX(PConstants.HALF_PI);
-
-    // Usa raio visual cacheado da órbita
-    float r_visual = getCachedVisualOrbitRadius();
-
-    pg.noFill();
-    pg.stroke(150, 150, 255, 150);
-    pg.strokeWeight(1);
-    pg.ellipse(0, 0, r_visual * 2, r_visual * 2);
-    pg.popMatrix();
-  }
-
-  public void display(PGraphicsOpenGL pg, boolean showLabel,
-                      int renderingMode, ShapeManager shapeManager,
-                      ShaderManager shaderManager, float sunRadius) {
-    this.renderingMode = renderingMode;
-
-    pg.pushMatrix();
-    PVector d = getDrawPosition(sunRadius);
-    pg.translate(d.x, d.y, d.z);
-    pg.scale(getDrawnRadius());
-
-    // Usa shape cacheado
-    PShape shape = getCachedShape(shapeManager);
-
-    if (renderingMode == 0) {
-      pg.noFill();
-      pg.stroke(WIREFRAME_COLOR);
-      pg.strokeWeight(WIREFRAME_STROKE_WEIGHT);
-    } else if (renderingMode == 1) {
-      pg.noStroke();
-      pg.fill(col);
-    } else if (renderingMode == 2) {
-      pg.noStroke();
-      if (texture != null) {
-        PShader shader = shaderManager.getShader("planet");
-        if (shader != null) pg.shader(shader);
-      } else {
-        pg.fill(col);
-      }
+        applyScalingFactors(simParams);
     }
 
-    pg.shape(shape);
-    pg.resetShader();
-    pg.popMatrix();
-
-    if (showLabel) {
-      drawLabel(pg, sunRadius, d);
+    // ——————————————— Escala visual ———————————————
+    public void applyScalingFactors(SimParams simParams) {
+        this.radiusPx = SUN_VISUAL_RADIUS
+                      * baseRatio
+                      * simParams.globalScale
+                      * simParams.planetAmplification;
+        this.drawPositionDirty = true;
+        this.cachedOrbitMode   = -1;
     }
-  }
 
-  private void drawLabel(PGraphicsOpenGL pg, float sunRadius, PVector drawPos) {
-    pg.pushMatrix();
-    PVector labelPos = drawPos.copy();
-    labelPos.y -= (getDrawnRadius() + 5);
-    pg.translate(labelPos.x, labelPos.y, labelPos.z);
+    // ——————————————— CelestialBody (física) ———————————————
+    @Override public PVector getPositionAU()         { return positionAU; }
+    @Override public PVector getVelocityAU()         { return velocityAU; }
+    @Override public float   getMassSolar()          { return massSolar; }
+    @Override public CelestialBody getCentralBody()  { return centralBody; }
+    public  void    setCentralBody(CelestialBody c)  { this.centralBody = c; }
 
-    // Usa tamanho cacheado para a label
-    pg.fill(255);
-    pg.textSize(getCachedLabelSize());
-    pg.textAlign(PConstants.CENTER, PConstants.BOTTOM);
-    pg.text(name, 0, -getDrawnRadius() - 5);
-    pg.popMatrix();
-  }
-
-
-  // --- Métodos de Cache ---
-
-  /**
-  * Retorna o shape cacheado da lua.
-  */
-  private PShape getCachedShape(ShapeManager shapeManager) {
-    if (cachedShape == null || cachedRenderingMode != renderingMode) {
-      cachedShape = shapeManager.getShape(name, renderingMode, texture);
-      cachedRenderingMode = renderingMode;
+    @Override
+    public void propagateKepler(float dtDays) {
+        if (centralBody != null) {
+            keplerSolve(
+                centralBody.getPositionAU(),
+                positionAU,
+                velocityAU,
+                perihelionAU,
+                aphelionAU,
+                eccentricity,
+                inclinationRad,
+                argumentOfPeriapsisRad,
+                dtDays,
+                centralBody.getMassSolar()
+            );
+            this.drawPositionDirty = true;
+        }
     }
-    return cachedShape;
-  }
 
-  /**
-  * Retorna o tamanho cacheado da label, dependente do raio atual da lua.
-  */
-  private float getCachedLabelSize() {
-    float drawnRadius = getDrawnRadius();
-    if (cachedMoonRadius != drawnRadius) {
-      cachedLabelSize = pApplet.max(10, drawnRadius * 0.5f);
-      cachedMoonRadius = drawnRadius;
+    @Override public float getPerihelionAU()           { return perihelionAU; }
+    @Override public float getAphelionAU()             { return aphelionAU; }
+    @Override public float getEccentricity()           { return eccentricity; }
+    @Override public float getOrbitInclinationRad()    { return inclinationRad; }
+    @Override public float getArgumentOfPeriapsisRad() { return argumentOfPeriapsisRad; }
+    @Override public float getRadiusAU()               { return radiusAU; }
+    @Override public float getRotationPeriodDays()     { return rotationPeriodDays; }
+
+    // ——————————————— Renderização ———————————————
+    public void updateRotation(float dtDays) {
+        rotationAngle += rotationSpeed * dtDays;
     }
-    return cachedLabelSize;
-  }
 
-  /**
-  * Retorna o raio visual cacheado da órbita da lua.
-  */
-  private float getCachedVisualOrbitRadius() {
-    float currentParentRadius = parent.getScaledRadius();
-    if (cachedParentRadius != currentParentRadius) {
-      cachedVisualOrbitRadius = currentParentRadius * (1 + moonOrbitFactor / moonOrbitCalibration);
-      cachedParentRadius = currentParentRadius;
+    /** Atualiza órbita e rotação da lua */
+    public void update(float dtDays) {
+      updateRotation(dtDays);
     }
-    return cachedVisualOrbitRadius;
-  }
 
-  // ---------- Encapsulamento Estrutural ----------
-
-  private float getVisualOrbitRadius() {
-    return parent.getScaledRadius() * (1 + moonOrbitFactor / moonOrbitCalibration);
-  }
-
-  private float getPhysicalOrbitRadiusAU() {
-    return (parent.getScaledRadius() * moonOrbitFactor) / pixelsPerAU;
-  }
-
-  private PVector computePositionFromAngle(float angle) {
-    float r_px_visual = getVisualOrbitRadius();
-    PVector pos = new PVector(PApplet.cos(angle) * r_px_visual, 0, PApplet.sin(angle) * r_px_visual);
-    rotationMatrix.mult(pos, pos);
-    return pos;
-  }
-
-  private PVector computeTangentialVelocityFromAngle(float angle) {
-    float v_pixels_per_day = PApplet.sqrt(G_AU * parent.mass / getPhysicalOrbitRadiusAU()) * pixelsPerAU;
-    PVector tangent = new PVector(-PApplet.sin(angle), 0, PApplet.cos(angle));
-    rotationMatrix.mult(tangent, tangent);
-    tangent.normalize().mult(v_pixels_per_day);
-    return tangent;
-  }
-
-  public void resetRotationMatrix() {
-    rotationMatrix = new PMatrix3D();
-    if (alignWithPlanetAxis) {
-      rotationMatrix.rotate(parent.axisTilt, 0, 0, 1);
-    } else {
-      rotationMatrix.rotate(argumentPeriapsis, 0, 1, 0);
-      rotationMatrix.rotate(inclination, 1, 0, 0);
+    public PVector getDrawPosition(float centralRadiusPx) {
+        if (drawPositionDirty || cachedCentralRadius != centralRadiusPx) {
+            PVector parentPx = centralBody.getPositionAU()
+                                .copy().mult(PIXELS_PER_AU * simParams.globalScale);
+            PVector selfOff  = positionAU.copy().mult(PIXELS_PER_AU * simParams.globalScale);
+            cachedDrawPosition.set(parentPx).add(selfOff);
+            cachedCentralRadius = centralRadiusPx;
+            drawPositionDirty  = false;
+        }
+        return cachedDrawPosition;
     }
-  }
 
-  public void setRenderingMode(int mode) {
-    this.renderingMode = mode;
-  }
+    public void displayOrbit(PGraphicsOpenGL pg, float centralRadiusPx) {
+        if (cachedOrbitMode != renderingMode) {
+            cachedSemiMajor = radiusAU * PIXELS_PER_AU * simParams.globalScale;
+            cachedSemiMinor = cachedSemiMajor * PApplet.sqrt(1 - eccentricity*eccentricity);
+            cachedFocus     = cachedSemiMajor * eccentricity;
+            cachedOrbitMode = renderingMode;
+        }
+        PVector center = centralBody.getPositionAU()
+                           .copy().mult(PIXELS_PER_AU * simParams.globalScale);
+        pg.pushMatrix();
+          pg.translate(center.x, center.y, center.z);
+          pg.rotateX(HALF_PI);
+          if (alignWithPlanetAxis) {
+            pg.rotateZ(((Planet)centralBody).axisTiltRad);
+          } else {
+            pg.rotateZ(argumentOfPeriapsisRad);
+          }
+          pg.rotateX(inclinationRad);
+          pg.translate(-cachedFocus, 0, 0);
 
-  public int getRenderingMode() {
-    return renderingMode;
-  }
+          pg.noFill();
+          pg.stroke(150,150,255,150);
+          pg.strokeWeight(1);
+          pg.ellipse(0,0,2*cachedSemiMajor,2*cachedSemiMinor);
+        pg.popMatrix();
+    }
 
-  public void buildShape(PApplet p, ShapeManager shapeManager) {
-    shapeManager.buildShape(name, renderingMode, texture);
-  }
+    public void display(PGraphicsOpenGL pg,
+                        boolean showLabel,
+                        int renderingMode,
+                        ShapeManager shapeManager,
+                        ShaderManager shaderManager) {
 
-  public void setTexture(PImage texture) {
-    this.texture = texture;
-  }
+        //updateRotation(1f/60f);
 
-  public void dispose() {
-    texture = null;
-  }
+        float scale = PIXELS_PER_AU * simParams.globalScale;
+        PVector pos = getDrawPosition(centralBody.getRadiusAU() * scale); // <- pega posição correta
+        pg.pushMatrix();
+          pg.translate(pos.x, pos.y, pos.z); // <- translate para posição orbital correta
+
+          pg.rotateZ(rotationAngle);
+          pg.scale(radiusPx);
+
+          if (renderingMode == 0) {
+            pg.noFill(); 
+            pg.stroke(WIREFRAME_COLOR); 
+            pg.strokeWeight(WIREFRAME_STROKE_WEIGHT);
+          } else if (renderingMode == 1) {
+            pg.noStroke(); 
+            pg.fill(displayColor);
+          } else {
+            pg.noStroke();
+            PShader sh = shaderManager.getShader("planet");
+            if (sh != null && texture != null) pg.shader(sh);
+            else pg.fill(displayColor);
+          }
+
+          if (cachedShape == null || cachedRenderingMode != renderingMode) {
+            cachedShape = shapeManager.getShape(name, renderingMode, texture);
+            cachedRenderingMode = renderingMode;
+          }
+          pg.shape(cachedShape);
+          pg.resetShader();
+        pg.popMatrix();
+
+        if (showLabel) {
+          if (cachedRadiusForLabel != radiusPx) {
+            cachedLabelSize = PApplet.max(10, radiusPx * 0.5f);
+            cachedRadiusForLabel = radiusPx;
+          }
+          pg.pushMatrix();
+            pg.translate(pos.x, pos.y - (radiusPx + 5), pos.z); // <- também corrige a label
+            pg.fill(255);
+            pg.textSize(cachedLabelSize);
+            pg.textAlign(CENTER, BOTTOM);
+            pg.text(name, 0, 0);
+          pg.popMatrix();
+        }
+    }
+
+    public void buildShape(PApplet p, ShapeManager shapeManager) {
+        this.cachedShape = null;
+    }
+
+    public void setRenderingMode(int mode) {
+        this.renderingMode = mode;
+        this.cachedShape   = null;
+    }
+    public int getRenderingMode() {
+        return renderingMode;
+    }
+
+    public void dispose() {
+        cachedShape    = null;
+    }
 }

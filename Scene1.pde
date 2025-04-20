@@ -1,10 +1,16 @@
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import processing.opengl.*;
+import java.util.*;
 
+/**
+ * Scene1 — integra ConfigLoader → PhysicsEngine → Renderer com SimulatedClock.
+ */
 class Scene1 implements Scene {
   private zividomelive parent;
   private PApplet pApplet;
-  private ArrayList<Planet> planets;
+  private List<Planet> planets;
   private Sun sun;
+  private List<CelestialBody> bodies;  // Sol + planetas + luas
 
   private SimParams simParams;
   private TextureManager textureManager;
@@ -14,37 +20,53 @@ class Scene1 implements Scene {
   private PhysicsEngine physicsEngine;
   private Renderer renderer;
 
-  private float timeScale = 1.0f;
-  private boolean showOrbits = true;
+  private boolean showOrbits     = true;
   private boolean showMoonOrbits = true;
-  private boolean showLabels = false;
-  private int selectedPlanet = -1;
+  private boolean showLabels     = false;
+  private int     selectedPlanet = -1;
 
   private int prevMouseX, prevMouseY;
   private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
-  // DeltaTime
-  private long lastUpdateTime = System.nanoTime();
+  private SimulatedClock clock; // Novo relógio em dias
 
   Scene1(zividomelive parent, PApplet pApplet) {
     this.parent = parent;
     this.pApplet = pApplet;
 
-    simParams = new SimParams();
+    // 1) Inicializa managers e params
+    simParams      = new SimParams();
     textureManager = new TextureManager(pApplet);
-    shapeManager = new ShapeManager(pApplet);
-    shaderManager = new ShaderManager(pApplet);
-
+    shapeManager   = new ShapeManager(pApplet);
+    shaderManager  = new ShaderManager(pApplet);
     loadAllShaders();
 
+    // 2) Configurações físicas (AU, dias)
     configLoader = new ConfigLoader(pApplet, textureManager, simParams);
     configLoader.sendTexturesToShaderManager(shaderManager);
-    sun = configLoader.loadSun();
+    sun     = configLoader.loadSun();
     planets = configLoader.loadConfiguration();
 
-    physicsEngine = new PhysicsEngine(pApplet, planets, sun);
-    renderer = new Renderer(pApplet, planets, configLoader.getSkySphere(), shapeManager, shaderManager, simParams);
+    for (Planet p : planets) {
+    p.setCentralBody(sun);
+    }
+
+    // 3) Monta lista de corpos para a física
+    bodies = new ArrayList<>();
+    bodies.add(sun);
+    for (Planet p : planets) {
+      bodies.add(p);
+      bodies.addAll(p.getMoons());
+    }
+    physicsEngine = new PhysicsEngine(bodies);
+
+    // 4) Renderer: converte AU→px apenas aqui
+    renderer = new Renderer(pApplet, planets, configLoader.getSkySphere(),
+                            shapeManager, shaderManager, simParams);
     renderer.setSun(sun);
+
+    // 5) Relógio simulado (dias)
+    clock = new SimulatedClock(0.0f, 1.0f);
 
     configureCamera();
   }
@@ -70,33 +92,94 @@ class Scene1 implements Scene {
   private boolean tryLoadShader(String name, String fragFile, String vertFile) {
     try {
       shaderManager.loadShader(name, fragFile, vertFile);
-      pApplet.println("[Shader] ✔ '" + name + "' carregado de " + fragFile + " + " + vertFile);
+      pApplet.println("[Shader] ✔ '" + name + "' carregado.");
       return true;
     } catch (Exception e) {
-      pApplet.println("[Shader] ❌ Falha ao carregar shader '" + name + "': " + e.getMessage());
+      pApplet.println("[Shader] ❌ Falha ao carregar '" + name + "': " + e.getMessage());
       return false;
     }
   }
 
-
   private void configureCamera() {
-    float neptuneDrawPos = NEPTUNE_DIST * PIXELS_PER_AU + SUN_VISUAL_RADIUS;
-    renderer.setCameraDistance(neptuneDrawPos * 1.2f);
+    // distância inicial baseada em Netuno
+    float dist = NEPTUNE_DIST
+               * PIXELS_PER_AU
+               * simParams.globalScale
+               * 1.2f;
+    renderer.setCameraDistance(dist);
   }
 
-  private float calculateDeltaTimeInSeconds() {
-    long currentTime = System.nanoTime();
-    float dt = (currentTime - lastUpdateTime) / 1_000_000_000.0f;
-    lastUpdateTime = currentTime;
-    return dt;
-  }
+  /** Recarrega tudo em runtime */
+  public void setupScene() {
+    rwLock.writeLock().lock();
+    try {
+      sun     = configLoader.loadSun();
+      planets = configLoader.loadConfiguration();
 
+      // 1) refresca os "central bodies"
+      for (Planet p : planets) {
+        p.setCentralBody(sun);
+        for (Moon m : p.getMoons()) {
+          m.setCentralBody(p);
+        }
+      }
+
+      // 2) monta o array de corpos para a física
+      bodies.clear();
+      bodies.add(sun);
+      for (Planet p : planets) {
+        bodies.add(p);
+        bodies.addAll(p.getMoons());
+      }
+      physicsEngine = new PhysicsEngine(bodies);
+
+      // 3) renderer
+      renderer.setSun(sun);
+      renderer.setPlanets(planets);
+
+      // 4) rebuild das shapes
+      sun.buildShape(pApplet, shapeManager);
+      for (Planet p : planets) {
+        p.buildShape(pApplet, shapeManager);
+        for (Moon m : p.getMoons()) {
+          m.buildShape(pApplet, shapeManager);
+        }
+      }
+
+      // 5) reaplica escalas visuais (zoom / amplificação)
+      applyScalingFactors();
+    } finally {
+      rwLock.writeLock().unlock();
+    }
+  }
+  
+  /**
+  * Atualiza a simulação subdividindo grandes passos de tempo em subpassos menores.
+  */
+  @Override
   public void update() {
     rwLock.writeLock().lock();
     try {
-      float dt = calculateDeltaTimeInSeconds() * timeScale;
-      physicsEngine.update(dt);
-      sun.update(dt);
+      float totalDt = clock.update();
+      if (totalDt > 0f) {
+        // Divide totalDt em subpassos para manter estabilidade da órbita
+        float maxStep = 0.5f; // dias máximos por subpasso
+        int steps    = (int) Math.ceil(totalDt / maxStep);
+        float dt     = totalDt / steps;
+        for (int i = 0; i < steps; i++) {
+          physicsEngine.update(dt);
+        }
+
+        // Atualiza rotações visuais com o total do tempo
+        sun.update(totalDt);
+        for (Planet p : planets) {
+          p.update(totalDt);
+          for (Moon m : p.getMoons()) {
+            m.update(totalDt);
+          }
+        }
+      }
+
       updateCameraTarget();
       trackSelectedPlanet();
     } finally {
@@ -105,56 +188,71 @@ class Scene1 implements Scene {
   }
 
   private void updateCameraTarget() {
-    float sunRadius = sun.getRadius();
-    if (selectedPlanet == 0 && sun != null) {
-      renderer.updateCameraTarget(sun.getPosition());
-    } else if (selectedPlanet > 0 && selectedPlanet - 1 < planets.size()) {
-      Planet target = planets.get(selectedPlanet - 1);
-      renderer.updateCameraTarget(target.getDrawPosition(sunRadius));
+    float scale = PIXELS_PER_AU * simParams.globalScale;
+    if (selectedPlanet == 0) {
+      // mira no Sol
+      PVector sunPx = sun.getPositionAU().copy().mult(scale);
+      renderer.updateCameraTarget(sunPx);
+    } else if (selectedPlanet > 0 && selectedPlanet <= planets.size()) {
+      Planet p = planets.get(selectedPlanet - 1);
+      PVector tgtPx = p.getPositionAU().copy().mult(scale);
+      renderer.updateCameraTarget(tgtPx);
     } else {
       renderer.updateCameraTarget(new PVector(0, 0, 0));
     }
   }
 
   private void trackSelectedPlanet() {
-    if (selectedPlanet == 0 && sun != null) {
-      renderer.goTo(sun.getPosition(), renderer.getCameraRotationX(), renderer.getCameraRotationY(), renderer.getCameraDistance());
-    } else if (selectedPlanet > 0 && selectedPlanet - 1 < planets.size()) {
-      float sunRadius = sun.getRadius();
-      Planet target = planets.get(selectedPlanet - 1);
-      renderer.goTo(target.getDrawPosition(sunRadius), renderer.getCameraRotationX(), renderer.getCameraRotationY(), renderer.getCameraDistance());
+    float scale = PIXELS_PER_AU * simParams.globalScale;
+    if (selectedPlanet == 0) {
+      PVector sunPx = sun.getPositionAU().copy().mult(scale);
+      renderer.goTo(sunPx,
+                    renderer.getCameraRotationX(),
+                    renderer.getCameraRotationY(),
+                    renderer.getCameraDistance());
+    } else if (selectedPlanet > 0 && selectedPlanet <= planets.size()) {
+      Planet p = planets.get(selectedPlanet - 1);
+      PVector tgtPx = p.getPositionAU().copy().mult(scale);
+      renderer.goTo(tgtPx,
+                    renderer.getCameraRotationX(),
+                    renderer.getCameraRotationY(),
+                    renderer.getCameraDistance());
     }
   }
 
   public void sceneRender(PGraphicsOpenGL pg) {
     rwLock.readLock().lock();
     try {
-      shaderManager.setUniform("sun", "time", pApplet.millis() / 1000.0f);
       pg.background(0, 10, 20);
       pg.pushMatrix();
         renderer.setupCamera(pg);
-        sun.display(pg, showLabels, shaderManager);
+
+        // Sol
+        PVector sunPx = sun.getPositionAU().copy()
+                          .mult(PIXELS_PER_AU * simParams.globalScale);
+        pg.pushMatrix();
+          pg.translate(sunPx.x, sunPx.y, sunPx.z);
+          sun.display(pg, showLabels, shaderManager);
+        pg.popMatrix();
+
         renderer.drawLighting(pg);
-        if (showOrbits) renderer.drawPlanetOrbits(pg);
-        renderer.drawPlanetsAndMoons(pg, showLabels, showMoonOrbits, shapeManager, shaderManager);
-        renderer.drawSkySphere(pg, renderer.getRenderingMode());
+
+        // Órbitas de planetas
+        if (showOrbits) {
+          renderer.drawPlanetOrbits(pg);
+        }
+        // Órbitas de luas (independente)
+        if (showMoonOrbits) {
+          renderer.drawMoonOrbits(pg);
+        }
+
+        // Corpos
+        renderer.drawPlanetsAndMoons(pg, showLabels, /* showMoonOrbits já só ativa labels/luas */ false);
+
+        renderer.drawSkySphere(pg);
       pg.popMatrix();
     } finally {
       rwLock.readLock().unlock();
-    }
-  }
-
-  public void setupScene() {
-    rwLock.writeLock().lock();
-    try {
-      sun = configLoader.loadSun();
-      sun.buildShape(pApplet, shapeManager);
-      planets = configLoader.loadConfiguration();
-      physicsEngine = new PhysicsEngine(pApplet, planets, sun);
-      renderer.setSun(sun);
-      renderer.setPlanets(planets);
-    } finally {
-      rwLock.writeLock().unlock();
     }
   }
 
@@ -165,7 +263,7 @@ class Scene1 implements Scene {
     for (Planet p : planets) {
       p.setRenderingMode(mode);
       p.buildShape(pApplet, shapeManager);
-      for (Moon m : p.moons) {
+      for (Moon m : p.getMoons()) {
         m.setRenderingMode(mode);
         m.buildShape(pApplet, shapeManager);
       }
@@ -175,10 +273,8 @@ class Scene1 implements Scene {
   private void applyScalingFactors() {
     rwLock.writeLock().lock();
     try {
-      if (sun != null) sun.applyScalingFactors(simParams);
-      if (planets != null) {
-        for (Planet p : planets) p.applyScalingFactors(simParams);
-      }
+      if (sun != null)  sun.applyScalingFactors(simParams);
+      if (planets!=null) for (Planet p : planets) p.applyScalingFactors(simParams);
     } finally {
       rwLock.writeLock().unlock();
     }
@@ -186,30 +282,27 @@ class Scene1 implements Scene {
 
   public void keyEvent(processing.event.KeyEvent event) {
     if (event.getAction() != processing.event.KeyEvent.PRESS) return;
-
     char key = event.getKey();
     switch (key) {
       case ' ': resetView(); break;
-      case 'G': simParams.globalScale *= 1.1f; simParams.planetAmplification = 1.0f; applyScalingFactors(); break;
-      case 'g': simParams.globalScale /= 1.1f; simParams.planetAmplification = 1.0f; applyScalingFactors(); break;
+      case 'G': simParams.globalScale *= 1.1f; simParams.planetAmplification = 1; applyScalingFactors(); break;
+      case 'g': simParams.globalScale /= 1.1f; simParams.planetAmplification = 1; applyScalingFactors(); break;
       case 'a': simParams.planetAmplification *= 1.1f; applyScalingFactors(); break;
       case 'z': simParams.planetAmplification /= 1.1f; applyScalingFactors(); break;
-      case 'r': simParams.globalScale = 1.0f; simParams.planetAmplification = 1.0f; applyScalingFactors(); pApplet.println("[Scene1] Escala global e amplificação resetadas."); break;
+      case 'r': simParams.globalScale = 1; simParams.planetAmplification = 1; applyScalingFactors(); pApplet.println("[Scene1] Escalas resetadas."); break;
       case 'w': changeRenderingMode(0); break;
       case 's': changeRenderingMode(1); break;
       case 't': changeRenderingMode(2); break;
-      case '+': timeScale *= 1.2f; break;
-      case '-': timeScale *= 0.8f; break;
+      case '+': clock.setTimeScale(clock.getTimeScale()*1.2f); break;
+      case '-': clock.setTimeScale(clock.getTimeScale()*0.8f); break;
       case 'o': showOrbits = !showOrbits; break;
       case 'l': showLabels = !showLabels; break;
       case 'p': showMoonOrbits = !showMoonOrbits; break;
       default:
         if (Character.isDigit(key)) {
-          int num = Character.getNumericValue(key);
-          if (num == 1) selectedPlanet = 0;
-          else if (num > 1 && num <= planets.size() + 1) selectedPlanet = num - 1;
+          int n = Character.getNumericValue(key);
+          selectedPlanet = (n>=1 && n<=planets.size()+1) ? n-1 : selectedPlanet;
         }
-        break;
     }
   }
 
@@ -219,75 +312,40 @@ class Scene1 implements Scene {
         prevMouseX = event.getX();
         prevMouseY = event.getY();
         break;
-
       case MouseEvent.DRAG:
-        float dx = (event.getX() - prevMouseX) * 0.01f;
-        float dy = (event.getY() - prevMouseY) * 0.01f;
+        float dx = (event.getX()-prevMouseX)*0.01f;
+        float dy = (event.getY()-prevMouseY)*0.01f;
         renderer.setCameraRotation(
-          renderer.getCameraRotationX() + dy,
-          renderer.getCameraRotationY() + dx
+          renderer.getCameraRotationX()+dy,
+          renderer.getCameraRotationY()+dx
         );
         prevMouseX = event.getX();
         prevMouseY = event.getY();
         break;
-
       case MouseEvent.WHEEL:
         float scroll = event.getCount();
-
-        // 🔍 Detecção heurística de scroll contínuo (trackpad)
-        boolean isTrackpad = Math.abs(scroll) < 1.0f;
-
-        float zoomFactor;
-        if (isTrackpad) {
-          // Mais sensível, resolução contínua
-          zoomFactor = scroll * 0.5f;
-        } else {
-          // Bolinha tradicional: incremento fixo
-          zoomFactor = scroll * 2.0f;
-        }
-
+        boolean isPad = Math.abs(scroll)<1;
+        float zoom = isPad ? scroll*0.01f : scroll*2f;
         renderer.setCameraDistance(
-          PApplet.constrain(renderer.getCameraDistance() + zoomFactor, -100000.0f, 100000.0f)
+          PApplet.constrain(renderer.getCameraDistance()+zoom, -1e10f, 1e10f)
         );
         break;
     }
   }
 
   private void resetView() {
-    renderer.setCameraRotation(PConstants.PI / 16, 0);
+    renderer.setCameraRotation(PI/16, 0);
     renderer.setCameraDistance(20);
   }
 
   public void dispose() {
-    if (textureManager != null) {
-      textureManager.clear();
-      textureManager = null;
-    }
-    if (configLoader != null) {
-      configLoader.dispose();
-      configLoader = null;
-    }
-    if (planets != null) {
-      for (Planet p : planets) p.dispose();
-      planets.clear();
-      planets = null;
-    }
-    if (sun != null) {
-      sun.dispose();
-      sun = null;
-    }
-    if (physicsEngine != null) {
-      physicsEngine.dispose();
-      physicsEngine = null;
-    }
-    if (renderer != null) {
-      renderer.dispose();
-      renderer = null;
-    }
-    shapeManager = null;
-    shaderManager = null;
-
-    System.out.println("Disposing resources for scene: " + getName());
+    textureManager.clear();
+    configLoader.dispose();
+    for (Planet p:planets) p.dispose();
+    sun.dispose();
+    physicsEngine.dispose();
+    renderer.dispose();
+    System.out.println("Disposed Scene1");
   }
 
   public String getName() {
