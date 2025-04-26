@@ -56,9 +56,8 @@ class Renderer {
   }
 
   public void drawLighting(PGraphicsOpenGL pg) {
-    pg.ambientLight(15, 15, 15);
+    pg.ambientLight(35, 35, 35);
     if (sun != null) {
-      // converte posição em AU para pixels
       PVector sunPx = sun.getPositionAU().copy()
                          .mult(PIXELS_PER_AU * simParams.globalScale);
       pg.pointLight(255, 255, 220,
@@ -66,101 +65,104 @@ class Renderer {
     }
   }
 
+
+
   /**
-  * Desenha apenas as órbitas dos planetas no plano da eclíptica (XZ).
+  * Desenha apenas as órbitas dos planetas no plano da eclíptica (XZ / Y-up),
+  * centradas no foco (Sol) e usando o mesmo pipeline Ω→i→ω do KeplerMath.
   */
   public void drawPlanetOrbits(PGraphicsOpenGL pg) {
     pg.noFill();
-    pg.strokeWeight(1.5f);
     pg.stroke(200, 200, 255, 150);
-
+    pg.strokeWeight(1);
     float scale = PIXELS_PER_AU * simParams.globalScale;
+    int segments = 180;
+
+    // offset para o foco (Sol)
+    PVector sunPx = sun.getPositionAU().copy().mult(scale);
+
+    // desenha todas as órbitas
+    pg.pushMatrix();
+    pg.translate(sunPx.x, sunPx.y, sunPx.z);
 
     for (Planet p : planets) {
-      float peri   = p.getPerihelionAU();
-      float aphe   = p.getAphelionAU();
-      float e      = p.getEccentricity();
-      float inc    = p.getOrbitInclinationRad();
-      float argPer = p.getArgumentOfPeriapsisRad();
+      float peri = p.getPerihelionAU();
+      float aphe = p.getAphelionAU();
+      float e    = p.getEccentricity();
+      float Ω    = p.getLongitudeAscendingNodeRad();
+      float i    = p.getOrbitInclinationRad();
+      float ω    = p.getArgumentOfPeriapsisRad();
 
-      float a   = (peri + aphe) * 0.5f;
-      float b   = a * sqrt(1 - e * e);
-      float aPx = a * scale;
-      float bPx = b * scale;
-      float fPx = a * e * scale;
+      float a = 0.5f * (peri + aphe);
+      float b = a * PApplet.sqrt(1 - e*e);
+
+      pg.beginShape();
+      for (int j = 0; j <= segments; j++) {
+        float θ   = PApplet.TWO_PI * j / segments;
+        float cosθ = PApplet.cos(θ), sinθ = PApplet.sin(θ);
+
+        // ponto no plano orbital, já centrado no foco:
+        float xp = a * (cosθ - e);
+        float zp = b * sinθ;
+        PVector vPlane = new PVector(xp, 0, zp);
+
+        // aplica Ω→i→ω
+        PVector v3d = applyOrbitalPlaneToGlobal(vPlane, Ω, i, ω);
+        v3d.mult(scale);
+
+        pg.vertex(v3d.x, v3d.y, v3d.z);
+      }
+      pg.endShape(PConstants.CLOSE);
+    }
+
+    pg.popMatrix();
+  }
+
+  /**
+  * Desenha todos os planetas.
+  */
+  public void drawPlanets(PGraphicsOpenGL pg, boolean showLabels) {
+      for (Planet p : planets) {
+          pg.pushMatrix();
+              p.display(pg, showLabels, false,
+                        renderingMode, shapeManager, shaderManager);
+          pg.popMatrix();
+      }
+  }
+
+  /**
+  * Desenha todas as luas — órbitas (opcional) + shape.
+  */
+  public void drawMoons(PGraphicsOpenGL pg, boolean showLabels, boolean showMoonOrbits) {
+    float scaleAUtoPx = PIXELS_PER_AU * simParams.globalScale;
+    for (Planet p : planets) {
+      // posição do planeta em px (pivô das luas)
+      PVector pPosPx = p.getPositionAU().copy().mult(scaleAUtoPx);
+      float   prPx   = p.getRadiusPx();
 
       pg.pushMatrix();
-        pg.rotateX(PConstants.PI/2);
-        if (argPer != 0) pg.rotateZ(argPer);
-        pg.rotateX(inc);
-        pg.translate(-fPx, 0, 0);
-        pg.ellipse(0, 0, 2 * aPx, 2 * bPx);
+        pg.translate(pPosPx.x, pPosPx.y, pPosPx.z);
+
+        for (Moon m : p.getMoons()) {
+          if (showMoonOrbits) {
+            // desenha a órbita de cada lua em torno do planeta
+            m.displayOrbit(pg, prPx);
+          }
+          // desenha o próprio corpo da lua
+          m.display(pg, showLabels, renderingMode, shapeManager, shaderManager);
+        }
       pg.popMatrix();
     }
   }
 
   /**
-  * Desenha apenas as órbitas das luas no plano da eclíptica (XZ).
+  * Dispatcher que chama drawPlanets e drawMoons.
   */
-  public void drawMoonOrbits(PGraphicsOpenGL pg) {
-    pg.noFill();
-    pg.strokeWeight(1f);
-    pg.stroke(150,150,255,150);
-
-    float scale = PIXELS_PER_AU * simParams.globalScale;
-
-    for (Planet p : planets) {
-      PVector pPos = p.getPositionAU().copy().mult(scale);
-      for (Moon m : p.getMoons()) {
-        float mPeri   = m.getPerihelionAU();
-        float mAphe   = m.getAphelionAU();
-        float me      = m.getEccentricity();
-        float mInc    = m.getOrbitInclinationRad();
-        float mArg    = m.getArgumentOfPeriapsisRad();
-
-        float ma   = (mPeri + mAphe) * 0.5f;
-        float mb   = ma * sqrt(1 - me * me);
-        float maPx = ma * scale;
-        float mbPx = mb * scale;
-        float mfPx = ma * me * scale;
-
-        pg.pushMatrix();
-          pg.translate(pPos.x, pPos.y, pPos.z);
-          pg.rotateX(PConstants.PI/2);
-          if (mArg != 0) pg.rotateZ(mArg);
-          pg.rotateX(mInc);
-          pg.translate(-mfPx, 0, 0);
-          pg.ellipse(0, 0, 2 * maPx, 2 * mbPx);
-        pg.popMatrix();
-      }
-    }
-  }
-
   public void drawPlanetsAndMoons(PGraphicsOpenGL pg,
-                                boolean showLabels,
-                                boolean showMoonOrbits) {
-    float scaleAUtoPx = PIXELS_PER_AU * simParams.globalScale;
-    float sunRadiusPx = sun.getRadius();
-
-    for (Planet p : planets) {
-        PVector posPx = p.getPositionAU().copy().mult(scaleAUtoPx);
-
-        pg.pushMatrix();
-          pg.translate(posPx.x, posPx.y, posPx.z);
-
-          // 1) Desenha o planeta
-          p.display(pg, showLabels, showMoonOrbits, renderingMode, shapeManager, shaderManager);
-
-          // 2) Dentro da mesma matriz de planeta, desenha suas luas
-          for (Moon m : p.getMoons()) {
-              if (showMoonOrbits) {
-                  m.displayOrbit(pg, sunRadiusPx); // órbita é desenhada
-              }
-              m.display(pg, showLabels, renderingMode, shapeManager, shaderManager);
-          }
-
-        pg.popMatrix(); // fecha transformação do planeta
-    }
+                                  boolean showLabels,
+                                  boolean showMoonOrbits) {
+    drawPlanets(pg, showLabels);
+    drawMoons  (pg, showLabels, showMoonOrbits);
   }
 
   public void drawSkySphere(PGraphicsOpenGL pg) {
@@ -245,8 +247,7 @@ class Renderer {
   }
 
   public void dispose() {
-    // libera referências
-    planets   = null;
-    sun       = null;
+    planets = null;
+    sun     = null;
   }
 }

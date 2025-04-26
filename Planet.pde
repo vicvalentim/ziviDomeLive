@@ -6,9 +6,9 @@ public class Planet implements CelestialBody {
     // ——————————————— Campos de display ———————————————
     private final PApplet pApplet;
     private final SimParams simParams;
-    private float radiusPx;                   // raio para render em pixels
-    private final float baseRatio;            // radiusAU / SUN_VISUAL_RADIUS
-    private final color col;
+    private float radiusPx;
+    private final float baseRatio;
+    private final int col;
     private final String name;
     private final PImage texture, ringTexture;
     private int renderingMode = 2;
@@ -19,24 +19,26 @@ public class Planet implements CelestialBody {
 
     // rotação visual
     private float rotationAngle = 0;
-    private final float rotationFactor = 0.2f;
-    private final float rotationSpeed;        // rad/dia
+    private final float rotationSpeed;
     private final boolean hasRings;
 
     // ——————————————— Campos de física ———————————————
-    private final float massSolar;            // massa em M☉
-    private final float radiusAU;             // raio físico em AU
-    private final float rotationPeriodDays;   // dias
-    private final PVector positionAU;         // AU
-    private final PVector velocityAU;         // AU/dia
-    private CelestialBody centralBody;        // foco de Kepler
+    private final float massSolar;
+    private final float radiusAU;
+    private final float rotationPeriodDays;
+    private final PVector positionAU;
+    private final PVector velocityAU;
+    private CelestialBody centralBody;
 
     // elementos orbitais
     private final float perihelionAU;
     private final float aphelionAU;
     private final float eccentricity;
     private final float orbitInclinationRad;
-    private final float argumentOfPeriapsisRad = 0f;
+    private final float argumentOfPeriapsisRad;
+    private final float semiMajorAxisAU;  
+    private final float longitudeAscendingNodeRad; 
+    private final float meanAnomalyRad;           
     private final float orbitalPeriodDays;
     private final float orbitalVelocityAUperDay;
     private final float axisTiltRad;
@@ -55,11 +57,11 @@ public class Planet implements CelestialBody {
                   SimParams simParams,
                   float massSolar,
                   float radiusAU,
-                  float sunRadiusAU,               // NOVO
+                  float sunRadiusAU,
                   float rotationPeriodDays,
                   PVector initialPosAU,
                   PVector initialVelAU,
-                  color displayColor,
+                  int displayColor,
                   String name,
                   PImage texture,
                   PImage ringTexture,
@@ -68,30 +70,38 @@ public class Planet implements CelestialBody {
                   float perihelionAU,
                   float aphelionAU,
                   float eccentricity,
+                  float argumentOfPeriapsisRad,
+                  float longitudeAscendingNodeRad,
+                  float meanAnomalyRad,
                   float orbitalPeriodDays,
-                  float orbitalVelocityAUperDay) {
+                  float orbitalVelocityAUperDay,
+                  float semiMajorAxisAU) {
 
-        this.pApplet                 = pApplet;
-        this.simParams               = simParams;
-        this.massSolar               = massSolar;
-        this.radiusAU                = radiusAU;
-        this.rotationPeriodDays      = rotationPeriodDays;
-        this.positionAU              = initialPosAU.copy();
-        this.velocityAU              = initialVelAU.copy();
-        this.col                     = displayColor;
-        this.name                    = name;
-        this.texture                 = texture;
-        this.ringTexture             = ringTexture;
-        this.orbitInclinationRad     = orbitInclinationRad;
-        this.axisTiltRad             = axisTiltRad;
-        this.perihelionAU            = perihelionAU;
-        this.aphelionAU              = aphelionAU;
-        this.eccentricity            = eccentricity;
-        this.orbitalPeriodDays       = orbitalPeriodDays;
-        this.orbitalVelocityAUperDay = orbitalVelocityAUperDay;
+        this.pApplet                   = pApplet;
+        this.simParams                 = simParams;
+        this.massSolar                 = massSolar;
+        this.radiusAU                  = radiusAU;
+        this.rotationPeriodDays        = rotationPeriodDays;
+        this.positionAU                = initialPosAU.copy();
+        this.velocityAU                = initialVelAU.copy();
+        this.col                       = displayColor;
+        this.name                      = name;
+        this.texture                   = texture;
+        this.ringTexture               = ringTexture;
+        this.orbitInclinationRad       = orbitInclinationRad;
+        this.axisTiltRad               = axisTiltRad;
+        this.perihelionAU              = perihelionAU;
+        this.aphelionAU                = aphelionAU;
+        this.eccentricity              = eccentricity;
+        this.argumentOfPeriapsisRad    = argumentOfPeriapsisRad;
+        this.longitudeAscendingNodeRad = longitudeAscendingNodeRad;
+        this.meanAnomalyRad            = meanAnomalyRad;
+        this.orbitalPeriodDays         = orbitalPeriodDays;
+        this.orbitalVelocityAUperDay   = orbitalVelocityAUperDay;
+        this.semiMajorAxisAU           = semiMajorAxisAU;
 
         this.rotationSpeed = PApplet.TWO_PI / rotationPeriodDays;
-        this.baseRatio     = radiusAU / sunRadiusAU; // <<<< AQUI é o correto!
+        this.baseRatio     = radiusAU / sunRadiusAU;
         this.hasRings      = "Saturn".equals(name);
 
         applyScalingFactors(simParams);
@@ -106,57 +116,59 @@ public class Planet implements CelestialBody {
         this.cachedRingMode = -1;
     }
 
-    // ——————————————— CelestialBody (física) ———————————————
-    @Override public PVector getPositionAU()         { return positionAU; }
-    @Override public PVector getVelocityAU()         { return velocityAU; }
-    @Override public float   getMassSolar()          { return massSolar; }
-    @Override public CelestialBody getCentralBody()  { return centralBody; }
-    public  void    setCentralBody(CelestialBody c)  { this.centralBody = c; }
+    // ——————————————— Implementação CelestialBody ———————————————
+    @Override public PVector getPositionAU()               { return positionAU; }
+    @Override public PVector getVelocityAU()               { return velocityAU; }
+    @Override public float   getMassSolar()                { return massSolar; }
+    @Override public CelestialBody getCentralBody()        { return centralBody; }
+    @Override public void    setCentralBody(CelestialBody c){ this.centralBody = c; }
+    @Override public float getPerihelionAU()               { return perihelionAU; }
+    @Override public float getAphelionAU()                 { return aphelionAU; }
+    @Override public float getEccentricity()               { return eccentricity; }
+    @Override public float getOrbitInclinationRad()        { return orbitInclinationRad; }
+    @Override public float getArgumentOfPeriapsisRad()     { return argumentOfPeriapsisRad; }
+    @Override public float getSemiMajorAxisAU()            { return semiMajorAxisAU; }
+    @Override public float getLongitudeAscendingNodeRad()  { return longitudeAscendingNodeRad; }
+    @Override public float getMeanAnomalyRad()             { return meanAnomalyRad; }
+    @Override public float getRadiusAU()                   { return radiusAU; }
+    @Override public float getRotationPeriodDays()         { return rotationPeriodDays; }
 
     @Override
-      public void propagateKepler(float dtDays) {
+    public void propagateKepler(float dtDays) {
         if (centralBody != null) {
-          keplerSolve(
-            centralBody.getPositionAU(),
-            positionAU,
-            velocityAU,
-            perihelionAU,
-            aphelionAU,
-            eccentricity,
-            orbitInclinationRad,
-            argumentOfPeriapsisRad,  // já é 0f por declaração
-            dtDays,
-            centralBody.getMassSolar()
-          );
+            keplerSolve(
+                centralBody.getPositionAU(),
+                positionAU,
+                velocityAU,
+                perihelionAU,
+                aphelionAU,
+                eccentricity,
+                orbitInclinationRad,
+                argumentOfPeriapsisRad,
+                longitudeAscendingNodeRad,
+                meanAnomalyRad,
+                dtDays,
+                centralBody.getMassSolar()
+            );
         }
-      }
-
-
-    @Override public float getPerihelionAU()            { return perihelionAU; }
-    @Override public float getAphelionAU()              { return aphelionAU; }
-    @Override public float getEccentricity()            { return eccentricity; }
-    @Override public float getOrbitInclinationRad()     { return orbitInclinationRad; }
-    @Override public float getArgumentOfPeriapsisRad()  { return argumentOfPeriapsisRad; }
-    @Override public float getRadiusAU()                { return radiusAU; }
-    @Override public float getRotationPeriodDays()      { return rotationPeriodDays; }
+    }
 
     // ——————————————— Luas ———————————————
-    public void addMoon(Moon m)     { moons.add(m); }
-    public List<Moon> getMoons()    { return new ArrayList<>(moons); }
+    public void addMoon(Moon m) { moons.add(m); }
+    public List<Moon> getMoons() { return new ArrayList<>(moons); }
+    public float getAxisTiltRad() { return axisTiltRad; }
 
-    // ——————————————— Renderização ———————————————
+    // ——————————————— Animação e Renderização ———————————————
     public void updateRotation(float dtDays) {
-        rotationAngle += rotationSpeed * dtDays * rotationFactor;
+        rotationAngle += rotationSpeed * dtDays;
         if (hasRings) {
             ringRotationAngle += ringRotationSpeed * dtDays;
         }
     }
 
-    /** Atualiza posição orbital e rotação axial */
     public void update(float dtDays) {
         updateRotation(dtDays);
     }
-
 
     public void display(PGraphicsOpenGL pg,
                         boolean showLabel,
@@ -169,38 +181,34 @@ public class Planet implements CelestialBody {
         PVector posPx = positionAU.copy().mult(scale);
 
         pg.pushMatrix();
+            pg.translate(posPx.x, posPx.y, posPx.z);
 
-        if (hasRings) {
-            drawSaturnRings(pg, renderingMode); // Desenha os anéis primeiro
-        }
-
-        pg.rotateZ(axisTiltRad);
-        pg.rotateY(rotationAngle);
-        pg.scale(radiusPx);
-
-        if (renderingMode == 0) {
-            pg.noFill();
-            pg.stroke(WIREFRAME_COLOR);
-            pg.strokeWeight(WIREFRAME_STROKE_WEIGHT);
-        } else if (renderingMode == 1) {
-            pg.noStroke();
-            pg.fill(col);
-        } else if (renderingMode == 2) {
-            pg.noStroke();
-            if (texture != null) {
-                PShader shader = shaderManager.getShader("planet");
-                if (shader != null) {
-                    pg.shader(shader);
-                }
-            } else {
-                pg.fill(col);
+            if (hasRings) {
+                drawSaturnRings(pg, renderingMode);
             }
-        }
 
-        PShape s = getCachedShape(shapeManager);
-        pg.shape(s);
-        pg.resetShader();
+            pg.rotateZ(axisTiltRad);
+            pg.rotateY(rotationAngle);
+            pg.scale(radiusPx);
 
+            if (renderingMode == 0) {
+                pg.noFill();
+                pg.stroke(WIREFRAME_COLOR);
+                pg.strokeWeight(WIREFRAME_STROKE_WEIGHT);
+            } else if (renderingMode == 1) {
+                pg.noStroke();
+                pg.fill(col);
+            } else {
+                pg.noStroke();
+                PShader shader = (texture != null)
+                               ? shaderManager.getShader("planet")
+                               : null;
+                if (shader != null) pg.shader(shader);
+                else              pg.fill(col);
+            }
+
+            pg.shape(getCachedShape(shapeManager));
+            pg.resetShader();
         pg.popMatrix();
 
         if (showLabel) {
@@ -208,17 +216,19 @@ public class Planet implements CelestialBody {
             pg.translate(posPx.x, posPx.y - (radiusPx + 5), posPx.z);
             pg.fill(255);
             pg.textSize(Math.max(10, radiusPx * 0.5f));
-            pg.textAlign(CENTER, BOTTOM);
+            pg.textAlign(PConstants.CENTER, PConstants.BOTTOM);
             pg.text(name, 0, 0);
             pg.popMatrix();
         }
     }
 
     private PShape getCachedShape(ShapeManager shapeManager) {
-        if (cachedShape==null || cachedRenderingMode!=renderingMode) {
-          cachedShape = shapeManager.getShape(name, renderingMode, texture);
-          cachedRenderingMode = renderingMode;
-          if (renderingMode==1 && cachedShape!=null) cachedShape.setFill(col);
+        if (cachedShape == null || cachedRenderingMode != renderingMode) {
+            cachedShape = shapeManager.getShape(name, renderingMode, texture);
+            cachedRenderingMode = renderingMode;
+            if (renderingMode == 1 && cachedShape != null) {
+                cachedShape.setFill(col);
+            }
         }
         return cachedShape;
     }
@@ -228,16 +238,12 @@ public class Planet implements CelestialBody {
             buildSaturnRingsShape(renderingMode);
             cachedRingMode = renderingMode;
         }
-
         pg.pushMatrix();
-        pg.rotateZ(axisTiltRad);
-        if (axisTiltRad > PApplet.HALF_PI) {
-            pg.rotateY(PApplet.PI);
-        }
-        pg.rotateY(ringRotationAngle);
-        pg.shape(saturnRingsShape);
+            pg.rotateZ(axisTiltRad);
+            if (axisTiltRad > PApplet.HALF_PI) pg.rotateY(PApplet.PI);
+            pg.rotateY(ringRotationAngle);
+            pg.shape(saturnRingsShape);
         pg.popMatrix();
-        
     }
 
     private void buildSaturnRingsShape(int renderingMode) {
@@ -304,36 +310,39 @@ public class Planet implements CelestialBody {
                 saturnRingsShape.vertex(r2 * cosA, 0, r2 * sinA, u2, 1.0f);
             }
         }
-
         saturnRingsShape.endShape();
-
         if (renderingMode == 2 && ringTexture != null) {
             saturnRingsShape.setTexture(ringTexture);
         }
     }
 
-    public void buildShape(PApplet p, ShapeManager shapeManager) {
-        this.cachedShape = null;
-        this.cachedRingMode = -1; // <<<<<<<<<<<<<< ADICIONE esta linha
+    // ——————————————— Dispose, getters, setters ———————————————
+    public void buildShape(PApplet p, ShapeManager sm) {
+        cachedShape = null;
+        cachedRingMode = -1;
     }
 
     public void setRenderingMode(int mode) {
         this.renderingMode = mode;
         this.cachedShape   = null;
     }
+
     public int getRenderingMode() {
         return renderingMode;
     }
 
-    public String getName() { 
-      return name; 
+    public String getName() {
+        return name;
     }
 
-    // ——————————————— Dispose ———————————————
+    public float getRadiusPx() {
+        return radiusPx;
+    }
+
     public void dispose() {
-      cachedShape      = null;
-      saturnRingsShape = null;
-      moons.forEach(Moon::dispose);
-      moons.clear();
+        cachedShape = null;
+        saturnRingsShape = null;
+        moons.forEach(Moon::dispose);
+        moons.clear();
     }
 }

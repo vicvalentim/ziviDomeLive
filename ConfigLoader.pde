@@ -1,12 +1,8 @@
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import processing.core.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
-/**
- * ConfigLoader — lê o JSON “solar2.json” já com todos os parâmetros físicos em AU e dias,
- * instanciando apenas dados físicos. Nenhum cálculo de pixel aqui.
- */
 class ConfigLoader {
   private final PApplet pApplet;
   private final TextureManager textureManager;
@@ -16,7 +12,7 @@ class ConfigLoader {
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final HashMap<String,String> planetTextureMap = new HashMap<>();
 
-  private float sunRadiusAU = 1.0f; // Garantia inicial
+  private float sunRadiusAU = 1.0f;
 
   ConfigLoader(PApplet pApplet, TextureManager textureManager, SimParams simParams) {
     this.pApplet = pApplet;
@@ -38,32 +34,27 @@ class ConfigLoader {
     planetTextureMap.put("Moon",    "2k_moon.jpg");
   }
 
-  /** Carrega apenas os dados físicos do Sol (unidades naturais). */
+  /** Carrega apenas o Sol. */
   Sun loadSun() {
     lock.readLock().lock();
     try {
       JSONObject sunObj = pApplet.loadJSONObject("solar2.json")
-                              .getJSONObject("sun");
+                                 .getJSONObject("sun");
 
-      String name           = sunObj.getString("name");
-      float massSolar       = sunObj.getFloat("massSolar");
-      float radiusAU        = sunObj.getFloat("radiusAU");
-      float rotPeriodDays   = sunObj.getFloat("rotationPeriodDays");
-      JSONArray cn          = sunObj.getJSONArray("colorNorm");
-      int displayColor      = pApplet.color(
+      float massSolar     = sunObj.getFloat("massSolar");
+      float radiusAU      = sunObj.getFloat("radiusAU");
+      float rotPeriodDays = sunObj.getFloat("rotationPeriodDays");
+      JSONArray cn        = sunObj.getJSONArray("colorNorm");
+      int displayColor    = pApplet.color(
         cn.getFloat(0)*255f,
         cn.getFloat(1)*255f,
         cn.getFloat(2)*255f
       );
 
-      this.sunRadiusAU = radiusAU; // Importante para planetas
+      this.sunRadiusAU = radiusAU;
 
-      // Raio visual em px: SUN_VISUAL_RADIUS é "tamanho padrão" do Sol
       float radiusPx = SUN_VISUAL_RADIUS * simParams.globalScale;
-
-      PImage texture = planetTextureMap.containsKey(name)
-        ? textureManager.getTexture(planetTextureMap.get(name))
-        : null;
+      PImage texture = textureManager.getTexture(planetTextureMap.get("Sun"));
 
       return new Sun(
         pApplet,
@@ -71,7 +62,7 @@ class ConfigLoader {
         massSolar,
         radiusAU,
         rotPeriodDays,
-        new PVector(0,0,0),
+        new PVector(0, 0, 0),
         displayColor,
         texture
       );
@@ -80,143 +71,214 @@ class ConfigLoader {
     }
   }
 
-  /** Carrega todos os planetas e luas, com todos os parâmetros físicos. */
-  ArrayList<Planet> loadConfiguration() {
-    lock.writeLock().lock();
-    try {
-      JSONObject config     = pApplet.loadJSONObject("solar2.json");
-      ArrayList<Planet> pls = new ArrayList<>();
+  // ─────────────────────────────────── Planets ────────────────────────────────── 
 
-      // 1) Planetas
-      JSONArray planetsArray = config.getJSONArray("planets");
-      for (int i = 0; i < planetsArray.size(); i++) {
-        JSONObject pd        = planetsArray.getJSONObject(i);
-        String   name        = pd.getString("name");
-        float    massSolar   = pd.getFloat("massSolar");
-        float    distanceAU  = pd.getFloat("distanceAU");
-        float    radiusAU    = pd.getFloat("radiusAU");
-        float    rotPeriod   = pd.getFloat("rotationPeriodDays");
-        float    orbPeriod   = pd.getFloat("orbitalPeriodDays");
-        float    incRad      = pd.getFloat("orbitInclinationRad");
-        float    tiltRad     = pd.getFloat("axisTiltRad");
-        float    periAU      = pd.getFloat("perihelionAU");
-        float    apheAU      = pd.getFloat("aphelionAU");
-        float    ecc         = pd.getFloat("eccentricity");
-        float    velAUperDay = pd.getFloat("orbitalVelocityAUperDay");
-        JSONArray cn         = pd.getJSONArray("colorNorm");
-        int      displayColor = pApplet.color(
-                          cn.getFloat(0)*255,
-                          cn.getFloat(1)*255,
-                          cn.getFloat(2)*255
-                        );
+  /** Lê “planets” aplicando Kepler no plano XZ e depois Ω→i→ω. */
+  public ArrayList<Planet> loadPlanets() {
+      JSONObject cfg = pApplet.loadJSONObject("solar2.json");
+      JSONArray arr   = cfg.getJSONArray("planets");
+      ArrayList<Planet> out = new ArrayList<>();
 
-        // Texturas
-        PImage tex    = planetTextureMap.containsKey(name)
-                        ? textureManager.getTexture(planetTextureMap.get(name))
-                        : null;
-        PImage ringTex= "Saturn".equals(name)
-                        ? textureManager.getTexture("2k_saturn_ring_alpha.png")
-                        : null;
+      for (int k = 0; k < arr.size(); k++) {
+        JSONObject pd = arr.getJSONObject(k);
 
-        PVector posAU = new PVector(distanceAU, 0, 0);
-        PVector velAU = new PVector(0, 0, -velAUperDay);
+        // básicos
+        String name               = pd.getString("name");
+        float  massSolar          = pd.getFloat("massSolar");
+        float  radiusAU           = pd.getFloat("radiusAU");
+        float  rotationPeriodDays = pd.getFloat("rotationPeriodDays");
+        float  orbitalPeriodDays  = pd.getFloat("orbitalPeriodDays");
 
+        // elementos
+        float perihelionAU           = pd.getFloat("perihelionAU");
+        float aphelionAU             = pd.getFloat("aphelionAU");
+        float eccentricity           = pd.getFloat("eccentricity");
+        float Ω                      = pd.getFloat("longitudeAscendingNodeRad");
+        float iRad                   = pd.getFloat("orbitInclinationRad");
+        float axisTiltRad            = pd.getFloat("axisTiltRad");
+        float ω                      = pd.getFloat("argumentOfPeriapsisRad");
+        float M0                     = pd.getFloat("meanAnomalyRad");
+        float a                      = pd.getFloat("semiMajorAxisAU");
+
+        // 1) resolve Kepler para E, depois posição/vel no plano XZ
+        float E0   = solveKeplerEquation(M0, eccentricity);
+        float cosE = PApplet.cos(E0), sinE = PApplet.sin(E0);
+        float xOp  = a * (cosE - eccentricity);
+        float zOp  = a * PApplet.sqrt(1 - eccentricity*eccentricity) * sinE;
+        float μ    = G_DAY; 
+        float n    = PApplet.sqrt(μ/(a*a*a));
+        float vxOp = -n * a * sinE / (1 - eccentricity * cosE);
+        float vzOp =  n * a * PApplet.sqrt(1-eccentricity*eccentricity) * cosE 
+                          / (1 - eccentricity * cosE);
+
+        PVector rPlane = new PVector(xOp, 0, zOp);
+        PVector vPlane = new PVector(vxOp, 0, vzOp);
+
+        // 2) transforma pro referencial global XZ → Y-up
+        PVector rGlobal = applyOrbitalPlaneToGlobal(rPlane, Ω, iRad, ω);
+        PVector vGlobal = applyOrbitalPlaneToGlobal(vPlane, Ω, iRad, ω);
+
+        // 3) cor e texturas
+        JSONArray cn = pd.getJSONArray("colorNorm");
+        int displayColor = pApplet.color(
+          cn.getFloat(0)*255,
+          cn.getFloat(1)*255,
+          cn.getFloat(2)*255
+        );
+        PImage tex    = textureManager.getTexture(planetTextureMap.get(name));
+        PImage ring   = "Saturn".equals(name)
+                      ? textureManager.getTexture("2k_saturn_ring_alpha.png")
+                      : null;
+
+        // 4) monta o objeto
         Planet planet = new Planet(
-          pApplet,
+          pApplet, 
           simParams,
           massSolar,
           radiusAU,
-          sunRadiusAU, // <<<<<<<<<< ADICIONADO
-          rotPeriod,
-          posAU,
-          velAU,
+          sunRadiusAU,
+          rotationPeriodDays,
+          rGlobal, 
+          vGlobal,
           displayColor,
           name,
-          tex,
-          ringTex,
-          incRad,
-          tiltRad,
-          periAU,
-          apheAU,
-          ecc,
-          orbPeriod,
-          velAUperDay
+          tex, 
+          ring,
+          iRad,            // orbitInclinationRad
+          axisTiltRad,
+          perihelionAU, 
+          aphelionAU, 
+          eccentricity,
+          ω,               // argumentOfPeriapsisRad
+          Ω,               // longitudeAscendingNodeRad
+          M0,              // meanAnomalyRad
+          orbitalPeriodDays,
+          vGlobal.mag(), // velocidade média AU/dia
+          a                // semiMajorAxisAU
         );
 
-        pls.add(planet);
+        out.add(planet);
       }
 
-      // 2) Luas
-      JSONArray moonsArray = config.getJSONArray("moons");
-      for (int i = 0; i < moonsArray.size(); i++) {
-        JSONObject md       = moonsArray.getJSONObject(i);
-        String   parentName = md.getString("planetName");
-        Planet   parent     = getPlanetByName(parentName, pls);
-        if (parent == null) continue;
+      return out;
+  }
 
-        String   moonName    = md.getString("moonName");
-        float    massSolar   = md.hasKey("massSolar") 
-                              ? md.getFloat("massSolar") 
-                              : 0f;
-        float    radiusRatio = md.getFloat("radiusRatio");
-        float    radiusAU    = radiusRatio * parent.getRadiusAU();
-        float    periAU      = md.getFloat("perihelionAU");
-        float    apheAU      = md.getFloat("aphelionAU");
-        float    ecc         = md.getFloat("eccentricity");
-        float    incRad      = md.getFloat("orbitInclinationRad");
-        float    argPeriRad  = md.getFloat("argumentPeriapsisRad");
-        boolean  alignAxis   = md.getBoolean("alignWithPlanetAxis");
-        float    rotPeriod   = md.getFloat("rotationPeriodDays");
-        float    orbPeriod   = md.getFloat("orbitalPeriodDays");
-        float    velAUperDay = md.getFloat("orbitalVelocityAUperDay");
-        JSONArray cm         = md.getJSONArray("colorNorm");
-        int      displayColor= pApplet.color(
-                                cm.getFloat(0)*255,
-                                cm.getFloat(1)*255,
-                                cm.getFloat(2)*255
-                              );
+ // ─────────────────────────────────── Moons ────────────────────────────────── 
 
-        PVector posAU = new PVector(md.getFloat("orbitDistanceAU"), 0, 0);
-        PVector velAU = new PVector(0, 0, -velAUperDay);
+  /** Lê “moons” aplicando o *mesmo* pipeline Ω→i→ω no plano XZ. */
+  public void loadMoons(List<Planet> planets) {
+      JSONObject cfg = pApplet.loadJSONObject("solar2.json");
+      JSONArray  arr = cfg.getJSONArray("moons");
 
+      for (int k = 0; k < arr.size(); k++) {
+        JSONObject md = arr.getJSONObject(k);
+        Planet host = getPlanetByName(md.getString("planetName"), planets);
+        if (host == null) continue;
+
+        // parâmetros
+        float massSolar           = md.getFloat("massSolar");
+        float radiusAU            = md.getFloat("radiusAU");
+        float rotationPeriodDays  = md.getFloat("rotationPeriodDays");
+        float a                   = md.getFloat("semiMajorAxisAU");
+        float perihelionAU        = md.getFloat("perihelionAU");
+        float aphelionAU          = md.getFloat("aphelionAU");
+        float eccentricity        = md.getFloat("eccentricity");
+        float iRad                = md.getFloat("orbitInclinationRad");
+        float ω                   = md.getFloat("argumentOfPeriapsisRad");
+        float Ω                   = md.getFloat("longitudeAscendingNodeRad");
+        float M0                  = md.getFloat("meanAnomalyRad");
+        boolean alignWithAxis     = md.getBoolean("alignWithPlanetAxis");
+        String moonName           = md.getString("moonName");
+
+        // Kepler no plano XZ
+        float E0   = solveKeplerEquation(M0, eccentricity);
+        float cosE = PApplet.cos(E0), sinE = PApplet.sin(E0);
+        float xOp  = a * (cosE - eccentricity);
+        float zOp  = a * PApplet.sqrt(1 - eccentricity*eccentricity) * sinE;
+        float μ    = G_DAY * host.getMassSolar();
+        float n    = PApplet.sqrt(μ/(a*a*a));
+        float vxOp = -n * a * sinE / (1 - eccentricity * cosE);
+        float vzOp =  n * a * PApplet.sqrt(1-eccentricity*eccentricity) * cosE 
+                          / (1 - eccentricity * cosE);
+
+        PVector rPlane = new PVector(xOp, 0, zOp);
+        PVector vPlane = new PVector(vxOp, 0, vzOp);
+
+        // transforma pro global XZ
+        PVector rGlobal = applyOrbitalPlaneToGlobal(rPlane, Ω, iRad, ω);
+        PVector vGlobal = applyOrbitalPlaneToGlobal(vPlane, Ω, iRad, ω);
+
+        // cor e textura
+        JSONArray cn = md.getJSONArray("colorNorm");
+        int displayColor = pApplet.color(
+          cn.getFloat(0)*255,
+          cn.getFloat(1)*255,
+          cn.getFloat(2)*255
+        );
+        PImage texMoon = ("Earth".equals(host.getName()) && "Moon".equals(moonName))
+                        ? textureManager.getTexture("2k_moon.jpg")
+                        : null;
+
+        // instancia a lua
         Moon moon = new Moon(
-          pApplet,
-          simParams,
+          pApplet, simParams,
           massSolar,
           radiusAU,
-          sunRadiusAU, // <<<<<<<<<< ADICIONADO
-          rotPeriod,
-          posAU,
-          velAU,
+          rotationPeriodDays,
+          a,            // semiMajorAxisAU
+          perihelionAU,
+          aphelionAU,
+          eccentricity,
+          rGlobal,      // initialPosAU
+          vGlobal,      // initialVelAU
           moonName,
           displayColor,
-          textureManager.getTexture(planetTextureMap.get("Moon")),
-          parent,
-          incRad,
-          argPeriRad,
-          alignAxis,
-          periAU,
-          apheAU,
-          ecc
+          texMoon,
+          host,
+          iRad, ω, Ω, M0,
+          alignWithAxis
         );
 
-        parent.addMoon(moon);
+        // escala + vincula
+        moon.setRadiusPx(radiusAU / host.getRadiusAU() * host.getRadiusPx());
+        host.addMoon(moon);
       }
+  }
 
-      // 3) Sky sphere
+  /** Resolve a equação de Kepler M = E - e·sin(E) para E dado M e e. */
+  private float solveKeplerEquation(float M, float e) {
+      float E = M;
+      for (int i = 0; i < 10; i++) {
+          float f  = E - e * PApplet.sin(E) - M;
+          float fp = 1 - e * PApplet.cos(E);
+          float dE = -f / fp;
+          E += dE;
+          if (PApplet.abs(dE) < 1e-6f) break;
+      }
+      return E;
+  }
+
+
+  /** Orquestra o carregamento: planetas primeiro, depois luas. */
+  public ArrayList<Planet> loadConfiguration() {
+    lock.writeLock().lock();
+    try {
+      ArrayList<Planet> planets = loadPlanets();
+      loadMoons(planets);
+
       skyTexture = textureManager.getTexture("8k_stars_milky_way.jpg");
       skySphere  = pApplet.createShape(SPHERE, 1);
       skySphere.setTexture(skyTexture);
       skySphere.setStroke(false);
       skySphere.setFill(pApplet.color(255));
 
-      return pls;
+      return planets;
     } finally {
       lock.writeLock().unlock();
     }
   }
 
-  private Planet getPlanetByName(String name, ArrayList<Planet> planets) {
+  private Planet getPlanetByName(String name, List<Planet> planets) {
     for (Planet p : planets) {
       if (p.getName().equals(name)) return p;
     }

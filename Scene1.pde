@@ -10,7 +10,7 @@ class Scene1 implements Scene {
   private PApplet pApplet;
   private List<Planet> planets;
   private Sun sun;
-  private List<CelestialBody> bodies;  // Sol + planetas + luas
+  private List<CelestialBody> planetaryBodies;
 
   private SimParams simParams;
   private TextureManager textureManager;
@@ -30,42 +30,47 @@ class Scene1 implements Scene {
 
   private SimulatedClock clock; // Novo relógio em dias
 
+  /** Construtor */
   Scene1(zividomelive parent, PApplet pApplet) {
-    this.parent = parent;
-    this.pApplet = pApplet;
+    this.parent   = parent;
+    this.pApplet  = pApplet;
 
-    // 1) Inicializa managers e params
+    // 1) Inicializa managers e params...
     simParams      = new SimParams();
     textureManager = new TextureManager(pApplet);
     shapeManager   = new ShapeManager(pApplet);
     shaderManager  = new ShaderManager(pApplet);
     loadAllShaders();
 
-    // 2) Configurações físicas (AU, dias)
+    // 2) Carrega Sol, planetas e configura central bodies
     configLoader = new ConfigLoader(pApplet, textureManager, simParams);
     configLoader.sendTexturesToShaderManager(shaderManager);
     sun     = configLoader.loadSun();
     planets = configLoader.loadConfiguration();
-
     for (Planet p : planets) {
-    p.setCentralBody(sun);
+      p.setCentralBody(sun);
+      for (Moon m : p.getMoons()) {
+        m.setCentralBody(p);
+      }
     }
 
-    // 3) Monta lista de corpos para a física
-    bodies = new ArrayList<>();
-    bodies.add(sun);
+    // 3) Monta lista de corpos PARA TUDO (Sol + planetas + luas)
+    planetaryBodies = new ArrayList<>();
+    planetaryBodies.add(sun);
     for (Planet p : planets) {
-      bodies.add(p);
-      bodies.addAll(p.getMoons());
+      planetaryBodies.add(p);
+      for (Moon m : p.getMoons()) {
+        planetaryBodies.add(m);
+      }
     }
-    physicsEngine = new PhysicsEngine(bodies);
+    physicsEngine = new PhysicsEngine(planetaryBodies);
 
-    // 4) Renderer: converte AU→px apenas aqui
+    // 4) Renderer
     renderer = new Renderer(pApplet, planets, configLoader.getSkySphere(),
                             shapeManager, shaderManager, simParams);
     renderer.setSun(sun);
 
-    // 5) Relógio simulado (dias)
+    // 5) Relógio simulado
     clock = new SimulatedClock(0.0f, 1.0f);
 
     configureCamera();
@@ -116,28 +121,26 @@ class Scene1 implements Scene {
       sun     = configLoader.loadSun();
       planets = configLoader.loadConfiguration();
 
-      // 1) refresca os "central bodies"
+      // central bodies
+      planetaryBodies.clear();
+      planetaryBodies.add(sun);
       for (Planet p : planets) {
         p.setCentralBody(sun);
+        planetaryBodies.add(p);
         for (Moon m : p.getMoons()) {
           m.setCentralBody(p);
+          planetaryBodies.add(m);
         }
       }
 
-      // 2) monta o array de corpos para a física
-      bodies.clear();
-      bodies.add(sun);
-      for (Planet p : planets) {
-        bodies.add(p);
-        bodies.addAll(p.getMoons());
-      }
-      physicsEngine = new PhysicsEngine(bodies);
+      // reinicia o engine COM luas
+      physicsEngine = new PhysicsEngine(planetaryBodies);
 
-      // 3) renderer
+      // renderer
       renderer.setSun(sun);
       renderer.setPlanets(planets);
 
-      // 4) rebuild das shapes
+      // rebuild shapes
       sun.buildShape(pApplet, shapeManager);
       for (Planet p : planets) {
         p.buildShape(pApplet, shapeManager);
@@ -146,13 +149,13 @@ class Scene1 implements Scene {
         }
       }
 
-      // 5) reaplica escalas visuais (zoom / amplificação)
+      // reaplica escalas (planetas + luas)
       applyScalingFactors();
     } finally {
       rwLock.writeLock().unlock();
     }
   }
-  
+
   /**
   * Atualiza a simulação subdividindo grandes passos de tempo em subpassos menores.
   */
@@ -162,22 +165,22 @@ class Scene1 implements Scene {
     try {
       float totalDt = clock.update();
       if (totalDt > 0f) {
-        // Divide totalDt em subpassos para manter estabilidade da órbita
-        float maxStep = 0.5f; // dias máximos por subpasso
-        int steps    = (int) Math.ceil(totalDt / maxStep);
-        float dt     = totalDt / steps;
+        // subdivide o passo
+        float maxStep = 0.5f;
+        int steps = (int) Math.ceil(totalDt / maxStep);
+        float dt = totalDt / steps;
+
         for (int i = 0; i < steps; i++) {
+          // agora PhysicsEngine propaga planetas + luas de uma vez
           physicsEngine.update(dt);
         }
 
-        // Atualiza rotações visuais com o total do tempo
+        // rotação axial visual (sol + planetas)
         sun.update(totalDt);
         for (Planet p : planets) {
           p.update(totalDt);
-          for (Moon m : p.getMoons()) {
-            m.update(totalDt);
-          }
         }
+        // (não precisa mais chamar m.update() aqui)
       }
 
       updateCameraTarget();
@@ -187,6 +190,10 @@ class Scene1 implements Scene {
     }
   }
 
+  /**
+   * Atualiza o alvo da câmera com base no planeta selecionado.
+   * Se nenhum planeta estiver selecionado, a câmera foca no Sol.
+   */
   private void updateCameraTarget() {
     float scale = PIXELS_PER_AU * simParams.globalScale;
     if (selectedPlanet == 0) {
@@ -227,7 +234,7 @@ class Scene1 implements Scene {
       pg.pushMatrix();
         renderer.setupCamera(pg);
 
-        // Sol
+        // 1) Sol
         PVector sunPx = sun.getPositionAU().copy()
                           .mult(PIXELS_PER_AU * simParams.globalScale);
         pg.pushMatrix();
@@ -235,27 +242,26 @@ class Scene1 implements Scene {
           sun.display(pg, showLabels, shaderManager);
         pg.popMatrix();
 
+        // 2) iluminação
         renderer.drawLighting(pg);
 
-        // Órbitas de planetas
+        // 3) Órbitas de planetas
         if (showOrbits) {
           renderer.drawPlanetOrbits(pg);
         }
-        // Órbitas de luas (independente)
-        if (showMoonOrbits) {
-          renderer.drawMoonOrbits(pg);
-        }
 
-        // Corpos
-        renderer.drawPlanetsAndMoons(pg, showLabels, /* showMoonOrbits já só ativa labels/luas */ false);
+        // 4) Planetas + luas (com órbitas de luas via m.displayOrbit())
+        renderer.drawPlanetsAndMoons(pg, showLabels, showMoonOrbits);
 
+        // 5) Céu
         renderer.drawSkySphere(pg);
+
       pg.popMatrix();
     } finally {
       rwLock.readLock().unlock();
     }
   }
-
+  
   private void changeRenderingMode(int mode) {
     renderer.setRenderingMode(mode);
     sun.setRenderingMode(mode);
@@ -273,8 +279,15 @@ class Scene1 implements Scene {
   private void applyScalingFactors() {
     rwLock.writeLock().lock();
     try {
-      if (sun != null)  sun.applyScalingFactors(simParams);
-      if (planets!=null) for (Planet p : planets) p.applyScalingFactors(simParams);
+      if (sun != null) sun.applyScalingFactors(simParams);
+      if (planets != null) {
+        for (Planet p : planets) {
+          p.applyScalingFactors(simParams);
+          for (Moon m : p.getMoons()) {
+            m.applyScalingFactors(simParams);
+          }
+        }
+      }
     } finally {
       rwLock.writeLock().unlock();
     }

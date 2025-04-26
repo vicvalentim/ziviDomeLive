@@ -1,50 +1,55 @@
-import processing.core.PVector;
-
 /**
- * Interface comum a todos os corpos celestes do sistema:
- * Sun, Planet e Moon.
+ * Corpo celeste genérico (Sol, planeta ou lua) – unidades:
+ *  • posição-velocidade: AU  |  • tempo: dias  |  • massa: M☉
  */
 public interface CelestialBody {
-    // ——— Unidades físicas ———
 
-    /** Posição no espaço, em AU. */
-    PVector getPositionAU();
+  // ───────────────────────────── Estado dinâmico ────────────────────────────
+  /** Posição heliocêntrica (ou planetocêntrica, para luas) em AU. */
+  PVector getPositionAU();
 
-    /** Velocidade em AU por dia. */
-    PVector getVelocityAU();
+  /** Velocidade em AU/dia. */
+  PVector getVelocityAU();
 
-    /** Massa, em massas solares (M☉). */
-    float getMassSolar();
+  /** Massa em massas solares (M☉). */
+  float   getMassSolar();
 
-    /** Retorna o corpo-foco (Sol para planetas; planeta para luas). */
-    CelestialBody getCentralBody();
+  /** Corpo-foco (Sol → planetas, planeta → luas). */
+  CelestialBody getCentralBody();
+  void          setCentralBody(CelestialBody c);
 
-    /** Propaga a órbita por dtDays via solver Kepleriano. */
-    void propagateKepler(float dtDays);
+  /** Propaga a órbita por <code>dtDays</code> usando o solver Kepleriano. */
+  void propagateKepler(float dtDays);
 
-    // ——— Elementos orbitais ———
+  // ───────────────────────────── Elementos orbitais ─────────────────────────
+  /** Semi-eixo maior <i>a</i> em AU. */                         // ★ novo
+  float getSemiMajorAxisAU();
 
-    /** Distância do periélio, em AU. */
-    float getPerihelionAU();
+  /** Distância de periélio (q = a·(1-e)) em AU. */
+  float getPerihelionAU();
 
-    /** Distância do afélio, em AU. */
-    float getAphelionAU();
+  /** Distância de afélio (Q = a·(1+e)) em AU. */
+  float getAphelionAU();
 
-    /** Excentricidade da órbita. */
-    float getEccentricity();
+  /** Excentricidade e. */
+  float getEccentricity();
 
-    /** Inclinação orbital, em radianos. */
-    float getOrbitInclinationRad();
+  /** Inclinação orbital <i>i</i> (rad).  */
+  float getOrbitInclinationRad();
 
-    /** Argumento do periastro, em radianos. */
-    float getArgumentOfPeriapsisRad();
+  /** Longitude do nó ascendente Ω (rad). */                       // ★ novo
+  float getLongitudeAscendingNodeRad();
 
+  /** Argumento do periastro ω (rad). */
+  float getArgumentOfPeriapsisRad();
 
-    // ——— Métodos auxiliares (opcionais) ———
+  /** Anomalia média <i>M</i> no epoch J2000 (rad). */             // ★ novo
+  float getMeanAnomalyRad();
 
-    /** Raio físico, em AU (para render). */
-    float getRadiusAU();
+  // ───────────────────────────── Auxiliares de render ───────────────────────
+  /** Raio físico (AU). */
+  float getRadiusAU();
 
-    /** Período de rotação em dias (para animação). */
-    float getRotationPeriodDays();
+  /** Período de rotação sideral (dias). */
+  float getRotationPeriodDays();
 }

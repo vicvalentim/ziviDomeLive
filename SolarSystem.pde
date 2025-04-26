@@ -1,14 +1,13 @@
 import com.victorvalentim.zividomelive.*;
 import controlP5.*;
 import codeanticode.syphon.*;
-import spout.*;
 
 // Main instances
 zividomelive ziviDome;      // Instance of the zividomelive library
 SceneManager sceneManager;  // SceneManager to manage multiple scenes
 
 void settings() {
-  fullScreen(P3D);  // Set the window size and P3D mode
+  size(1200, 800, P3D);  // Set the window size and P3D mode
 }
 
 void setup() {
