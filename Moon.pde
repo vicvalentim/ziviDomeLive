@@ -34,6 +34,11 @@ public class Moon implements CelestialBody {
     private final float longitudeAscendingNodeRad;
     private final float meanAnomalyRad;
     private final boolean alignWithAxis;
+    private float currentMeanAnomalyRad;
+
+    // Estado J2000 original (posição e velocidade em UA / UA·dia⁻¹)
+    PVector initialPosAU;
+    PVector initialVelAU;
 
     /** Construtor ajustado */
     public Moon(PApplet pApplet,
@@ -68,6 +73,8 @@ public class Moon implements CelestialBody {
         this.eccentricity              = eccentricity;
         this.positionAU                = initialPosAU.copy();
         this.velocityAU                = initialVelAU.copy();
+        this.initialPosAU              = positionAU.copy();
+        this.initialVelAU              = velocityAU.copy();
         this.name                      = name;
         this.col                       = displayColor;
         this.texture                   = texture;
@@ -77,6 +84,7 @@ public class Moon implements CelestialBody {
         this.longitudeAscendingNodeRad = longitudeAscendingNodeRad;
         this.meanAnomalyRad            = meanAnomalyRad;
         this.alignWithAxis             = alignWithAxis;
+        this.currentMeanAnomalyRad     = meanAnomalyRad;
 
         this.rotationSpeed = PApplet.TWO_PI / rotationPeriodDays;
     }
@@ -115,6 +123,17 @@ public class Moon implements CelestialBody {
     @Override
     public void propagateKepler(float dtDays) {
         if (centralBody != null) {
+            // 1) calcule semi-eixo e n (como antes)
+            float a  = 0.5f * (perihelionAU + aphelionAU);
+            float mu = G_DAY * centralBody.getMassSolar();
+            float n  = PApplet.sqrt(mu/(a*a*a));
+
+            // 2) avance a anomalia média
+            currentMeanAnomalyRad += n * dtDays;
+            // opcional: force 0 <= currentMeanAnomalyRad < TWO_PI
+            currentMeanAnomalyRad %= PApplet.TWO_PI;
+
+            // 3) chame o solver com essa nova anomalia
             keplerSolve(
                 centralBody.getPositionAU(),
                 positionAU,
@@ -123,10 +142,10 @@ public class Moon implements CelestialBody {
                 aphelionAU,
                 eccentricity,
                 orbitInclinationRad,
-                argumentOfPeriapsisRad,
                 longitudeAscendingNodeRad,
-                meanAnomalyRad,
-                dtDays,
+                argumentOfPeriapsisRad,
+                currentMeanAnomalyRad,
+                0f,                        // já contei todo dt em currentMeanAnomalyRad
                 centralBody.getMassSolar()
             );
         }
@@ -221,6 +240,16 @@ public class Moon implements CelestialBody {
 
     public int getRenderingMode() {
         return renderingMode;
+    }
+
+    /**
+    * Restaura exatamente a posição e velocidade que o corpo
+    * tinha na época J2000 (gravadas em initialPosAU/initialVelAU).
+    */
+    void resetToJ2000() {
+        positionAU.set(initialPosAU);
+        velocityAU.set(initialVelAU);
+        currentMeanAnomalyRad = meanAnomalyRad;
     }
 
     public void dispose() {

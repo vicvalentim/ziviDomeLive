@@ -1,6 +1,11 @@
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import processing.opengl.*;
 import java.util.*;
+import javax.swing.JOptionPane;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoField;
 
 /**
  * Scene1 — integra ConfigLoader → PhysicsEngine → Renderer com SimulatedClock.
@@ -30,50 +35,78 @@ class Scene1 implements Scene {
 
   private SimulatedClock clock; // Novo relógio em dias
 
-  /** Construtor */
+ 
+  // ————————————————————————————————
+  // Construtor de Scene1
+  // ————————————————————————————————
   Scene1(zividomelive parent, PApplet pApplet) {
-    this.parent   = parent;
-    this.pApplet  = pApplet;
+      this.parent   = parent;
+      this.pApplet  = pApplet;
 
-    // 1) Inicializa managers e params...
-    simParams      = new SimParams();
-    textureManager = new TextureManager(pApplet);
-    shapeManager   = new ShapeManager(pApplet);
-    shaderManager  = new ShaderManager(pApplet);
-    loadAllShaders();
+      // 1) Inicializa managers e params...
+      simParams      = new SimParams();
+      textureManager = new TextureManager(pApplet);
+      shapeManager   = new ShapeManager(pApplet);
+      shaderManager  = new ShaderManager(pApplet);
+      loadAllShaders();
 
-    // 2) Carrega Sol, planetas e configura central bodies
-    configLoader = new ConfigLoader(pApplet, textureManager, simParams);
-    configLoader.sendTexturesToShaderManager(shaderManager);
-    sun     = configLoader.loadSun();
-    planets = configLoader.loadConfiguration();
-    for (Planet p : planets) {
-      p.setCentralBody(sun);
-      for (Moon m : p.getMoons()) {
-        m.setCentralBody(p);
+      // 2) Carrega Sol, planetas e configura central bodies
+      configLoader = new ConfigLoader(pApplet, textureManager, simParams);
+      configLoader.sendTexturesToShaderManager(shaderManager);
+      sun     = configLoader.loadSun();
+      planets = configLoader.loadConfiguration();
+      for (Planet p : planets) {
+        p.setCentralBody(sun);
+        for (Moon m : p.getMoons()) {
+          m.setCentralBody(p);
+        }
       }
-    }
 
-    // 3) Monta lista de corpos PARA TUDO (Sol + planetas + luas)
-    planetaryBodies = new ArrayList<>();
-    planetaryBodies.add(sun);
-    for (Planet p : planets) {
-      planetaryBodies.add(p);
-      for (Moon m : p.getMoons()) {
-        planetaryBodies.add(m);
+      // 3) Monta lista de corpos (Sol + planetas + luas) e PhysicsEngine
+      planetaryBodies = new ArrayList<>();
+      planetaryBodies.add(sun);
+      for (Planet p : planets) {
+        planetaryBodies.add(p);
+        for (Moon m : p.getMoons()) {
+          planetaryBodies.add(m);
+        }
       }
-    }
-    physicsEngine = new PhysicsEngine(planetaryBodies);
+      physicsEngine = new PhysicsEngine(planetaryBodies);
 
-    // 4) Renderer
-    renderer = new Renderer(pApplet, planets, configLoader.getSkySphere(),
-                            shapeManager, shaderManager, simParams);
-    renderer.setSun(sun);
+      // 4) Renderer
+      renderer = new Renderer(pApplet, planets, configLoader.getSkySphere(),
+                              shapeManager, shaderManager, simParams);
+      renderer.setSun(sun);
 
-    // 5) Relógio simulado
-    clock = new SimulatedClock(0.0f, 1.0f);
+      // 5) Relógio absoluto e inicialização para “hoje” UTC
+      clock = new SimulatedClock();
 
-    configureCamera();
+      Instant now = Instant.now();
+      ZonedDateTime utc = now.atZone(ZoneOffset.UTC);
+      clock.setCalendarUTC(
+        utc.getYear(),
+        utc.getMonthValue(),
+        utc.getDayOfMonth(),
+        utc.getHour(),
+        utc.getMinute(),
+        utc.getSecond() + utc.get(ChronoField.MILLI_OF_SECOND)/1000.0
+      );
+
+      // 6) Propaga todos os corpos desde J2000 até a data/hora escolhida
+      double daysSinceJ2000 = clock.getDaysSinceJ2000();
+      if (daysSinceJ2000 > 0) {
+        float total = (float) daysSinceJ2000;
+        float maxStep = 0.5f;
+        int   steps   = (int) Math.ceil(total / maxStep);
+        float dt      = total / steps;
+        for (int i = 0; i < steps; i++) {
+          physicsEngine.update(dt);
+        }
+      pApplet.println("[Scene1] Data inicial UTC: " + clock.getCalendarUTCString());
+      }
+
+      // 7) Ajusta a câmera
+      configureCamera();
   }
 
   private void loadAllShaders() {
@@ -156,39 +189,36 @@ class Scene1 implements Scene {
     }
   }
 
-  /**
-  * Atualiza a simulação subdividindo grandes passos de tempo em subpassos menores.
-  */
+  // ————————————————————————————————
+  // update() — agora baseado em double do relógio
+  // ————————————————————————————————
   @Override
   public void update() {
     rwLock.writeLock().lock();
     try {
-      float totalDt = clock.update();
-      if (totalDt > 0f) {
-        // subdivide o passo
-        float maxStep = 0.5f;
-        int steps = (int) Math.ceil(totalDt / maxStep);
-        float dt = totalDt / steps;
-
+      // Δt em dias simulados desde o último frame
+      double totalDt = clock.update();
+      if (totalDt > 0.0) {
+        // subdivide em subpassos ≤ 0.5d
+        double maxStep = 0.5;
+        int steps = (int)Math.ceil(totalDt / maxStep);
+        double dt = totalDt / steps;
         for (int i = 0; i < steps; i++) {
-          // agora PhysicsEngine propaga planetas + luas de uma vez
-          physicsEngine.update(dt);
+          physicsEngine.update((float)dt);
         }
-
-        // rotação axial visual (sol + planetas)
-        sun.update(totalDt);
+        // rotação axial visual
+        sun.update((float)totalDt);
         for (Planet p : planets) {
-          p.update(totalDt);
+          p.update((float)totalDt);
         }
-        // (não precisa mais chamar m.update() aqui)
       }
-
       updateCameraTarget();
       trackSelectedPlanet();
     } finally {
       rwLock.writeLock().unlock();
     }
   }
+
 
   /**
    * Atualiza o alvo da câmera com base no planeta selecionado.
@@ -231,6 +261,9 @@ class Scene1 implements Scene {
     rwLock.readLock().lock();
     try {
       pg.background(0, 10, 20);
+      pg.fill(255);
+      pg.textSize(12);
+      pg.text(clock.getCalendarUTCString(), 10, 20);
       pg.pushMatrix();
         renderer.setupCamera(pg);
 
@@ -306,11 +339,58 @@ class Scene1 implements Scene {
       case 'w': changeRenderingMode(0); break;
       case 's': changeRenderingMode(1); break;
       case 't': changeRenderingMode(2); break;
-      case '+': clock.setTimeScale(clock.getTimeScale()*1.2f); break;
-      case '-': clock.setTimeScale(clock.getTimeScale()*0.8f); break;
+      case '+': clock.setTimeScale(clock.getTimeScale() * 1.2); break;
+      case '-': clock.setTimeScale(clock.getTimeScale() * 0.8); break;
       case 'o': showOrbits = !showOrbits; break;
       case 'l': showLabels = !showLabels; break;
       case 'p': showMoonOrbits = !showMoonOrbits; break;
+      case 'D': String input = JOptionPane.showInputDialog(
+      "Data UTC (AAAA-MM-DD HH:MM:SS):"
+    );
+    if (input != null) {
+      try {
+        // 1) parse da string
+        String[] sp = input.trim().split("\\s+");
+        String[] d = sp[0].split("-");
+        String[] t = sp[1].split(":");
+        int Y = Integer.parseInt(d[0]),
+            M = Integer.parseInt(d[1]),
+           Dd = Integer.parseInt(d[2]),
+            h = Integer.parseInt(t[0]),
+            m = Integer.parseInt(t[1]);
+        double s = Double.parseDouble(t[2]);
+
+        // 2) ajusta o relógio
+        clock.setCalendarUTC(Y, M, Dd, h, m, s);
+
+        // 3) reset a todos os corpos para J2000
+        for (Planet p : planets) {
+          p.resetToJ2000();
+          for (Moon m_ : p.getMoons()) {
+            m_.resetToJ2000();
+          }
+        }
+
+        // 4) propaga até o novo instante
+        float days0 = (float)clock.getDaysSinceJ2000();
+        physicsEngine.setEnablePerturbations(false);
+        if (days0 > 0) {
+          // subdivida em subpassos como no update()
+          float maxStep = 0.5f;
+          int steps = (int)Math.ceil(days0 / maxStep);
+          float dt    = days0 / steps;
+          for (int i = 0; i < steps; i++) {
+            physicsEngine.update(dt);
+          }
+        }
+        physicsEngine.setEnablePerturbations(true);
+
+      } catch (Exception ex) {
+        pApplet.println("Data inválida: " + ex.getMessage());
+      }
+    }
+    pApplet.println("[Scene1] Data alterada UTC: " + clock.getCalendarUTCString());
+    break;
       default:
         if (Character.isDigit(key)) {
           int n = Character.getNumericValue(key);

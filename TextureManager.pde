@@ -2,7 +2,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 class TextureManager {
-  private static final String TEXTURE_PATH = "texture/";
+  private static final String TEXTURE_PATH = "textures/";
   
   private PApplet pApplet;
   private final HashMap<String, PImage> textures = new HashMap<String, PImage>();

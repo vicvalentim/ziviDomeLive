@@ -42,6 +42,7 @@ public class Planet implements CelestialBody {
     private final float orbitalPeriodDays;
     private final float orbitalVelocityAUperDay;
     private final float axisTiltRad;
+    private float currentMeanAnomalyRad;
 
     // luas
     private final List<Moon> moons = new ArrayList<>();
@@ -51,6 +52,10 @@ public class Planet implements CelestialBody {
     private final float ringRotationSpeed = 0.05f;
     private PShape saturnRingsShape;
     private int cachedRingMode = -1;
+
+    // Estado J2000 original (posição e velocidade em UA / UA·dia⁻¹)
+    PVector initialPosAU;
+    PVector initialVelAU;
 
     /** Construtor */
     public Planet(PApplet pApplet,
@@ -84,6 +89,8 @@ public class Planet implements CelestialBody {
         this.rotationPeriodDays        = rotationPeriodDays;
         this.positionAU                = initialPosAU.copy();
         this.velocityAU                = initialVelAU.copy();
+        this.initialPosAU              = positionAU.copy();
+        this.initialVelAU              = velocityAU.copy();
         this.col                       = displayColor;
         this.name                      = name;
         this.texture                   = texture;
@@ -103,6 +110,7 @@ public class Planet implements CelestialBody {
         this.rotationSpeed = PApplet.TWO_PI / rotationPeriodDays;
         this.baseRatio     = radiusAU / sunRadiusAU;
         this.hasRings      = "Saturn".equals(name);
+        this.currentMeanAnomalyRad = meanAnomalyRad;
 
         applyScalingFactors(simParams);
     }
@@ -136,6 +144,17 @@ public class Planet implements CelestialBody {
     @Override
     public void propagateKepler(float dtDays) {
         if (centralBody != null) {
+            // 1) calcule semi-eixo e n (como antes)
+            float a  = 0.5f * (perihelionAU + aphelionAU);
+            float mu = G_DAY * centralBody.getMassSolar();
+            float n  = PApplet.sqrt(mu/(a*a*a));
+
+            // 2) avance a anomalia média
+            currentMeanAnomalyRad += n * dtDays;
+            // opcional: force 0 <= currentMeanAnomalyRad < TWO_PI
+            currentMeanAnomalyRad %= PApplet.TWO_PI;
+
+            // 3) chame o solver com essa nova anomalia
             keplerSolve(
                 centralBody.getPositionAU(),
                 positionAU,
@@ -144,10 +163,10 @@ public class Planet implements CelestialBody {
                 aphelionAU,
                 eccentricity,
                 orbitInclinationRad,
-                argumentOfPeriapsisRad,
                 longitudeAscendingNodeRad,
-                meanAnomalyRad,
-                dtDays,
+                argumentOfPeriapsisRad,
+                currentMeanAnomalyRad,
+                0f,                        // já contei todo dt em currentMeanAnomalyRad
                 centralBody.getMassSolar()
             );
         }
@@ -337,6 +356,16 @@ public class Planet implements CelestialBody {
 
     public float getRadiusPx() {
         return radiusPx;
+    }
+
+    /**
+    * Restaura exatamente a posição e velocidade que o corpo
+    * tinha na época J2000 (gravadas em initialPosAU/initialVelAU).
+    */
+    void resetToJ2000() {
+        positionAU.set(initialPosAU);
+        velocityAU.set(initialVelAU);
+        currentMeanAnomalyRad = meanAnomalyRad;
     }
 
     public void dispose() {
