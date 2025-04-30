@@ -221,7 +221,7 @@
             "orbitalPeriodDays": 0.318910,
             "perihelionAU": 0.00006197,
             "aphelionAU": 0.00006388,
-            "alignWithPlanetAxis": true,
+            "alignWithPlanetAxis": false,
             "colorNorm": [
                 0.78,
                 0.78,
@@ -244,7 +244,7 @@
             "orbitalPeriodDays": 1.262444,
             "perihelionAU": 0.00015647,
             "aphelionAU": 0.00015663,
-            "alignWithPlanetAxis": true,
+            "alignWithPlanetAxis": false,
             "colorNorm": [
                 0.78,
                 0.78,
@@ -267,7 +267,7 @@
             "orbitalPeriodDays": 1.769138,
             "perihelionAU": 0.00280685,
             "aphelionAU": 0.00283015,
-            "alignWithPlanetAxis": true,
+            "alignWithPlanetAxis": false,
             "colorNorm": [
                 0.78,
                 0.78,
@@ -290,7 +290,7 @@
             "orbitalPeriodDays": 3.551181,
             "perihelionAU": 0.00444454,
             "aphelionAU": 0.00452904,
-            "alignWithPlanetAxis": true,
+            "alignWithPlanetAxis": false,
             "colorNorm": [
                 0.78,
                 0.78,
@@ -313,7 +313,7 @@
             "orbitalPeriodDays": 7.154553,
             "perihelionAU": 0.00714540,
             "aphelionAU": 0.00716393,
-            "alignWithPlanetAxis": true,
+            "alignWithPlanetAxis": false,
             "colorNorm": [
                 0.78,
                 0.78,
@@ -336,7 +336,7 @@
             "orbitalPeriodDays": 16.689018,
             "perihelionAU": 0.01249667,
             "aphelionAU": 0.01267280,
-            "alignWithPlanetAxis": true,
+            "alignWithPlanetAxis": false,
             "colorNorm": [
                 0.78,
                 0.78,
@@ -359,7 +359,7 @@
             "orbitalPeriodDays": 15.945421,
             "perihelionAU": 0.00793540,
             "aphelionAU": 0.00839981,
-            "alignWithPlanetAxis": true,
+            "alignWithPlanetAxis": false,
             "colorNorm": [
                 0.78,
                 0.78,
@@ -382,7 +382,7 @@
             "orbitalPeriodDays": 1.413479,
             "perihelionAU": 0.00079716,
             "aphelionAU": 0.00079924,
-            "alignWithPlanetAxis": true,
+            "alignWithPlanetAxis": false,
             "colorNorm": [
                 0.78,
                 0.78,
@@ -405,7 +405,7 @@
             "orbitalPeriodDays": 2.520379,
             "perihelionAU": 0.00127450,
             "aphelionAU": 0.00127758,
-            "alignWithPlanetAxis": true,
+            "alignWithPlanetAxis": false,
             "colorNorm": [
                 0.78,
                 0.78,
@@ -428,7 +428,7 @@
             "orbitalPeriodDays": 4.144177,
             "perihelionAU": 0.00176806,
             "aphelionAU": 0.00178392,
-            "alignWithPlanetAxis": true,
+            "alignWithPlanetAxis": false,
             "colorNorm": [
                 0.78,
                 0.78,
@@ -451,7 +451,7 @@
             "orbitalPeriodDays": 8.706234,
             "perihelionAU": 0.00291893,
             "aphelionAU": 0.00292338,
-            "alignWithPlanetAxis": true,
+            "alignWithPlanetAxis": false,
             "colorNorm": [
                 0.78,
                 0.78,
@@ -474,7 +474,7 @@
             "orbitalPeriodDays": 13.463239,
             "perihelionAU": 0.00389163,
             "aphelionAU": 0.00390251,
-            "alignWithPlanetAxis": true,
+            "alignWithPlanetAxis": false,
             "colorNorm": [
                 0.78,
                 0.78,

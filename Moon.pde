@@ -122,34 +122,39 @@ public class Moon implements CelestialBody {
 
     @Override
     public void propagateKepler(float dtDays) {
-        if (centralBody != null) {
-            // 1) calcule semi-eixo e n (como antes)
-            float a  = 0.5f * (perihelionAU + aphelionAU);
-            float mu = G_DAY * centralBody.getMassSolar();
-            float n  = PApplet.sqrt(mu/(a*a*a));
+        if (centralBody == null) return;
 
-            // 2) avance a anomalia média
-            currentMeanAnomalyRad += n * dtDays;
-            // opcional: force 0 <= currentMeanAnomalyRad < TWO_PI
-            currentMeanAnomalyRad %= PApplet.TWO_PI;
+        // 1) parâmetros da órbita
+        float a   = 0.5f * (perihelionAU + aphelionAU);
+        float mu  = G_DAY * centralBody.getMassSolar();
+        float n   = PApplet.sqrt(mu / (a * a * a));
 
-            // 3) chame o solver com essa nova anomalia
-            keplerSolve(
-                centralBody.getPositionAU(),
-                positionAU,
-                velocityAU,
-                perihelionAU,
-                aphelionAU,
-                eccentricity,
-                orbitInclinationRad,
-                longitudeAscendingNodeRad,
-                argumentOfPeriapsisRad,
-                currentMeanAnomalyRad,
-                0f,                        // já contei todo dt em currentMeanAnomalyRad
-                centralBody.getMassSolar()
-            );
-        }
+        // 2) atualiza a anomalia média
+        currentMeanAnomalyRad = (currentMeanAnomalyRad + n * dtDays) % PApplet.TWO_PI;
+
+        // 3) resolve via initialState (que já usa μ = G_DAY * massFocus)
+        PVector rOrb = new PVector(), vOrb = new PVector();
+        initialState(
+        a,
+        eccentricity,
+        currentMeanAnomalyRad,
+        centralBody.getMassSolar(),
+        rOrb,
+        vOrb
+        );
+
+        // 4) gira do plano orbital → eclíptica
+        PVector rEcl = applyOrbitalPlaneToGlobal(rOrb, longitudeAscendingNodeRad, orbitInclinationRad, argumentOfPeriapsisRad);
+        PVector vEcl = applyOrbitalPlaneToGlobal(vOrb, longitudeAscendingNodeRad, orbitInclinationRad, argumentOfPeriapsisRad);
+
+        // 5) composição absoluta: foco + componente orbital
+        PVector focusPos = centralBody.getPositionAU();
+        PVector focusVel = centralBody.getVelocityAU();
+
+        positionAU.set(PVector.add(focusPos, rEcl));
+        velocityAU.set(PVector.add(focusVel, vEcl));
     }
+
 
     // ——————————————— Desenho da órbita ———————————————
     public void displayOrbit(PGraphicsOpenGL pg, float planetRadiusPx) {
@@ -240,6 +245,10 @@ public class Moon implements CelestialBody {
 
     public int getRenderingMode() {
         return renderingMode;
+    }
+
+    public String getName() {
+        return name;
     }
 
     /**

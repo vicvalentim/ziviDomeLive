@@ -6,7 +6,7 @@ public static final float G_DAY = 2.9591220828559093e-4f;
 // —————————————————————————— Conversão de Unidades ——————————————————————————
 
 // Definição arbitrária do projeto para escala espacial visual
-final float PIXELS_PER_AU = 400.0f;   // Pixels por Unidade Astronômica (AU)
+final float PIXELS_PER_AU = 60.0f;   // Pixels por Unidade Astronômica (AU)
 final float RADIUS_AU_SUN = 0.004650f;// Raio real do Sol em AU
 
 // —————————————————————————— Parâmetros de Distância dos Planetas ——————————————————————————
@@ -34,7 +34,7 @@ final float NEPTUNE_RATIO  = 0.0354f;
 // —————————————————————————— Parâmetros Visuais e de Renderização ——————————————————————————
 
 // Fator extra para tornar o Sol visível (sem ele, o Sol real seria "pequeno demais")
-final float VISUAL_SCALE = 40.0f;
+final float VISUAL_SCALE = 1.0f;
 
 // Raio visual do Sol usado para desenhar (em pixels)
 final float SUN_VISUAL_RADIUS = PIXELS_PER_AU * RADIUS_AU_SUN * VISUAL_SCALE;

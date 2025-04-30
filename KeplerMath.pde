@@ -60,34 +60,38 @@ PVector rotateVecZ(PVector v, float θ) {
   );
 }
 
-// ———————————————————————————————————————————————————————————————————————————————
-// Calcula posição e velocidade iniciais no plano orbital XZ
-// dado (a, e, M0). Assume μ = G_DAY (Sol domina, massa = 1 M☉).
-//
-// @param a      semi-eixo maior (AU)
-// @param e      excentricidade
-// @param M0     anomalia média inicial (rad)
-// @param rOrb   saída: PVector posição no plano XZ (AU)
-// @param vOrb   saída: PVector velocidade no plano XZ (AU/dia)
-// ———————————————————————————————————————————————————————————————————————————————
-void initialState(float a, float e, float M0, PVector rOrb, PVector vOrb) {
+/**
+ * Igual ao initialState “padrão”, mas usando μ = G_DAY * massFocus,
+ * para verse-los não apenas em torno do Sol, mas de qualquer corpo.
+ *
+ * @param a          semi-eixo maior (AU)
+ * @param e          excentricidade
+ * @param M0         anomalia média inicial (rad)
+ * @param massFocus  massa do foco em M☉
+ * @param rOrb       saída: posição no plano orbital XZ (AU)
+ * @param vOrb       saída: velocidade no plano orbital XZ (AU/dia)
+ */
+void initialState(float a,
+                  float e,
+                  float M0,
+                  float massFocus,
+                  PVector rOrb,
+                  PVector vOrb) {
   // 1) resolve E
   float E    = solveKeplerEquation(M0, e);
-  float cosE = cos(E);
-  float sinE = sin(E);
+  float cosE = cos(E), sinE = sin(E);
 
-  // 2) posição no plano orbital XZ
+  // 2) posição no plano XZ
   float x = a * (cosE - e);
-  float z = a * sqrt(1 - e * e) * sinE;
+  float z = a * sqrt(1 - e*e) * sinE;
   rOrb.set(x, 0, z);
 
-  // 3) velocidade no plano orbital XZ
-  float mu        = G_DAY;
+  // 3) velocidade no plano XZ, usando μ = G_DAY * massFocus
+  float mu        = G_DAY * massFocus;
   float rMag      = a * (1 - e * cosE);
   float sqrt_mu_a = sqrt(mu * a);
-
-  float vx = -sinE * sqrt_mu_a / rMag;
-  float vz =  cosE * sqrt_mu_a * sqrt(1 - e * e) / rMag;
+  float vx = - sinE * sqrt_mu_a / rMag;
+  float vz =   cosE * sqrt_mu_a * sqrt(1 - e*e) / rMag;
   vOrb.set(vx, 0, vz);
 }
 

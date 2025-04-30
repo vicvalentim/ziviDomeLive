@@ -134,24 +134,20 @@ class Renderer {
   * Desenha todas as luas — órbitas (opcional) + shape.
   */
   public void drawMoons(PGraphicsOpenGL pg, boolean showLabels, boolean showMoonOrbits) {
+    // cada m.displayOrbit() e m.display() já usam getPositionAU() absoluto
     float scaleAUtoPx = PIXELS_PER_AU * simParams.globalScale;
+
     for (Planet p : planets) {
-      // posição do planeta em px (pivô das luas)
-      PVector pPosPx = p.getPositionAU().copy().mult(scaleAUtoPx);
-      float   prPx   = p.getRadiusPx();
+      float planetRadiusPx = p.getRadiusPx();
 
-      pg.pushMatrix();
-        pg.translate(pPosPx.x, pPosPx.y, pPosPx.z);
-
-        for (Moon m : p.getMoons()) {
-          if (showMoonOrbits) {
-            // desenha a órbita de cada lua em torno do planeta
-            m.displayOrbit(pg, prPx);
-          }
-          // desenha o próprio corpo da lua
-          m.display(pg, showLabels, renderingMode, shapeManager, shaderManager);
+      for (Moon m : p.getMoons()) {
+        if (showMoonOrbits) {
+          // displayOrbit já faz translate(centralBody.pos) internamente
+          m.displayOrbit(pg, planetRadiusPx);
         }
-      pg.popMatrix();
+        // display() já faz translate(moon.globalPos) internamente
+        m.display(pg, showLabels, renderingMode, shapeManager, shaderManager);
+      }
     }
   }
 

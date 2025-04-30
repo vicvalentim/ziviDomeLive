@@ -16,6 +16,7 @@ class ConfigLoader {
   private final HashMap<String,String> textureByName = new HashMap<>();
 
   private float sunRadiusAU = 1.0f;
+  private float sunMassSolar;
 
   // NÃO final para permitir recarregar
   private JSONObject solarCfg;       
@@ -40,6 +41,7 @@ class ConfigLoader {
     try {
       this.solarCfg    = pApplet.loadJSONObject("solar2.json");
       this.jsonSun     = requireJSONObject(solarCfg, "sun");
+      this.sunMassSolar = requireFloat     (jsonSun, "massSolar");
       this.jsonPlanets = requireJSONArray (solarCfg, "planets");
       this.jsonMoons   = requireJSONArray (solarCfg, "moons");
     } finally {
@@ -79,9 +81,11 @@ class ConfigLoader {
     lock.readLock().lock();
     try {
       try {
-        float massSolar     = requireFloat   (jsonSun, "massSolar");
-        float radiusAU      = requireFloat   (jsonSun, "radiusAU");
-        float rotPeriodDays = requireFloat   (jsonSun, "rotationPeriodDays");
+        // 1) lê do JSON
+        float massSolar     = requireFloat(jsonSun, "massSolar");
+        this.sunMassSolar   = massSolar;          // ← garantido aqui!
+        float radiusAU      = requireFloat(jsonSun, "radiusAU");
+        float rotPeriodDays = requireFloat(jsonSun, "rotationPeriodDays");
         JSONArray cn        = requireJSONArray(jsonSun, "colorNorm");
         int displayColor    = pApplet.color(
           cn.getFloat(0)*255f,
@@ -138,10 +142,18 @@ class ConfigLoader {
         float M0                  = requireFloat  (pd, "meanAnomalyRad");
         float a                   = requireFloat  (pd, "semiMajorAxisAU");
 
-        // ——— condição inicial via initialState —————————————————
+        // ——— condição inicial via initialState com massa do Sol —————————————————
         PVector rPlane = new PVector();
         PVector vPlane = new PVector();
-        initialState(a, eccentricity, M0, rPlane, vPlane);
+        // usa μ = G_DAY * sunMassSolar
+        initialState(
+          a,
+          eccentricity,
+          M0,
+          sunMassSolar,
+          rPlane,
+          vPlane
+        );
 
         // ——— aplica pipeline Ω → i → ω para referencial global (Y-up) —————————
         PVector rGlobal = applyOrbitalPlaneToGlobal(rPlane, Ω, iRad, ω);
@@ -185,7 +197,6 @@ class ConfigLoader {
     return out;
   }
 
-
   // ─────────────────────────────────────────────────────────────────
   // Carrega luas
   // ─────────────────────────────────────────────────────────────────
@@ -199,11 +210,13 @@ class ConfigLoader {
           pApplet.println("[ConfigLoader] Host not found: " + hostName);
           continue;
         }
+        pApplet.println("[ConfigLoader] Carregando lua #" + k + ": " +
+                        requireString(md, "moonName"));
 
         // ── parâmetros da Lua ─────────────────────────────────────────
-        float massSolar          = requireFloat(md, "massSolar");
-        float radiusAU           = requireFloat(md, "radiusAU");
-        float rotationPeriodDays = requireFloat(md, "rotationPeriodDays");
+        float massSolar           = requireFloat(md, "massSolar");
+        float radiusAU            = requireFloat(md, "radiusAU");
+        float rotationPeriodDays  = requireFloat(md, "rotationPeriodDays");
         float a                   = requireFloat(md, "semiMajorAxisAU");
         float perihelionAU        = requireFloat(md, "perihelionAU");
         float aphelionAU          = requireFloat(md, "aphelionAU");
@@ -212,18 +225,30 @@ class ConfigLoader {
         float ω                   = requireFloat(md, "argumentOfPeriapsisRad");
         float Ω                   = requireFloat(md, "longitudeAscendingNodeRad");
         float M0                  = requireFloat(md, "meanAnomalyRad");
-        boolean alignWithAxis     = md.hasKey("alignWithPlanetAxis") && md.getBoolean("alignWithPlanetAxis");
+        boolean alignWithAxis     = md.hasKey("alignWithPlanetAxis")
+                                  && md.getBoolean("alignWithPlanetAxis");
         String moonName           = requireString(md, "moonName");
 
-        // ── condição inicial via initialState ───────────────
+        // ── condição inicial via initialState COM massa do host ─────────
         PVector rPlane = new PVector();
         PVector vPlane = new PVector();
-        // preenche rPlane e vPlane no plano XZ
-        initialState(a, eccentricity, M0, rPlane, vPlane);
+        // initialState(a, e, M0, massFocus, outPos, outVel)
+        initialState(
+          a,
+          eccentricity,
+          M0,
+          host.getMassSolar(),  // massa do planeta-pai
+          rPlane,
+          vPlane
+        );
 
-        // ── aplica pipeline Ω→i→ω ao plano XZ → referencial global Y-up ───
+        // ── aplica rotações Ω→i→ω para referencial global (Y-up) ──────────
         PVector rGlobal = applyOrbitalPlaneToGlobal(rPlane, Ω, iRad, ω);
         PVector vGlobal = applyOrbitalPlaneToGlobal(vPlane, Ω, iRad, ω);
+
+        // ── desloca pelo host (posição + velocidade) ────────────────────
+        rGlobal.add(host.getPositionAU());
+        vGlobal.add(host.getVelocityAU());
 
         // ── cor & textura ───────────────────────────────────────────────
         JSONArray cn     = requireJSONArray(md, "colorNorm");
@@ -241,8 +266,8 @@ class ConfigLoader {
           radiusAU,
           rotationPeriodDays,
           a, perihelionAU, aphelionAU, eccentricity,
-          rGlobal,
-          vGlobal,
+          rGlobal,        // posição absoluta
+          vGlobal,        // velocidade absoluta
           moonName,
           displayColor,
           texMoon,
@@ -252,8 +277,11 @@ class ConfigLoader {
         );
 
         // ── escala visual e vincula ao planeta ────────────────────────
-        moon.setRadiusPx(radiusAU / host.getRadiusAU() * host.getRadiusPx());
+        moon.setRadiusPx(radiusAU / host.getRadiusAU()
+                        * host.getRadiusPx());
         host.addMoon(moon);
+        pApplet.println("[ConfigLoader]   -> associada a " + host.getName() + ": " + moon.getName());
+        
 
       } catch (Exception e) {
         pApplet.println("[ConfigLoader] Skip moon #" + k + ": " + e.getMessage());

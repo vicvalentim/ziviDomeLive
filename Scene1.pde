@@ -34,27 +34,86 @@ class Scene1 implements Scene {
   private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
   private SimulatedClock clock; // Novo relógio em dias
+  private boolean needsReload = false;
 
  
   // ————————————————————————————————
   // Construtor de Scene1
   // ————————————————————————————————
   Scene1(zividomelive parent, PApplet pApplet) {
-      this.parent   = parent;
-      this.pApplet  = pApplet;
+    this.parent  = parent;
+    this.pApplet = pApplet;
 
-      // 1) Inicializa managers e params...
-      simParams      = new SimParams();
-      textureManager = new TextureManager(pApplet);
-      shapeManager   = new ShapeManager(pApplet);
-      shaderManager  = new ShaderManager(pApplet);
-      loadAllShaders();
+    // 1) Inicializa managers e params...
+    simParams      = new SimParams();
+    textureManager = new TextureManager(pApplet);
+    shapeManager   = new ShapeManager(pApplet);
+    shaderManager  = new ShaderManager(pApplet);
+    loadAllShaders();
 
-      // 2) Carrega Sol, planetas e configura central bodies
-      configLoader = new ConfigLoader(pApplet, textureManager, simParams);
-      configLoader.sendTexturesToShaderManager(shaderManager);
+    // 2) Carrega Sol e planetas
+    configLoader = new ConfigLoader(pApplet, textureManager, simParams);
+    configLoader.sendTexturesToShaderManager(shaderManager);
+
+    sun     = configLoader.loadSun();
+    planets = configLoader.loadConfiguration();
+
+    // configura central bodies
+    for (Planet p : planets) {
+      p.setCentralBody(sun);
+      for (Moon m : p.getMoons()) {
+        m.setCentralBody(p);
+      }
+    }
+
+    // 3) Monta lista de corpos (Sol + planetas + luas) e PhysicsEngine
+    planetaryBodies = new ArrayList<>();
+    planetaryBodies.add(sun);
+      for (Planet p : planets) {
+        planetaryBodies.add(p);
+        // aqui é ESSENCIAL:
+        planetaryBodies.addAll(p.getMoons());
+      }
+    physicsEngine = new PhysicsEngine(planetaryBodies);
+
+
+    // 4) Agora sim: cria o renderer com a lista de planetas já carregada
+    renderer = new Renderer(
+      pApplet,
+      planets,
+      configLoader.getSkySphere(),
+      shapeManager,
+      shaderManager,
+      simParams
+    );
+    renderer.setSun(sun);
+    
+    sun.buildShape(pApplet, shapeManager);
+    for (Planet p : planets) {
+      p.buildShape(pApplet, shapeManager);
+      for (Moon m : p.getMoons()) {
+        m.buildShape(pApplet, shapeManager);
+      }
+    }
+
+    // 5) Inicializa o relógio absoluto e propaga até “hoje”…
+    clock = new SimulatedClock();
+    setClockToNowUTC();
+    propagateSinceJ2000();
+
+    // 6) Ajusta a câmera
+    configureCamera();
+  }
+
+
+  /** centraliza todo o loadSun()/loadConfiguration()/montagem de corpos + physics + renderer */
+  private void initializeScene() {
+      // 1) recarrega JSON se for reload
+      // *** só há JSON fresco se veio de setupScene() ***
       sun     = configLoader.loadSun();
       planets = configLoader.loadConfiguration();
+
+      // 2) fixa central bodies
       for (Planet p : planets) {
         p.setCentralBody(sun);
         for (Moon m : p.getMoons()) {
@@ -62,51 +121,29 @@ class Scene1 implements Scene {
         }
       }
 
-      // 3) Monta lista de corpos (Sol + planetas + luas) e PhysicsEngine
+      // 3) monta lista e physicsEngine
       planetaryBodies = new ArrayList<>();
       planetaryBodies.add(sun);
-      for (Planet p : planets) {
-        planetaryBodies.add(p);
-        for (Moon m : p.getMoons()) {
-          planetaryBodies.add(m);
+        for (Planet p : planets) {
+          planetaryBodies.add(p);
+          // aqui é ESSENCIAL:
+          planetaryBodies.addAll(p.getMoons());
         }
-      }
       physicsEngine = new PhysicsEngine(planetaryBodies);
 
-      // 4) Renderer
-      renderer = new Renderer(pApplet, planets, configLoader.getSkySphere(),
-                              shapeManager, shaderManager, simParams);
+      // 4) passa ao renderer
       renderer.setSun(sun);
+      renderer.setPlanets(planets);
 
-      // 5) Relógio absoluto e inicialização para “hoje” UTC
-      clock = new SimulatedClock();
-
-      Instant now = Instant.now();
-      ZonedDateTime utc = now.atZone(ZoneOffset.UTC);
-      clock.setCalendarUTC(
-        utc.getYear(),
-        utc.getMonthValue(),
-        utc.getDayOfMonth(),
-        utc.getHour(),
-        utc.getMinute(),
-        utc.getSecond() + utc.get(ChronoField.MILLI_OF_SECOND)/1000.0
-      );
-
-      // 6) Propaga todos os corpos desde J2000 até a data/hora escolhida
-      double daysSinceJ2000 = clock.getDaysSinceJ2000();
-      if (daysSinceJ2000 > 0) {
-        float total = (float) daysSinceJ2000;
-        float maxStep = 0.5f;
-        int   steps   = (int) Math.ceil(total / maxStep);
-        float dt      = total / steps;
-        for (int i = 0; i < steps; i++) {
-          physicsEngine.update(dt);
+      // 5) rebuild shapes e escalas
+      sun.buildShape(pApplet, shapeManager);
+      for (Planet p : planets) {
+        p.buildShape(pApplet, shapeManager);
+        for (Moon m : p.getMoons()) {
+          m.buildShape(pApplet, shapeManager);
         }
-      pApplet.println("[Scene1] Data inicial UTC: " + clock.getCalendarUTCString());
       }
-
-      // 7) Ajusta a câmera
-      configureCamera();
+      applyScalingFactors();
   }
 
   private void loadAllShaders() {
@@ -138,6 +175,41 @@ class Scene1 implements Scene {
     }
   }
 
+  /**
+   * Ajusta o relógio para a data atual UTC.
+   * O relógio é ajustado para o instante atual em UTC.
+   */
+  private void setClockToNowUTC() {
+    Instant now = Instant.now();
+    ZonedDateTime utc = now.atZone(ZoneOffset.UTC);
+    clock.setCalendarUTC(
+      utc.getYear(),
+      utc.getMonthValue(),
+      utc.getDayOfMonth(),
+      utc.getHour(),
+      utc.getMinute(),
+      utc.getSecond() + utc.get(ChronoField.MILLI_OF_SECOND)/1000.0
+    );
+    pApplet.println("[Scene1] Data inicial UTC: " + clock.getCalendarUTCString());
+  }
+
+  /**
+   * Propaga os corpos celestes desde J2000 até o instante atual.
+   * Isso é feito para evitar que a simulação comece em J2000.
+   */
+  private void propagateSinceJ2000() {
+    double days = clock.getDaysSinceJ2000();
+    if (days <= 0) return;
+    float  total   = (float) days;
+    float  maxStep = 0.5f;
+    int    steps   = (int) Math.ceil(total / maxStep);
+    float  dt      = total / steps;
+    for (int i = 0; i < steps; i++) {
+      physicsEngine.update(dt);
+    }
+  }
+
+  
   private void configureCamera() {
     // distância inicial baseada em Netuno
     float dist = NEPTUNE_DIST
@@ -147,43 +219,19 @@ class Scene1 implements Scene {
     renderer.setCameraDistance(dist);
   }
 
-  /** Recarrega tudo em runtime */
+  /** Chame needsReload = true no keyEvent para disparar um reload */
   public void setupScene() {
+    if (!needsReload) return;
+    needsReload = false;
+
     rwLock.writeLock().lock();
     try {
-      sun     = configLoader.loadSun();
-      planets = configLoader.loadConfiguration();
-
-      // central bodies
-      planetaryBodies.clear();
-      planetaryBodies.add(sun);
-      for (Planet p : planets) {
-        p.setCentralBody(sun);
-        planetaryBodies.add(p);
-        for (Moon m : p.getMoons()) {
-          m.setCentralBody(p);
-          planetaryBodies.add(m);
-        }
-      }
-
-      // reinicia o engine COM luas
-      physicsEngine = new PhysicsEngine(planetaryBodies);
-
-      // renderer
-      renderer.setSun(sun);
-      renderer.setPlanets(planets);
-
-      // rebuild shapes
-      sun.buildShape(pApplet, shapeManager);
-      for (Planet p : planets) {
-        p.buildShape(pApplet, shapeManager);
-        for (Moon m : p.getMoons()) {
-          m.buildShape(pApplet, shapeManager);
-        }
-      }
-
-      // reaplica escalas (planetas + luas)
-      applyScalingFactors();
+      // 1) recarrega o JSON
+      configLoader.reloadJson();
+      // 2) faz todo o initializeScene de novo
+      initializeScene();
+      // 3) reajusta o relógio (opcional)
+      propagateSinceJ2000();
     } finally {
       rwLock.writeLock().unlock();
     }
@@ -194,31 +242,36 @@ class Scene1 implements Scene {
   // ————————————————————————————————
   @Override
   public void update() {
+    // 0) Se foi pedido reload, reinicializa tudo
+    setupScene();
+
     rwLock.writeLock().lock();
     try {
-      // Δt em dias simulados desde o último frame
+      // 1) Δt em dias simulados desde o último frame
       double totalDt = clock.update();
       if (totalDt > 0.0) {
         // subdivide em subpassos ≤ 0.5d
         double maxStep = 0.5;
-        int steps = (int)Math.ceil(totalDt / maxStep);
+        int steps = (int) Math.ceil(totalDt / maxStep);
         double dt = totalDt / steps;
         for (int i = 0; i < steps; i++) {
-          physicsEngine.update((float)dt);
+          physicsEngine.update((float) dt);
         }
         // rotação axial visual
-        sun.update((float)totalDt);
+        sun.update((float) totalDt);
         for (Planet p : planets) {
-          p.update((float)totalDt);
+          p.update((float) totalDt);
         }
       }
+
+      // 2) câmera
       updateCameraTarget();
       trackSelectedPlanet();
+
     } finally {
       rwLock.writeLock().unlock();
     }
   }
-
 
   /**
    * Atualiza o alvo da câmera com base no planeta selecionado.
@@ -312,13 +365,20 @@ class Scene1 implements Scene {
   private void applyScalingFactors() {
     rwLock.writeLock().lock();
     try {
+      // Sol
       if (sun != null) sun.applyScalingFactors(simParams);
-      if (planets != null) {
-        for (Planet p : planets) {
-          p.applyScalingFactors(simParams);
-          for (Moon m : p.getMoons()) {
-            m.applyScalingFactors(simParams);
-          }
+
+      // Planetas e luas
+      for (Planet p : planets) {
+        p.applyScalingFactors(simParams);
+        // reconstrói o PShape do planeta (opcional, só se quiser limpar cache)
+        p.buildShape(pApplet, shapeManager);
+
+        for (Moon m : p.getMoons()) {
+          // isso recalcula m.radiusPx = parent.radiusPx * (m.radiusAU/parent.radiusAU)
+          m.applyScalingFactors(simParams);
+          // e limpa o cache da forma para usar o novo size
+          m.buildShape(pApplet, shapeManager);
         }
       }
     } finally {
@@ -336,6 +396,7 @@ class Scene1 implements Scene {
       case 'a': simParams.planetAmplification *= 1.1f; applyScalingFactors(); break;
       case 'z': simParams.planetAmplification /= 1.1f; applyScalingFactors(); break;
       case 'r': simParams.globalScale = 1; simParams.planetAmplification = 1; applyScalingFactors(); pApplet.println("[Scene1] Escalas resetadas."); break;
+      case 'R': needsReload = true; pApplet.println("[Scene1] Reset Geral"); break;
       case 'w': changeRenderingMode(0); break;
       case 's': changeRenderingMode(1); break;
       case 't': changeRenderingMode(2); break;
