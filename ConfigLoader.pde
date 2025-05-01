@@ -94,11 +94,12 @@ class ConfigLoader {
         );
 
         this.sunRadiusAU = radiusAU;
-        float radiusPx   = SUN_VISUAL_RADIUS * simParams.globalScale;
+        float radiusPx   = sunRadiusPx(simParams);
         PImage tex       = lookupTexture("sun");
 
         return new Sun(
           pApplet,
+          simParams,
           radiusPx,
           massSolar,
           radiusAU,

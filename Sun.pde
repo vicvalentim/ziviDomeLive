@@ -6,6 +6,7 @@ import processing.opengl.*;
 
 public class Sun implements CelestialBody {
     private final PApplet pApplet;
+    private final SimParams simParams;
 
     // ——————————————— Display ———————————————
     private float radiusPx;
@@ -27,6 +28,7 @@ public class Sun implements CelestialBody {
 
     // ——————————————— Construtor ———————————————
     public Sun(PApplet pApplet,
+               SimParams simParams,
                float radiusPx,
                float massSolar,
                float radiusAU,
@@ -35,8 +37,9 @@ public class Sun implements CelestialBody {
                color displayColor,
                PImage texture) {
         this.pApplet = pApplet;
+        this.simParams = simParams;
         this.radiusPx = radiusPx;
-        this.baseRatio = radiusPx / SUN_VISUAL_RADIUS;
+        this.baseRatio = radiusPx / sunRadiusPx(simParams);
         this.massSolar = massSolar;
         this.radiusAU = radiusAU;
         this.rotationPeriodDays = rotationPeriodDays;
@@ -48,7 +51,7 @@ public class Sun implements CelestialBody {
 
     // ——————————————— Escala visual ———————————————
     public void applyScalingFactors(SimParams simParams) {
-        this.radiusPx = SUN_VISUAL_RADIUS * baseRatio * simParams.globalScale;
+        this.radiusPx = sunRadiusPx(simParams) * baseRatio;
     }
 
     // ——————————————— Atualização ———————————————

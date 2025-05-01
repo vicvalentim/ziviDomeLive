@@ -117,9 +117,8 @@ public class Planet implements CelestialBody {
 
     // ——————————————— Escala visual ———————————————
     public void applyScalingFactors(SimParams simParams) {
-        this.radiusPx = SUN_VISUAL_RADIUS
+        this.radiusPx = sunRadiusPx(simParams)
                       * baseRatio
-                      * simParams.globalScale
                       * simParams.planetAmplification;
         this.cachedRingMode = -1;
     }
@@ -196,7 +195,7 @@ public class Planet implements CelestialBody {
                         ShapeManager shapeManager,
                         ShaderManager shaderManager) {
 
-        float scale = PIXELS_PER_AU * simParams.globalScale;
+        float scale = pxPerAU(simParams);
         PVector posPx = positionAU.copy().mult(scale);
 
         pg.pushMatrix();

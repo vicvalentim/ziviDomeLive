@@ -59,7 +59,7 @@ class Renderer {
     pg.ambientLight(35, 35, 35);
     if (sun != null) {
       PVector sunPx = sun.getPositionAU().copy()
-                         .mult(PIXELS_PER_AU * simParams.globalScale);
+                         .mult(pxPerAU(simParams));
       pg.pointLight(255, 255, 220,
                     sunPx.x, sunPx.y, sunPx.z);
     }
@@ -75,7 +75,7 @@ class Renderer {
     pg.noFill();
     pg.stroke(200, 200, 255, 150);
     pg.strokeWeight(1);
-    float scale = PIXELS_PER_AU * simParams.globalScale;
+    float scale = pxPerAU(simParams);
     int segments = 180;
 
     // offset para o foco (Sol)
@@ -132,23 +132,29 @@ class Renderer {
 
   /**
   * Desenha todas as luas — órbitas (opcional) + shape.
+  * Agora usa o próprio SimParams para que a órbita
+  * infle/encolha junto com `globalScale` e `bodyScale`.
   */
-  public void drawMoons(PGraphicsOpenGL pg, boolean showLabels, boolean showMoonOrbits) {
-    // cada m.displayOrbit() e m.display() já usam getPositionAU() absoluto
-    float scaleAUtoPx = PIXELS_PER_AU * simParams.globalScale;
+  public void drawMoons(PGraphicsOpenGL pg,
+                        boolean showLabels,
+                        boolean showMoonOrbits) {
 
-    for (Planet p : planets) {
-      float planetRadiusPx = p.getRadiusPx();
+      for (Planet p : planets) {
+          for (Moon m : p.getMoons()) {
 
-      for (Moon m : p.getMoons()) {
-        if (showMoonOrbits) {
-          // displayOrbit já faz translate(centralBody.pos) internamente
-          m.displayOrbit(pg, planetRadiusPx);
-        }
-        // display() já faz translate(moon.globalPos) internamente
-        m.display(pg, showLabels, renderingMode, shapeManager, shaderManager);
+              if (showMoonOrbits) {
+                  // assinatura nova: (pg, simParams)
+                  m.displayOrbit(pg, simParams);
+              }
+
+              // o resto continua igual
+              m.display(pg,
+                        showLabels,
+                        renderingMode,
+                        shapeManager,
+                        shaderManager);
+          }
       }
-    }
   }
 
   /**
@@ -166,7 +172,7 @@ class Renderer {
     pg.pushMatrix();
       if (sun != null) {
         PVector sunPx = sun.getPositionAU().copy()
-                           .mult(PIXELS_PER_AU * simParams.globalScale);
+                           .mult(pxPerAU(simParams));
         pg.translate(sunPx.x, sunPx.y, sunPx.z);
         pg.rotateY(cameraRotationY * 0.5f);
       }
@@ -191,7 +197,7 @@ class Renderer {
         pg.fill(255);
       }
 
-      float skyScale = -NEPTUNE_DIST * PIXELS_PER_AU * 2f * simParams.globalScale;
+      float skyScale = -NEPTUNE_DIST * pxPerAU(simParams) * 2f;
       pg.scale(skyScale);
       pg.shape(skySphere);
       pg.resetShader();

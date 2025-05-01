@@ -155,76 +155,106 @@ public class Moon implements CelestialBody {
         velocityAU.set(PVector.add(focusVel, vEcl));
     }
 
-
     // ——————————————— Desenho da órbita ———————————————
-    public void displayOrbit(PGraphicsOpenGL pg, float planetRadiusPx) {
-        float scale = PIXELS_PER_AU * simParams.globalScale;
-        float a = (perihelionAU + aphelionAU) * 0.5f;
-        float b = a * PApplet.sqrt(1 - eccentricity * eccentricity);
-        float f = a * eccentricity;
+    /** Desenha a órbita da lua em torno do planeta-pai. */
+    public void displayOrbit(PGraphicsOpenGL pg, SimParams s) {
+        float baseScale  = pxPerAU(s);                   // PIXELS_PER_AU * globalScale
+        float orbitScale = baseScale * s.bodyScale;      // agora unificado a bodyScale
+        int   seg        = 180;
 
-        float aPx = a * scale;
-        float bPx = b * scale;
-        float fPx = f * scale;
+        float a = 0.5f * (perihelionAU + aphelionAU);
+        float b = a * PApplet.sqrt(1 - eccentricity * eccentricity);
+        float e = eccentricity;
+
+        // foco fixo em pixels (usa só baseScale)
+        PVector focusPx = PVector.mult(centralBody.getPositionAU(), baseScale);
 
         pg.pushMatrix();
-            PVector pPx = PVector.mult(centralBody.getPositionAU(), scale);
-            pg.translate(pPx.x, pPx.y, pPx.z);
-            pg.rotateX(PConstants.PI / 2);
-            pg.rotateZ(argumentOfPeriapsisRad);
-            pg.rotateX(orbitInclinationRad);
-            pg.translate(-fPx, 0, 0);
-            pg.noFill();
-            pg.stroke(150, 150, 255, 150);
-            pg.strokeWeight(1);
-            pg.ellipse(0, 0, 2 * aPx, 2 * bPx);
+        pg.noFill();
+        pg.stroke(150, 150, 255, 150);
+        pg.strokeWeight(1);
+        pg.beginShape();
+        for (int j = 0; j <= seg; j++) {
+            float θ   = PApplet.TWO_PI * j / seg;
+            float xp  = (a * (PApplet.cos(θ) - e)) * orbitScale;
+            float zp  = (b * PApplet.sin(θ))       * orbitScale;
+            PVector v = new PVector(xp, 0, zp);
+
+            PVector v3d = applyOrbitalPlaneToGlobal(
+                                v,
+                                longitudeAscendingNodeRad,
+                                orbitInclinationRad,
+                                argumentOfPeriapsisRad);
+
+            v3d.add(focusPx);
+            pg.vertex(v3d.x, v3d.y, v3d.z);
+        }
+        pg.endShape(PConstants.CLOSE);
         pg.popMatrix();
     }
 
-    // ——————————————— Atualização de rotação ———————————————
-    /** Atualiza a rotação visual da lua */
-    public void update(float dtDays) {
-        // aqui você pode controlar um fator de amplificação se quiser
-        rotationAngle += rotationSpeed * dtDays;
-    }
     // ——————————————— Desenho do corpo ———————————————
+    /** Desenha a lua em si, com órbitas e corpos ampliados pelo mesmo bodyScale
+    *  e mantendo o raio proporcional ao do planeta-pai. */
     public void display(PGraphicsOpenGL pg,
                         boolean showLabel,
                         int renderingMode,
                         ShapeManager shapeManager,
                         ShaderManager shaderManager) {
 
-        float scale = PIXELS_PER_AU * simParams.globalScale;
-        PVector posPx = positionAU.copy().mult(scale);
+        // 1) recalcule radiusPx relativo ao pai
+        applyScalingFactors(simParams);
+        // agora this.radiusPx == parent.getRadiusPx() * (this.radiusAU / parent.getRadiusAU())
+
+        // 2) escalas físicas
+        float baseScale  = pxPerAU(simParams);            // UA → px
+        float orbitScale = baseScale * simParams.bodyScale; // amplificação unificada
+
+        // 3) foco fixo em px (planeta-pai)
+        PVector focusPx = centralBody.getPositionAU().copy().mult(baseScale);
+
+        // 4) deslocamento da lua em UA → px já ampliado
+        PVector relAU  = PVector.sub(positionAU, centralBody.getPositionAU());
+        PVector offset = relAU.mult(orbitScale);
+
+        // 5) posição final
+        PVector posPx  = PVector.add(focusPx, offset);
 
         pg.pushMatrix();
-            pg.translate(posPx.x, posPx.y, posPx.z);
-            pg.rotateZ(alignWithAxis ? 0 : argumentOfPeriapsisRad);
-            pg.scale(radiusPx);
+        pg.translate(posPx.x, posPx.y, posPx.z);
+        pg.rotateZ(alignWithAxis ? 0 : argumentOfPeriapsisRad);
 
-            if (renderingMode == 0) {
-                pg.noFill(); pg.stroke(WIREFRAME_COLOR); pg.strokeWeight(WIREFRAME_STROKE_WEIGHT);
-            } else if (renderingMode == 1) {
-                pg.noStroke(); pg.fill(col);
+        // 6) usa o radiusPx já calculado
+        pg.scale(radiusPx);
+
+        // 7) modos de render
+        if (renderingMode == 0) {
+            pg.noFill();
+            pg.stroke(WIREFRAME_COLOR);
+            pg.strokeWeight(WIREFRAME_STROKE_WEIGHT);
+        } else if (renderingMode == 1) {
+            pg.noStroke();
+            pg.fill(col);
+        } else {
+            pg.noStroke();
+            if (texture != null && shaderManager.getShader("planet") != null) {
+                pg.shader(shaderManager.getShader("planet"));
             } else {
-                pg.noStroke();
-                if (texture != null && shaderManager.getShader("planet") != null) {
-                    pg.shader(shaderManager.getShader("planet"));
-                } else {
-                    pg.fill(col);
-                }
+                pg.fill(col);
             }
+        }
 
-            pg.shape(getCachedShape(shapeManager));
-            pg.resetShader();
+        pg.shape(getCachedShape(shapeManager));
+        pg.resetShader();
         pg.popMatrix();
 
         if (showLabel) {
-            pg.fill(255);
-            pg.textAlign(PConstants.CENTER, PConstants.BOTTOM);
-            pg.text(name, posPx.x, posPx.y - (radiusPx + 5), posPx.z);
+        pg.fill(255);
+        pg.textAlign(PConstants.CENTER, PConstants.BOTTOM);
+        pg.text(name, posPx.x, posPx.y - (radiusPx + 5), posPx.z);
         }
     }
+
 
     private PShape getCachedShape(ShapeManager shapeManager) {
         if (cachedShape == null || cachedRenderingMode != renderingMode) {

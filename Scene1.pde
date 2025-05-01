@@ -278,7 +278,7 @@ class Scene1 implements Scene {
    * Se nenhum planeta estiver selecionado, a câmera foca no Sol.
    */
   private void updateCameraTarget() {
-    float scale = PIXELS_PER_AU * simParams.globalScale;
+    float scale = pxPerAU(simParams);
     if (selectedPlanet == 0) {
       // mira no Sol
       PVector sunPx = sun.getPositionAU().copy().mult(scale);
@@ -293,7 +293,7 @@ class Scene1 implements Scene {
   }
 
   private void trackSelectedPlanet() {
-    float scale = PIXELS_PER_AU * simParams.globalScale;
+    float scale = pxPerAU(simParams);
     if (selectedPlanet == 0) {
       PVector sunPx = sun.getPositionAU().copy().mult(scale);
       renderer.goTo(sunPx,
@@ -322,7 +322,7 @@ class Scene1 implements Scene {
 
         // 1) Sol
         PVector sunPx = sun.getPositionAU().copy()
-                          .mult(PIXELS_PER_AU * simParams.globalScale);
+                          .mult(pxPerAU(simParams));
         pg.pushMatrix();
           pg.translate(sunPx.x, sunPx.y, sunPx.z);
           sun.display(pg, showLabels, shaderManager);
@@ -393,9 +393,11 @@ class Scene1 implements Scene {
       case ' ': resetView(); break;
       case 'G': simParams.globalScale *= 1.1f; simParams.planetAmplification = 1; applyScalingFactors(); break;
       case 'g': simParams.globalScale /= 1.1f; simParams.planetAmplification = 1; applyScalingFactors(); break;
-      case 'a': simParams.planetAmplification *= 1.1f; applyScalingFactors(); break;
-      case 'z': simParams.planetAmplification /= 1.1f; applyScalingFactors(); break;
-      case 'r': simParams.globalScale = 1; simParams.planetAmplification = 1; applyScalingFactors(); pApplet.println("[Scene1] Escalas resetadas."); break;
+      case 'A': simParams.planetAmplification *= 1.1f; applyScalingFactors(); break;
+      case 'a': simParams.planetAmplification /= 1.1f; applyScalingFactors(); break;
+      case 'B': simParams.bodyScale   *= 1.1f;   applyScalingFactors(); break;
+      case 'b': simParams.bodyScale   /= 1.1f;   applyScalingFactors(); break;
+      case 'r': simParams.globalScale = 1.0f; simParams.planetAmplification = 1.0f; simParams.bodyScale = 1.0f; applyScalingFactors(); pApplet.println("[Scene1] Escalas resetadas."); break;
       case 'R': needsReload = true; pApplet.println("[Scene1] Reset Geral"); break;
       case 'w': changeRenderingMode(0); break;
       case 's': changeRenderingMode(1); break;
