@@ -13,16 +13,24 @@ final float NEPTUNE_DIST = 30.07f;
 // —————————————————————————— Estilo Wireframe ——————————————————————————
 
 final int WIREFRAME_COLOR = 0xFFFFFFFF;        // Branco
-final float WIREFRAME_STROKE_WEIGHT = 0.5f;    // Espessura da linha no wireframe
+final float WIREFRAME_STROKE_WEIGHT = 0.2f;    // Espessura da linha no wireframe
+
+
+// —————————————————————————— Parâmetros dinâmicos para a simulação ——————————————————————————
+
+// não são constantes, portanto não usamos static
+public float globalScale = 5.0f; // “tabuleiro”
+public float bodyScale   = 20.0f; // “peças”
+public float planetAmplification = 1.0f; // ajuste fino para planetas
 
 // —————————————————————————— Funções Globais de Distâncias e Tamanhos ——————————————————————————
 
 // ---------- distâncias ----------
-public float pxPerAU(SimParams s){
-    return PIXELS_PER_AU * s.globalScale; 
+public float pxPerAU(){
+    return PIXELS_PER_AU * globalScale; 
 }
 
 // ---------- tamanhos ----------
-public float sunRadiusPx(SimParams s){
-    return RADIUS_AU_SUN * pxPerAU(s) * s.bodyScale;
+public float sunRadiusPx(){
+    return RADIUS_AU_SUN * pxPerAU() * bodyScale;
 }

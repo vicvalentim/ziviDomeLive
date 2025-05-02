@@ -9,12 +9,6 @@ class Renderer {
 
   private final ShapeManager shapeManager;
   private final ShaderManager shaderManager;
-  private final SimParams simParams;
-
-  private float cameraRotationX = PI/16;
-  private float cameraRotationY = 0;
-  private float cameraDistance  = 20;
-  private final PVector cameraTarget = new PVector(0, 0, 0);
 
   private int renderingMode = 2;
 
@@ -22,14 +16,12 @@ class Renderer {
                   List<Planet> planets,
                   PShape skySphere,
                   ShapeManager shapeManager,
-                  ShaderManager shaderManager,
-                  SimParams simParams) {
+                  ShaderManager shaderManager) {
     this.pApplet       = pApplet;
     this.planets       = planets;
     this.skySphere     = skySphere;
     this.shapeManager  = shapeManager;
     this.shaderManager = shaderManager;
-    this.simParams     = simParams;
   }
 
   public void setSun(Sun sun) {
@@ -48,24 +40,15 @@ class Renderer {
     return renderingMode;
   }
 
-  public void setupCamera(PGraphicsOpenGL pg) {
-    pg.translate(0, 0, cameraDistance);
-    pg.rotateX(cameraRotationX);
-    pg.rotateY(cameraRotationY);
-    pg.translate(-cameraTarget.x, -cameraTarget.y, -cameraTarget.z);
-  }
-
   public void drawLighting(PGraphicsOpenGL pg) {
     pg.ambientLight(35, 35, 35);
     if (sun != null) {
       PVector sunPx = sun.getPositionAU().copy()
-                         .mult(pxPerAU(simParams));
+                         .mult(pxPerAU());
       pg.pointLight(255, 255, 220,
                     sunPx.x, sunPx.y, sunPx.z);
     }
   }
-
-
 
   /**
   * Desenha apenas as órbitas dos planetas no plano da eclíptica (XZ / Y-up),
@@ -75,7 +58,7 @@ class Renderer {
     pg.noFill();
     pg.stroke(200, 200, 255, 150);
     pg.strokeWeight(1);
-    float scale = pxPerAU(simParams);
+    float scale = pxPerAU();
     int segments = 180;
 
     // offset para o foco (Sol)
@@ -143,8 +126,7 @@ class Renderer {
           for (Moon m : p.getMoons()) {
 
               if (showMoonOrbits) {
-                  // assinatura nova: (pg, simParams)
-                  m.displayOrbit(pg, simParams);
+                  m.displayOrbit(pg);
               }
 
               // o resto continua igual
@@ -172,9 +154,9 @@ class Renderer {
     pg.pushMatrix();
       if (sun != null) {
         PVector sunPx = sun.getPositionAU().copy()
-                           .mult(pxPerAU(simParams));
+                           .mult(pxPerAU());
         pg.translate(sunPx.x, sunPx.y, sunPx.z);
-        pg.rotateY(cameraRotationY * 0.5f);
+        //pg.rotateY(cameraRotationY * 0.5f);
       }
 
       PGL pgl = pg.beginPGL();
@@ -197,7 +179,7 @@ class Renderer {
         pg.fill(255);
       }
 
-      float skyScale = -NEPTUNE_DIST * pxPerAU(simParams) * 2f;
+      float skyScale = -NEPTUNE_DIST * pxPerAU() * 2f;
       pg.scale(skyScale);
       pg.shape(skySphere);
       pg.resetShader();
@@ -206,46 +188,6 @@ class Renderer {
       pgl.enable(PGL.CULL_FACE);
       pg.endPGL();
     pg.popMatrix();
-  }
-
-  public void updateCameraTarget(PVector newTarget) {
-    cameraTarget.lerp(newTarget, 0.01f);
-  }
-
-  public void setCameraRotation(float rotX, float rotY) {
-    cameraRotationX = rotX;
-    cameraRotationY = rotY;
-  }
-
-  public float getCameraRotationX() {
-    return cameraRotationX;
-  }
-
-  public float getCameraRotationY() {
-    return cameraRotationY;
-  }
-
-  public void setCameraDistance(float distance) {
-    cameraDistance = distance;
-  }
-
-  public float getCameraDistance() {
-    return cameraDistance;
-  }
-
-  public void goTo(PVector newTarget,
-                   float newRotX,
-                   float newRotY,
-                   float newDistance) {
-    float smooth = 0.05f;
-    cameraTarget.lerp(newTarget, smooth);
-    cameraRotationX = lerp(cameraRotationX, newRotX, smooth);
-    cameraRotationY = lerp(cameraRotationY, newRotY, smooth);
-    cameraDistance  = lerp(cameraDistance, newDistance, smooth);
-  }
-
-  private float lerp(float start, float stop, float amt) {
-    return start + (stop - start) * amt;
   }
 
   public void dispose() {

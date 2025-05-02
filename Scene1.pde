@@ -17,14 +17,20 @@ class Scene1 implements Scene {
   private Sun sun;
   private List<CelestialBody> planetaryBodies;
 
-  private SimParams simParams;
+  // ————————————————————————————————
+  // Managers
+  // ————————————————————————————————
   private TextureManager textureManager;
   private ShaderManager shaderManager;
   private ShapeManager shapeManager;
   private ConfigLoader configLoader;
   private PhysicsEngine physicsEngine;
   private Renderer renderer;
+  private CameraController cameraController;
 
+  // ————————————————————————————————
+  // Parâmetros de visualização
+  // ————————————————————————————————
   private boolean showOrbits     = true;
   private boolean showMoonOrbits = true;
   private boolean showLabels     = false;
@@ -45,14 +51,13 @@ class Scene1 implements Scene {
     this.pApplet = pApplet;
 
     // 1) Inicializa managers e params...
-    simParams      = new SimParams();
     textureManager = new TextureManager(pApplet);
     shapeManager   = new ShapeManager(pApplet);
     shaderManager  = new ShaderManager(pApplet);
     loadAllShaders();
 
     // 2) Carrega Sol e planetas
-    configLoader = new ConfigLoader(pApplet, textureManager, simParams);
+    configLoader = new ConfigLoader(pApplet, textureManager);
     configLoader.sendTexturesToShaderManager(shaderManager);
 
     sun     = configLoader.loadSun();
@@ -83,8 +88,7 @@ class Scene1 implements Scene {
       planets,
       configLoader.getSkySphere(),
       shapeManager,
-      shaderManager,
-      simParams
+      shaderManager
     );
     renderer.setSun(sun);
     
@@ -101,8 +105,19 @@ class Scene1 implements Scene {
     setClockToNowUTC();
     propagateSinceJ2000();
 
-    // 6) Ajusta a câmera
-    configureCamera();
+    // 6) Inicializa o controlador de câmera
+    // *** distância inicial é 1.2x a distância de Netuno ***
+
+    // distância inicial
+    float initDist = NEPTUNE_DIST * pxPerAU() * 1.2f;
+
+    // instanciamos o controlador de câmera
+    cameraController = new CameraController(
+      new PVector(0, 0, 0),  // alvo inicial no (0,0,0)
+      initDist               // distância inicial
+    );
+
+    resetView();
   }
 
 
@@ -209,17 +224,6 @@ class Scene1 implements Scene {
     }
   }
 
-  
-  private void configureCamera() {
-    // distância inicial baseada em Netuno
-    float dist = NEPTUNE_DIST
-               * PIXELS_PER_AU
-               * simParams.globalScale
-               * 1.2f;
-    renderer.setCameraDistance(dist);
-  }
-
-  /** Chame needsReload = true no keyEvent para disparar um reload */
   public void setupScene() {
     if (!needsReload) return;
     needsReload = false;
@@ -250,66 +254,55 @@ class Scene1 implements Scene {
       // 1) Δt em dias simulados desde o último frame
       double totalDt = clock.update();
       if (totalDt > 0.0) {
-        // subdivide em subpassos ≤ 0.5d
+        // subdivide em subpassos ≤ 0.5 dias
         double maxStep = 0.5;
         int steps = (int) Math.ceil(totalDt / maxStep);
         double dt = totalDt / steps;
         for (int i = 0; i < steps; i++) {
           physicsEngine.update((float) dt);
         }
-        // rotação axial visual
+        // rotação axial visual de Sol, planetas e luas
         sun.update((float) totalDt);
         for (Planet p : planets) {
           p.update((float) totalDt);
+          for (Moon m : p.getMoons()) {
+            m.update((float) totalDt);
+          }
         }
       }
 
-      // 2) câmera
-      updateCameraTarget();
-      trackSelectedPlanet();
+      // 2) Câmera: escolhe o novo alvo em px
+      float scale = pxPerAU();
+      PVector newTarget;
+      if (selectedPlanet == 0) {
+        newTarget = sun.getPositionAU().copy().mult(scale);
+      } else if (selectedPlanet > 0 && selectedPlanet <= planets.size()) {
+        newTarget = planets
+          .get(selectedPlanet - 1)
+          .getPositionAU()
+          .copy()
+          .mult(scale);
+      } else {
+        newTarget = new PVector(0, 0, 0);
+      }
+
+      // 3) Atualiza meta e interpola suavemente
+      cameraController.goTo(
+        newTarget,
+        cameraController.getOrientation(),
+        cameraController.getDistance()
+      );
+      cameraController.update();
 
     } finally {
       rwLock.writeLock().unlock();
     }
   }
 
-  /**
-   * Atualiza o alvo da câmera com base no planeta selecionado.
-   * Se nenhum planeta estiver selecionado, a câmera foca no Sol.
-   */
-  private void updateCameraTarget() {
-    float scale = pxPerAU(simParams);
-    if (selectedPlanet == 0) {
-      // mira no Sol
-      PVector sunPx = sun.getPositionAU().copy().mult(scale);
-      renderer.updateCameraTarget(sunPx);
-    } else if (selectedPlanet > 0 && selectedPlanet <= planets.size()) {
-      Planet p = planets.get(selectedPlanet - 1);
-      PVector tgtPx = p.getPositionAU().copy().mult(scale);
-      renderer.updateCameraTarget(tgtPx);
-    } else {
-      renderer.updateCameraTarget(new PVector(0, 0, 0));
-    }
-  }
 
-  private void trackSelectedPlanet() {
-    float scale = pxPerAU(simParams);
-    if (selectedPlanet == 0) {
-      PVector sunPx = sun.getPositionAU().copy().mult(scale);
-      renderer.goTo(sunPx,
-                    renderer.getCameraRotationX(),
-                    renderer.getCameraRotationY(),
-                    renderer.getCameraDistance());
-    } else if (selectedPlanet > 0 && selectedPlanet <= planets.size()) {
-      Planet p = planets.get(selectedPlanet - 1);
-      PVector tgtPx = p.getPositionAU().copy().mult(scale);
-      renderer.goTo(tgtPx,
-                    renderer.getCameraRotationX(),
-                    renderer.getCameraRotationY(),
-                    renderer.getCameraDistance());
-    }
-  }
-
+  // ————————————————————————————————
+  // render() — renderiza o frame atual
+  // ————————————————————————————————
   public void sceneRender(PGraphicsOpenGL pg) {
     rwLock.readLock().lock();
     try {
@@ -318,11 +311,11 @@ class Scene1 implements Scene {
       pg.textSize(12);
       pg.text(clock.getCalendarUTCString(), 10, 20);
       pg.pushMatrix();
-        renderer.setupCamera(pg);
+      cameraController.apply(pg);
 
         // 1) Sol
         PVector sunPx = sun.getPositionAU().copy()
-                          .mult(pxPerAU(simParams));
+                          .mult(pxPerAU());
         pg.pushMatrix();
           pg.translate(sunPx.x, sunPx.y, sunPx.z);
           sun.display(pg, showLabels, shaderManager);
@@ -348,6 +341,9 @@ class Scene1 implements Scene {
     }
   }
   
+  // ————————————————————————————————
+  // Funções auxiliares
+  // ————————————————————————————————
   private void changeRenderingMode(int mode) {
     renderer.setRenderingMode(mode);
     sun.setRenderingMode(mode);
@@ -362,21 +358,25 @@ class Scene1 implements Scene {
     }
   }
 
+  /**
+   * Converte a distância em AU para pixels na tela.
+   * @return Fator de conversão de AU para pixels
+   */
   private void applyScalingFactors() {
     rwLock.writeLock().lock();
     try {
       // Sol
-      if (sun != null) sun.applyScalingFactors(simParams);
+      if (sun != null) sun.applyScalingFactors();
 
       // Planetas e luas
       for (Planet p : planets) {
-        p.applyScalingFactors(simParams);
+        p.applyScalingFactors();
         // reconstrói o PShape do planeta (opcional, só se quiser limpar cache)
         p.buildShape(pApplet, shapeManager);
 
         for (Moon m : p.getMoons()) {
           // isso recalcula m.radiusPx = parent.radiusPx * (m.radiusAU/parent.radiusAU)
-          m.applyScalingFactors(simParams);
+          m.applyScalingFactors();
           // e limpa o cache da forma para usar o novo size
           m.buildShape(pApplet, shapeManager);
         }
@@ -385,19 +385,23 @@ class Scene1 implements Scene {
       rwLock.writeLock().unlock();
     }
   }
-
+  
+  /**
+   * Função de callback para eventos de teclado.
+   * @param event Evento de teclado
+   */ 
   public void keyEvent(processing.event.KeyEvent event) {
     if (event.getAction() != processing.event.KeyEvent.PRESS) return;
     char key = event.getKey();
     switch (key) {
       case ' ': resetView(); break;
-      case 'G': simParams.globalScale *= 1.1f; simParams.planetAmplification = 1; applyScalingFactors(); break;
-      case 'g': simParams.globalScale /= 1.1f; simParams.planetAmplification = 1; applyScalingFactors(); break;
-      case 'A': simParams.planetAmplification *= 1.1f; applyScalingFactors(); break;
-      case 'a': simParams.planetAmplification /= 1.1f; applyScalingFactors(); break;
-      case 'B': simParams.bodyScale   *= 1.1f;   applyScalingFactors(); break;
-      case 'b': simParams.bodyScale   /= 1.1f;   applyScalingFactors(); break;
-      case 'r': simParams.globalScale = 1.0f; simParams.planetAmplification = 1.0f; simParams.bodyScale = 1.0f; applyScalingFactors(); pApplet.println("[Scene1] Escalas resetadas."); break;
+      case 'G': globalScale *= 1.1f; planetAmplification = 1; applyScalingFactors(); break;
+      case 'g': globalScale /= 1.1f; planetAmplification = 1; applyScalingFactors(); break;
+      case 'A': planetAmplification *= 1.1f; applyScalingFactors(); break;
+      case 'a': planetAmplification /= 1.1f; applyScalingFactors(); break;
+      case 'B': bodyScale   *= 1.1f;   applyScalingFactors(); break;
+      case 'b': bodyScale   /= 1.1f;   applyScalingFactors(); break;
+      case 'r': globalScale = 1.0f; planetAmplification = 1.0f; bodyScale = 1.0f; applyScalingFactors(); pApplet.println("[Scene1] Escalas resetadas."); break;
       case 'R': needsReload = true; pApplet.println("[Scene1] Reset Geral"); break;
       case 'w': changeRenderingMode(0); break;
       case 's': changeRenderingMode(1); break;
@@ -462,38 +466,64 @@ class Scene1 implements Scene {
     }
   }
 
+  /**
+   * Função de callback para eventos do mouse.
+   * @param event Evento do mouse
+   */
   public void mouseEvent(processing.event.MouseEvent event) {
     switch (event.getAction()) {
       case MouseEvent.PRESS:
         prevMouseX = event.getX();
         prevMouseY = event.getY();
         break;
+
       case MouseEvent.DRAG:
-        float dx = (event.getX()-prevMouseX)*0.01f;
-        float dy = (event.getY()-prevMouseY)*0.01f;
-        renderer.setCameraRotation(
-          renderer.getCameraRotationX()+dy,
-          renderer.getCameraRotationY()+dx
-        );
+        float dx = (event.getX() - prevMouseX) * 0.01f;
+        float dy = (event.getY() - prevMouseY) * 0.01f;
+        // Rotaciona a câmera usando o CameraController (quaternions)
+        cameraController.rotateAround(new PVector(0, 1, 0), dx);
+        cameraController.rotateAround(new PVector(1, 0, 0), dy);
         prevMouseX = event.getX();
         prevMouseY = event.getY();
         break;
+
       case MouseEvent.WHEEL:
         float scroll = event.getCount();
-        boolean isPad = Math.abs(scroll)<1;
-        float zoom = isPad ? scroll*0.01f : scroll*2f;
-        renderer.setCameraDistance(
-          PApplet.constrain(renderer.getCameraDistance()+zoom, -1e10f, 1e10f)
+        boolean isPad = Math.abs(scroll) < 1;
+        float zoom   = isPad ? scroll * 0.001f : scroll * 2f;
+        // Ajusta distância da câmera com limites
+        cameraController.setDistance(
+          PApplet.constrain(
+            cameraController.getDistance() + zoom,
+            -1e6f,      // distância mínima
+            1e6f      // distância máxima
+          )
         );
         break;
     }
   }
 
+  /**
+  * Reseta a câmera para a posição inicial, olhar para o Sol
+  * mas mais afastado, usando NEPTUNE_DIST.
+  */
   private void resetView() {
-    renderer.setCameraRotation(PI/16, 0);
-    renderer.setCameraDistance(20);
+      // 1) alvo: centro do Sol
+      cameraController.setTarget(new PVector(0, 0, 0));
+
+      // 2) pitch suave de PI/16
+      Quaternion q = new Quaternion(1, 0, 0, 0)
+                        .fromAxisAngle(new PVector(1, 0, 0), PI/16);
+      cameraController.setOrientation(q);
+
+      // 3) distância: igual ao initDist do construtor
+      float dist = -NEPTUNE_DIST * pxPerAU();
+      cameraController.setDistance(dist);
   }
 
+  /**
+   * Limpa todos os recursos utilizados pela cena.
+   */
   public void dispose() {
     textureManager.clear();
     configLoader.dispose();
@@ -504,6 +534,10 @@ class Scene1 implements Scene {
     System.out.println("Disposed Scene1");
   }
 
+  /**
+   * Retorna o nome da cena.
+   * @return Nome da cena
+   */
   public String getName() {
     return "Sistema Solar Físico";
   }

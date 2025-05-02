@@ -5,7 +5,6 @@ import java.util.List;
 public class Planet implements CelestialBody {
     // ——————————————— Campos de display ———————————————
     private final PApplet pApplet;
-    private final SimParams simParams;
     private float radiusPx;
     private final float baseRatio;
     private final int col;
@@ -59,7 +58,6 @@ public class Planet implements CelestialBody {
 
     /** Construtor */
     public Planet(PApplet pApplet,
-                  SimParams simParams,
                   float massSolar,
                   float radiusAU,
                   float sunRadiusAU,
@@ -83,7 +81,6 @@ public class Planet implements CelestialBody {
                   float semiMajorAxisAU) {
 
         this.pApplet                   = pApplet;
-        this.simParams                 = simParams;
         this.massSolar                 = massSolar;
         this.radiusAU                  = radiusAU;
         this.rotationPeriodDays        = rotationPeriodDays;
@@ -112,14 +109,14 @@ public class Planet implements CelestialBody {
         this.hasRings      = "Saturn".equals(name);
         this.currentMeanAnomalyRad = meanAnomalyRad;
 
-        applyScalingFactors(simParams);
+        applyScalingFactors();
     }
 
     // ——————————————— Escala visual ———————————————
-    public void applyScalingFactors(SimParams simParams) {
-        this.radiusPx = sunRadiusPx(simParams)
+    public void applyScalingFactors() {
+        this.radiusPx = sunRadiusPx()
                       * baseRatio
-                      * simParams.planetAmplification;
+                      * planetAmplification;
         this.cachedRingMode = -1;
     }
 
@@ -195,7 +192,7 @@ public class Planet implements CelestialBody {
                         ShapeManager shapeManager,
                         ShaderManager shaderManager) {
 
-        float scale = pxPerAU(simParams);
+        float scale = pxPerAU();
         PVector posPx = positionAU.copy().mult(scale);
 
         pg.pushMatrix();

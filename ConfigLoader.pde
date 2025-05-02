@@ -9,7 +9,6 @@ import java.io.File;
 class ConfigLoader {
   private final PApplet pApplet;
   private final TextureManager textureManager;
-  private final SimParams simParams;
   private PShape skySphere;
   private PImage skyTexture;
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -24,10 +23,10 @@ class ConfigLoader {
   private JSONArray  jsonPlanets;    
   private JSONArray  jsonMoons;      
 
-  ConfigLoader(PApplet pApplet, TextureManager textureManager, SimParams simParams) {
+  ConfigLoader(PApplet pApplet, TextureManager textureManager) {
     this.pApplet        = pApplet;
     this.textureManager = textureManager;
-    this.simParams      = simParams;
+
 
     scanTextureFolder("textures");
 
@@ -94,12 +93,11 @@ class ConfigLoader {
         );
 
         this.sunRadiusAU = radiusAU;
-        float radiusPx   = sunRadiusPx(simParams);
+        float radiusPx   = sunRadiusPx();
         PImage tex       = lookupTexture("sun");
 
         return new Sun(
           pApplet,
-          simParams,
           radiusPx,
           massSolar,
           radiusAU,
@@ -172,7 +170,7 @@ class ConfigLoader {
 
         // ——— monta o objeto Planet ——————————————————————————
         Planet planet = new Planet(
-          pApplet, simParams,
+          pApplet,
           massSolar,
           radiusAU,
           sunRadiusAU,
@@ -262,7 +260,7 @@ class ConfigLoader {
 
         // ── instancia a lua ────────────────────────────────────────────
         Moon moon = new Moon(
-          pApplet, simParams,
+          pApplet,
           massSolar,
           radiusAU,
           rotationPeriodDays,

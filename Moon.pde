@@ -1,7 +1,6 @@
 public class Moon implements CelestialBody {
     // ——————————————— Display ———————————————
     private final PApplet pApplet;
-    private final SimParams simParams;
     private float radiusPx;
     private final int col;
     private final String name;
@@ -42,7 +41,6 @@ public class Moon implements CelestialBody {
 
     /** Construtor ajustado */
     public Moon(PApplet pApplet,
-                SimParams simParams,
                 float massSolar,
                 float radiusAU,
                 float rotationPeriodDays,
@@ -63,7 +61,6 @@ public class Moon implements CelestialBody {
                 boolean alignWithAxis) {
 
         this.pApplet                   = pApplet;
-        this.simParams                 = simParams;
         this.massSolar                 = massSolar;
         this.radiusAU                  = radiusAU;
         this.rotationPeriodDays        = rotationPeriodDays;
@@ -94,7 +91,7 @@ public class Moon implements CelestialBody {
     }
 
     // ——————————————— Escala visual ———————————————
-    public void applyScalingFactors(SimParams simParams) {
+    public void applyScalingFactors() {
         if (centralBody instanceof Planet) {
             Planet parent = (Planet) centralBody;
             float sizeRatio = radiusAU / parent.getRadiusAU();
@@ -155,11 +152,27 @@ public class Moon implements CelestialBody {
         velocityAU.set(PVector.add(focusVel, vEcl));
     }
 
+    // ——————————————— Atualização de rotação ———————————————
+    /** Atualiza a rotação visual da lua */
+    public void updateRotation(float dtDays) {
+        rotationAngle = (rotationAngle + rotationSpeed * dtDays) % PApplet.TWO_PI;
+    }
+
+    // ——————————————— Atualização geral ———————————————
+    /**
+    * Atualiza a simulação da órbita e a rotação visual.
+    * Deve ser chamada a cada frame com dt em dias.
+    */
+    public void update(float dtDays) {
+        // 2) atualiza ângulo de rotação
+        updateRotation(dtDays);
+    }
+
     // ——————————————— Desenho da órbita ———————————————
     /** Desenha a órbita da lua em torno do planeta-pai. */
-    public void displayOrbit(PGraphicsOpenGL pg, SimParams s) {
-        float baseScale  = pxPerAU(s);                   // PIXELS_PER_AU * globalScale
-        float orbitScale = baseScale * s.bodyScale;      // agora unificado a bodyScale
+    public void displayOrbit(PGraphicsOpenGL pg) {
+        float baseScale  = pxPerAU();                   
+        float orbitScale = baseScale * bodyScale;     
         int   seg        = 180;
 
         float a = 0.5f * (perihelionAU + aphelionAU);
@@ -203,12 +216,12 @@ public class Moon implements CelestialBody {
                         ShaderManager shaderManager) {
 
         // 1) recalcule radiusPx relativo ao pai
-        applyScalingFactors(simParams);
+        applyScalingFactors();
         // agora this.radiusPx == parent.getRadiusPx() * (this.radiusAU / parent.getRadiusAU())
 
         // 2) escalas físicas
-        float baseScale  = pxPerAU(simParams);            // UA → px
-        float orbitScale = baseScale * simParams.bodyScale; // amplificação unificada
+        float baseScale  = pxPerAU();            // UA → px
+        float orbitScale = baseScale * bodyScale; // amplificação unificada
 
         // 3) foco fixo em px (planeta-pai)
         PVector focusPx = centralBody.getPositionAU().copy().mult(baseScale);
