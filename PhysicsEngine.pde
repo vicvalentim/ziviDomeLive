@@ -9,7 +9,7 @@ import java.util.concurrent.*;
 public class PhysicsEngine {
     private final List<CelestialBody> bodies;
     private final ExecutorService executor;
-    private boolean enablePerturbations = false;
+    private boolean enablePerturbations = true;
     private static final int PARALLEL_THRESHOLD = 32;
 
     public PhysicsEngine(List<CelestialBody> bodies) {

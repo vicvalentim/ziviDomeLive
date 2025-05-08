@@ -18,7 +18,7 @@ final float WIREFRAME_STROKE_WEIGHT = 0.2f;    // Espessura da linha no wirefram
 
 // —————————————————————————— Parâmetros dinâmicos para a simulação ——————————————————————————
 
-// não são constantes, portanto não usamos static
+// Variáveis Globais - não são constantes, portanto não usamos static
 public float globalScale = 5.0f; // “tabuleiro”
 public float bodyScale   = 20.0f; // “peças”
 public float planetAmplification = 1.0f; // ajuste fino para planetas

@@ -4,6 +4,7 @@ import java.util.List;
 class Renderer {
   private final PApplet pApplet;
   private List<Planet> planets;
+  private List<PShape> planetOrbitShapesUniform;
   private Sun sun;
   private final PShape skySphere;
 
@@ -22,6 +23,9 @@ class Renderer {
     this.skySphere     = skySphere;
     this.shapeManager  = shapeManager;
     this.shaderManager = shaderManager;
+
+    // logo após planets estarem definidos:
+    buildPlanetOrbitShapesUniform();
   }
 
   public void setSun(Sun sun) {
@@ -50,54 +54,53 @@ class Renderer {
     }
   }
 
-  /**
-  * Desenha apenas as órbitas dos planetas no plano da eclíptica (XZ / Y-up),
-  * centradas no foco (Sol) e usando o mesmo pipeline Ω→i→ω do KeplerMath.
-  */
-  public void drawPlanetOrbits(PGraphicsOpenGL pg) {
-    pg.noFill();
-    pg.stroke(200, 200, 255, 150);
-    pg.strokeWeight(1);
-    float scale = pxPerAU();
+  // chame isto uma vez, depois de carregar/sincronizar o lista de planetas:
+  void buildPlanetOrbitShapesUniform() {
+    planetOrbitShapesUniform = new ArrayList<PShape>();
     int segments = 180;
 
-    // offset para o foco (Sol)
-    PVector sunPx = sun.getPositionAU().copy().mult(scale);
-
-    // desenha todas as órbitas
-    pg.pushMatrix();
-    pg.translate(sunPx.x, sunPx.y, sunPx.z);
-
     for (Planet p : planets) {
+      PShape shp = createShape();
+      shp.beginShape(PConstants.LINE_LOOP);
+      shp.noFill();
+      shp.stroke(200, 200, 255, 150);
+      shp.strokeWeight(1);
+
       float peri = p.getPerihelionAU();
       float aphe = p.getAphelionAU();
       float e    = p.getEccentricity();
       float Ω    = p.getLongitudeAscendingNodeRad();
       float i    = p.getOrbitInclinationRad();
       float ω    = p.getArgumentOfPeriapsisRad();
+      float a    = 0.5f * (peri + aphe);
+      float b    = a * sqrt(1 - e*e);
 
-      float a = 0.5f * (peri + aphe);
-      float b = a * PApplet.sqrt(1 - e*e);
-
-      pg.beginShape();
-      for (int j = 0; j <= segments; j++) {
-        float θ   = PApplet.TWO_PI * j / segments;
-        float cosθ = PApplet.cos(θ), sinθ = PApplet.sin(θ);
-
-        // ponto no plano orbital, já centrado no foco:
-        float xp = a * (cosθ - e);
-        float zp = b * sinθ;
+      for (int j = 0; j < segments; j++) {
+        float θ  = TWO_PI * j / segments;
+        float xp = a * (cos(θ) - e);
+        float zp = b * sin(θ);
         PVector vPlane = new PVector(xp, 0, zp);
-
-        // aplica Ω→i→ω
         PVector v3d = applyOrbitalPlaneToGlobal(vPlane, Ω, i, ω);
-        v3d.mult(scale);
-
-        pg.vertex(v3d.x, v3d.y, v3d.z);
+        shp.vertex(v3d.x, v3d.y, v3d.z);
       }
-      pg.endShape(PConstants.CLOSE);
-    }
 
+      shp.endShape();
+      planetOrbitShapesUniform.add(shp);
+    }
+  }
+
+  // substitua drawPlanetOrbits por isto:
+  public void drawPlanetOrbits(PGraphicsOpenGL pg) {
+    if (planetOrbitShapesUniform == null) return;
+    float scale = pxPerAU();
+    PVector sunPx = sun.getPositionAU().copy().mult(scale);
+
+    pg.pushMatrix();
+      pg.translate(sunPx.x, sunPx.y, sunPx.z);
+      pg.scale(scale);
+      for (PShape shp : planetOrbitShapesUniform) {
+        pg.shape(shp);
+      }
     pg.popMatrix();
   }
 

@@ -9,6 +9,7 @@ public class Moon implements CelestialBody {
 
     // caches para performance de render
     private PShape cachedShape;
+    private PShape orbitShapeUniform;
     private int cachedRenderingMode = -1;
 
     // rotação visual
@@ -84,6 +85,8 @@ public class Moon implements CelestialBody {
         this.currentMeanAnomalyRad     = meanAnomalyRad;
 
         this.rotationSpeed = PApplet.TWO_PI / rotationPeriodDays;
+
+        buildOrbitShapeUniform();
     }
 
     public void setRadiusPx(float px) {
@@ -168,42 +171,47 @@ public class Moon implements CelestialBody {
         updateRotation(dtDays);
     }
 
-    // ——————————————— Desenho da órbita ———————————————
-    /** Desenha a órbita da lua em torno do planeta-pai. */
+    // ——————————————— Desenha órbitas pontilhadas das luas ———————————————
+    // chame isto uma vez após os parâmetros da lua estarem prontos:
+    public void buildOrbitShapeUniform() {
+    int seg = 180;
+    orbitShapeUniform = createShape();
+    orbitShapeUniform.beginShape(PConstants.LINE_LOOP);
+    orbitShapeUniform.noFill();
+    orbitShapeUniform.stroke(150, 150, 255, 150);
+    orbitShapeUniform.strokeWeight(1);
+
+    float a = 0.5f * (perihelionAU + aphelionAU);
+    float b = a * sqrt(1 - eccentricity*eccentricity);
+    float e = eccentricity;
+
+    for (int j = 0; j < seg; j++) {
+        float θ  = TWO_PI * j / seg;
+        float xp = a * (cos(θ) - e);
+        float zp = b * sin(θ);
+        PVector vPlane = new PVector(xp, 0, zp);
+        PVector v3d    = applyOrbitalPlaneToGlobal(
+                        vPlane,
+                        longitudeAscendingNodeRad,
+                        orbitInclinationRad,
+                        argumentOfPeriapsisRad);
+        orbitShapeUniform.vertex(v3d.x, v3d.y, v3d.z);
+    }
+
+    orbitShapeUniform.endShape();
+    }
+
     public void displayOrbit(PGraphicsOpenGL pg) {
-        float baseScale  = pxPerAU();                   
-        float orbitScale = baseScale * bodyScale;     
-        int   seg        = 180;
+    if (orbitShapeUniform == null) return;
+    float baseScale  = pxPerAU();
+    float orbitScale = baseScale * bodyScale;
+    PVector focusPx  = centralBody.getPositionAU().copy().mult(baseScale);
 
-        float a = 0.5f * (perihelionAU + aphelionAU);
-        float b = a * PApplet.sqrt(1 - eccentricity * eccentricity);
-        float e = eccentricity;
-
-        // foco fixo em pixels (usa só baseScale)
-        PVector focusPx = PVector.mult(centralBody.getPositionAU(), baseScale);
-
-        pg.pushMatrix();
-        pg.noFill();
-        pg.stroke(150, 150, 255, 150);
-        pg.strokeWeight(1);
-        pg.beginShape();
-        for (int j = 0; j <= seg; j++) {
-            float θ   = PApplet.TWO_PI * j / seg;
-            float xp  = (a * (PApplet.cos(θ) - e)) * orbitScale;
-            float zp  = (b * PApplet.sin(θ))       * orbitScale;
-            PVector v = new PVector(xp, 0, zp);
-
-            PVector v3d = applyOrbitalPlaneToGlobal(
-                                v,
-                                longitudeAscendingNodeRad,
-                                orbitInclinationRad,
-                                argumentOfPeriapsisRad);
-
-            v3d.add(focusPx);
-            pg.vertex(v3d.x, v3d.y, v3d.z);
-        }
-        pg.endShape(PConstants.CLOSE);
-        pg.popMatrix();
+    pg.pushMatrix();
+        pg.translate(focusPx.x, focusPx.y, focusPx.z);
+        pg.scale(orbitScale);
+        pg.shape(orbitShapeUniform);
+    pg.popMatrix();
     }
 
     // ——————————————— Desenho do corpo ———————————————
