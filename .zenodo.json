@@ -1,0 +1,28 @@
+{
+  "title": "ziviDomeLive: Processing library for immersive fulldome visuals",
+  "upload_type": "software",
+  "description": "ziviDomeLive is a Java library for Processing that simplifies the creation of immersive fulldome and VR visual experiences. It offers multiple projection modes, real-time scene management and Syphon/Spout integration for live video routing.",
+  "version": "1.4.0",
+  "license": "GPL-2.0-only",
+  "creators": [
+    {
+      "name": "Valentim, Victor",
+      "orcid": "0000-0002-0282-7947",
+      "affiliation": "UFRB – CECULT"
+    }
+  ],
+  "keywords": [
+    "fulldome",
+    "Processing",
+    "creative-coding",
+    "immersive-media",
+    "VR"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/vicvalentim/ziviDomeLive",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}
