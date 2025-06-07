@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use this library, please cite it as indicated below."
 title: "ziviDomeLive: Processing library for immersive fulldome visuals"
-version: "1.4.0"            # must match the GitHub release tag
-doi: ""                      # fill in after Zenodo assigns the DOI
+version: "1.4.0"
+doi: ""
 authors:
   - family-names: Valentim
     given-names: Victor
