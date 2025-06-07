@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this library, please cite it as indicated below."
+title: "ziviDomeLive: Processing library for immersive fulldome visuals"
+version: "1.4.0"            # must match the GitHub release tag
+doi: ""                      # fill in after Zenodo assigns the DOI
+authors:
+  - family-names: Valentim
+    given-names: Victor
+    orcid: "https://orcid.org/0000-0002-0282-7947"
+    affiliation: "UFRB – Center for Culture, Languages and Applied Technologies (CECULT)"
+license: GPL-2.0-only
+keywords:
+  - fulldome
+  - Processing
+  - creative-coding
+  - immersive-media
+  - VR
+repository-code: "https://github.com/vicvalentim/ziviDomeLive"
+abstract: >
+  ziviDomeLive is a Java library for the Processing platform that streamlines the
+  development of real-time visual experiences for fulldome projection, mono VR and
+  other immersive installations. It provides multiple projection modes (domemaster,
+  equirectangular, cubemap), dynamic resolution switching and Syphon/Spout routing
+  for live video output.
