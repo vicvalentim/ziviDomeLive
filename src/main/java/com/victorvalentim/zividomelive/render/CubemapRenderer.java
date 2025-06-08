@@ -23,7 +23,7 @@ import java.util.logging.Logger;
 public class CubemapRenderer implements PConstants {
     private static final int NUM_FACES = 6;
     private static final float DEFAULT_NEAR_PLANE = 0.01f;
-    private static final float DEFAULT_FAR_PLANE = 22000.0f;
+    private static final float DEFAULT_FAR_PLANE = 10000000.0f;
     private static final Logger LOGGER = LogManager.getLogger();
 
     // Thread manager can be used to obtain a shared executor
