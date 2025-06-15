@@ -12,10 +12,8 @@ import spout.Spout;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
+import java.lang.reflect.Method;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
 /**
@@ -40,14 +38,17 @@ public class OutputManager implements PConstants {
 	private boolean spoutEnabled = false;
 	private boolean syphonEnabled = false;
 
-	private PGraphicsOpenGL outputGraphics;
-	private final boolean isMacOS;
-	private final boolean isWindows;
-	private ByteBuffer[] ndiBuffers;
-	private int lastWidth = 0;
-	private int lastHeight = 0;
-	private DevolayVideoFrame reusableFrame; // Reusable NDI video frame
-	private final int THREAD_COUNT = Runtime.getRuntime().availableProcessors();
+        private PGraphicsOpenGL outputGraphics;
+        private final boolean isMacOS;
+        private final boolean isWindows;
+        private int lastWidth = 0;
+        private int lastHeight = 0;
+        // Persistent resources for NDI frame creation
+        private int pboId = -1;
+        private ByteBuffer ndiBuffer;
+        private Method sendVideoFrameGLMethod;
+        private boolean glTransferAvailable = false;
+        private DevolayVideoFrame reusableFrame; // Reusable NDI video frame
 
 	/**
 	 * Constructs the OutputManager, initializing it with the parent application instance.
@@ -72,14 +73,28 @@ public class OutputManager implements PConstants {
 	/**
 	 * Initializes NDI output if it is not already enabled.
 	 */
-	private void initNDI() {
-		if (!ndiEnabled && ndiSender == null) {
-			ndiSender = new DevolaySender("ziviDomeLive NDI Output");
-			reusableFrame = new DevolayVideoFrame(); // Initialize reusable frame
-			ndiEnabled = true;
-			logger.info("NDI output initialized.");
-		}
-	}
+        private void initNDI() {
+                if (!ndiEnabled && ndiSender == null) {
+                        ndiSender = new DevolaySender("ziviDomeLive NDI Output");
+                        reusableFrame = new DevolayVideoFrame(); // Initialize reusable frame
+                        // Check for optional GL transfer support
+                        try {
+                                for (Method m : DevolaySender.class.getMethods()) {
+                                        if (m.getName().equals("sendVideoFrameGL")) {
+                                                sendVideoFrameGLMethod = m;
+                                                glTransferAvailable = true;
+                                                logger.info("sendVideoFrameGL available, using GPU transfer.");
+                                                break;
+                                        }
+                                }
+                        } catch (Exception e) {
+                                logger.warning("Failed to resolve sendVideoFrameGL: " + e.getMessage());
+                        }
+
+                        ndiEnabled = true;
+                        logger.info("NDI output initialized.");
+                }
+        }
 
 	/**
 	 * Sets up Syphon (for macOS) or Spout (for Windows) based on the OS.
@@ -167,19 +182,21 @@ public class OutputManager implements PConstants {
 	/**
 	 * Sends the prepared output to the enabled output methods (NDI, Spout, or Syphon).
 	 */
-	public void sendOutput() {
-		if (ndiEnabled && ndiSender != null) {
-			prepareOutput(ndiView);
-			DevolayVideoFrame ndiFrame = createNDIFrame(outputGraphics);
+        public void sendOutput() {
+                if (ndiEnabled && ndiSender != null) {
+                        prepareOutput(ndiView);
+                        DevolayVideoFrame ndiFrame = createNDIFrame(outputGraphics);
 
-			ThreadManager.submitRunnable(() -> {
-				synchronized (this) {
-					if (ndiSender != null) {
-						ndiSender.sendVideoFrameAsync(ndiFrame);
-					}
-				}
-			});
-		}
+                        if (ndiFrame != null) {
+                                ThreadManager.submitRunnable(() -> {
+                                        synchronized (this) {
+                                                if (ndiSender != null) {
+                                                        ndiSender.sendVideoFrameAsync(ndiFrame);
+                                                }
+                                        }
+                                });
+                        }
+                }
 
 		if (spoutEnabled && spoutSender != null && isWindows) {
 			prepareOutput(spoutView);
@@ -198,94 +215,68 @@ public class OutputManager implements PConstants {
 	 * @param pg the PGraphics instance containing the image data
 	 * @return the created NDI video frame
 	 */
-	private synchronized DevolayVideoFrame createNDIFrame(PGraphicsOpenGL pg) {
-		int width = pg.width;
-		int height = pg.height;
+        private synchronized DevolayVideoFrame createNDIFrame(PGraphicsOpenGL pg) {
+                int width = pg.width;
+                int height = pg.height;
 
-		// Get the OpenGL texture ID
-		int textureID = pg.getTexture().glName;
+                // Get the OpenGL texture ID
+                int textureID = pg.getTexture().glName;
 
-		// Create a Pixel Buffer Object (PBO) for efficient pixel transfer
-		IntBuffer pboIDs = IntBuffer.allocate(1);
-		PGL pgl = pg.beginPGL();
-		pgl.genBuffers(1, pboIDs);
-		int pboID = pboIDs.get(0);
-		pgl.bindBuffer(PGL.PIXEL_PACK_BUFFER, pboID);
-		pgl.bufferData(PGL.PIXEL_PACK_BUFFER, width * height * 4, null, PGL.STREAM_READ);
+                // If Devolay supports sending GL textures directly, use it
+                if (glTransferAvailable && sendVideoFrameGLMethod != null) {
+                        try {
+                                sendVideoFrameGLMethod.invoke(ndiSender, textureID, width, height);
+                                return null; // Frame was sent directly
+                        } catch (Exception e) {
+                                logger.warning("sendVideoFrameGL failed, falling back to CPU copy: " + e.getMessage());
+                                glTransferAvailable = false;
+                        }
+                }
 
-		// Bind the texture and read pixels into the PBO
-		pg.beginDraw();
-		pgl = pg.beginPGL();
-		pgl.bindTexture(PGL.TEXTURE_2D, textureID);
-		pgl.readPixels(0, 0, width, height, PGL.RGBA, PGL.UNSIGNED_BYTE, 0);
-		pg.endPGL();
-		pg.endDraw();
+                // Lazy creation of persistent PBO
+                PGL pgl = pg.beginPGL();
+                if (pboId == -1) {
+                        IntBuffer ids = IntBuffer.allocate(1);
+                        pgl.genBuffers(1, ids);
+                        pboId = ids.get(0);
+                }
 
-		// Map the PBO to a ByteBuffer
-		ByteBuffer buffer = pgl.mapBuffer(PGL.PIXEL_PACK_BUFFER, PGL.READ_ONLY);
-		buffer.order(ByteOrder.LITTLE_ENDIAN);
+                int requiredSize = width * height * 4;
 
-		// Prepare tasks for parallel processing
-		List<Callable<Void>> tasks = prepareTasks(pg, buffer);
+                if (ndiBuffer == null || ndiBuffer.capacity() != requiredSize || width != lastWidth || height != lastHeight) {
+                        pgl.bindBuffer(PGL.PIXEL_PACK_BUFFER, pboId);
+                        pgl.bufferData(PGL.PIXEL_PACK_BUFFER, requiredSize, null, PGL.STREAM_READ);
+                        pgl.bindBuffer(PGL.PIXEL_PACK_BUFFER, 0);
 
-		try {
-			ThreadManager.getExecutor().invokeAll(tasks);
-		} catch (Exception e) {
-			logger.severe("Error in parallel pixel copy: " + e.getMessage());
-		}
+                        ndiBuffer = ByteBuffer.allocateDirect(requiredSize);
+                        ndiBuffer.order(ByteOrder.LITTLE_ENDIAN);
+                        lastWidth = width;
+                        lastHeight = height;
+                }
 
-		// Unmap the PBO but do not delete it immediately to avoid blocking
-		pgl.unmapBuffer(PGL.PIXEL_PACK_BUFFER);
-		pgl.bindBuffer(PGL.PIXEL_PACK_BUFFER, 0);
-		pgl.deleteBuffers(1, IntBuffer.wrap(new int[]{pboID}));
+                // Read pixels into PBO
+                pgl.bindBuffer(PGL.PIXEL_PACK_BUFFER, pboId);
+                pgl.bindTexture(PGL.TEXTURE_2D, textureID);
+                pgl.readPixels(0, 0, width, height, PGL.RGBA, PGL.UNSIGNED_BYTE, 0);
+                ByteBuffer mapped = pgl.mapBuffer(PGL.PIXEL_PACK_BUFFER, PGL.READ_ONLY);
+                ndiBuffer.clear();
+                ndiBuffer.put(mapped);
+                ndiBuffer.flip();
 
-		buffer.flip();
+                pgl.unmapBuffer(PGL.PIXEL_PACK_BUFFER);
+                pgl.bindBuffer(PGL.PIXEL_PACK_BUFFER, 0);
+                pg.endPGL();
 
-		reusableFrame.setResolution(width, height);
-		reusableFrame.setData(buffer);
-		reusableFrame.setFourCCType(DevolayFrameFourCCType.RGBA);
-		reusableFrame.setLineStride(width * 4);
-		reusableFrame.setFormatType(DevolayFrameFormatType.INTERLEAVED);
-		reusableFrame.setFrameRate(150, 1);
+                reusableFrame.setResolution(width, height);
+                reusableFrame.setData(ndiBuffer);
+                reusableFrame.setFourCCType(DevolayFrameFourCCType.RGBA);
+                reusableFrame.setLineStride(width * 4);
+                reusableFrame.setFormatType(DevolayFrameFormatType.INTERLEAVED);
+                reusableFrame.setFrameRate(150, 1);
 
-		return reusableFrame;
-	}
-
-	private List<Callable<Void>> prepareTasks(PGraphicsOpenGL pg, ByteBuffer buffer) {
-		int width = pg.width;
-		int height = pg.height;
-		int pixelCount = width * height;
-		int blockSize = pixelCount / THREAD_COUNT;
-		List<Callable<Void>> tasks = new ArrayList<>();
-
-		for (int i = 0; i < THREAD_COUNT; i++) {
-			final int start = i * blockSize;
-			final int end = (i == THREAD_COUNT - 1) ? pixelCount : start + blockSize;
-
-			tasks.add(() -> {
-				for (int j = start; j < end; j++) {
-					int x = j % width;
-					int y = j / width;
-					int index = (y * width + x) * 4;
-
-					// Read pixel data from the PBO
-					byte r = buffer.get(index);
-					byte g = buffer.get(index + 1);
-					byte b = buffer.get(index + 2);
-					byte a = buffer.get(index + 3);
-
-					// Write pixel data back to the buffer
-					buffer.put(index, r);
-					buffer.put(index + 1, g);
-					buffer.put(index + 2, b);
-					buffer.put(index + 3, a);
-				}
-				return null;
-			});
-		}
-
-                return tasks;
+                return reusableFrame;
         }
+
 
 	/**
 	 * Shuts down all output methods (NDI, Spout, Syphon).
