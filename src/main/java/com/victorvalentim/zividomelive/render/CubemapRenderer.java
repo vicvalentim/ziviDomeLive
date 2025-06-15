@@ -4,7 +4,6 @@ import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.render.camera.CameraManager;
 import com.victorvalentim.zividomelive.render.camera.CameraOrientation;
 import com.victorvalentim.zividomelive.support.LogManager;
-import com.victorvalentim.zividomelive.support.ThreadManager;
 import com.victorvalentim.zividomelive.render.Quaternion;
 import processing.core.PApplet;
 import processing.core.PConstants;
@@ -12,14 +11,11 @@ import processing.core.PGraphics;
 import processing.core.PVector;
 import processing.opengl.PGraphicsOpenGL;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.logging.Logger;
 
 /**
  * CubemapRenderer class handles the rendering of cubemap faces using Processing's PGraphicsOpenGL.
- * It supports asynchronous calculation of frustum parameters and multi-threaded rendering.
+ * It uses cached frustum parameters for rendering.
  */
 public class CubemapRenderer implements PConstants {
     private static final int NUM_FACES = 6;
@@ -27,9 +23,6 @@ public class CubemapRenderer implements PConstants {
     private static final float DEFAULT_FAR_PLANE = 10000000.0f;
     private static final Logger LOGGER = LogManager.getLogger();
 
-    // Thread manager can be used to obtain a shared executor
-    private final ExecutorService sharedExecutor = ThreadManager.getExecutor();
-    private final ExecutorService executor;
     private PGraphicsOpenGL[] cubemapFaces;
     private int resolution;
     private final PApplet parent;
@@ -42,10 +35,6 @@ public class CubemapRenderer implements PConstants {
     // Orientation quaternion used for incremental rotations
     private Quaternion currentOrientation = new Quaternion(0, 0, 0, 1);
 
-    // Futures for asynchronous calculations
-    private Future<Float> nearPlaneFuture;
-    private Future<Float> farPlaneFuture;
-    private Future<Float> fieldOfViewFuture;
 
     /**
      * Constructs a CubemapRenderer with the specified initial resolution and parent PApplet.
@@ -56,10 +45,10 @@ public class CubemapRenderer implements PConstants {
     public CubemapRenderer(int initialResolution, PApplet parent) {
         this.parent = parent;
         this.resolution = initialResolution;
-        int numThreads = Runtime.getRuntime().availableProcessors();
-        this.executor = Executors.newFixedThreadPool(numThreads);
         initializeCubemapFaces();
-        calculateFrustumParametersAsync();
+        cachedNearPlane = DEFAULT_NEAR_PLANE;
+        cachedFarPlane = DEFAULT_FAR_PLANE;
+        cachedFieldOfView = PApplet.PI / 2;
     }
 
     /**
@@ -97,15 +86,6 @@ public class CubemapRenderer implements PConstants {
      */
     private void configureCameraForFace(PGraphicsOpenGL pg, CameraOrientation orientation, float pitch, float yaw, float roll) {
         PVector eye = new PVector(0, 0, 0);
-        try {
-            // Wait for the asynchronous calculations to complete
-            cachedNearPlane = nearPlaneFuture.get();
-            cachedFarPlane = farPlaneFuture.get();
-            cachedFieldOfView = fieldOfViewFuture.get();
-        } catch (Exception e) {
-            LOGGER.severe("Error retrieving frustum parameters: " + e.getMessage());
-            return;
-        }
 
         pg.camera(eye.x, eye.y, eye.z, orientation.centerX, orientation.centerY, orientation.centerZ,
                   orientation.upX, orientation.upY, orientation.upZ);
@@ -120,27 +100,6 @@ public class CubemapRenderer implements PConstants {
         Quaternion target = qYaw.multiply(qRoll).multiply(qPitch);
         currentOrientation = currentOrientation.slerp(target, 1f);
         pg.applyMatrix(currentOrientation.toMatrix());
-    }
-
-    /**
-     * Starts asynchronous calculation of frustum parameters.
-     */
-    private void calculateFrustumParametersAsync() {
-        nearPlaneFuture = executor.submit(this::calculateNearPlane);
-        farPlaneFuture  = executor.submit(this::calculateFarPlane);
-        fieldOfViewFuture = executor.submit(this::calculateFieldOfView);
-    }
-
-    private float calculateNearPlane() {
-        return DEFAULT_NEAR_PLANE;
-    }
-
-    private float calculateFarPlane() {
-        return DEFAULT_FAR_PLANE;
-    }
-
-    private float calculateFieldOfView() {
-        return PApplet.PI / 2;
     }
 
     /**
@@ -180,7 +139,7 @@ public class CubemapRenderer implements PConstants {
     }
 
     /**
-     * Disposes of cubemap faces and shuts down the executor to free up resources.
+     * Disposes of cubemap faces to free up resources.
      */
     public void dispose() {
         if (cubemapFaces != null) {
@@ -190,9 +149,6 @@ public class CubemapRenderer implements PConstants {
                 }
             }
             cubemapFaces = null;
-        }
-        if (executor != null) {
-            executor.shutdown();
         }
     }
 }
