@@ -5,6 +5,7 @@ import com.victorvalentim.zividomelive.render.camera.CameraManager;
 import com.victorvalentim.zividomelive.render.camera.CameraOrientation;
 import com.victorvalentim.zividomelive.support.LogManager;
 import com.victorvalentim.zividomelive.support.ThreadManager;
+import com.victorvalentim.zividomelive.render.Quaternion;
 import processing.core.PApplet;
 import processing.core.PConstants;
 import processing.core.PGraphics;
@@ -106,9 +107,8 @@ public class CubemapRenderer implements PConstants {
 
         // The following translations are redundant if they are (0,0,0); remove if not needed
         pg.translate(0, 0, 0);
-        pg.rotateX(pitch);
-        pg.rotateY(roll);
-        pg.rotateZ(yaw);
+        Quaternion q = Quaternion.fromEuler(pitch, roll, yaw);
+        pg.applyMatrix(q.toMatrix());
     }
 
     /**
