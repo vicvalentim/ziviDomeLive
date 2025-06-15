@@ -1,0 +1,11 @@
+/* Justify text only in the main markdown content area */
+.md-content p{
+    text-align: justify;
+}
+
+.img-center {
+    display: block;
+    align: center;
+    margin-left: auto;
+    margin-right: auto;
+}
