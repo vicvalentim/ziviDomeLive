@@ -39,6 +39,9 @@ public class CubemapRenderer implements PConstants {
     private volatile float cachedFarPlane;
     private volatile float cachedFieldOfView;
 
+    // Orientation quaternion used for incremental rotations
+    private Quaternion currentOrientation = new Quaternion(0, 0, 0, 1);
+
     // Futures for asynchronous calculations
     private Future<Float> nearPlaneFuture;
     private Future<Float> farPlaneFuture;
@@ -88,6 +91,9 @@ public class CubemapRenderer implements PConstants {
 
     /**
      * Configures the camera for each cubemap face using asynchronously calculated frustum parameters.
+     * @param pitch rotation around the X axis
+     * @param yaw   rotation around the Z axis
+     * @param roll  rotation around the Y axis
      */
     private void configureCameraForFace(PGraphicsOpenGL pg, CameraOrientation orientation, float pitch, float yaw, float roll) {
         PVector eye = new PVector(0, 0, 0);
@@ -107,8 +113,13 @@ public class CubemapRenderer implements PConstants {
 
         // The following translations are redundant if they are (0,0,0); remove if not needed
         pg.translate(0, 0, 0);
-        Quaternion q = Quaternion.fromEuler(pitch, roll, yaw);
-        pg.applyMatrix(q.toMatrix());
+        // Build rotation using axis-angle quaternions and SLERP for smoother updates
+        Quaternion qPitch = Quaternion.fromAxisAngle(1f, 0f, 0f, pitch);
+        Quaternion qYaw   = Quaternion.fromAxisAngle(0f, 0f, 1f, yaw);
+        Quaternion qRoll  = Quaternion.fromAxisAngle(0f, 1f, 0f, roll);
+        Quaternion target = qYaw.multiply(qRoll).multiply(qPitch);
+        currentOrientation = currentOrientation.slerp(target, 1f);
+        pg.applyMatrix(currentOrientation.toMatrix());
     }
 
     /**
@@ -135,9 +146,9 @@ public class CubemapRenderer implements PConstants {
     /**
      * Captures the cubemap faces based on the camera orientation.
      *
-     * @param pitch the pitch angle
-     * @param yaw the yaw angle
-     * @param roll the roll angle
+     * @param pitch rotation around the X axis
+     * @param yaw   rotation around the Z axis
+     * @param roll  rotation around the Y axis
      * @param cameraManager manager for camera orientations
      * @param currentScene the current scene to render
      */
