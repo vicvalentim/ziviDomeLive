@@ -81,7 +81,7 @@ repositories {
 // The provided example uses Apache Commons Math. Replace or add as needed.
 dependencies {
     // resolve Processing core
-    compileOnly(group = "com.github.micycle1", name = "processing-core-4", version = "4.3.1")
+    compileOnly (group = "org.processing", name = "core", version = "4.4.4")
     // We are currently resolving from an unofficial, jitpack-enabled, processing4 repository.
     // Eventually, this will change to an official source.
 
