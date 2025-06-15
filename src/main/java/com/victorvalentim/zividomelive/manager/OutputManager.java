@@ -284,14 +284,8 @@ public class OutputManager implements PConstants {
 			});
 		}
 
-		try {
-			ThreadManager.getExecutor().invokeAll(tasks);
-		} catch (Exception e) {
-			logger.severe("Error in parallel pixel copy: " + e.getMessage());
-		}
-
-		return tasks;
-	}
+                return tasks;
+        }
 
 	/**
 	 * Shuts down all output methods (NDI, Spout, Syphon).
