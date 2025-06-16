@@ -29,6 +29,7 @@
 
 **Customizable Rendering Pipelines**:
 - **OpenGL Cubemap Renderer**: Efficiently captures scenes into a single cubemap texture for downstream shaders.
+- **Skybox Shader Preview**: Use `skybox.vert` and `skybox.frag` to visualize the cubemap in the preview window.
 - Define and customize rendering pipelines to meet the needs of your project. Whether you are rendering for fulldome projection or interactive experiences, the library allows you to adjust the rendering resolution, projection mode, and other parameters to optimize performance and visual quality.
 
 ## Known Issues

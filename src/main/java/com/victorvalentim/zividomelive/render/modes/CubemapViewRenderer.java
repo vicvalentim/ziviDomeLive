@@ -1,7 +1,7 @@
 package com.victorvalentim.zividomelive.render.modes;
 
 import processing.core.*;
-import processing.opengl.PGraphicsOpenGL;
+import processing.opengl.*;
 
 /**
  * The CubemapViewRenderer class handles the creation and rendering of cubemap views.
@@ -12,6 +12,7 @@ public class CubemapViewRenderer {
     private final int[] faceRotations = {2, 2, 2, 2, 2, 2};
     private final boolean[] faceInversions = {true, true, true, true, true, true};
     private final PApplet parent;
+    private final PShader skyboxShader;
 
     /**
      * Constructs a CubemapViewRenderer with the specified parent PApplet and resolution.
@@ -19,9 +20,17 @@ public class CubemapViewRenderer {
      * @param parent the parent PApplet instance
      * @param resolution the resolution of the cubemap
      */
-	public CubemapViewRenderer(PApplet parent, int resolution) {
+    public CubemapViewRenderer(PApplet parent, int resolution) {
         this.parent = parent;
         this.resolution = resolution;
+        this.skyboxShader = parent.loadShader("data/shaders/skybox.frag", "data/shaders/skybox.vert");
+        this.skyboxShader.set("cubemap", 1);
+        int[] inversionsInt = new int[faceInversions.length];
+        for (int i = 0; i < faceInversions.length; i++) {
+            inversionsInt[i] = faceInversions[i] ? 1 : 0;
+        }
+        this.skyboxShader.set("faceRotations", faceRotations);
+        this.skyboxShader.set("faceInversions", inversionsInt);
     }
 
     /**
@@ -70,7 +79,21 @@ public class CubemapViewRenderer {
 
         cubemap.beginDraw();
         cubemap.background(0, 0);
-        // TODO: sample each cubemap face from cubemapTexture
+
+        PGL pgl = cubemap.beginPGL();
+        pgl.activeTexture(PGL.TEXTURE1);
+        pgl.bindTexture(PGL.TEXTURE_CUBE_MAP, cubemapTexture);
+        cubemap.endPGL();
+
+        skyboxShader.set("resolution", new float[]{cubemap.width, cubemap.height});
+        cubemap.shader(skyboxShader);
+        cubemap.rect(0, 0, cubemap.width, cubemap.height);
+
+        PGL unbind = cubemap.beginPGL();
+        unbind.bindTexture(PGL.TEXTURE_CUBE_MAP, 0);
+        cubemap.endPGL();
+
+        cubemap.resetShader();
         cubemap.endDraw();
     }
 
