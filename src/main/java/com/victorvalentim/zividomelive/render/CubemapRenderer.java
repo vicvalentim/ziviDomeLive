@@ -4,7 +4,6 @@ import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.render.camera.CameraManager;
 import com.victorvalentim.zividomelive.render.camera.CameraOrientation;
 import com.victorvalentim.zividomelive.support.LogManager;
-import com.victorvalentim.zividomelive.render.Quaternion;
 import processing.core.PApplet;
 import processing.core.PConstants;
 import processing.core.PGraphics;
@@ -22,15 +21,14 @@ public class CubemapRenderer implements PConstants {
     private static final float DEFAULT_NEAR_PLANE = 0.01f;
     private static final float DEFAULT_FAR_PLANE = 10000000.0f;
     private static final Logger LOGGER = LogManager.getLogger();
-
     private PGraphicsOpenGL[] cubemapFaces;
     private int resolution;
     private final PApplet parent;
 
     // Cached frustum parameters
-    private volatile float cachedNearPlane;
-    private volatile float cachedFarPlane;
-    private volatile float cachedFieldOfView;
+    private final float cachedNearPlane;
+    private final float cachedFarPlane;
+    private final float cachedFieldOfView;
 
     // Orientation quaternion used for incremental rotations
     private Quaternion currentOrientation = new Quaternion(0, 0, 0, 1);

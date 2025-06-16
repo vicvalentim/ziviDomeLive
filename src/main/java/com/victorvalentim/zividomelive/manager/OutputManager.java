@@ -44,11 +44,8 @@ public class OutputManager implements PConstants {
         private PGraphicsOpenGL latestGraphics; // Tracks last used graphics context
         private final boolean isMacOS;
         private final boolean isWindows;
-        private ByteBuffer[] ndiBuffers;
         private ByteBuffer ndiBuffer;
         private int pboId = -1;
-        private int lastWidth = 0;
-        private int lastHeight = 0;
         private DevolayVideoFrame reusableFrame; // Reusable NDI video frame
         private final int THREAD_COUNT = Runtime.getRuntime().availableProcessors();
 
@@ -294,7 +291,7 @@ public class OutputManager implements PConstants {
 		}
 
                 return tasks;
-        }
+		}
 
 	/**
 	 * Shuts down all output methods (NDI, Spout, Syphon).

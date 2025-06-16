@@ -86,7 +86,7 @@ dependencies {
     // Eventually, this will change to an official source.
 
     // insert your external dependencies
-    implementation(group = "me.walkerknapp", name = "devolay", version = "2.1.1")
+    implementation(group = "me.walkerknapp", name = "devolay", version = "2.1.1", classifier = "integrated")
     //implementation(group = "org.apache.commons", name = "commons-math3", version = "3.6.1")
     // The provided example uses commons-math3. Replace or add as needed.
 
