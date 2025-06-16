@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15671507.svg)](https://doi.org/10.5281/zenodo.15671507)
+
 # ziviDomeLive Library
 
 **ziviDomeLive** is a Processing library designed to facilitate the creation of immersive visual experiences for fulldome projections, monoscopic VR environments, and interactive installations. The library provides a flexible framework to manage scenes, handle 3D rendering, and integrate external controllers or projection technologies like **Syphon** and **Spout**. Whether you're working on planetarium installations, live audiovisual performances, or interactive media, **ziviDomeLive** offers a robust framework for real-time rendering and scene management.
