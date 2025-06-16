@@ -40,14 +40,17 @@ public class OutputManager implements PConstants {
 	private boolean spoutEnabled = false;
 	private boolean syphonEnabled = false;
 
-	private PGraphicsOpenGL outputGraphics;
-	private final boolean isMacOS;
-	private final boolean isWindows;
-	private ByteBuffer[] ndiBuffers;
-	private int lastWidth = 0;
-	private int lastHeight = 0;
-	private DevolayVideoFrame reusableFrame; // Reusable NDI video frame
-	private final int THREAD_COUNT = Runtime.getRuntime().availableProcessors();
+        private PGraphicsOpenGL outputGraphics;
+        private PGraphicsOpenGL latestGraphics; // Tracks last used graphics context
+        private final boolean isMacOS;
+        private final boolean isWindows;
+        private ByteBuffer[] ndiBuffers;
+        private ByteBuffer ndiBuffer;
+        private int pboId = -1;
+        private int lastWidth = 0;
+        private int lastHeight = 0;
+        private DevolayVideoFrame reusableFrame; // Reusable NDI video frame
+        private final int THREAD_COUNT = Runtime.getRuntime().availableProcessors();
 
 	/**
 	 * Constructs the OutputManager, initializing it with the parent application instance.
@@ -202,20 +205,21 @@ public class OutputManager implements PConstants {
 	 * @param pg the PGraphics instance containing the image data
 	 * @return the created NDI video frame
 	 */
-	private synchronized DevolayVideoFrame createNDIFrame(PGraphicsOpenGL pg) {
-		int width = pg.width;
-		int height = pg.height;
+        private synchronized DevolayVideoFrame createNDIFrame(PGraphicsOpenGL pg) {
+                latestGraphics = pg; // store context for cleanup
+                int width = pg.width;
+                int height = pg.height;
 
 		// Get the OpenGL texture ID
 		int textureID = pg.getTexture().glName;
 
-		// Create a Pixel Buffer Object (PBO) for efficient pixel transfer
-		IntBuffer pboIDs = IntBuffer.allocate(1);
-		PGL pgl = pg.beginPGL();
-		pgl.genBuffers(1, pboIDs);
-		int pboID = pboIDs.get(0);
-		pgl.bindBuffer(PGL.PIXEL_PACK_BUFFER, pboID);
-		pgl.bufferData(PGL.PIXEL_PACK_BUFFER, width * height * 4, null, PGL.STREAM_READ);
+                // Create a Pixel Buffer Object (PBO) for efficient pixel transfer
+                IntBuffer pboIDs = IntBuffer.allocate(1);
+                PGL pgl = pg.beginPGL();
+                pgl.genBuffers(1, pboIDs);
+                pboId = pboIDs.get(0);
+                pgl.bindBuffer(PGL.PIXEL_PACK_BUFFER, pboId);
+                pgl.bufferData(PGL.PIXEL_PACK_BUFFER, width * height * 4, null, PGL.STREAM_READ);
 
 		// Bind the texture and read pixels into the PBO
 		pg.beginDraw();
@@ -226,11 +230,11 @@ public class OutputManager implements PConstants {
 		pg.endDraw();
 
 		// Map the PBO to a ByteBuffer
-		ByteBuffer buffer = pgl.mapBuffer(PGL.PIXEL_PACK_BUFFER, PGL.READ_ONLY);
-		buffer.order(ByteOrder.LITTLE_ENDIAN);
+                ndiBuffer = pgl.mapBuffer(PGL.PIXEL_PACK_BUFFER, PGL.READ_ONLY);
+                ndiBuffer.order(ByteOrder.LITTLE_ENDIAN);
 
 		// Prepare tasks for parallel processing
-		List<Callable<Void>> tasks = prepareTasks(pg, buffer);
+                List<Callable<Void>> tasks = prepareTasks(pg, ndiBuffer);
 
 		try {
 			ThreadManager.getExecutor().invokeAll(tasks);
@@ -239,14 +243,15 @@ public class OutputManager implements PConstants {
 		}
 
 		// Unmap the PBO but do not delete it immediately to avoid blocking
-		pgl.unmapBuffer(PGL.PIXEL_PACK_BUFFER);
-		pgl.bindBuffer(PGL.PIXEL_PACK_BUFFER, 0);
-		pgl.deleteBuffers(1, IntBuffer.wrap(new int[]{pboID}));
+                pgl.unmapBuffer(PGL.PIXEL_PACK_BUFFER);
+                pgl.bindBuffer(PGL.PIXEL_PACK_BUFFER, 0);
+                pgl.deleteBuffers(1, IntBuffer.wrap(new int[]{pboId}));
 
-		buffer.flip();
+                // buffer was unmapped; flip the stored buffer
+                ndiBuffer.flip();
 
 		reusableFrame.setResolution(width, height);
-		reusableFrame.setData(buffer);
+                reusableFrame.setData(ndiBuffer);
 		reusableFrame.setFourCCType(DevolayFrameFourCCType.RGBA);
 		reusableFrame.setLineStride(width * 4);
 		reusableFrame.setFormatType(DevolayFrameFormatType.INTERLEAVED);
@@ -305,14 +310,22 @@ public class OutputManager implements PConstants {
 	/**
 	 * Shuts down NDI output, releasing resources.
 	 */
-	private synchronized void shutdownNDI() {
-		if (ndiSender != null) {
-			ndiSender.close();
-			ndiSender = null;
-			reusableFrame = null; // Clears reusable frame
-			logger.info("NDI output shut down.");
-		}
-	}
+        private synchronized void shutdownNDI() {
+                if (pboId != -1 && latestGraphics != null) {
+                        PGL pgl = latestGraphics.beginPGL();
+                        pgl.deleteBuffers(1, IntBuffer.wrap(new int[]{pboId}));
+                        latestGraphics.endPGL();
+                        pboId = -1;
+                        ndiBuffer = null;
+                }
+
+                if (ndiSender != null) {
+                        ndiSender.close();
+                        ndiSender = null;
+                        reusableFrame = null; // Clears reusable frame
+                        logger.info("NDI output shut down.");
+                }
+        }
 
 	/**
 	 * Shuts down Spout output, releasing resources.
