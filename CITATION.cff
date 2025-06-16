@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this library, please cite it as indicated below."
 title: "ziviDomeLive: Processing library for immersive fulldome visuals"
 version: "1.3.5"
-doi: ""
+doi: "https://doi.org/10.5281/zenodo.15671507"
 authors:
   - family-names: Valentim
     given-names: Victor
