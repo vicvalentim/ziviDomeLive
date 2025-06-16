@@ -240,13 +240,16 @@ public class zividomelive implements PConstants {
 
 			// Paths to shader files
 			String equirectangularVertexShaderPath = "data/shaders/equirectangular.vert";
-                        String equirectangularFragmentShaderPath = "data/shaders/equirectangular_cube.frag";
-			String domemasterVertexShaderPath = "data/shaders/domemaster.vert";
-			String domemasterFragmentShaderPath = "data/shaders/domemaster.frag";
+                        String equirectangularFragmentShaderPath = "data/shaders/equirectangular.frag";
+			String domemasterVertexShaderPath = "data/shaders/fisheye.vert";
+			String domemasterFragmentShaderPath = "data/shaders/fisheye.frag";
+			String cubemapVertexShaderPath = "data/shaders/skybox.vert";
+			String cubemapFragmentShaderPath = "data/shaders/skybox.frag";
 
 			// Load shaders asynchronously
 			CompletableFuture<PShader> equirectangularShaderFuture = CompletableFuture.supplyAsync(() -> p.loadShader(equirectangularFragmentShaderPath, equirectangularVertexShaderPath), ThreadManager.getExecutor());
 			CompletableFuture<PShader> domemasterShaderFuture = CompletableFuture.supplyAsync(() -> p.loadShader(domemasterFragmentShaderPath, domemasterVertexShaderPath), ThreadManager.getExecutor());
+			CompletableFuture<PShader> cubemapShaderFuture = CompletableFuture.supplyAsync(() -> p.loadShader(cubemapFragmentShaderPath, cubemapVertexShaderPath), ThreadManager.getExecutor());
 
 			// Initialize renderers asynchronously
                         CompletableFuture<Void> cubemapRendererFuture = CompletableFuture.runAsync(() -> {
