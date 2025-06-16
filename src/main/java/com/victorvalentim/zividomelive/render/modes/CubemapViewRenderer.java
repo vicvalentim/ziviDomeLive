@@ -59,28 +59,18 @@ public class CubemapViewRenderer {
     }
 
     /**
-     * Draws the cubemap faces onto the PGraphics object.
+     * Draws the cubemap texture onto the 2D graphics.
      *
-     * @param cubemapFaces an array of PGraphics objects representing the cubemap faces
+     * @param cubemapTexture the OpenGL texture ID of the cubemap
      */
-    public void drawCubemapToGraphics(PGraphicsOpenGL[] cubemapFaces) {
-        if (cubemapFaces == null || cubemapFaces.length != 6) {
-            System.out.println("Error: Invalid cubemapFaces.");
-            return;
-        }
-
+    public void drawCubemapToGraphics(int cubemapTexture) {
         if (cubemap == null) {
             initializeCubemap();
         }
 
         cubemap.beginDraw();
         cubemap.background(0, 0);
-        applyTransformations(cubemap, cubemapFaces[3], (float) resolution / 2, 0, (float) resolution / 2, (float) resolution / 2, faceRotations[3], faceInversions[3]);
-        applyTransformations(cubemap, cubemapFaces[1], 0, (float) resolution / 2, (float) resolution / 2, (float) resolution / 2, faceRotations[0], faceInversions[0]);
-        applyTransformations(cubemap, cubemapFaces[4], (float) resolution / 2, (float) resolution / 2, (float) resolution / 2, (float) resolution / 2, faceRotations[4], faceInversions[4]);
-        applyTransformations(cubemap, cubemapFaces[0], resolution, (float) resolution / 2, (float) resolution / 2, (float) resolution / 2, faceRotations[1], faceInversions[1]);
-        applyTransformations(cubemap, cubemapFaces[5], (float) (resolution * 3) / 2, (float) resolution / 2, (float) resolution / 2, (float) resolution / 2, faceRotations[5], faceInversions[5]);
-        applyTransformations(cubemap, cubemapFaces[2], (float) resolution / 2, resolution, (float) resolution / 2, (float) resolution / 2, faceRotations[2], faceInversions[2]);
+        // TODO: sample each cubemap face from cubemapTexture
         cubemap.endDraw();
     }
 

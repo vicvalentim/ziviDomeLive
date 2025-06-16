@@ -28,6 +28,7 @@
 - **ziviDomeLive** works across multiple operating systems, including macOS, Windows, and Linux, making it highly versatile and accessible to a wide range of users. This ensures that your visual creations can be deployed on various platforms without compatibility issues.
 
 **Customizable Rendering Pipelines**:
+- **OpenGL Cubemap Renderer**: Efficiently captures scenes into a single cubemap texture for downstream shaders.
 - Define and customize rendering pipelines to meet the needs of your project. Whether you are rendering for fulldome projection or interactive experiences, the library allows you to adjust the rendering resolution, projection mode, and other parameters to optimize performance and visual quality.
 
 ## Known Issues

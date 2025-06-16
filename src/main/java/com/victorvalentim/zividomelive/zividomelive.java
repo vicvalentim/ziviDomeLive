@@ -37,7 +37,7 @@ public class zividomelive implements PConstants {
 	private boolean controlPanelShownOnce = false;
 
 	private ControlManager controlManager;
-	private CubemapRenderer cubemapRenderer;
+        private PGLCubemapRenderer cubemapRenderer;
 	private EquirectangularRenderer equirectangularRenderer;
 	private StandardRenderer standardRenderer;
 	private FisheyeDomemaster fisheyeDomemaster;
@@ -240,7 +240,7 @@ public class zividomelive implements PConstants {
 
 			// Paths to shader files
 			String equirectangularVertexShaderPath = "data/shaders/equirectangular.vert";
-			String equirectangularFragmentShaderPath = "data/shaders/equirectangular.frag";
+                        String equirectangularFragmentShaderPath = "data/shaders/equirectangular_cube.frag";
 			String domemasterVertexShaderPath = "data/shaders/domemaster.vert";
 			String domemasterFragmentShaderPath = "data/shaders/domemaster.frag";
 
@@ -249,10 +249,10 @@ public class zividomelive implements PConstants {
 			CompletableFuture<PShader> domemasterShaderFuture = CompletableFuture.supplyAsync(() -> p.loadShader(domemasterFragmentShaderPath, domemasterVertexShaderPath), ThreadManager.getExecutor());
 
 			// Initialize renderers asynchronously
-			CompletableFuture<Void> cubemapRendererFuture = CompletableFuture.runAsync(() -> {
-				cubemapRenderer = new CubemapRenderer(resolution, p);
-				LOGGER.info("CubemapRenderer initialized.");
-			});
+                        CompletableFuture<Void> cubemapRendererFuture = CompletableFuture.runAsync(() -> {
+                                cubemapRenderer = new PGLCubemapRenderer(p, resolution);
+                                LOGGER.info("CubemapRenderer initialized.");
+                        });
 
 			CompletableFuture<Void> equirectangularRendererFuture = CompletableFuture.runAsync(() -> {
 				equirectangularRenderer = new EquirectangularRenderer(resolution, equirectangularFragmentShaderPath, equirectangularVertexShaderPath, p);
@@ -402,12 +402,12 @@ public class zividomelive implements PConstants {
 	 * Updates the render views based on the current view type.
 	 */
 	private void updateRenderViews() {
-		equirectangularRenderer.render(cubemapRenderer.getCubemapFaces());
+                equirectangularRenderer.render(cubemapRenderer.getCubemapTexture());
 		fisheyeDomemaster.applyShader(equirectangularRenderer.getEquirectangular(), getFov());
 
 		switch (getCurrentView()) {
 			case CUBEMAP:
-				cubemapViewRenderer.drawCubemapToGraphics(cubemapRenderer.getCubemapFaces());
+                                cubemapViewRenderer.drawCubemapToGraphics(cubemapRenderer.getCubemapTexture());
 				break;
 			case STANDARD:
 				standardRenderer.render();
@@ -450,7 +450,7 @@ public class zividomelive implements PConstants {
 	public void renderFisheyeDomemaster() {
 		if (fisheyeDomemaster != null) {
 			individualRenderer();
-			equirectangularRenderer.render(cubemapRenderer.getCubemapFaces());
+                        equirectangularRenderer.render(cubemapRenderer.getCubemapTexture());
 			fisheyeDomemaster.applyShader(equirectangularRenderer.getEquirectangular(), getFov());
 			displayView(fisheyeDomemaster.getDomemasterGraphics());
 		} else {
@@ -465,7 +465,7 @@ public class zividomelive implements PConstants {
 	public void renderEquirectangular() {
 		if (equirectangularRenderer != null) {
 			individualRenderer();
-			equirectangularRenderer.render(cubemapRenderer.getCubemapFaces());
+                        equirectangularRenderer.render(cubemapRenderer.getCubemapTexture());
 			displayView(equirectangularRenderer.getEquirectangular());
 		} else {
 			LOGGER.severe("Error: EquirectangularRenderer not initialized.");
@@ -479,7 +479,7 @@ public class zividomelive implements PConstants {
 	public void renderCubemap() {
 		if (cubemapViewRenderer != null) {
 			individualRenderer();
-			cubemapViewRenderer.drawCubemapToGraphics(cubemapRenderer.getCubemapFaces());
+                        cubemapViewRenderer.drawCubemapToGraphics(cubemapRenderer.getCubemapTexture());
 			displayView(cubemapViewRenderer.getCubemap());
 		} else {
 			LOGGER.severe("Error: CubemapViewRenderer not initialized.");

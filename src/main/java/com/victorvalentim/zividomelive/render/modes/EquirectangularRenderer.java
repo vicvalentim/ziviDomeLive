@@ -4,7 +4,8 @@ import processing.core.*;
 import processing.opengl.*;
 
 /**
- * The EquirectangularRenderer class handles the rendering of equirectangular projections from cubemap faces.
+ * The EquirectangularRenderer class handles the rendering of equirectangular projections
+ * from an OpenGL cubemap texture.
  */
 public class EquirectangularRenderer {
     private PGraphics equirectangular;
@@ -24,6 +25,7 @@ public class EquirectangularRenderer {
         this.resolution = resolution;
         this.equirectangularShader = parent.loadShader(fragmentShaderPath, vertexShaderPath);
         this.parent = parent;
+        this.equirectangularShader.set("cubemap", 1);
     }
 
     /**
@@ -37,26 +39,31 @@ public class EquirectangularRenderer {
     }
 
     /**
-     * Renders the equirectangular projection from the given cubemap faces.
+     * Renders the equirectangular projection from the supplied cubemap texture.
      *
-     * @param faces an array of PGraphics objects representing the cubemap faces
+     * @param cubemapTexture the OpenGL texture ID of the cubemap
      */
-    public void render(PGraphicsOpenGL[] faces) {
+    public void render(int cubemapTexture) {
         if (equirectangular == null) {
             initializeEquirectangular();
         }
 
         equirectangular.beginDraw();
         equirectangular.background(0, 0);
-        equirectangularShader.set("posX", faces[0]);
-        equirectangularShader.set("negX", faces[1]);
-        equirectangularShader.set("posY", faces[2]);
-        equirectangularShader.set("negY", faces[3]);
-        equirectangularShader.set("posZ", faces[4]);
-        equirectangularShader.set("negZ", faces[5]);
+
+        PGL pgl = equirectangular.beginPGL();
+        pgl.activeTexture(PGL.TEXTURE1);
+        pgl.bindTexture(PGL.TEXTURE_CUBE_MAP, cubemapTexture);
+        equirectangular.endPGL();
+
         equirectangularShader.set("resolution", new float[]{equirectangular.width, equirectangular.height});
         equirectangular.shader(equirectangularShader);
         equirectangular.rect(0, 0, equirectangular.width, equirectangular.height);
+
+        PGL unbind = equirectangular.beginPGL();
+        unbind.bindTexture(PGL.TEXTURE_CUBE_MAP, 0);
+        equirectangular.endPGL();
+
         equirectangular.endDraw();
     }
 
