@@ -13,7 +13,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.lang.reflect.Method;
-
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
 /**
@@ -49,6 +51,7 @@ public class OutputManager implements PConstants {
         private Method sendVideoFrameGLMethod;
         private boolean glTransferAvailable = false;
         private DevolayVideoFrame reusableFrame; // Reusable NDI video frame
+        private final int THREAD_COUNT = Runtime.getRuntime().availableProcessors();
 
 	/**
 	 * Constructs the OutputManager, initializing it with the parent application instance.
@@ -259,8 +262,9 @@ public class OutputManager implements PConstants {
                 pgl.bindTexture(PGL.TEXTURE_2D, textureID);
                 pgl.readPixels(0, 0, width, height, PGL.RGBA, PGL.UNSIGNED_BYTE, 0);
                 ByteBuffer mapped = pgl.mapBuffer(PGL.PIXEL_PACK_BUFFER, PGL.READ_ONLY);
+
                 ndiBuffer.clear();
-                ndiBuffer.put(mapped);
+                copyAndFlip(mapped, ndiBuffer, width, height);
                 ndiBuffer.flip();
 
                 pgl.unmapBuffer(PGL.PIXEL_PACK_BUFFER);
@@ -275,6 +279,61 @@ public class OutputManager implements PConstants {
                 reusableFrame.setFrameRate(150, 1);
 
                 return reusableFrame;
+        }
+
+        /**
+         * Copies pixel data from the source buffer into the destination buffer while
+         * flipping it vertically. The operation is divided across available threads
+         * for better performance on high resolutions.
+         *
+         * @param src    the source buffer containing pixel data
+         * @param dst    the destination buffer where flipped data will be written
+         * @param width  the width of the frame in pixels
+         * @param height the height of the frame in pixels
+         */
+        private void copyAndFlip(ByteBuffer src, ByteBuffer dst, int width, int height) {
+                int stride = width * 4;
+                int half = height / 2;
+
+                List<Callable<Void>> tasks = new ArrayList<>();
+                int rowsPerThread = Math.max(1, half / THREAD_COUNT);
+
+                for (int i = 0; i < THREAD_COUNT; i++) {
+                        final int start = i * rowsPerThread;
+                        final int end = (i == THREAD_COUNT - 1) ? half : start + rowsPerThread;
+                        if (start >= end) {
+                                break;
+                        }
+
+                        tasks.add(() -> {
+                                ByteBuffer srcDup = src.duplicate();
+                                ByteBuffer dstDup = dst.duplicate();
+                                byte[] topRow = new byte[stride];
+                                byte[] bottomRow = new byte[stride];
+
+                                for (int y = start; y < end; y++) {
+                                        int topOffset = y * stride;
+                                        int bottomOffset = (height - 1 - y) * stride;
+
+                                        srcDup.position(topOffset);
+                                        srcDup.get(topRow);
+                                        srcDup.position(bottomOffset);
+                                        srcDup.get(bottomRow);
+
+                                        dstDup.position(bottomOffset);
+                                        dstDup.put(topRow);
+                                        dstDup.position(topOffset);
+                                        dstDup.put(bottomRow);
+                                }
+                                return null;
+                        });
+                }
+
+                try {
+                        ThreadManager.getExecutor().invokeAll(tasks);
+                } catch (Exception e) {
+                        logger.severe("Error flipping NDI buffer: " + e.getMessage());
+                }
         }
 
 
