@@ -72,14 +72,18 @@ public class OutputManager implements PConstants {
 	/**
 	 * Initializes NDI output if it is not already enabled.
 	 */
-	private void initNDI() {
-		if (!ndiEnabled && ndiSender == null) {
-			ndiSender = new DevolaySender("ziviDomeLive NDI Output");
-			reusableFrame = new DevolayVideoFrame(); // Initialize reusable frame
-			ndiEnabled = true;
-			logger.info("NDI output initialized.");
-		}
-	}
+        private void initNDI() {
+                if (!ndiEnabled && ndiSender == null) {
+                        try {
+                                ndiSender = new DevolaySender("ziviDomeLive NDI Output");
+                                reusableFrame = new DevolayVideoFrame(); // Initialize reusable frame
+                                ndiEnabled = true;
+                                logger.info("NDI output initialized.");
+                        } catch (ExceptionInInitializerError | UnsatisfiedLinkError | IllegalStateException e) {
+                                logger.warning("NDI cannot be started on this platform.");
+                        }
+                }
+        }
 
 	/**
 	 * Sets up Syphon (for macOS) or Spout (for Windows) based on the OS.
