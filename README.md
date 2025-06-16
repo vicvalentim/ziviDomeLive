@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15671507.svg)](https://doi.org/10.5281/zenodo.15671507)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15671506.svg)](https://doi.org/10.5281/zenodo.15671506)
 
 # ziviDomeLive Library
 
