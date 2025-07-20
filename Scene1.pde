@@ -395,8 +395,8 @@ class Scene1 implements Scene {
     char key = event.getKey();
     switch (key) {
       case ' ': resetView(); break;
-      case 'G': globalScale *= 1.1f; planetAmplification = 1; applyScalingFactors(); break;
-      case 'g': globalScale /= 1.1f; planetAmplification = 1; applyScalingFactors(); break;
+      case 'G': globalScale *= 1.1f; applyScalingFactors(); break;
+      case 'g': globalScale /= 1.1f; applyScalingFactors(); break;
       case 'A': planetAmplification *= 1.1f; applyScalingFactors(); break;
       case 'a': planetAmplification /= 1.1f; applyScalingFactors(); break;
       case 'B': bodyScale   *= 1.1f;   applyScalingFactors(); break;

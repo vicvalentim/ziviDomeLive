@@ -13,7 +13,7 @@ final float NEPTUNE_DIST = 30.07f;
 // —————————————————————————— Estilo Wireframe ——————————————————————————
 
 final int WIREFRAME_COLOR = 0xFFFFFFFF;        // Branco
-final float WIREFRAME_STROKE_WEIGHT = 0.2f;    // Espessura da linha no wireframe
+final float WIREFRAME_STROKE_WEIGHT = 0.1f;    // Espessura da linha no wireframe
 
 
 // —————————————————————————— Parâmetros dinâmicos para a simulação ——————————————————————————
