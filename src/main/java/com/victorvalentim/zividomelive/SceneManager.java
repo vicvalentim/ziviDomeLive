@@ -66,6 +66,7 @@ public class SceneManager {
 
 		if (previousIndex != currentSceneIndex) {
 			Scene newScene = getCurrentScene();
+			newScene.setupScene();
 			LOGGER.info("Switched to the next scene: " + newScene.getName());
 		}
 	}
