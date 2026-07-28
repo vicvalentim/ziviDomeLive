@@ -101,9 +101,17 @@ dependencies {
 
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
-    // Processing core is needed at test runtime for PApplet static math helpers
-    // (sin, cos, sqrt, constrain) used by Quaternion and related classes.
-    testImplementation(group = "org.processing", name = "core", version = "4.4.4")
+    // Processing core is needed at test compile/runtime for PApplet static math helpers
+    // (sin, cos, sqrt, constrain) used by Quaternion and related classes, and for
+    // PMatrix3D / PGraphicsOpenGL type references. PGraphicsOpenGL is bundled inside
+    // core-4.4.4.jar so the native JOGL aggregator JARs (jogl-all-main, gluegen-rt-main)
+    // are NOT needed on the test classpath — our unit tests never instantiate OpenGL
+    // contexts. Excluding them avoids a dependency on the unreliable jogamp.org Maven
+    // repository and keeps CI hermetic.
+    testImplementation(group = "org.processing", name = "core", version = "4.4.4") {
+        exclude(group = "org.jogamp.jogl", module = "jogl-all-main")
+        exclude(group = "org.jogamp.gluegen", module = "gluegen-rt-main")
+    }
 }
 
 tasks.test {
