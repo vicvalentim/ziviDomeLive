@@ -101,6 +101,9 @@ dependencies {
 
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+    // Processing core is needed at test runtime for PApplet static math helpers
+    // (sin, cos, sqrt, constrain) used by Quaternion and related classes.
+    testImplementation(group = "org.processing", name = "core", version = "4.4.4")
 }
 
 tasks.test {
