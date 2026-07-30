@@ -86,6 +86,35 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
+	 * Sets the global logging mode used by the library.
+	 * Call this before creating a zividomelive instance.
+	 *
+	 * @param mode desired logging mode
+	 */
+	public static void setLogMode(LogManager.Mode mode) {
+		LogManager.setMode(mode);
+	}
+
+	/** Enables verbose DEBUG logs (console + file). */
+	public static void enableDebugLogging() {
+		LogManager.setMode(LogManager.Mode.DEBUG);
+	}
+
+	/** Enables RELEASE logging mode (LogManager output disabled). */
+	public static void enableReleaseLogging() {
+		LogManager.setMode(LogManager.Mode.RELEASE);
+	}
+
+	/**
+	 * Returns the currently active logging mode.
+	 *
+	 * @return active logging mode
+	 */
+	public static LogManager.Mode getLogMode() {
+		return LogManager.getMode();
+	}
+
+	/**
 	 * Prints a welcome message indicating that the library has been initialized.
 	 */
 	private void welcome() {
@@ -131,7 +160,6 @@ public class zividomelive implements PConstants {
 		} catch (Exception e) {
 			LOGGER.severe("Error setting frame rate: " + e.getMessage());
 		}
-
 		try {
 			printOpenGLInfo(p);
 		} catch (Exception e) {
@@ -212,19 +240,15 @@ public class zividomelive implements PConstants {
 		try {
 			LOGGER.info("Initializing managers...");
 
-			CompletableFuture<Void> cameraManagerFuture = CompletableFuture.runAsync(() -> {
-				cameraManager = new CameraManager();
-				LOGGER.info("CameraManager initialized.");
-			}, ThreadManager.getExecutor());
+			cameraManager = new CameraManager();
+			LOGGER.info("CameraManager initialized.");
 
-			CompletableFuture<Void> renderersFuture = CompletableFuture.runAsync(this::initializeRenderers, ThreadManager.getExecutor());
+			// Rendering and UI resources must be created on the Processing thread.
+			initializeRenderers();
 
-			CompletableFuture<Void> controlManagerFuture = CompletableFuture.runAsync(() -> {
-				controlManager = new ControlManager(p, this, resolution);
-				LOGGER.info("ControlManager initialized.");
-			}, ThreadManager.getExecutor());
+			controlManager = new ControlManager(p, this, resolution);
+			LOGGER.info("ControlManager initialized.");
 
-			CompletableFuture.allOf(cameraManagerFuture, renderersFuture, controlManagerFuture).join();
 			LOGGER.info("Managers initialized successfully.");
 		} catch (Exception e) {
 			LOGGER.severe("Error initializing managers");
@@ -244,44 +268,20 @@ public class zividomelive implements PConstants {
 			String domemasterVertexShaderPath = "data/shaders/domemaster.vert";
 			String domemasterFragmentShaderPath = "data/shaders/domemaster.frag";
 
-			// Load shaders asynchronously
-			CompletableFuture<PShader> equirectangularShaderFuture = CompletableFuture.supplyAsync(() -> p.loadShader(equirectangularFragmentShaderPath, equirectangularVertexShaderPath), ThreadManager.getExecutor());
-			CompletableFuture<PShader> domemasterShaderFuture = CompletableFuture.supplyAsync(() -> p.loadShader(domemasterFragmentShaderPath, domemasterVertexShaderPath), ThreadManager.getExecutor());
+			cubemapRenderer = new CubemapRenderer(resolution, p);
+			LOGGER.info("CubemapRenderer initialized.");
 
-			// Initialize renderers asynchronously
-			CompletableFuture<Void> cubemapRendererFuture = CompletableFuture.runAsync(() -> {
-				cubemapRenderer = new CubemapRenderer(resolution, p);
-				LOGGER.info("CubemapRenderer initialized.");
-			});
+			equirectangularRenderer = new EquirectangularRenderer(resolution, equirectangularFragmentShaderPath, equirectangularVertexShaderPath, p);
+			LOGGER.info("EquirectangularRenderer initialized.");
 
-			CompletableFuture<Void> equirectangularRendererFuture = CompletableFuture.runAsync(() -> {
-				equirectangularRenderer = new EquirectangularRenderer(resolution, equirectangularFragmentShaderPath, equirectangularVertexShaderPath, p);
-				LOGGER.info("EquirectangularRenderer initialized.");
-			});
+			standardRenderer = new StandardRenderer(p, p.width, p.height, currentScene);
+			LOGGER.info("StandardRenderer initialized.");
 
-			CompletableFuture<Void> standardRendererFuture = CompletableFuture.runAsync(() -> {
-				standardRenderer = new StandardRenderer(p, p.width, p.height, currentScene);
-				LOGGER.info("StandardRenderer initialized.");
-			});
+			fisheyeDomemaster = new FisheyeDomemaster(resolution, domemasterFragmentShaderPath, domemasterVertexShaderPath, p);
+			LOGGER.info("FisheyeDomemaster initialized.");
 
-			CompletableFuture<Void> fisheyeDomemasterFuture = CompletableFuture.runAsync(() -> {
-				fisheyeDomemaster = new FisheyeDomemaster(resolution, domemasterFragmentShaderPath, domemasterVertexShaderPath, p);
-				LOGGER.info("FisheyeDomemaster initialized.");
-			});
-
-			CompletableFuture<Void> cubemapViewRendererFuture = CompletableFuture.runAsync(() -> {
-				cubemapViewRenderer = new CubemapViewRenderer(p, resolution);
-				LOGGER.info("CubemapViewRenderer initialized.");
-			});
-
-			// Wait for all renderers to be initialized
-			CompletableFuture.allOf(
-					cubemapRendererFuture,
-					equirectangularRendererFuture,
-					standardRendererFuture,
-					fisheyeDomemasterFuture,
-					cubemapViewRendererFuture
-			).join();
+			cubemapViewRenderer = new CubemapViewRenderer(p, resolution);
+			LOGGER.info("CubemapViewRenderer initialized.");
 
 			LOGGER.info("Renderers initialized successfully.");
 		} catch (Exception e) {
@@ -294,7 +294,7 @@ public class zividomelive implements PConstants {
 	 */
 	public void draw() {
 		if (!initialized) {
-			p.background(0);
+			p.background(0,0);
 		}
 
 		// Renderiza o conteúdo principal em segundo plano
@@ -655,6 +655,7 @@ public class zividomelive implements PConstants {
 							currentScene = sceneManager.getCurrentScene();
 							if (currentScene != null) {
 								currentScene.setupScene();
+								if (standardRenderer != null) standardRenderer.setCurrentScene(currentScene);
 								LOGGER.info("Switched to the previous scene: " + currentScene.getName());
 							} else {
 								LOGGER.warning("No previous scene available.");
@@ -668,6 +669,7 @@ public class zividomelive implements PConstants {
 							currentScene = sceneManager.getCurrentScene();
 							if (currentScene != null) {
 								currentScene.setupScene();
+								if (standardRenderer != null) standardRenderer.setCurrentScene(currentScene);
 								LOGGER.info("Switched to the next scene: " + currentScene.getName());
 							} else {
 								LOGGER.warning("No next scene available.");

@@ -47,7 +47,7 @@ public class DefaultScene implements Scene {
 	 */
 	public void sceneRender(PGraphicsOpenGL pg) {
 		pg.beginDraw();
-
+		pg.background(0,50,100, 255);
 		// Posiciona o sistema de coordenadas para (0, 0, 300)
 		pg.translate(0, 250, 250);
 		pg.rotateX(-PConstants.HALF_PI);

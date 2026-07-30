@@ -4,7 +4,6 @@ import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.render.camera.CameraManager;
 import com.victorvalentim.zividomelive.render.camera.CameraOrientation;
 import com.victorvalentim.zividomelive.support.LogManager;
-import com.victorvalentim.zividomelive.render.Quaternion;
 import processing.core.PApplet;
 import processing.core.PConstants;
 import processing.core.PGraphics;

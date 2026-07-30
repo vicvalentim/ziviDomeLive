@@ -7,6 +7,7 @@ zividomelive ziviDome;      // Instance of the zividomelive library
 SceneManager sceneManager;  // SceneManager to manage multiple scenes
 
 void settings() {
+  pixelDensity(1);  // Library default policy
   size(1200, 800, P3D);  // Set the window size and P3D mode
 }
 
