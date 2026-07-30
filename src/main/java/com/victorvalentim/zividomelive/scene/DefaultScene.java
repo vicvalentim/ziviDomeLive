@@ -42,11 +42,11 @@ public class DefaultScene implements Scene {
 
 	/**
 	 * Renders the main scene with lighting to highlight the objects.
+	 * The library owns beginDraw/endDraw for this target.
 	 *
 	 * @param pg the PGraphicsOpenGL object used for rendering
 	 */
 	public void sceneRender(PGraphicsOpenGL pg) {
-		pg.beginDraw();
 		pg.background(0,50,100, 255);
 		// Position coordinate system to (0, 0, 300)
 		pg.translate(0, 250, 250);
@@ -58,8 +58,6 @@ public class DefaultScene implements Scene {
 
 		// Render text
 		renderText(pg);
-
-		pg.endDraw();
 	}
 
 	public void update() {
@@ -90,7 +88,6 @@ public class DefaultScene implements Scene {
 	 */
 	private void renderRotatingSphere(PGraphicsOpenGL pg) {
 		pg.pushMatrix();
-		pg.clear();
 		pg.noFill();
 		pg.strokeWeight(2.0f);
 

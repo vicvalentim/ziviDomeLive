@@ -14,7 +14,7 @@ void settings() {
 
 void setup() {
   // Optional: enable verbose library logs for debugging.
-  //zividomelive.enableDebugLogging();
+  zividomelive.enableDebugLogging();
 
   // Initialize the zividomelive library
   ziviDome = new zividomelive(this);
