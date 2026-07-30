@@ -44,6 +44,40 @@ public class SceneManager {
 	}
 
 	/**
+	 * Activates a scene by instance; registers it first if it is not in the manager yet.
+	 *
+	 * @param scene scene to activate
+	 */
+	public void activateScene(Scene scene) {
+		if (scene == null) {
+			LOGGER.severe("Cannot activate a null scene.");
+			return;
+		}
+
+		int index = scenes.indexOf(scene);
+		if (index == -1) {
+			scenes.add(scene);
+			index = scenes.size() - 1;
+			LOGGER.info("Scene auto-registered during activation: " + scene.getName());
+		}
+
+		currentSceneIndex = index;
+		Scene activeScene = scenes.get(currentSceneIndex);
+		activeScene.setupScene();
+		LOGGER.info("Scene activated: " + activeScene.getName());
+	}
+
+	/**
+	 * Returns true when the manager already contains the provided scene instance.
+	 *
+	 * @param scene scene to check
+	 * @return true if scene is already managed
+	 */
+	public boolean containsScene(Scene scene) {
+		return scenes.contains(scene);
+	}
+
+	/**
 	 * Returns the total number of registered scenes.
 	 *
 	 * @return the number of scenes

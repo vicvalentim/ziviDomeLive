@@ -134,10 +134,10 @@ public class zividomelive implements PConstants {
 			LOGGER.warning("Cannot set a null scene.");
 			return;
 		}
-		sceneManager.registerScene(scene);
+		sceneManager.activateScene(scene);
 		currentScene = sceneManager.getCurrentScene();
-		if (currentScene != null) {
-			currentScene.setupScene();
+		if (standardRenderer != null && currentScene != null) {
+			standardRenderer.setCurrentScene(currentScene);
 		}
 	}
 
@@ -295,6 +295,7 @@ public class zividomelive implements PConstants {
 	public void draw() {
 		if (!initialized) {
 			p.background(0,0);
+			return;
 		}
 
 		// Renderiza o conteúdo principal em segundo plano
@@ -582,7 +583,9 @@ public class zividomelive implements PConstants {
 	public void setCurrentScene(Scene newScene) {
 		this.currentScene = newScene;
 		this.setScene(newScene); // Update the scene in the parent PApplet
-		standardRenderer.setCurrentScene(newScene); // Update the scene in StandardRenderer
+		if (standardRenderer != null) {
+			standardRenderer.setCurrentScene(newScene); // Update the scene in StandardRenderer
+		}
 	}
 
 	/**
@@ -632,6 +635,13 @@ public class zividomelive implements PConstants {
 	 * @param event the KeyEvent object containing details of the key event
 	 */
 	public void keyEvent(processing.event.KeyEvent event) {
+		if (controlManager == null) {
+			if (currentScene != null) {
+				currentScene.keyEvent(event);
+			}
+			return;
+		}
+
 		if (event.getAction() == KeyEvent.PRESS) { // Apenas trata eventos de tecla pressionada
 			if (!controlManager.isNumberboxActive()) {
 				// Primeiro, processa as teclas padrão
@@ -654,7 +664,6 @@ public class zividomelive implements PConstants {
 							sceneManager.previousScene();
 							currentScene = sceneManager.getCurrentScene();
 							if (currentScene != null) {
-								currentScene.setupScene();
 								if (standardRenderer != null) standardRenderer.setCurrentScene(currentScene);
 								LOGGER.info("Switched to the previous scene: " + currentScene.getName());
 							} else {
@@ -668,7 +677,6 @@ public class zividomelive implements PConstants {
 							sceneManager.nextScene();
 							currentScene = sceneManager.getCurrentScene();
 							if (currentScene != null) {
-								currentScene.setupScene();
 								if (standardRenderer != null) standardRenderer.setCurrentScene(currentScene);
 								LOGGER.info("Switched to the next scene: " + currentScene.getName());
 							} else {
@@ -697,9 +705,6 @@ public class zividomelive implements PConstants {
 	 * @param event the MouseEvent object containing details of the mouse event
 	 */
 	public void mouseEvent(MouseEvent event) {
-		int x = event.getX();
-		int y = event.getY();
-
 		if (splash != null && event.getAction() == MouseEvent.PRESS) {
 			splash.mousePressed();
 		}
@@ -973,7 +978,10 @@ public class zividomelive implements PConstants {
 			return;
 		}
 		this.sceneManager = sceneManager;
-		setScene(sceneManager.getCurrentScene());
+		currentScene = sceneManager.getCurrentScene();
+		if (standardRenderer != null && currentScene != null) {
+			standardRenderer.setCurrentScene(currentScene);
+		}
 	}
 
 	/**
