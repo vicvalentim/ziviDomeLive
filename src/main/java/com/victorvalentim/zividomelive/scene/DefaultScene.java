@@ -48,22 +48,22 @@ public class DefaultScene implements Scene {
 	public void sceneRender(PGraphicsOpenGL pg) {
 		pg.beginDraw();
 		pg.background(0,50,100, 255);
-		// Posiciona o sistema de coordenadas para (0, 0, 300)
+		// Position coordinate system to (0, 0, 300)
 		pg.translate(0, 250, 250);
 		pg.rotateX(-PConstants.HALF_PI);
 
-		// Renderiza a esfera central e objetos orbitais
+		// Render central sphere and orbital objects
 		renderRotatingSphere(pg);
 		renderOrbitingCubes(pg);
 
-		// Renderiza texto
+		// Render text
 		renderText(pg);
 
 		pg.endDraw();
 	}
 
 	public void update() {
-		// Atualizações contínuas podem ser aplicadas aqui, como animações
+		// Continuous updates can be applied here, such as animations
 	}
 
 

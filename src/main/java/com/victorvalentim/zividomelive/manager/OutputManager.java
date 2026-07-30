@@ -12,10 +12,8 @@ import spout.Spout;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
+import java.util.Locale;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -40,17 +38,12 @@ public class OutputManager implements PConstants {
 	private boolean spoutEnabled = false;
 	private boolean syphonEnabled = false;
 
-        private PGraphicsOpenGL outputGraphics;
-        private PGraphicsOpenGL latestGraphics; // Tracks last used graphics context
-        private final boolean isMacOS;
-        private final boolean isWindows;
-        private ByteBuffer[] ndiBuffers;
-        private ByteBuffer ndiBuffer;
-        private int pboId = -1;
-        private int lastWidth = 0;
-        private int lastHeight = 0;
-        private DevolayVideoFrame reusableFrame; // Reusable NDI video frame
-        private final int THREAD_COUNT = Runtime.getRuntime().availableProcessors();
+	private PGraphicsOpenGL outputGraphics;
+	private final boolean isMacOS;
+	private final boolean isWindows;
+	private ByteBuffer ndiBuffer;
+	private int pboId = -1;
+	private DevolayVideoFrame reusableFrame; // Reusable NDI video frame
 
 	/**
 	 * Constructs the OutputManager, initializing it with the parent application instance.
@@ -75,18 +68,21 @@ public class OutputManager implements PConstants {
 	/**
 	 * Initializes NDI output if it is not already enabled.
 	 */
-        private void initNDI() {
-                if (!ndiEnabled && ndiSender == null) {
-                        try {
-                                ndiSender = new DevolaySender("ziviDomeLive NDI Output");
-                                reusableFrame = new DevolayVideoFrame(); // Initialize reusable frame
-                                ndiEnabled = true;
-                                logger.info("NDI output initialized.");
-                        } catch (ExceptionInInitializerError | UnsatisfiedLinkError | IllegalStateException e) {
-                                logger.warning("NDI cannot be started on this platform.");
-                        }
-                }
-        }
+	private void initNDI() {
+		if (!ndiEnabled && ndiSender == null) {
+			try {
+				ndiSender = new DevolaySender("ziviDomeLive NDI Output");
+				reusableFrame = new DevolayVideoFrame();
+				ndiEnabled = true;
+				logger.info("NDI output initialized.");
+			} catch (ExceptionInInitializerError | UnsatisfiedLinkError | IllegalStateException e) {
+				ndiSender = null;
+				reusableFrame = null;
+				ndiEnabled = false;
+				logger.log(Level.WARNING, "initNDI failed: NDI unavailable on this platform.", e);
+			}
+		}
+	}
 
 	/**
 	 * Sets up Syphon (for macOS) or Spout (for Windows) based on the OS.
@@ -104,7 +100,7 @@ public class OutputManager implements PConstants {
 				logger.info("Spout initialized for Windows.");
 			}
 		} catch (Exception e) {
-			logger.severe("Error setting up Syphon/Spout: " + e.getMessage());
+			logger.log(Level.SEVERE, "setupSyphonOrSpout failed.", e);
 		}
 	}
 
@@ -114,24 +110,44 @@ public class OutputManager implements PConstants {
 	 * @param method the name of the output method to toggle ("ndi", "spout", "syphon")
 	 */
 	public void toggleOutput(String method) {
-		switch (method.toLowerCase()) {
+		if (method == null || method.trim().isEmpty()) {
+			logger.warning("Ignoring output toggle request with empty method.");
+			return;
+		}
+		String normalizedMethod = method.trim().toLowerCase(Locale.ROOT);
+
+		switch (normalizedMethod) {
 			case "ndi":
 				if (!ndiEnabled) {
 					initNDI();
 				} else {
 					shutdownNDI();
-					ndiEnabled = false;
 				}
 				break;
 			case "spout":
-				spoutEnabled = !spoutEnabled;
-				if (spoutEnabled) setupSyphonOrSpout();
-				else shutdownSpout();
+				if (!isWindows) {
+					logger.warning("Spout toggle ignored: unsupported platform.");
+					return;
+				}
+				if (!spoutEnabled) {
+					setupSyphonOrSpout();
+				} else {
+					shutdownSpout();
+				}
 				break;
 			case "syphon":
-				syphonEnabled = !syphonEnabled;
-				if (syphonEnabled) setupSyphonOrSpout();
-				else shutdownSyphon();
+				if (!isMacOS) {
+					logger.warning("Syphon toggle ignored: unsupported platform.");
+					return;
+				}
+				if (!syphonEnabled) {
+					setupSyphonOrSpout();
+				} else {
+					shutdownSyphon();
+				}
+				break;
+			default:
+				logger.warning("Unknown output method: " + normalizedMethod);
 				break;
 		}
 	}
@@ -155,19 +171,37 @@ public class OutputManager implements PConstants {
 	 * @param viewType the view type to prepare
 	 */
 	private void prepareOutput(zividomelive.ViewType viewType) {
-		switch (viewType) {
-			case FISHEYE_DOMEMASTER:
-				outputGraphics = parent.getFisheyeDomemaster().getDomemasterGraphics();
-				break;
-			case EQUIRECTANGULAR:
-				outputGraphics = parent.getEquirectangularRenderer().getEquirectangular();
-				break;
-			case CUBEMAP:
-				outputGraphics = parent.getCubemapViewRenderer().getCubemap();
-				break;
-			case STANDARD:
-				outputGraphics = parent.getStandardRenderer().getStandardView();
-				break;
+		outputGraphics = null;
+		if (viewType == null) {
+			return;
+		}
+
+		try {
+			switch (viewType) {
+				case FISHEYE_DOMEMASTER:
+					if (parent.getFisheyeDomemaster() != null) {
+						outputGraphics = parent.getFisheyeDomemaster().getDomemasterGraphics();
+					}
+					break;
+				case EQUIRECTANGULAR:
+					if (parent.getEquirectangularRenderer() != null) {
+						outputGraphics = parent.getEquirectangularRenderer().getEquirectangular();
+					}
+					break;
+				case CUBEMAP:
+					if (parent.getCubemapViewRenderer() != null) {
+						outputGraphics = parent.getCubemapViewRenderer().getCubemap();
+					}
+					break;
+				case STANDARD:
+					if (parent.getStandardRenderer() != null) {
+						outputGraphics = parent.getStandardRenderer().getStandardView();
+					}
+					break;
+			}
+		} catch (Exception e) {
+			logger.log(Level.WARNING, "prepareOutput failed for " + viewType + ".", e);
+			outputGraphics = null;
 		}
 	}
 
@@ -176,26 +210,44 @@ public class OutputManager implements PConstants {
 	 */
 	public void sendOutput() {
 		if (ndiEnabled && ndiSender != null) {
-			prepareOutput(ndiView);
-			DevolayVideoFrame ndiFrame = createNDIFrame(outputGraphics);
+			try {
+				prepareOutput(ndiView);
+				DevolayVideoFrame ndiFrame = outputGraphics == null ? null : createNDIFrame(outputGraphics);
 
-			ThreadManager.submitRunnable(() -> {
-				synchronized (this) {
-					if (ndiSender != null) {
-						ndiSender.sendVideoFrameAsync(ndiFrame);
-					}
+				if (ndiFrame != null) {
+					ThreadManager.submitRunnable(() -> {
+						synchronized (this) {
+							if (ndiSender != null && ndiEnabled) {
+								ndiSender.sendVideoFrameAsync(ndiFrame);
+							}
+						}
+					});
 				}
-			});
+			} catch (Exception e) {
+				logger.log(Level.WARNING, "sendOutput skipped NDI frame due to error.", e);
+			}
 		}
 
 		if (spoutEnabled && spoutSender != null && isWindows) {
-			prepareOutput(spoutView);
-			spoutSender.sendTexture(outputGraphics);
+			try {
+				prepareOutput(spoutView);
+				if (outputGraphics != null) {
+					spoutSender.sendTexture(outputGraphics);
+				}
+			} catch (Exception e) {
+				logger.log(Level.WARNING, "sendOutput skipped Spout frame due to error.", e);
+			}
 		}
 
 		if (syphonEnabled && syphonServer != null && isMacOS) {
-			prepareOutput(syphonView);
-			syphonServer.sendImage(outputGraphics);
+			try {
+				prepareOutput(syphonView);
+				if (outputGraphics != null) {
+					syphonServer.sendImage(outputGraphics);
+				}
+			} catch (Exception e) {
+				logger.log(Level.WARNING, "sendOutput skipped Syphon frame due to error.", e);
+			}
 		}
 	}
 
@@ -205,53 +257,69 @@ public class OutputManager implements PConstants {
 	 * @param pg the PGraphics instance containing the image data
 	 * @return the created NDI video frame
 	 */
-        private synchronized DevolayVideoFrame createNDIFrame(PGraphicsOpenGL pg) {
-                latestGraphics = pg; // store context for cleanup
-                int width = pg.width;
-                int height = pg.height;
-
-		// Get the OpenGL texture ID
-		int textureID = pg.getTexture().glName;
-
-                // Create a Pixel Buffer Object (PBO) for efficient pixel transfer
-                IntBuffer pboIDs = IntBuffer.allocate(1);
-                PGL pgl = pg.beginPGL();
-                pgl.genBuffers(1, pboIDs);
-                pboId = pboIDs.get(0);
-                pgl.bindBuffer(PGL.PIXEL_PACK_BUFFER, pboId);
-                pgl.bufferData(PGL.PIXEL_PACK_BUFFER, width * height * 4, null, PGL.STREAM_READ);
-
-		// Bind the texture and read pixels into the PBO
-		pg.beginDraw();
-		pgl = pg.beginPGL();
-		pgl.bindTexture(PGL.TEXTURE_2D, textureID);
-		pgl.readPixels(0, 0, width, height, PGL.RGBA, PGL.UNSIGNED_BYTE, 0);
-		pg.endPGL();
-		pg.endDraw();
-
-		// Map the PBO to a ByteBuffer
-                ndiBuffer = pgl.mapBuffer(PGL.PIXEL_PACK_BUFFER, PGL.READ_ONLY);
-                ndiBuffer.order(ByteOrder.LITTLE_ENDIAN);
-
-		// Prepare tasks for parallel processing
-                List<Callable<Void>> tasks = prepareTasks(pg, ndiBuffer);
-
-		try {
-			ThreadManager.getExecutor().invokeAll(tasks);
-		} catch (Exception e) {
-			logger.severe("Error in parallel pixel copy: " + e.getMessage());
+ 	private synchronized DevolayVideoFrame createNDIFrame(PGraphicsOpenGL pg) {
+		if (pg == null || reusableFrame == null) {
+			return null;
 		}
 
-		// Unmap the PBO but do not delete it immediately to avoid blocking
-                pgl.unmapBuffer(PGL.PIXEL_PACK_BUFFER);
-                pgl.bindBuffer(PGL.PIXEL_PACK_BUFFER, 0);
-                pgl.deleteBuffers(1, IntBuffer.wrap(new int[]{pboId}));
+		int width = pg.width;
+		int height = pg.height;
+		if (width <= 0 || height <= 0) {
+			return null;
+		}
 
-                // buffer was unmapped; flip the stored buffer
-                ndiBuffer.flip();
+		if (pg.getTexture() == null) {
+			logger.warning("createNDIFrame skipped: texture is not available.");
+			return null;
+		}
+
+		int byteCount = width * height * 4;
+		pg.beginDraw();
+		PGL pgl = pg.beginPGL();
+		boolean mapped = false;
+		try {
+			int textureID = pg.getTexture().glName;
+
+			IntBuffer pboIDs = IntBuffer.allocate(1);
+			pgl.genBuffers(1, pboIDs);
+			pboId = pboIDs.get(0);
+			pgl.bindBuffer(PGL.PIXEL_PACK_BUFFER, pboId);
+			pgl.bufferData(PGL.PIXEL_PACK_BUFFER, byteCount, null, PGL.STREAM_READ);
+
+			pgl.bindTexture(PGL.TEXTURE_2D, textureID);
+			pgl.readPixels(0, 0, width, height, PGL.RGBA, PGL.UNSIGNED_BYTE, 0);
+
+			ByteBuffer mappedBuffer = pgl.mapBuffer(PGL.PIXEL_PACK_BUFFER, PGL.READ_ONLY);
+			if (mappedBuffer == null) {
+				logger.warning("createNDIFrame failed: unable to map PBO buffer.");
+				return null;
+			}
+			mapped = true;
+			mappedBuffer.order(ByteOrder.LITTLE_ENDIAN);
+
+			if (ndiBuffer == null || ndiBuffer.capacity() != byteCount) {
+				ndiBuffer = ByteBuffer.allocateDirect(byteCount).order(ByteOrder.LITTLE_ENDIAN);
+			}
+
+			ndiBuffer.clear();
+			mappedBuffer.rewind();
+			ndiBuffer.put(mappedBuffer);
+			ndiBuffer.flip();
+		} finally {
+			if (mapped) {
+				pgl.unmapBuffer(PGL.PIXEL_PACK_BUFFER);
+			}
+			pgl.bindBuffer(PGL.PIXEL_PACK_BUFFER, 0);
+			if (pboId != -1) {
+				pgl.deleteBuffers(1, IntBuffer.wrap(new int[]{pboId}));
+				pboId = -1;
+			}
+			pg.endPGL();
+			pg.endDraw();
+		}
 
 		reusableFrame.setResolution(width, height);
-                reusableFrame.setData(ndiBuffer);
+		reusableFrame.setData(ndiBuffer);
 		reusableFrame.setFourCCType(DevolayFrameFourCCType.RGBA);
 		reusableFrame.setLineStride(width * 4);
 		reusableFrame.setFormatType(DevolayFrameFormatType.INTERLEAVED);
@@ -260,72 +328,33 @@ public class OutputManager implements PConstants {
 		return reusableFrame;
 	}
 
-	private List<Callable<Void>> prepareTasks(PGraphicsOpenGL pg, ByteBuffer buffer) {
-		int width = pg.width;
-		int height = pg.height;
-		int pixelCount = width * height;
-		int blockSize = pixelCount / THREAD_COUNT;
-		List<Callable<Void>> tasks = new ArrayList<>();
-
-		for (int i = 0; i < THREAD_COUNT; i++) {
-			final int start = i * blockSize;
-			final int end = (i == THREAD_COUNT - 1) ? pixelCount : start + blockSize;
-
-			tasks.add(() -> {
-				for (int j = start; j < end; j++) {
-					int x = j % width;
-					int y = j / width;
-					int index = (y * width + x) * 4;
-
-					// Read pixel data from the PBO
-					byte r = buffer.get(index);
-					byte g = buffer.get(index + 1);
-					byte b = buffer.get(index + 2);
-					byte a = buffer.get(index + 3);
-
-					// Write pixel data back to the buffer
-					buffer.put(index, r);
-					buffer.put(index + 1, g);
-					buffer.put(index + 2, b);
-					buffer.put(index + 3, a);
-				}
-				return null;
-			});
-		}
-
-                return tasks;
-        }
-
 	/**
 	 * Shuts down all output methods (NDI, Spout, Syphon).
 	 */
 	public void shutdownOutputs() {
+		ndiEnabled = false;
+		spoutEnabled = false;
+		syphonEnabled = false;
 		shutdownNDI();
 		shutdownSpout();
 		shutdownSyphon();
-		ThreadManager.shutdown(); // Ensures executor is shut down
-		logger.info("All output services and thread pool have been shut down.");
+		logger.info("All output services have been shut down.");
 	}
 
 	/**
 	 * Shuts down NDI output, releasing resources.
 	 */
-        private synchronized void shutdownNDI() {
-                if (pboId != -1 && latestGraphics != null) {
-                        PGL pgl = latestGraphics.beginPGL();
-                        pgl.deleteBuffers(1, IntBuffer.wrap(new int[]{pboId}));
-                        latestGraphics.endPGL();
-                        pboId = -1;
-                        ndiBuffer = null;
-                }
+	private synchronized void shutdownNDI() {
+		pboId = -1;
+		if (ndiSender != null) {
+			ndiSender.close();
+			ndiSender = null;
+			logger.info("NDI output shut down.");
+		}
 
-                if (ndiSender != null) {
-                        ndiSender.close();
-                        ndiSender = null;
-                        reusableFrame = null; // Clears reusable frame
-                        logger.info("NDI output shut down.");
-                }
-        }
+		reusableFrame = null;
+		ndiEnabled = false;
+	}
 
 	/**
 	 * Shuts down Spout output, releasing resources.
@@ -336,6 +365,7 @@ public class OutputManager implements PConstants {
 			spoutSender = null;
 			logger.info("Spout output shut down.");
 		}
+		spoutEnabled = false;
 	}
 
 	/**
@@ -347,6 +377,7 @@ public class OutputManager implements PConstants {
 			syphonServer = null;
 			logger.info("Syphon output shut down.");
 		}
+		syphonEnabled = false;
 	}
 
 	// Getter methods for each output method status
@@ -414,13 +445,14 @@ public class OutputManager implements PConstants {
 	 * @return true if any output method is enabled, false otherwise
 	 */
 	public boolean isActive() {
-		return ndiEnabled || spoutEnabled || syphonEnabled;
+		return (ndiEnabled && ndiSender != null)
+				|| (spoutEnabled && spoutSender != null)
+				|| (syphonEnabled && syphonServer != null);
 	}
 
 	/**
 	 * Stops all output methods and shuts down the OutputManager.
-	 * This method ensures that all resources are released and
-	 * the thread pool is properly shut down.
+	 * This method ensures that all output resources are released.
 	 */
 	public void stopOutput() {
 		shutdownOutputs();

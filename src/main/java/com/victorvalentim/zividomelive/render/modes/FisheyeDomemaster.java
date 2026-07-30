@@ -1,15 +1,18 @@
 package com.victorvalentim.zividomelive.render.modes;
 
 
+import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.PApplet;
 import processing.core.PGraphics;
 import processing.opengl.PGraphicsOpenGL;
 import processing.opengl.PShader;
+import java.util.logging.Logger;
 
 /**
  * The FisheyeDomemaster class handles the rendering of fisheye domemaster projections from equirectangular maps.
  */
 public class FisheyeDomemaster {
+    private static final Logger LOGGER = LogManager.getLogger();
     private PGraphics domemaster;
     private PGraphics domemasterSize;
     private final PShader domemasterShader;
@@ -82,7 +85,7 @@ public class FisheyeDomemaster {
      */
     public void applyShader(PGraphicsOpenGL equirectangular, float fov) {
         if (equirectangular == null) {
-            System.out.println("Equirectangular PGraphics is null.");
+            LOGGER.warning("Equirectangular PGraphics is null.");
             return;
         }
 

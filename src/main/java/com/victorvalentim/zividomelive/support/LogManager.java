@@ -54,10 +54,10 @@ public class LogManager {
 			return;
 		}
 
-		// Desativa o uso de handlers do logger pai
+		// Disable parent logger handlers to prevent duplicate logging
 		globalLogger.setUseParentHandlers(false);
 
-		// Remove handlers existentes para evitar duplicatas
+		// Remove existing handlers to avoid duplicates
 		Handler[] handlers = globalLogger.getHandlers();
 		for (Handler handler : handlers) {
 			globalLogger.removeHandler(handler);
@@ -73,26 +73,25 @@ public class LogManager {
 
 		globalLogger.setLevel(Level.ALL);
 
-		// Configurações de ConsoleHandler
+		// Configure ConsoleHandler for console output
 		ConsoleHandler consoleHandler = new ConsoleHandler();
 		consoleHandler.setLevel(Level.ALL);
 		consoleHandler.setFormatter(new CustomFormatter());
 		globalLogger.addHandler(consoleHandler);
 
-		// Configurações de FileHandler com validação de diretório
+		// Configure FileHandler with directory validation
 		try {
 			FileHandler fileHandler = getFileHandler();
 			globalLogger.addHandler(fileHandler);
 		} catch (IOException e) {
-			System.err.println("FileHandler configuration failed. Logs will only appear in the console.");
-			e.printStackTrace();
+			globalLogger.log(Level.WARNING, "FileHandler configuration failed. Logs will only appear in the console.", e);
 		}
 
-		// Filtro para ignorar mensagens duplicadas
+		// Filter to suppress duplicate log messages
 		globalLogger.setFilter(record -> {
 			String message = record.getMessage();
 			if (message.equals(lastLogMessage)) {
-				return false; // Ignora mensagens duplicadas
+				return false; // Suppress duplicate message
 			}
 			lastLogMessage = message;
 			return true;
@@ -111,7 +110,7 @@ public class LogManager {
 		String logDirectory;
 		String logFile;
 
-		// Define o local do log baseado no sistema operacional
+		// Determine log directory based on operating system
 		if (System.getProperty("os.name").toLowerCase().contains("win")) {
 			logDirectory = System.getProperty("user.home") + "\\zividomelive\\logs";
 			logFile = logDirectory + "\\ziviDomeLive.log";
@@ -122,19 +121,19 @@ public class LogManager {
 
 		java.io.File directory = new java.io.File(logDirectory);
 
-		// Verifica e cria o diretório, se necessário
+		// Create log directory if it does not exist
 		if (!directory.exists() && !directory.mkdirs()) {
 			throw new IOException("Failed to create log directory: " + logDirectory);
 		}
 
-		// Garante que o arquivo de log seja criado
+		// Ensure log file is created
 		java.io.File logFileObject = new java.io.File(logFile);
 		if (!logFileObject.exists() && !logFileObject.createNewFile()) {
 			throw new IOException("Failed to create log file: " + logFile);
 		}
 
-		// Configura o FileHandler
-		FileHandler fileHandler = new FileHandler(logFile, true); // true para anexar ao log existente
+		// Configure FileHandler with append mode enabled
+		FileHandler fileHandler = new FileHandler(logFile, true); // true: append to existing log
 		fileHandler.setLevel(Level.ALL);
 		fileHandler.setFormatter(new CustomFormatter());
 		return fileHandler;

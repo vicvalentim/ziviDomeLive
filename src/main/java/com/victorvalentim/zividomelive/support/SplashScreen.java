@@ -22,8 +22,8 @@ public class SplashScreen {
     long startTime;
     int displayDuration = 7000;
     PApplet p;
-    PGraphicsOpenGL backgroundLayer; // Camada para o fundo gradiente
-    PGraphicsOpenGL animationLayer;  // Camada para os elementos animados
+    PGraphicsOpenGL backgroundLayer; // Layer for gradient background
+    PGraphicsOpenGL animationLayer;  // Layer for animated elements
 
     /**
      * Constructs a SplashScreen instance.
@@ -94,7 +94,7 @@ public class SplashScreen {
         float rotationAngleY = PApplet.radians(p.millis() * 0.015f);
         float rotationAngleZ = PApplet.radians(p.millis() * 0.01f);
 
-        // Renderiza a esfera central
+        // Render central sphere
         animationLayer.pushMatrix();
         animationLayer.translate(p.width / 2f, p.height / 2f, 0);
         animationLayer.rotateX(rotationAngleX);
@@ -124,7 +124,7 @@ public class SplashScreen {
         }
         animationLayer.popMatrix();
 
-        // Renderiza os cubos orbitando ao redor da esfera
+        // Render cubes orbiting around the sphere
         for (int i = 0; i < numCubes; i++) {
             float rotationOffset = PConstants.TWO_PI / numCubes * i;
             float initialAngleOffset = PConstants.TWO_PI / numCubes * i;
@@ -147,7 +147,7 @@ public class SplashScreen {
             animationLayer.popMatrix();
         }
 
-        // Renderiza o texto "ziviDomeLive" abaixo da esfera
+        // Render "ziviDomeLive" text below the sphere
         animationLayer.pushMatrix();
         animationLayer.translate(p.width / 2f, p.height / 2f + radius + 40);
         animationLayer.textAlign(PConstants.CENTER, PConstants.CENTER);
@@ -165,10 +165,10 @@ public class SplashScreen {
     public void render() {
         if (!showSplash) return;
 
-        renderBackground(); // Atualiza o fundo com opacidade
+        renderBackground(); // Update background with opacity
         renderAnimations();
-        p.image(backgroundLayer, 0, 0); // Desenha o fundo gradiente
-        p.image(animationLayer, 0, 0); // Desenha os elementos animados sobre o fundo
+        p.image(backgroundLayer, 0, 0); // Draw gradient background
+        p.image(animationLayer, 0, 0); // Draw animated elements over background
     }
 
     /**
