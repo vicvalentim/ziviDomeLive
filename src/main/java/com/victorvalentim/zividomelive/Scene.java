@@ -11,6 +11,7 @@ import java.util.logging.Logger;
  * It includes methods for setting up the scene, rendering the scene, and handling events.
  */
 public interface Scene {
+	/** Logger instance for scene-related logging. */
 	Logger LOGGER = LogManager.getLogger();
 
 	/**

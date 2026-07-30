@@ -12,7 +12,7 @@ import spout.Spout;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
-import java.util.Locale;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -23,11 +23,19 @@ import java.util.logging.Logger;
  */
 public class OutputManager implements PConstants {
 
+	/** Enum representing different output types. */
+	public enum OutputType {
+		/** NDI output type. */
+		NDI,
+		/** Spout output type. */
+		SPOUT,
+		/** Syphon output type. */
+		SYPHON
+	}
+
 	private final Logger logger = LogManager.getLogger();
 	private zividomelive.ViewType currentView;
-	private zividomelive.ViewType ndiView;
-	private zividomelive.ViewType spoutView;
-	private zividomelive.ViewType syphonView;
+	private final Map<OutputType, zividomelive.ViewType> outputViews;
 	private final zividomelive parent;
 
 	private DevolaySender ndiSender;
@@ -54,15 +62,41 @@ public class OutputManager implements PConstants {
 	public OutputManager(zividomelive parent) {
 		this.parent = parent;
 		this.currentView = zividomelive.ViewType.FISHEYE_DOMEMASTER;
-		this.ndiView = currentView;
-		this.spoutView = currentView;
-		this.syphonView = currentView;
+		this.outputViews = new EnumMap<>(OutputType.class);
+		
+		// Initialize output views with default value
+		for (OutputType type : OutputType.values()) {
+			outputViews.put(type, zividomelive.ViewType.FISHEYE_DOMEMASTER);
+		}
 
 		String osName = System.getProperty("os.name").toLowerCase();
 		this.isMacOS = osName.contains("mac");
 		this.isWindows = osName.contains("win");
 
 		setupSyphonOrSpout(); // Initializes Syphon or Spout based on the OS
+	}
+
+	/**
+	 * Gets the view type configured for a specific output type.
+	 *
+	 * @param outputType the output type to query
+	 * @return the ViewType configured for the output, or FISHEYE_DOMEMASTER if not set
+	 */
+	public zividomelive.ViewType getViewForOutput(OutputType outputType) {
+		return outputViews.getOrDefault(outputType, zividomelive.ViewType.FISHEYE_DOMEMASTER);
+	}
+
+	/**
+	 * Sets the view type for a specific output type.
+	 *
+	 * @param outputType the output type to configure
+	 * @param viewType the ViewType to set
+	 */
+	public void setViewForOutput(OutputType outputType, zividomelive.ViewType viewType) {
+		if (outputType != null && viewType != null) {
+			outputViews.put(outputType, viewType);
+			logger.info("Set view for " + outputType + " to " + viewType);
+		}
 	}
 
 	/**
@@ -211,7 +245,7 @@ public class OutputManager implements PConstants {
 	public void sendOutput() {
 		if (ndiEnabled && ndiSender != null) {
 			try {
-				prepareOutput(ndiView);
+				prepareOutput(getViewForOutput(OutputType.NDI));
 				DevolayVideoFrame ndiFrame = outputGraphics == null ? null : createNDIFrame(outputGraphics);
 
 				if (ndiFrame != null) {
@@ -230,7 +264,7 @@ public class OutputManager implements PConstants {
 
 		if (spoutEnabled && spoutSender != null && isWindows) {
 			try {
-				prepareOutput(spoutView);
+				prepareOutput(getViewForOutput(OutputType.SPOUT));
 				if (outputGraphics != null) {
 					spoutSender.sendTexture(outputGraphics);
 				}
@@ -241,7 +275,7 @@ public class OutputManager implements PConstants {
 
 		if (syphonEnabled && syphonServer != null && isMacOS) {
 			try {
-				prepareOutput(syphonView);
+				prepareOutput(getViewForOutput(OutputType.SYPHON));
 				if (outputGraphics != null) {
 					syphonServer.sendImage(outputGraphics);
 				}
@@ -415,8 +449,7 @@ public class OutputManager implements PConstants {
 	 * @param view the desired view type for NDI output
 	 */
 	public void setNdiView(zividomelive.ViewType view) {
-		this.ndiView = view;
-		logger.info("NDI view set to " + view);
+		setViewForOutput(OutputType.NDI, view);
 	}
 
 	/**
@@ -425,8 +458,7 @@ public class OutputManager implements PConstants {
 	 * @param view the desired view type for Spout output
 	 */
 	public void setSpoutView(zividomelive.ViewType view) {
-		this.spoutView = view;
-		logger.info("Spout view set to " + view);
+		setViewForOutput(OutputType.SPOUT, view);
 	}
 
 	/**
@@ -435,8 +467,7 @@ public class OutputManager implements PConstants {
 	 * @param view the desired view type for Syphon output
 	 */
 	public void setSyphonView(zividomelive.ViewType view) {
-		this.syphonView = view;
-		logger.info("Syphon view set to " + view);
+		setViewForOutput(OutputType.SYPHON, view);
 	}
 
 	/**

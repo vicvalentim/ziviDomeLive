@@ -19,11 +19,15 @@ public class SplashScreen {
     int numCubes = 13;
     float[] speeds;
     boolean fading = false;
-    long startTime;
+    long startTimeNano;
     int displayDuration = 7000;
     PApplet p;
     PGraphicsOpenGL backgroundLayer; // Layer for gradient background
     PGraphicsOpenGL animationLayer;  // Layer for animated elements
+    
+    // Caching for optimization
+    private int cachedOpacity = -1;
+    private boolean backgroundNeedsUpdate = true;
 
     /**
      * Constructs a SplashScreen instance.
@@ -47,14 +51,18 @@ public class SplashScreen {
         showSplash = true;
         fading = false;
         opacity = 255;
-        startTime = p.millis();
+        cachedOpacity = -1;
+        backgroundNeedsUpdate = true;
+        startTimeNano = System.nanoTime();
     }
 
     /**
      * Updates the splash screen state. Starts fade-out after a set duration or on user interaction.
      */
     public void update() {
-        if (!fading && p.millis() - startTime > displayDuration) {
+        long elapsedMs = (System.nanoTime() - startTimeNano) / 1_000_000;
+        
+        if (!fading && elapsedMs > displayDuration) {
             fading = true;
         }
         if (fading) {
@@ -64,12 +72,24 @@ public class SplashScreen {
                 showSplash = false;
             }
         }
+        
+        // Mark background for update if opacity changed significantly
+        if (Math.abs(opacity - cachedOpacity) > 0) {
+            backgroundNeedsUpdate = true;
+            cachedOpacity = opacity;
+        }
     }
 
     /**
      * Renders the background gradient layer with current opacity.
+     * Only re-renders if the opacity has changed significantly to improve performance.
      */
     private void renderBackground() {
+        // Skip if opacity hasn't changed enough to warrant a redraw
+        if (!backgroundNeedsUpdate && cachedOpacity == opacity) {
+            return;
+        }
+        
         backgroundLayer.beginDraw();
         backgroundLayer.clear();
         for (int i = 0; i < p.height; i++) {
@@ -79,6 +99,7 @@ public class SplashScreen {
             backgroundLayer.line(0, i, p.width, i);
         }
         backgroundLayer.endDraw();
+        backgroundNeedsUpdate = false;
     }
 
     /**

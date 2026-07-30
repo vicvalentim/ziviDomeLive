@@ -25,7 +25,18 @@ import java.util.logging.Logger;
  */
 public class zividomelive implements PConstants {
 
+	/**
+	 * Enum representing the initialization state of the library.
+	 */
+	public enum InitState {
+		NOT_INITIALIZED,
+		SETUP_COMPLETE,
+		MANAGERS_READY,
+		READY
+	}
+
 	private final PApplet p;
+	private InitState initState = InitState.NOT_INITIALIZED;
 	private boolean initialized = false;
 	private Scene currentScene;
 
@@ -198,6 +209,8 @@ public class zividomelive implements PConstants {
 				LOGGER.severe("Error initializing DefaultScene: " + e.getMessage());
 			}
 		}
+
+		initState = InitState.SETUP_COMPLETE;
 		LOGGER.info("Setup completed.");
 	}
 
@@ -237,6 +250,11 @@ public class zividomelive implements PConstants {
 	 * Initializes various managers required for rendering and control.
 	 */
 	public void initializeManagers() {
+		if (initState != InitState.SETUP_COMPLETE) {
+			LOGGER.severe("Cannot initialize managers: Setup not complete. Current state: " + initState);
+			return;
+		}
+
 		try {
 			LOGGER.info("Initializing managers...");
 
@@ -249,9 +267,12 @@ public class zividomelive implements PConstants {
 			controlManager = new ControlManager(p, this, resolution);
 			LOGGER.info("ControlManager initialized.");
 
+			initState = InitState.MANAGERS_READY;
+			initialized = true;
 			LOGGER.info("Managers initialized successfully.");
 		} catch (Exception e) {
-			LOGGER.severe("Error initializing managers");
+			LOGGER.severe("Error initializing managers: " + e.getMessage());
+			initState = InitState.SETUP_COMPLETE; // Revert state on error
 		}
 	}
 
@@ -293,8 +314,8 @@ public class zividomelive implements PConstants {
 	 * Main draw method that handles rendering and updating the view.
 	 */
 	public void draw() {
-		if (!initialized) {
-			p.background(0,0);
+		if (initState != InitState.MANAGERS_READY) {
+			p.background(0, 0);
 			return;
 		}
 
@@ -336,19 +357,6 @@ public class zividomelive implements PConstants {
 			drawFloatingPreview(); // Desenha uma visualização flutuante, se ativada
 		}
 		drawControlPanel();        // Exibe o painel de controle
-	}
-
-	void individualRenderer() {
-		if (!initialized) {
-			LOGGER.severe("Error: System not fully initialized.");
-			return;
-		}
-
-		clearBackground();
-		handleGraphicsReset(); // Garante que o reset gráfico seja realizado
-		captureCubemap();
-		outputManager.sendOutput(); // Envia a saída para os métodos de saída ativados
-		drawControlPanel();         // Exibe o painel de controle
 	}
 
 	void clearBackground() {
@@ -445,15 +453,26 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
+	 * Generic renderer for individual view modes (avoids duplicated logic).
+	 * Prepares the scene and captures cubemap, then uses the current view mode's renderer.
+	 */
+	private void renderWithCurrentView() {
+		clearBackground();
+		handleGraphicsReset();
+		captureCubemap();
+		updateRenderViews();
+		displayCurrentView();
+		outputManager.sendOutput();
+		drawControlPanel();
+	}
+
+	/**
 	 * Renders the fisheye domemaster view by applying the shader and displaying the view.
 	 * If the FisheyeDomemaster is not initialized, an error message is printed.
 	 */
 	public void renderFisheyeDomemaster() {
 		if (fisheyeDomemaster != null) {
-			individualRenderer();
-			equirectangularRenderer.render(cubemapRenderer.getCubemapFaces());
-			fisheyeDomemaster.applyShader(equirectangularRenderer.getEquirectangular(), getFov());
-			displayView(fisheyeDomemaster.getDomemasterGraphics());
+			renderWithCurrentView();
 		} else {
 			LOGGER.severe("Error: FisheyeDomemaster not initialized.");
 		}
@@ -465,9 +484,7 @@ public class zividomelive implements PConstants {
 	 */
 	public void renderEquirectangular() {
 		if (equirectangularRenderer != null) {
-			individualRenderer();
-			equirectangularRenderer.render(cubemapRenderer.getCubemapFaces());
-			displayView(equirectangularRenderer.getEquirectangular());
+			renderWithCurrentView();
 		} else {
 			LOGGER.severe("Error: EquirectangularRenderer not initialized.");
 		}
@@ -479,9 +496,7 @@ public class zividomelive implements PConstants {
 	 */
 	public void renderCubemap() {
 		if (cubemapViewRenderer != null) {
-			individualRenderer();
-			cubemapViewRenderer.drawCubemapToGraphics(cubemapRenderer.getCubemapFaces());
-			displayView(cubemapViewRenderer.getCubemap());
+			renderWithCurrentView();
 		} else {
 			LOGGER.severe("Error: CubemapViewRenderer not initialized.");
 		}
@@ -493,9 +508,7 @@ public class zividomelive implements PConstants {
 	 */
 	public void renderStandard() {
 		if (standardRenderer != null) {
-			individualRenderer();
-			standardRenderer.render();
-			displayView(standardRenderer.getStandardView());
+			renderWithCurrentView();
 		} else {
 			LOGGER.severe("Error: StandardRenderer not initialized.");
 		}
@@ -594,15 +607,15 @@ public class zividomelive implements PConstants {
 	private void registerEventHandlers() {
 		boolean allSuccess = true;
 
-		if (registerMethod("pre")) allSuccess = false;
-		if (registerMethod("draw")) allSuccess = false;
-		if (registerMethod("post")) allSuccess = false;
-		if (registerMethod("mouseEvent")) allSuccess = false;
-		if (registerMethod("keyEvent")) allSuccess = false;
-		if (registerMethod("stop")) allSuccess = false;
-		if (registerMethod("resume")) allSuccess = false;
-		if (registerMethod("pause")) allSuccess = false;
-		if (registerMethod("dispose")) allSuccess = false;
+		if (!registerMethod("pre")) allSuccess = false;
+		if (!registerMethod("draw")) allSuccess = false;
+		if (!registerMethod("post")) allSuccess = false;
+		if (!registerMethod("mouseEvent")) allSuccess = false;
+		if (!registerMethod("keyEvent")) allSuccess = false;
+		if (!registerMethod("stop")) allSuccess = false;
+		if (!registerMethod("resume")) allSuccess = false;
+		if (!registerMethod("pause")) allSuccess = false;
+		if (!registerMethod("dispose")) allSuccess = false;
 
 		if (allSuccess) {
 			LOGGER.info("All event handlers registered successfully.");
@@ -621,10 +634,10 @@ public class zividomelive implements PConstants {
 		try {
 			p.registerMethod(methodName, this);
 			LOGGER.info("Successfully registered method: " + methodName);
-			return false;
+			return true;
 		} catch (Exception e) {
 			LOGGER.severe("Failed to register method: " + methodName + ". Error: " + e.getMessage());
-			return true;
+			return false;
 		}
 	}
 
@@ -957,13 +970,21 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
-	 * Checks if the instance is initialized.
+	 * Checks if the instance is initialized and ready to render.
 	 *
-	 * @return true if the instance is initialized, false otherwise
+	 * @return true if the instance is initialized and managers are ready, false otherwise
 	 */
 	public boolean isInitialized() {
+		return initState == InitState.MANAGERS_READY;
+	}
 
-		return initialized;
+	/**
+	 * Returns the current initialization state.
+	 *
+	 * @return the current InitState
+	 */
+	public InitState getInitState() {
+		return initState;
 	}
 
 	/**
@@ -998,8 +1019,8 @@ public class zividomelive implements PConstants {
 	 */
 	public void pre() {
 		// Garantir que os managers estejam inicializados antes de renderizar
-		if (!initialized) {
-			LOGGER.warning("Render skipped: Managers not initialized.");
+		if (initState != InitState.MANAGERS_READY) {
+			LOGGER.warning("Render skipped: System not ready. State: " + initState);
 			return;
 		}
 
@@ -1013,10 +1034,14 @@ public class zividomelive implements PConstants {
 	 * Post-initialization method to set up managers after the initial setup.
 	 */
 	public void post() {
-		if (!initialized) {
-			initializeManagers();
-			initialized = true;
-			p.unregisterMethod("post", this);
+		if (initState == InitState.SETUP_COMPLETE) {
+			try {
+				initializeManagers();
+				p.unregisterMethod("post", this);
+				LOGGER.info("Post-initialization completed successfully.");
+			} catch (Exception e) {
+				LOGGER.severe("Error during post-initialization: " + e.getMessage());
+			}
 		}
 	}
 
