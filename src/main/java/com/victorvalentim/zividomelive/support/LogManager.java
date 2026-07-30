@@ -7,29 +7,71 @@ import java.util.logging.*;
  * Manages logging configuration for the application.
  */
 public class LogManager {
+	/** Supported logging profiles for the library. */
+	public enum Mode {
+		/** Verbose logging to console and file. */
+		DEBUG,
+		/** Silent mode: disables LogManager output. */
+		RELEASE
+	}
 
 	private static final Logger globalLogger = Logger.getLogger("com.victorvalentim.zividomelive");
 	private static boolean isConfigured = false;
 	private static String lastLogMessage = "";
+	private static Mode currentMode = Mode.RELEASE;
 
 	private LogManager() {}
+
+
+	/**
+	 * Sets the global logging mode.
+	 *
+	 * @param mode desired logging mode
+	 */
+	public static synchronized void setMode(Mode mode) {
+		if (mode == null) {
+			throw new IllegalArgumentException("Log mode cannot be null.");
+		}
+		currentMode = mode;
+		isConfigured = false;
+		configureLogger();
+	}
+
+	/**
+	 * Returns the currently configured logging mode.
+	 *
+	 * @return current logging mode
+	 */
+	public static synchronized Mode getMode() {
+		return currentMode;
+	}
 
 	/**
 	 * Configures the global logger with a custom format and handlers.
 	 */
-	private static void configureLogger() {
-		if (isConfigured) return;
+	private static synchronized void configureLogger() {
+		if (isConfigured) {
+			return;
+		}
 
 		// Desativa o uso de handlers do logger pai
 		globalLogger.setUseParentHandlers(false);
-
-		globalLogger.setLevel(Level.ALL);
 
 		// Remove handlers existentes para evitar duplicatas
 		Handler[] handlers = globalLogger.getHandlers();
 		for (Handler handler : handlers) {
 			globalLogger.removeHandler(handler);
+			handler.close();
 		}
+
+		if (currentMode == Mode.RELEASE) {
+			globalLogger.setLevel(Level.OFF);
+			globalLogger.setFilter(null);
+			isConfigured = true;
+			return;
+		}
+
+		globalLogger.setLevel(Level.ALL);
 
 		// Configurações de ConsoleHandler
 		ConsoleHandler consoleHandler = new ConsoleHandler();

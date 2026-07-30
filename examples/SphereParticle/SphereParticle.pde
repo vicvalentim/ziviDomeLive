@@ -16,6 +16,7 @@ ExecutorService particleProcessors;  // ExecutorService para processamento paral
 ReentrantLock lock = new ReentrantLock();  // Lock para controle de acesso concorrente
 
 void settings() {
+  pixelDensity(1);  // Library default policy
   size(1280, 720, P3D);  // Define o tamanho da janela e o modo P3D
 }
 

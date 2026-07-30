@@ -490,7 +490,7 @@ class Scene1 implements Scene {
       case MouseEvent.WHEEL:
         float scroll = event.getCount();
         boolean isPad = Math.abs(scroll) < 1;
-        float zoom   = isPad ? scroll * 0.001f : scroll * 2f;
+        float zoom   = isPad ? scroll * 0.001f : scroll * 80f;
         // Ajusta distância da câmera com limites
         cameraController.setDistance(
           PApplet.constrain(
