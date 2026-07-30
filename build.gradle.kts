@@ -43,6 +43,10 @@ group = "com.victorvalentim.zividomelive"
 // You can update these numbers as you release new versions of your library.
 version = "1.3.6"
 
+// Centralized dependency versions for easier Maven sync/updates.
+val processingCoreVersion = "4.5.6"
+val devolayVersion = "2.1.1"
+
 // The location of your sketchbook folder. The sketchbook folder holds your installed
 // libraries, tools, and modes. It is needed if you:
 // 1. wish to copy the library to the Processing sketchbook, which installs the library locally
@@ -72,7 +76,7 @@ if (currentOS.isMacOsX) {
 repositories {
     mavenCentral()
 
-    // these two are needed to resolve processing4 from micycle1's repo
+    // Kept for compatibility with occasional transitive dependencies in Processing ecosystem.
     maven { url = uri("https://jitpack.io") }
     maven { url = uri("https://jogamp.org/deployment/maven/") }
 }
@@ -81,12 +85,10 @@ repositories {
 // The provided example uses Apache Commons Math. Replace or add as needed.
 dependencies {
     // resolve Processing core
-    compileOnly(group = "org.processing", name = "core", version = "4.4.4")
-    // We are currently resolving from an unofficial, jitpack-enabled, processing4 repository.
-    // Eventually, this will change to an official source.
+    compileOnly(group = "org.processing", name = "core", version = processingCoreVersion)
 
     // insert your external dependencies
-    implementation(group = "me.walkerknapp", name = "devolay", version = "2.1.1")
+    implementation(group = "me.walkerknapp", name = "devolay", version = devolayVersion)
     //implementation(group = "org.apache.commons", name = "commons-math3", version = "3.6.1")
     // The provided example uses commons-math3. Replace or add as needed.
 
@@ -103,7 +105,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter")
     // Processing core is needed at test runtime for PApplet static math helpers
     // (sin, cos, sqrt, constrain) used by Quaternion and related classes.
-    testImplementation(group = "org.processing", name = "core", version = "4.4.4")
+    testImplementation(group = "org.processing", name = "core", version = processingCoreVersion)
 }
 
 tasks.test {
