@@ -55,9 +55,9 @@ version = "1.3.6"
 var sketchbookLocation = ""
 val userHome = System.getProperty("user.home")
 val currentOS = OperatingSystem.current()
-if(currentOS.isMacOsX) {
+if (currentOS.isMacOsX) {
     sketchbookLocation = "$userHome/Documents/Processing/"
-} else if(currentOS.isWindows) {
+} else if (currentOS.isWindows) {
     sketchbookLocation = "$userHome/My Documents/Processing/sketchbook"
 } else {
     sketchbookLocation = "$userHome/sketchbook"
@@ -81,7 +81,7 @@ repositories {
 // The provided example uses Apache Commons Math. Replace or add as needed.
 dependencies {
     // resolve Processing core
-    compileOnly (group = "org.processing", name = "core", version = "4.4.4")
+    compileOnly(group = "org.processing", name = "core", version = "4.4.4")
     // We are currently resolving from an unofficial, jitpack-enabled, processing4 repository.
     // Eventually, this will change to an official source.
 
@@ -148,9 +148,6 @@ tasks.jar {
     }
 }
 
-tasks.test {
-    useJUnitPlatform()
-}
 
 // ===========================
 // Tasks for releasing library
