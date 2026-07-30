@@ -1,12 +1,15 @@
 package com.victorvalentim.zividomelive.render.modes;
 
+import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.*;
 import processing.opengl.PGraphicsOpenGL;
+import java.util.logging.Logger;
 
 /**
  * The CubemapViewRenderer class handles the creation and rendering of cubemap views.
  */
 public class CubemapViewRenderer {
+    private static final Logger LOGGER = LogManager.getLogger();
     private int resolution;
     private PGraphicsOpenGL cubemap;
     private final int[] faceRotations = {2, 2, 2, 2, 2, 2};
@@ -65,7 +68,7 @@ public class CubemapViewRenderer {
      */
     public void drawCubemapToGraphics(PGraphicsOpenGL[] cubemapFaces) {
         if (cubemapFaces == null || cubemapFaces.length != 6) {
-            System.out.println("Error: Invalid cubemapFaces.");
+            LOGGER.warning("Invalid cubemapFaces: expected 6 faces.");
             return;
         }
 

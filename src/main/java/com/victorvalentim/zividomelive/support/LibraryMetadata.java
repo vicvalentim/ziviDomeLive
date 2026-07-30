@@ -4,12 +4,15 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * This class handles the loading and retrieval of library metadata from a properties file.
  */
 public class LibraryMetadata {
 
+	private static final Logger LOGGER = LogManager.getLogger();
 	private static final Properties properties = new Properties();
 	private static boolean isLoaded = false;
 
@@ -27,8 +30,7 @@ public class LibraryMetadata {
 				isLoaded = true;
 			}
 		} catch (IOException e) {
-			System.err.println("Error: Failed to load library.properties.");
-			e.printStackTrace();
+			LOGGER.log(Level.SEVERE, "Failed to load library.properties.", e);
 		}
 	}
 
@@ -60,6 +62,6 @@ public class LibraryMetadata {
 	private static String getBasePath() {
 		String jarPath = LibraryMetadata.class.getProtectionDomain().getCodeSource().getLocation().getPath();
 		File jarFile = new File(jarPath);
-		return jarFile.getParentFile().getParent(); // Move para o diretório raiz
+		return jarFile.getParentFile().getParent(); // Move to root directory
 	}
 }

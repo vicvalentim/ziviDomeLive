@@ -1,14 +1,17 @@
 package com.victorvalentim.zividomelive;
 
+import com.victorvalentim.zividomelive.support.LogManager;
 import controlP5.*;
 import processing.event.*;
 import processing.opengl.PGraphicsOpenGL;
+import java.util.logging.Logger;
 
 /**
  * The Scene interface defines the structure for a scene in the application.
  * It includes methods for setting up the scene, rendering the scene, and handling events.
  */
 public interface Scene {
+	Logger LOGGER = LogManager.getLogger();
 
 	/**
 	 * Sets up the scene. This method is called once when the scene is initialized.
@@ -61,7 +64,7 @@ public interface Scene {
 	 * Override this method if a scene requires custom resource management.
 	 */
 	default void dispose() {
-		System.out.println("Disposing resources for scene: " + getName());
+		LOGGER.info("Disposing resources for scene: " + getName());
 	}
 
 	/**
@@ -70,6 +73,6 @@ public interface Scene {
 	 * @return the name of the scene
 	 */
 	default String getName() {
-		return this.getClass().getSimpleName(); // Retorna o nome da classe como padrão
+		return this.getClass().getSimpleName(); // Return class name as default
 	}
 }

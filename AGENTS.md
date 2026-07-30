@@ -3,7 +3,7 @@
 ## Scope and source priority
 - This repo is a Processing 4 Java library for fulldome/VR rendering (`README.md`, `src/main/java/com/victorvalentim/zividomelive/zividomelive.java`).
 - Prefer source-of-truth in this order: `src/main/java` -> `build.gradle.kts` + `.github/workflows` -> `README.md` -> `examples/`.
-- Existing AI-specific conventions were discovered from `README.md` (no existing `AGENTS.md`/`CLAUDE.md`/copilot rules found by glob search).
+- Canonical agent guidance is this `AGENTS.md`; no `CLAUDE.md` or Copilot-instruction files are present in the repository.
 
 ## Big-picture architecture
 - Entrypoint: `zividomelive` orchestrates setup, lifecycle hooks, rendering, controls, and outputs.
@@ -21,6 +21,7 @@
 ## Runtime flow that matters
 - Processing hooks are auto-registered in constructor (`pre`, `draw`, `post`, `mouseEvent`, `keyEvent`, etc.).
 - Initialization is split: `setup()` creates `OutputManager` + splash/default scene; `post()` lazily initializes render managers once.
+- `draw()` is gated by `initialized`; it clears to black and returns until `post()` calls `initializeManagers()`, flips `initialized`, and unregisters `post()`.
 - Per-frame flow (`renderContent()`): clear -> pending graphics reset -> cubemap capture -> projection render -> output send -> optional preview -> control panel.
 - Scene updates happen in `pre()` via `currentScene.update()` before drawing.
 
@@ -38,6 +39,7 @@
 - Release artifacts: `./gradlew buildReleaseArtifacts` then package emits `release/ziviDomeLive.zip`, `.pdex`, `.txt` (`release.yml` publishes these on `v*` tags).
 - Processing-local install task: `./gradlew deployToProcessingSketchbook`.
 - Docs site: `mkdocs build` using Material + `mkdocs-static-i18n`; bilingual files use suffix mode (`*.md` + `*.pt.md`) in `docs/`.
+- Docs CI/deploy: `.github/workflows/deploy_website.yml` builds docs on `main` and deploys `site/` to `gh-pages`; `.github/workflows/pr_preview.yml` publishes PR previews under `gh-pages/pr-preview`.
 
 ## Testing patterns in this repo
 - Tests are intentionally lightweight and avoid GPU contexts when possible:
@@ -48,6 +50,7 @@
 
 ## Integration and platform boundaries
 - Output behavior is OS-gated in `OutputManager`: Syphon on macOS, Spout on Windows, NDI where native libs load.
+- `OutputManager` constructor auto-initializes Syphon/Spout on supported OS and enables that output by default; NDI initializes only when `toggleOutput("ndi")` is called.
 - Linux has reduced external-output support per `README.md` known issues.
 - Keyboard conventions in runtime: `h` toggles control panel, `m` cycles view mode, Left/Right arrows switch scenes (`zividomelive.keyEvent`).
 - Metadata is not fully consistent across files (example: `README.md` says GPL-2.0, `mkdocs.yml` footer says MIT); verify before changing licensing/version fields.
