@@ -29,9 +29,13 @@ public class zividomelive implements PConstants {
 	 * Enum representing the initialization state of the library.
 	 */
 	public enum InitState {
+		/** Instance created but setup has not started yet. */
 		NOT_INITIALIZED,
+		/** setup() completed, waiting for managers initialization in post(). */
 		SETUP_COMPLETE,
+		/** Managers and renderers are ready for rendering. */
 		MANAGERS_READY,
+		/** Reserved fully-ready state for future lifecycle expansion. */
 		READY
 	}
 
@@ -41,19 +45,27 @@ public class zividomelive implements PConstants {
 	private Scene currentScene;
 
 	private float pitch = 0.0f, yaw = 0.0f, roll = 0.0f, fov = 210.0f, fishSize = 100.0f;
-	private int resolution = 1024;
+	// Output resolution is dedicated to offscreen render targets used by external outputs.
+	private int outputResolution = 1024;
 	private boolean showControlPanel = true;
 	private boolean showPreview = false;
 	private final boolean enableOutput = false;
 	private boolean controlPanelShownOnce = false;
 
 	private ControlManager controlManager;
+	// Output pipeline (high resolution)
 	private CubemapRenderer cubemapRenderer;
 	private EquirectangularRenderer equirectangularRenderer;
-	private StandardRenderer standardRenderer;
 	private FisheyeDomemaster fisheyeDomemaster;
-	private CameraManager cameraManager;
 	private CubemapViewRenderer cubemapViewRenderer;
+	// Preview pipeline (window-sized)
+	private CubemapRenderer previewCubemapRenderer;
+	private EquirectangularRenderer previewEquirectangularRenderer;
+	private FisheyeDomemaster previewFisheyeDomemaster;
+	private CubemapViewRenderer previewCubemapViewRenderer;
+	private int previewResolution = 1024;
+	private StandardRenderer standardRenderer;
+	private CameraManager cameraManager;
 	private OutputManager outputManager;
 	private SplashScreen splash;
 	private SceneManager sceneManager;
@@ -74,8 +86,8 @@ public class zividomelive implements PConstants {
 	}
 
 	private ViewType currentView = ViewType.FISHEYE_DOMEMASTER;
-	private boolean pendingReset = false;
-	private int pendingResolution = resolution;
+	private boolean pendingOutputReset = false;
+	private int pendingOutputResolution = outputResolution;
 	private static final Logger LOGGER = LogManager.getLogger();
 
 
@@ -264,7 +276,7 @@ public class zividomelive implements PConstants {
 			// Rendering and UI resources must be created on the Processing thread.
 			initializeRenderers();
 
-			controlManager = new ControlManager(p, this, resolution);
+			controlManager = new ControlManager(p, this, outputResolution);
 			LOGGER.info("ControlManager initialized.");
 
 			initState = InitState.MANAGERS_READY;
@@ -289,24 +301,80 @@ public class zividomelive implements PConstants {
 			String domemasterVertexShaderPath = "data/shaders/domemaster.vert";
 			String domemasterFragmentShaderPath = "data/shaders/domemaster.frag";
 
-			cubemapRenderer = new CubemapRenderer(resolution, p);
+			cubemapRenderer = new CubemapRenderer(outputResolution, p);
 			LOGGER.info("CubemapRenderer initialized.");
-
-			equirectangularRenderer = new EquirectangularRenderer(resolution, equirectangularFragmentShaderPath, equirectangularVertexShaderPath, p);
+			equirectangularRenderer = new EquirectangularRenderer(outputResolution, equirectangularFragmentShaderPath, equirectangularVertexShaderPath, p);
 			LOGGER.info("EquirectangularRenderer initialized.");
-
 			standardRenderer = new StandardRenderer(p, p.width, p.height, currentScene);
 			LOGGER.info("StandardRenderer initialized.");
-
-			fisheyeDomemaster = new FisheyeDomemaster(resolution, domemasterFragmentShaderPath, domemasterVertexShaderPath, p);
+			fisheyeDomemaster = new FisheyeDomemaster(outputResolution, domemasterFragmentShaderPath, domemasterVertexShaderPath, p);
 			LOGGER.info("FisheyeDomemaster initialized.");
-
-			cubemapViewRenderer = new CubemapViewRenderer(p, resolution);
+			cubemapViewRenderer = new CubemapViewRenderer(p, outputResolution);
 			LOGGER.info("CubemapViewRenderer initialized.");
-
+			initializePreviewRenderers();
+			LOGGER.info("Preview renderers initialized.");
 			LOGGER.info("Renderers initialized successfully.");
 		} catch (Exception e) {
 			LOGGER.severe("Error initializing renderers");
+		}
+	}
+
+	private int computePreviewResolution() {
+		// Keep preview constrained by window size and capped for stable FPS.
+		int minDim = Math.max(256, Math.min(p.width, p.height));
+		return Math.min(1024, minDim);
+	}
+
+	private void initializePreviewRenderers() {
+		previewResolution = computePreviewResolution();
+		String equirectangularVertexShaderPath = "data/shaders/equirectangular.vert";
+		String equirectangularFragmentShaderPath = "data/shaders/equirectangular.frag";
+		String domemasterVertexShaderPath = "data/shaders/domemaster.vert";
+		String domemasterFragmentShaderPath = "data/shaders/domemaster.frag";
+
+		previewCubemapRenderer = new CubemapRenderer(previewResolution, p);
+		previewEquirectangularRenderer = new EquirectangularRenderer(previewResolution, equirectangularFragmentShaderPath, equirectangularVertexShaderPath, p);
+		previewFisheyeDomemaster = new FisheyeDomemaster(previewResolution, domemasterFragmentShaderPath, domemasterVertexShaderPath, p);
+		previewCubemapViewRenderer = new CubemapViewRenderer(p, previewResolution);
+	}
+
+	private void ensurePreviewRenderers() {
+		int expectedPreviewResolution = computePreviewResolution();
+		if (previewCubemapRenderer == null || previewEquirectangularRenderer == null || previewFisheyeDomemaster == null
+				|| previewCubemapViewRenderer == null || previewResolution != expectedPreviewResolution) {
+			releasePreviewGraphicsResources();
+			initializePreviewRenderers();
+		}
+	}
+
+	private void capturePreviewCubemap() {
+		if (previewCubemapRenderer != null) {
+			previewCubemapRenderer.captureCubemap(getPitch(), getYaw(), getRoll(), cameraManager, currentScene);
+		}
+	}
+
+	private void updatePreviewRenderViews(PGraphicsOpenGL[] sourceFaces) {
+		previewEquirectangularRenderer.render(sourceFaces);
+		previewFisheyeDomemaster.applyShader(previewEquirectangularRenderer.getEquirectangular(), getFov());
+		if (getCurrentView() == ViewType.CUBEMAP) {
+			previewCubemapViewRenderer.drawCubemapToGraphics(sourceFaces);
+		}
+	}
+
+	private void displayPreviewCurrentView() {
+		switch (getCurrentView()) {
+			case CUBEMAP:
+				displayView(previewCubemapViewRenderer.getCubemap());
+				break;
+			case EQUIRECTANGULAR:
+				displayView(previewEquirectangularRenderer.getEquirectangular());
+				break;
+			case FISHEYE_DOMEMASTER:
+				displayView(previewFisheyeDomemaster.getDomemasterGraphics());
+				break;
+			case STANDARD:
+				displayView(standardRenderer.getStandardView());
+				break;
 		}
 	}
 
@@ -341,22 +409,35 @@ public class zividomelive implements PConstants {
 	}
 
 	void renderContent() {
-		// Verifica se os renderizadores e a cena foram inicializados
 		if (cubemapRenderer == null || equirectangularRenderer == null || fisheyeDomemaster == null || standardRenderer == null || currentScene == null) {
 			LOGGER.severe("Error: Renderer or scene not initialized.");
 			return;
 		}
 
-		clearBackground();         // Limpa o fundo
-		handleGraphicsReset();     // Garante que o reset gráfico seja realizado, se necessário
-		captureCubemap();          // Captura o cubemap para a cena atual
-		renderView();              // Renderiza a visualização principal
-		outputManager.sendOutput(); // Envia a saída para os métodos de saída ativados
+		clearBackground();
+		handleGraphicsReset();
+		ensurePreviewRenderers();
+
+		// High-res pipeline is only required for external outputs.
+		if (isEnableOutput()) {
+			captureCubemap();
+			updateRenderViews();
+			outputManager.sendOutput();
+			updatePreviewRenderViews(cubemapRenderer.getCubemapFaces());
+		} else {
+			capturePreviewCubemap();
+			updatePreviewRenderViews(previewCubemapRenderer.getCubemapFaces());
+			if (getCurrentView() == ViewType.STANDARD) {
+				standardRenderer.render();
+			}
+		}
+
+		displayPreviewCurrentView();
 
 		if (showPreview) {
-			drawFloatingPreview(); // Desenha uma visualização flutuante, se ativada
+			drawFloatingPreview();
 		}
-		drawControlPanel();        // Exibe o painel de controle
+		drawControlPanel();
 	}
 
 	void clearBackground() {
@@ -367,13 +448,13 @@ public class zividomelive implements PConstants {
 	 * Handles resetting the graphics if a reset is pending.
 	 */
 	private void handleGraphicsReset() {
-		if (pendingReset) {
-			LOGGER.info("Pending reset detected. Changing resolution to: " + pendingResolution);
+		if (pendingOutputReset) {
+			LOGGER.info("Pending output reset detected. Changing output resolution to: " + pendingOutputResolution);
 			releaseGraphicsResources(); // Libera os recursos gráficos antigos
-			resolution = pendingResolution;
+			outputResolution = pendingOutputResolution;
 			initializeRenderers(); // Inicializa novos recursos gráficos
-			pendingReset = false;
-			LOGGER.info("Graphics reset completed.");
+			pendingOutputReset = false;
+			LOGGER.info("Output graphics reset completed.");
 		}
 	}
 
@@ -538,13 +619,31 @@ public class zividomelive implements PConstants {
 		float x = p.width - previewWidth;
 		float y = p.height - previewHeight;
 
-		PGraphicsOpenGL previewGraphics = fisheyeDomemaster.getDomemasterGraphics();
+		PGraphicsOpenGL previewGraphics = previewFisheyeDomemaster != null
+				? previewFisheyeDomemaster.getDomemasterGraphics()
+				: fisheyeDomemaster.getDomemasterGraphics();
 		p.image(previewGraphics, x, y, previewWidth, previewHeight);
 	}
 
-	/**
-	 * Disposes of the resources used by the instance.
-	 */
+	private void releasePreviewGraphicsResources() {
+		if (previewCubemapRenderer != null) {
+			previewCubemapRenderer.dispose();
+			previewCubemapRenderer = null;
+		}
+		if (previewEquirectangularRenderer != null) {
+			previewEquirectangularRenderer.dispose();
+			previewEquirectangularRenderer = null;
+		}
+		if (previewFisheyeDomemaster != null) {
+			previewFisheyeDomemaster.dispose();
+			previewFisheyeDomemaster = null;
+		}
+		if (previewCubemapViewRenderer != null) {
+			previewCubemapViewRenderer.dispose();
+			previewCubemapViewRenderer = null;
+		}
+	}
+
 	private void releaseGraphicsResources() {
 		if (cubemapRenderer != null) {
 			cubemapRenderer.dispose();
@@ -566,27 +665,37 @@ public class zividomelive implements PConstants {
 			cubemapViewRenderer.dispose();
 			cubemapViewRenderer = null;
 		}
+		releasePreviewGraphicsResources();
 	}
 
 	/**
-	 * Resets the graphics with a new resolution.
+	 * Resets output graphics with a new output resolution.
+	 * Preview stays constrained to the Processing window size.
 	 *
-	 * @param newResolution the new resolution to be set
+	 * @param newResolution the new output resolution to be set
 	 */
 	public void resetGraphics(int newResolution) {
-		pendingReset = true;
-		pendingResolution = newResolution;
-		LOGGER.info("Changing resolution to: " + newResolution); // Log the new resolution
+		pendingOutputReset = true;
+		pendingOutputResolution = newResolution;
+		LOGGER.info("Changing output resolution to: " + newResolution);
 		ThreadManager.getExecutor().submit(() -> {
 			try {
-				// Simulate some delay or processing if needed
 				Thread.sleep(100);
-				LOGGER.info("Resolution change processed.");
+				LOGGER.info("Output resolution change processed.");
 			} catch (InterruptedException e) {
-				LOGGER.severe("Error during resolution change processing");
+				LOGGER.severe("Error during output resolution change processing");
 				Thread.currentThread().interrupt();
 			}
 		});
+	}
+
+	/**
+	 * Returns the current output resolution used by offscreen render targets.
+	 *
+	 * @return current output resolution
+	 */
+	public int getOutputResolution() {
+		return outputResolution;
 	}
 
 	/**

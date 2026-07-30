@@ -294,7 +294,7 @@ public class ControlManager {
     }
 
     void addResolutionDropdown(float y) {
-        resolutionDropdown = cp5.addDropdownList("Resolution")
+        resolutionDropdown = cp5.addDropdownList("Output Resolution")
                 .setPosition(10, y)
                 .setSize(200, 200)
                 .setBarHeight(controlHeight)

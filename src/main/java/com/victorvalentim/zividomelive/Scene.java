@@ -30,6 +30,8 @@ public interface Scene {
 
 	/**
      * Renders the scene using the provided PGraphics object.
+     * The render target is already inside an active draw frame owned by the library,
+     * so scene implementations must NOT call beginDraw()/endDraw() here.
      *
      * @param pg the PGraphics object used for rendering the scene
      */
