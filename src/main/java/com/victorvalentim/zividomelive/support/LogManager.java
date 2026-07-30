@@ -1,6 +1,7 @@
 package com.victorvalentim.zividomelive.support;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.*;
 
 /**
@@ -17,7 +18,7 @@ public class LogManager {
 
 	private static final Logger globalLogger = Logger.getLogger("com.victorvalentim.zividomelive");
 	private static boolean isConfigured = false;
-	private static String lastLogMessage = "";
+	private static final AtomicReference<String> lastLogMessage = new AtomicReference<>("");
 	private static Mode currentMode = Mode.RELEASE;
 
 	private LogManager() {}
@@ -87,13 +88,14 @@ public class LogManager {
 			globalLogger.log(Level.WARNING, "FileHandler configuration failed. Logs will only appear in the console.", e);
 		}
 
-		// Filter to suppress duplicate log messages
+		// Filter to suppress duplicate log messages (thread-safe)
 		globalLogger.setFilter(record -> {
 			String message = record.getMessage();
-			if (message.equals(lastLogMessage)) {
+			String previousMessage = lastLogMessage.get();
+			if (message != null && message.equals(previousMessage)) {
 				return false; // Suppress duplicate message
 			}
-			lastLogMessage = message;
+			lastLogMessage.set(message);
 			return true;
 		});
 
@@ -142,10 +144,11 @@ public class LogManager {
 	/**
 	 * Returns the global logger instance for the application.
 	 * If the logger is not yet configured, it will be configured before returning.
+	 * This method is thread-safe.
 	 *
 	 * @return the global logger instance
 	 */
-	public static Logger getLogger() {
+	public static synchronized Logger getLogger() {
 		if (!isConfigured) {
 			configureLogger();
 		}
