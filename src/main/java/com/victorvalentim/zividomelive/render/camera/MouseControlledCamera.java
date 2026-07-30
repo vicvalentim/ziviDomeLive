@@ -1,33 +1,69 @@
 package com.victorvalentim.zividomelive.render.camera;
 
+import com.victorvalentim.zividomelive.render.Quaternion;
 import processing.core.*;
 import processing.event.MouseEvent;
 import processing.opengl.PGraphicsOpenGL;
 
 /**
- * The MouseControlledCamera class provides a camera that can be controlled using the mouse.
- * It allows for rotation around a center point and zooming in and out.
+ * A mouse-controlled orbit camera for the Standard View.
+ *
+ * <p>Rotation is tracked as a unit quaternion to avoid gimbal lock.
+ * Horizontal drag rotates around the world Y axis (yaw);
+ * vertical drag rotates around the camera's current right axis (pitch).
+ * The scroll wheel zooms multiplicatively within configurable limits.</p>
  */
 public class MouseControlledCamera implements PConstants {
-    private final PVector position;
-    private final PVector center;
-    private final PVector up;
 
-    private float distance = 1500;
-    private float angleX = PI / 2;
-    private float angleY = 0;
+    /** Orbit distance from the look-at center. */
+    private float distance = 1500f;
 
-    private int lastMouseX = -1; // Tracks the previous mouse X position
-    private int lastMouseY = -1; // Tracks the previous mouse Y position
+    /** Minimum allowed orbit distance. */
+    private static final float MIN_DISTANCE = 50f;
+
+    /** Maximum allowed orbit distance. */
+    private static final float MAX_DISTANCE = 10000f;
+
+    /** Zoom multiplier applied per scroll-wheel notch. */
+    private static final float ZOOM_FACTOR = 0.92f;
+
+    /** Drag sensitivity in radians per pixel. */
+    private static final float DRAG_SENSITIVITY = 0.005f;
+
+    /** Current camera orientation as a unit quaternion (identity = eye at +Z). */
+    private Quaternion rotation = new Quaternion(0f, 0f, 0f, 1f);
+
+    /** Cached eye position updated each frame. */
+    private final PVector position = new PVector(0, 0, 0);
+
+    /** Look-at center (fixed at origin). */
+    private final PVector center = new PVector(0, 0, 0);
+
+    /** Previous mouse coordinates for delta computation during drag. */
+    private int lastMouseX = -1;
+    private int lastMouseY = -1;
     private boolean dragging = false;
 
-	/**
-     * Constructs a MouseControlledCamera with default settings.
+    /**
+     * Constructs a MouseControlledCamera with default orbit settings.
+     * The initial eye position is at (0, 0, distance) looking at the origin.
      */
     public MouseControlledCamera() {
-        position = new PVector(0, 0, distance);
-        center = new PVector(0, 0, 0);
-        up = new PVector(0, 1, 0);
+        // identity rotation keeps eye at (0, 0, distance)
+    }
+
+    /**
+     * Recomputes the eye position from the current quaternion rotation and distance.
+     * Call once per frame before {@link #apply(PGraphicsOpenGL)}.
+     *
+     * @param parent the PApplet instance (unused but kept for API compatibility)
+     */
+    public void update(PApplet parent) {
+        PMatrix3D m = rotation.toMatrix();
+        // Camera eye is the rotated (0, 0, distance) vector offset from center
+        position.x = center.x + m.m02 * distance;
+        position.y = center.y + m.m12 * distance;
+        position.z = center.z + m.m22 * distance;
     }
 
     /**
@@ -36,23 +72,17 @@ public class MouseControlledCamera implements PConstants {
      * @param pg the PGraphics object to apply the camera view to
      */
     public void apply(PGraphicsOpenGL pg) {
-        pg.camera(position.x, position.y, position.z, center.x, center.y, center.z, up.x, up.y, up.z);
+        PMatrix3D m = rotation.toMatrix();
+        // Up vector is the rotated (0, 1, 0) – second column of rotation matrix
+        pg.camera(
+            position.x, position.y, position.z,
+            center.x,   center.y,   center.z,
+            m.m01,      m.m11,      m.m21
+        );
     }
 
     /**
-     * Updates the camera's position based on the current angles and distance.
-     *
-     * @param parent the PApplet instance used for calculations
-     */
-    public void update(PApplet parent) {
-        float cosAngleY = PApplet.cos(angleY);
-        position.x = center.x + distance * PApplet.cos(angleX) * cosAngleY;
-        position.y = center.y + distance * PApplet.sin(angleY);
-        position.z = center.z + distance * PApplet.sin(angleX) * cosAngleY;
-    }
-
-    /**
-     * Handles mouse events including zoom, drag for rotation, and release for resetting drag state.
+     * Handles mouse events: scroll to zoom, left-drag to orbit.
      *
      * @param event the MouseEvent object containing details of the mouse event
      */
@@ -61,74 +91,93 @@ public class MouseControlledCamera implements PConstants {
             case MouseEvent.WHEEL:
                 zoom(event.getCount());
                 break;
-
             case MouseEvent.DRAG:
                 handleDrag(event);
                 break;
-
             case MouseEvent.RELEASE:
                 dragging = false;
-                lastMouseX = -1; // Reset last mouse positions
+                lastMouseX = -1;
                 lastMouseY = -1;
                 break;
-
             default:
                 break;
         }
     }
 
     /**
-     * Handles dragging to rotate the camera.
+     * Resets rotation to identity (eye at +Z, no tilt) while keeping current distance.
+     */
+    public void resetRotation() {
+        rotation = new Quaternion(0f, 0f, 0f, 1f);
+    }
+
+    /**
+     * Returns the current orbit distance.
      *
-     * @param event the MouseEvent object containing drag details
+     * @return distance from center to eye
+     */
+    public float getDistance() {
+        return distance;
+    }
+
+    /**
+     * Sets the orbit distance, clamped to [MIN_DISTANCE, MAX_DISTANCE].
+     *
+     * @param distance desired distance
+     */
+    public void setDistance(float distance) {
+        this.distance = PApplet.constrain(distance, MIN_DISTANCE, MAX_DISTANCE);
+    }
+
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Handles left-button drag to orbit the camera using quaternion increments.
+     * Horizontal drag applies a world-Y yaw; vertical drag applies a camera-local-X pitch.
+     *
+     * @param event the drag MouseEvent
      */
     private void handleDrag(MouseEvent event) {
-        if (isLeftMousePressed(event)) {
-            if (!dragging) {
-                dragging = true;
-                lastMouseX = event.getX();
-                lastMouseY = event.getY();
-                return;
-            }
+        if (event.getButton() != LEFT) return;
 
-            float dx = event.getX() - lastMouseX;
-            float dy = event.getY() - lastMouseY;
-			// Controls the camera rotation speed
-			float sensitivity = 0.005f;
-			angleX += dx * sensitivity;
-            angleY += dy * sensitivity;
-
-            // Clamp the vertical angle to avoid flipping the camera
-            angleY = PApplet.constrain(angleY, -HALF_PI, HALF_PI);
-
+        if (!dragging) {
+            dragging = true;
             lastMouseX = event.getX();
             lastMouseY = event.getY();
+            return;
         }
+
+        float dx = event.getX() - lastMouseX;
+        float dy = event.getY() - lastMouseY;
+        lastMouseX = event.getX();
+        lastMouseY = event.getY();
+
+        if (dx == 0 && dy == 0) return;
+
+        // Yaw: rotate around world Y axis
+        Quaternion yawDelta = Quaternion.fromAxisAngle(0f, 1f, 0f, -dx * DRAG_SENSITIVITY);
+
+        // Pitch: rotate around camera's current right axis (first column of rotation matrix)
+        PMatrix3D m = rotation.toMatrix();
+        Quaternion pitchDelta = Quaternion.fromAxisAngle(m.m00, m.m10, m.m20, -dy * DRAG_SENSITIVITY);
+
+        // Apply yaw in world space (pre-multiply), pitch in local space (post-multiply)
+        rotation = yawDelta.multiply(rotation).multiply(pitchDelta).normalize();
     }
 
     /**
-     * Adjusts the distance for zooming, constrained between min and max distances.
+     * Zooms multiplicatively so large distances zoom faster and small ones stay precise.
      *
-     * @param delta the amount to zoom
+     * @param delta scroll wheel notch count (positive = zoom out)
      */
     private void zoom(float delta) {
-		// Controls the zoom speed
-		float zoomSensitivity = 10f;
-		distance -= delta * zoomSensitivity;
-		// Minimum zoom distance
-		float minDistance = 100f;
-		// Maximum zoom distance
-		float maxDistance = 5000f;
-		distance = PApplet.constrain(distance, minDistance, maxDistance);
-    }
-
-    /**
-     * Checks if the left mouse button is pressed during a mouse event.
-     *
-     * @param event the MouseEvent to check
-     * @return true if the left mouse button is pressed, false otherwise
-     */
-    private boolean isLeftMousePressed(MouseEvent event) {
-        return event.getButton() == LEFT;
+        if (delta > 0) {
+            distance /= ZOOM_FACTOR;
+        } else if (delta < 0) {
+            distance *= ZOOM_FACTOR;
+        }
+        distance = PApplet.constrain(distance, MIN_DISTANCE, MAX_DISTANCE);
     }
 }
