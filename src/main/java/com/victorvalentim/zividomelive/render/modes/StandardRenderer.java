@@ -7,7 +7,11 @@ import processing.opengl.PGraphicsOpenGL;
 
 /**
  * The StandardRenderer class handles the rendering of a standard view using a PGraphics object.
- * It utilizes a MouseControlledCamera for camera control and a Scene interface for rendering the scene.
+ * It utilizes a {@link MouseControlledCamera} (quaternion-based orbit) for camera control
+ * and a {@link Scene} interface for rendering the scene content.
+ *
+ * <p>An infinite sky background is painted before each scene render. The sky color
+ * can be customised via {@link #setSkyColor(int, int, int)}.</p>
  */
 public class StandardRenderer {
     private PGraphicsOpenGL standardView;
@@ -15,15 +19,20 @@ public class StandardRenderer {
     private MouseControlledCamera cam;
     private final PApplet parent;
 
+    /** Sky background color components (R, G, B). Default: dark space blue. */
+    private int skyR = 10;
+    private int skyG = 10;
+    private int skyB = 30;
+
     /**
      * Constructs a StandardRenderer with the specified parent PApplet, width, height, and current scene.
      *
-     * @param parent the parent PApplet instance
-     * @param width the width of the standard view
-     * @param height the height of the standard view
+     * @param parent       the parent PApplet instance
+     * @param width        the width of the standard view (currently unused; lazily sized to window)
+     * @param height       the height of the standard view (currently unused; lazily sized to window)
      * @param currentScene the current scene to be rendered
      */
-	public StandardRenderer(PApplet parent, int width, int height, Scene currentScene) {
+    public StandardRenderer(PApplet parent, int width, int height, Scene currentScene) {
         this.parent = parent;
         this.currentScene = currentScene;
         this.standardView = null;
@@ -42,6 +51,7 @@ public class StandardRenderer {
 
     /**
      * Sets the current scene to be rendered.
+     *
      * @param newScene the new scene to be set as the current scene
      */
     public void setCurrentScene(Scene newScene) {
@@ -49,8 +59,30 @@ public class StandardRenderer {
     }
 
     /**
+     * Sets the sky (infinite background) color for the Standard View.
+     *
+     * @param r red component (0–255)
+     * @param g green component (0–255)
+     * @param b blue component (0–255)
+     */
+    public void setSkyColor(int r, int g, int b) {
+        this.skyR = r;
+        this.skyG = g;
+        this.skyB = b;
+    }
+
+    /**
      * Renders the current scene using the standard view PGraphics object.
-     * Updates the camera and applies its settings before rendering the scene.
+     *
+     * <p>Pipeline per frame:</p>
+     * <ol>
+     *   <li>Lazy-initialise the off-screen buffer if needed.</li>
+     *   <li>Update camera position from quaternion + distance.</li>
+     *   <li>Fill the buffer with the sky color (infinite background).</li>
+     *   <li>Apply camera transform.</li>
+     *   <li>Delegate to {@link Scene#sceneRender(PGraphicsOpenGL)} – scene must NOT call
+     *       {@code beginDraw/endDraw}.</li>
+     * </ol>
      */
     public void render() {
         if (standardView == null) {
@@ -60,8 +92,8 @@ public class StandardRenderer {
         getCam().update(parent);
 
         standardView.beginDraw();
-        standardView.background(0, 0);
-
+        // Infinite sky: solid fill so every pixel is covered regardless of scene geometry
+        standardView.background(skyR, skyG, skyB);
         getCam().apply(standardView);
 
         currentScene.sceneRender(standardView);
