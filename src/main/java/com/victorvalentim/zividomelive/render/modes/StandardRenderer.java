@@ -25,6 +25,18 @@ public class StandardRenderer {
     private int skyB = 30;
 
     /**
+     * Near clipping plane distance. Keep small to avoid clipping close geometry.
+     * Dynamically derived as {@code distance * nearFactor} each frame.
+     */
+    private float nearFactor = 0.001f;
+
+    /**
+     * Far clipping plane distance multiplier relative to orbit distance.
+     * Increase this if distant objects disappear. Default gives far = distance * 2000.
+     */
+    private float farFactor = 2000f;
+
+    /**
      * Constructs a StandardRenderer with the specified parent PApplet, width, height, and current scene.
      *
      * @param parent       the parent PApplet instance
@@ -72,6 +84,21 @@ public class StandardRenderer {
     }
 
     /**
+     * Configures the clipping plane multipliers used to compute near/far each frame.
+     *
+     * <p>near = distance * nearFactor, far = distance * farFactor.
+     * Increase {@code farFactor} if distant objects disappear; decrease {@code nearFactor}
+     * only if very close geometry clips unexpectedly.</p>
+     *
+     * @param nearFactor multiplier for near plane (default 0.001)
+     * @param farFactor  multiplier for far plane  (default 2000)
+     */
+    public void setClipFactors(float nearFactor, float farFactor) {
+        this.nearFactor = Math.max(0.0001f, nearFactor);
+        this.farFactor  = Math.max(nearFactor * 10f, farFactor);
+    }
+
+    /**
      * Renders the current scene using the standard view PGraphics object.
      *
      * <p>Pipeline per frame:</p>
@@ -92,6 +119,14 @@ public class StandardRenderer {
         getCam().update(parent);
 
         standardView.beginDraw();
+        // Set perspective with distance-relative clipping planes so objects never
+        // disappear because they exceed the default far plane.
+        float dist  = getCam().getDistance();
+        float near  = Math.max(0.1f, dist * nearFactor);
+        float far   = dist * farFactor;
+        float aspect = (float) standardView.width / standardView.height;
+        standardView.perspective(PApplet.radians(60), aspect, near, far);
+
         // Infinite sky: solid fill so every pixel is covered regardless of scene geometry
         standardView.background(skyR, skyG, skyB);
         getCam().apply(standardView);
