@@ -96,10 +96,14 @@ zividomelive ziviDome;  // Instance of the ziviDomeLive library
 Scene currentScene;     // The current scene implementing the Scene interface
 
 void settings() {
+  pixelDensity(1);          // Recommended default for stable cross-display behavior
   size(1280, 720, P3D);  // Set window size and 3D rendering mode
 }
 
 void setup() {
+  // Optional: enable verbose logs while developing
+  // zividomelive.enableDebugLogging();
+
   ziviDome = new zividomelive(this);
   ziviDome.setup();  // Initialize the library
 
@@ -112,6 +116,24 @@ void draw() {
   ziviDome.draw();  // Handle rendering
 }
 ```
+
+### Logging Modes
+
+By default, the library uses **RELEASE** logging mode (LogManager output disabled).
+
+Enable DEBUG logs in your sketch before creating the library instance:
+
+```java
+zividomelive.enableDebugLogging();
+// or: zividomelive.setLogMode(LogManager.Mode.DEBUG);
+```
+
+Return to RELEASE mode when needed:
+
+```java
+zividomelive.enableReleaseLogging();
+```
+
 ## Implementing Scenes
 > [!NOTE]
 > A Scene is an interface that allows you to define different visual environments. Below is an example of how to implement a custom scene:

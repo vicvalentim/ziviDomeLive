@@ -32,6 +32,11 @@ public class SceneManager {
 			return;
 		}
 
+		if (scenes.contains(scene)) {
+			LOGGER.warning("Scene already registered: " + scene.getName());
+			return;
+		}
+
 		scenes.add(scene);
 		if (currentSceneIndex == -1) {
 			// Automatically set the first scene as current if none is active
