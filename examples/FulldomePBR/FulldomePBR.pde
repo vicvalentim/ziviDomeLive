@@ -18,7 +18,7 @@ void setup() {
   surface.setTitle("ziviDomeLive - Fulldome PBR Example");
 
   // Optional: enable verbose library logs for debugging.
-  zividomelive.enableDebugLogging();
+  //zividomelive.enableDebugLogging();
 
   // Initialize the library and its render pipeline.
   ziviDome = new zividomelive(this);

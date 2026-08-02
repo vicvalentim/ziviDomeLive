@@ -18,13 +18,13 @@ class Scene1 implements Scene {
   // The library provides a quaternion orbit camera that lives in scene space and
   // never touches the dome parameters (yaw/pitch/roll/fov) owned by the
   // ControlManager. We just configure it, enable input, and apply() it.
-  private final float initialDistance = 1900f;
+  private final float initialDistance = -900f;
 
   Scene1(zividomelive parent) {
     this.parent = parent;
     // Configure and enable the native scene camera.
     parent.setSceneCameraInputEnabled(true);
-    parent.getSceneCamera().setDistanceLimits(200f, 6000f);
+    parent.getSceneCamera().setDistanceLimits(-2000f, 6000f);
     resetCamera();
   }
 
