@@ -66,6 +66,9 @@ public class zividomelive implements PConstants {
 	private int previewResolution = 1024;
 	private StandardRenderer standardRenderer;
 	private CameraManager cameraManager;
+	// Native scene-space orbit camera service (see OrbitCamera).
+	private final OrbitCamera sceneCamera = new OrbitCamera();
+	private boolean sceneCameraInputEnabled = false;
 	private OutputManager outputManager;
 	private SplashScreen splash;
 	private SceneManager sceneManager;
@@ -835,6 +838,11 @@ public class zividomelive implements PConstants {
 			currentScene.mouseEvent(event);
 		}
 
+		// Forward to the native scene-space orbit camera when enabled.
+		if (sceneCameraInputEnabled) {
+			sceneCamera.mouseEvent(event);
+		}
+
 		if (standardRenderer != null) {
 			standardRenderer.getCam().mouseEvent(event);
 		}
@@ -1051,6 +1059,40 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
+	 * Returns the native scene-space orbit camera service.
+	 *
+	 * <p>Scenes drive space navigation by calling {@code getSceneCamera().apply(pg)}
+	 * inside {@code sceneRender} (between {@code pushMatrix}/{@code popMatrix}). The
+	 * camera transforms the scene modelview directly, so it works across every
+	 * projection without touching the dome parameters (yaw/pitch/roll/fov).</p>
+	 *
+	 * @return the shared {@link OrbitCamera} instance
+	 */
+	public OrbitCamera getSceneCamera() {
+		return sceneCamera;
+	}
+
+	/**
+	 * Enables or disables built-in mouse handling for the scene camera.
+	 * When enabled, the library forwards mouse drag/wheel events to
+	 * {@link #getSceneCamera()} automatically.
+	 *
+	 * @param enabled true to let the library drive the scene camera from mouse input
+	 */
+	public void setSceneCameraInputEnabled(boolean enabled) {
+		this.sceneCameraInputEnabled = enabled;
+	}
+
+	/**
+	 * Returns whether built-in mouse handling for the scene camera is enabled.
+	 *
+	 * @return true if the library forwards mouse input to the scene camera
+	 */
+	public boolean isSceneCameraInputEnabled() {
+		return sceneCameraInputEnabled;
+	}
+
+	/**
 	 * Gets the current PApplet instance.
 	 *
 	 * @return the current PApplet instance
@@ -1137,6 +1179,9 @@ public class zividomelive implements PConstants {
 		if (currentScene != null) {
 			currentScene.update(); // Atualiza o estado da cena atual
 		}
+
+		// Advance the native scene camera smoothing once per frame.
+		sceneCamera.update();
 	}
 
 	/**

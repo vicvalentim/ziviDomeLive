@@ -1,4 +1,6 @@
 import com.victorvalentim.zividomelive.*;
+import com.victorvalentim.zividomelive.render.*;
+import com.victorvalentim.zividomelive.render.camera.*;
 import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;

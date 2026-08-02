@@ -14,18 +14,17 @@ class Scene1 implements Scene {
   private final int[] paletteB = { 102, 210, 255 };
   private final int[] paletteC = { 218, 198, 255 };
 
-  // --- Scene-space camera navigation (quaternion orbit, like SolarSystem) ---
-  // The camera lives inside the scene and never touches the dome parameters
-  // (yaw / pitch / roll / fov) articulated by the ControlManager.
-  private SpaceCamera camera;
-  private int prevMouseX = 0;
-  private int prevMouseY = 0;
-  private final float orbitSensitivity = 0.01f; // radians per pixel
+  // --- Native scene-space camera service (ziviDomeLive OrbitCamera) ---
+  // The library provides a quaternion orbit camera that lives in scene space and
+  // never touches the dome parameters (yaw/pitch/roll/fov) owned by the
+  // ControlManager. We just configure it, enable input, and apply() it.
   private final float initialDistance = 1900f;
 
   Scene1(zividomelive parent) {
     this.parent = parent;
-    camera = new SpaceCamera(new PVector(0, 0, 0), initialDistance);
+    // Configure and enable the native scene camera.
+    parent.setSceneCameraInputEnabled(true);
+    parent.getSceneCamera().setDistanceLimits(200f, 6000f);
     resetCamera();
   }
 
@@ -35,7 +34,7 @@ class Scene1 implements Scene {
 
   public void update() {
     time += orbitSpeed;
-    camera.update(); // smooth SLERP/LERP toward the current goals
+    // Camera smoothing is advanced natively by the library each frame.
   }
 
   public void sceneRender(PGraphicsOpenGL pg) {
@@ -44,8 +43,8 @@ class Scene1 implements Scene {
     pg.sphereDetail(40);
 
     pg.pushMatrix();
-    // Move through space using the scene-space camera.
-    camera.apply(pg);
+    // Move through space using the native scene-space camera service.
+    parent.getSceneCamera().apply(pg);
 
     // Dome-friendly lighting stack (world space, after the camera transform):
     // ambient + sun + rim + warm fill.
@@ -69,8 +68,8 @@ class Scene1 implements Scene {
 
   private void resetCamera() {
     // Gentle downward tilt so the composition reads well on the dome.
-    SpaceQuat q = new SpaceQuat(1, 0, 0, 0).fromAxisAngle(new PVector(1, 0, 0), PI / 12);
-    camera.snapTo(new PVector(0, 0, 0), q, initialDistance);
+    Quaternion q = Quaternion.fromAxisAngle(1, 0, 0, PI / 12);
+    parent.getSceneCamera().snapTo(0, 0, 0, q, initialDistance);
   }
 
   public void keyEvent(processing.event.KeyEvent event) {
@@ -106,33 +105,9 @@ class Scene1 implements Scene {
   }
 
   public void mouseEvent(MouseEvent event) {
-    switch (event.getAction()) {
-      case MouseEvent.PRESS:
-        prevMouseX = event.getX();
-        prevMouseY = event.getY();
-        break;
-
-      case MouseEvent.DRAG:
-        // Orbit the scene-space camera with quaternions (fluid, gimbal-lock free).
-        float dx = (event.getX() - prevMouseX) * orbitSensitivity;
-        float dy = (event.getY() - prevMouseY) * orbitSensitivity;
-        camera.rotateAround(new PVector(0, 1, 0), dx); // yaw around world up
-        camera.rotateAround(new PVector(1, 0, 0), dy); // pitch around world right
-        prevMouseX = event.getX();
-        prevMouseY = event.getY();
-        break;
-
-      case MouseEvent.WHEEL:
-        // Fly toward/away from the target. Trackpad emits small fractional counts.
-        float scroll = event.getCount();
-        boolean isPad = Math.abs(scroll) < 1;
-        float zoom = isPad ? scroll * 4f : scroll * 120f;
-        camera.zoom(zoom);
-        break;
-
-      default:
-        break;
-    }
+    // Camera navigation is handled natively by the library
+    // (setSceneCameraInputEnabled(true) in the constructor): drag to orbit,
+    // wheel to fly in/out. Nothing to do here for the camera.
   }
 
   public void controlEvent(controlP5.ControlEvent theEvent) {
