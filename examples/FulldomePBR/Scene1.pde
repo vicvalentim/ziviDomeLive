@@ -14,18 +14,19 @@ class Scene1 implements Scene {
   private final int[] paletteB = { 102, 210, 255 };
   private final int[] paletteC = { 218, 198, 255 };
 
-  // --- Camera navigation state (drives the ziviDomeLive dome camera API) ---
-  private boolean dragging = false;
-  private int lastMouseX = 0;
-  private int lastMouseY = 0;
-  private final float lookSensitivity = 0.005f; // radians per pixel
-  private final float rollSensitivity = 0.004f; // radians per pixel
-  private final float fovMin = 30f;
-  private final float fovMax = 220f;
-  private final float defaultFov = 210f;
+  // --- Scene-space camera navigation (quaternion orbit, like SolarSystem) ---
+  // The camera lives inside the scene and never touches the dome parameters
+  // (yaw / pitch / roll / fov) articulated by the ControlManager.
+  private SpaceCamera camera;
+  private int prevMouseX = 0;
+  private int prevMouseY = 0;
+  private final float orbitSensitivity = 0.01f; // radians per pixel
+  private final float initialDistance = 1900f;
 
   Scene1(zividomelive parent) {
     this.parent = parent;
+    camera = new SpaceCamera(new PVector(0, 0, 0), initialDistance);
+    resetCamera();
   }
 
   public void setupScene() {
@@ -34,6 +35,7 @@ class Scene1 implements Scene {
 
   public void update() {
     time += orbitSpeed;
+    camera.update(); // smooth SLERP/LERP toward the current goals
   }
 
   public void sceneRender(PGraphicsOpenGL pg) {
@@ -41,7 +43,12 @@ class Scene1 implements Scene {
     pg.noStroke();
     pg.sphereDetail(40);
 
-    // Dome-friendly lighting stack: ambient + sun + rim + warm fill.
+    pg.pushMatrix();
+    // Move through space using the scene-space camera.
+    camera.apply(pg);
+
+    // Dome-friendly lighting stack (world space, after the camera transform):
+    // ambient + sun + rim + warm fill.
     pg.ambientLight(22, 22, 30);
     pg.directionalLight(140, 140, 160, -0.45f, -0.75f, -0.25f);
     pg.directionalLight(40, 70, 120, 0.35f, -0.2f, 0.9f);
@@ -56,6 +63,14 @@ class Scene1 implements Scene {
     renderOrbitingModules(pg);
     renderSupportPillars(pg);
     pg.popMatrix();
+
+    pg.popMatrix();
+  }
+
+  private void resetCamera() {
+    // Gentle downward tilt so the composition reads well on the dome.
+    SpaceQuat q = new SpaceQuat(1, 0, 0, 0).fromAxisAngle(new PVector(1, 0, 0), PI / 12);
+    camera.snapTo(new PVector(0, 0, 0), q, initialDistance);
   }
 
   public void keyEvent(processing.event.KeyEvent event) {
@@ -79,11 +94,8 @@ class Scene1 implements Scene {
         break;
       case 'v':
       case 'V':
-        // Reset the dome camera through the library API.
-        parent.setYaw(0f);
-        parent.setPitch(0f);
-        parent.setRoll(0f);
-        parent.setFov(defaultFov);
+        // Reset the scene-space camera (does not touch dome yaw/pitch/roll/fov).
+        resetCamera();
         break;
       case 'r':
         orbitRadius = 840f;
@@ -94,51 +106,28 @@ class Scene1 implements Scene {
   }
 
   public void mouseEvent(MouseEvent event) {
-    // In STANDARD view the library drives its own MouseControlledCamera,
-    // so we only navigate the dome camera for the fulldome projections.
-    boolean domeView = parent.getCurrentView() != zividomelive.ViewType.STANDARD;
-
     switch (event.getAction()) {
       case MouseEvent.PRESS:
-        dragging = true;
-        lastMouseX = event.getX();
-        lastMouseY = event.getY();
-        break;
-
-      case MouseEvent.RELEASE:
-        dragging = false;
+        prevMouseX = event.getX();
+        prevMouseY = event.getY();
         break;
 
       case MouseEvent.DRAG:
-        if (domeView && dragging) {
-          float dx = event.getX() - lastMouseX;
-          float dy = event.getY() - lastMouseY;
-          lastMouseX = event.getX();
-          lastMouseY = event.getY();
-
-          if (event.getButton() == RIGHT) {
-            // Right-drag rolls the horizon.
-            parent.setRoll(parent.getRoll() + dx * rollSensitivity);
-          } else {
-            // Left-drag looks around: horizontal = yaw, vertical = pitch.
-            float yaw = parent.getYaw() + dx * lookSensitivity;
-            float pitch = parent.getPitch() + dy * lookSensitivity;
-            pitch = constrain(pitch, -HALF_PI, HALF_PI);
-            parent.setYaw(yaw);
-            parent.setPitch(pitch);
-          }
-        }
+        // Orbit the scene-space camera with quaternions (fluid, gimbal-lock free).
+        float dx = (event.getX() - prevMouseX) * orbitSensitivity;
+        float dy = (event.getY() - prevMouseY) * orbitSensitivity;
+        camera.rotateAround(new PVector(0, 1, 0), dx); // yaw around world up
+        camera.rotateAround(new PVector(1, 0, 0), dy); // pitch around world right
+        prevMouseX = event.getX();
+        prevMouseY = event.getY();
         break;
 
       case MouseEvent.WHEEL:
-        if (domeView) {
-          // Wheel zooms the dome via field of view.
-          float fov = constrain(parent.getFov() + event.getCount() * 4f, fovMin, fovMax);
-          parent.setFov(fov);
-        } else {
-          // Non-dome fallback: adjust module orbit radius.
-          orbitRadius = constrain(orbitRadius + event.getCount() * 24f, 520f, 1500f);
-        }
+        // Fly toward/away from the target. Trackpad emits small fractional counts.
+        float scroll = event.getCount();
+        boolean isPad = Math.abs(scroll) < 1;
+        float zoom = isPad ? scroll * 4f : scroll * 120f;
+        camera.zoom(zoom);
         break;
 
       default:
