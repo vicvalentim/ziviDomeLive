@@ -1,7 +1,11 @@
-// Fulldome example scene with primitive meshes and PBR-inspired materials.
+// Fulldome example scene with full PBR lighting via GLSL shaders and
+// retained-mode primitives (PShape / VBO) built from PVector geometry.
+//
 // The library owns beginDraw()/endDraw(); this scene only draws content.
+// Camera navigation uses the native ziviDomeLive OrbitCamera service.
 class Scene1 implements Scene {
   private final zividomelive parent;
+  private final PApplet pApplet;
 
   private float time = 0f;
   private float orbitRadius = 840f;
@@ -15,21 +19,37 @@ class Scene1 implements Scene {
   private final int[] paletteC = { 218, 198, 255 };
 
   // --- Native scene-space camera service (ziviDomeLive OrbitCamera) ---
-  // The library provides a quaternion orbit camera that lives in scene space and
-  // never touches the dome parameters (yaw/pitch/roll/fov) owned by the
-  // ControlManager. We just configure it, enable input, and apply() it.
-  private final float initialDistance = -900f;
+  private final float initialDistance = 1900f;
+
+  // --- PBR pipeline ---
+  private PShader pbr;              // null => fall back to fixed-function lighting
+  private boolean usePbr = false;
+  private PShape unitSphere;        // radius 1
+  private PShape unitBox;           // size 1, centered
+  private PShape unitCylinder;      // radius 1, height 1, axis Y, centered
+
+  // Light data (scene/world space) uploaded to the shader each frame.
+  private final int lightCount = 4;
+  private final float[] lightPos = new float[lightCount * 3];
+  private final float[] lightColor = new float[lightCount * 3];
+  private final float[] lightType = new float[lightCount]; // 0 = directional, 1 = point
+  private final float[] ambient = { 22f / 255f, 22f / 255f, 30f / 255f };
+  private final PMatrix3D viewMatrix = new PMatrix3D();
 
   Scene1(zividomelive parent) {
     this.parent = parent;
+    this.pApplet = parent.getPApplet();
     // Configure and enable the native scene camera.
     parent.setSceneCameraInputEnabled(true);
-    parent.getSceneCamera().setDistanceLimits(-2000f, 6000f);
+    parent.getSceneCamera().setDistanceLimits(200f, 6000f);
     resetCamera();
   }
 
   public void setupScene() {
     buildStarShell();
+    buildPrimitives();
+    loadPbrShader();
+    configureLights();
   }
 
   public void update() {
@@ -40,36 +60,41 @@ class Scene1 implements Scene {
   public void sceneRender(PGraphicsOpenGL pg) {
     pg.background(5, 7, 18);
     pg.noStroke();
-    pg.sphereDetail(40);
 
     pg.pushMatrix();
     // Move through space using the native scene-space camera service.
     parent.getSceneCamera().apply(pg);
 
-    // Dome-friendly lighting stack (world space, after the camera transform):
-    // ambient + sun + rim + warm fill.
-    pg.ambientLight(22, 22, 30);
-    pg.directionalLight(140, 140, 160, -0.45f, -0.75f, -0.25f);
-    pg.directionalLight(40, 70, 120, 0.35f, -0.2f, 0.9f);
-    pg.pointLight(255, 205, 170, 0, -240, 280);
-    pg.pointLight(90, 150, 255, -520, 180, -260);
+    // Capture the view matrix (camera only, before world spin / object transforms)
+    // so the PBR shader can transform world-space lights into eye space.
+    pg.getMatrix(viewMatrix);
 
     pg.pushMatrix();
     pg.rotateY(time * 0.11f);
+
+    // Background elements use the default pipeline (no PBR lighting).
+    pg.resetShader();
     renderStarShell(pg);
     renderDomeGrid(pg);
-    renderCentralCluster(pg);
-    renderOrbitingModules(pg);
-    renderSupportPillars(pg);
-    pg.popMatrix();
+
+    // PBR-lit content.
+    if (usePbr) {
+      pg.shader(pbr);
+      uploadLightUniforms();
+      renderCentralCluster(pg);
+      renderOrbitingModules(pg);
+      renderSupportPillars(pg);
+      pg.resetShader();
+    } else {
+      // Fixed-function fallback keeps the example working without shaders.
+      applySceneLights(pg);
+      renderCentralCluster(pg);
+      renderOrbitingModules(pg);
+      renderSupportPillars(pg);
+    }
 
     pg.popMatrix();
-  }
-
-  private void resetCamera() {
-    // Gentle downward tilt so the composition reads well on the dome.
-    Quaternion q = Quaternion.fromAxisAngle(1, 0, 0, PI / 12);
-    parent.getSceneCamera().snapTo(0, 0, 0, q, initialDistance);
+    pg.popMatrix();
   }
 
   public void keyEvent(processing.event.KeyEvent event) {
@@ -91,9 +116,16 @@ class Scene1 implements Scene {
       case ']':
         orbitRadius = constrain(orbitRadius + 40f, 520f, 1500f);
         break;
+      case 'p':
+      case 'P':
+        // Toggle between PBR shader and fixed-function fallback.
+        if (pbr != null) {
+          usePbr = !usePbr;
+          println("[FulldomePBR] PBR shader " + (usePbr ? "ON" : "OFF"));
+        }
+        break;
       case 'v':
       case 'V':
-        // Reset the scene-space camera (does not touch dome yaw/pitch/roll/fov).
         resetCamera();
         break;
       case 'r':
@@ -106,8 +138,7 @@ class Scene1 implements Scene {
 
   public void mouseEvent(MouseEvent event) {
     // Camera navigation is handled natively by the library
-    // (setSceneCameraInputEnabled(true) in the constructor): drag to orbit,
-    // wheel to fly in/out. Nothing to do here for the camera.
+    // (setSceneCameraInputEnabled(true) in the constructor).
   }
 
   public void controlEvent(controlP5.ControlEvent theEvent) {
@@ -118,9 +149,107 @@ class Scene1 implements Scene {
     return "FulldomePBR";
   }
 
+  private void resetCamera() {
+    // Gentle downward tilt so the composition reads well on the dome.
+    Quaternion q = Quaternion.fromAxisAngle(1, 0, 0, PI / 12);
+    parent.getSceneCamera().snapTo(0, 0, 0, q, initialDistance);
+  }
+
   // -------------------------------------------------------------------------
-  // Scene composition helpers
+  // Lighting
   // -------------------------------------------------------------------------
+
+  private void configureLights() {
+    // 0: key directional (cool white)
+    setLight(0, 0f, -0.45f, -0.75f, -0.25f, 140f, 140f, 160f);
+    // 1: fill directional (blue)
+    setLight(1, 0f, 0.35f, -0.2f, 0.9f, 40f, 70f, 120f);
+    // 2: warm point light
+    setLight(2, 1f, 0f, -240f, 280f, 255f, 205f, 170f);
+    // 3: cool point light
+    setLight(3, 1f, -520f, 180f, -260f, 90f, 150f, 255f);
+  }
+
+  private void setLight(int i, float type, float x, float y, float z, float r, float g, float b) {
+    lightType[i] = type;
+    lightPos[i * 3] = x;
+    lightPos[i * 3 + 1] = y;
+    lightPos[i * 3 + 2] = z;
+    lightColor[i * 3] = r / 255f;
+    lightColor[i * 3 + 1] = g / 255f;
+    lightColor[i * 3 + 2] = b / 255f;
+  }
+
+  private void uploadLightUniforms() {
+    pbr.set("uViewMatrix", viewMatrix);
+    pbr.set("uLightCount", lightCount);
+    pbr.set("uAmbient", ambient[0], ambient[1], ambient[2]);
+    pbr.set("uLightPos", lightPos, 3);
+    pbr.set("uLightColor", lightColor, 3);
+    pbr.set("uLightType", lightType, 1);
+  }
+
+  // Fixed-function equivalent of the shader lights (fallback path).
+  private void applySceneLights(PGraphicsOpenGL pg) {
+    pg.ambientLight(22, 22, 30);
+    pg.directionalLight(140, 140, 160, -0.45f, -0.75f, -0.25f);
+    pg.directionalLight(40, 70, 120, 0.35f, -0.2f, 0.9f);
+    pg.pointLight(255, 205, 170, 0, -240, 280);
+    pg.pointLight(90, 150, 255, -520, 180, -260);
+  }
+
+  // -------------------------------------------------------------------------
+  // Materials
+  // -------------------------------------------------------------------------
+
+  // Sets the active material either as PBR uniforms or fixed-function state.
+  private void material(PGraphicsOpenGL pg, int r, int g, int b, float metallic, float roughness, float emissive) {
+    if (usePbr) {
+      pbr.set("uAlbedo", r / 255f, g / 255f, b / 255f);
+      pbr.set("uMetallic", metallic);
+      pbr.set("uRoughness", roughness);
+      pbr.set("uEmissive", (r / 255f) * emissive, (g / 255f) * emissive, (b / 255f) * emissive);
+    } else {
+      float ambientScale = lerp(0.28f, 0.08f, metallic);
+      float specStrength = lerp(80f, 255f, metallic);
+      float shininess = lerp(10f, 120f, 1f - roughness);
+      pg.noStroke();
+      pg.ambient(r * ambientScale, g * ambientScale, b * ambientScale);
+      pg.specular(specStrength, specStrength, specStrength);
+      pg.shininess(shininess);
+      if (emissive > 0f) {
+        pg.emissive(r * emissive, g * emissive, b * emissive);
+      } else {
+        pg.emissive(0, 0, 0);
+      }
+      pg.fill(r, g, b);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Scene composition (retained-mode primitives)
+  // -------------------------------------------------------------------------
+
+  private void drawSphere(PGraphicsOpenGL pg, float radius) {
+    pg.pushMatrix();
+    pg.scale(radius);
+    pg.shape(unitSphere);
+    pg.popMatrix();
+  }
+
+  private void drawBox(PGraphicsOpenGL pg, float sx, float sy, float sz) {
+    pg.pushMatrix();
+    pg.scale(sx, sy, sz);
+    pg.shape(unitBox);
+    pg.popMatrix();
+  }
+
+  private void drawCylinder(PGraphicsOpenGL pg, float radius, float height) {
+    pg.pushMatrix();
+    pg.scale(radius, height, radius);
+    pg.shape(unitCylinder);
+    pg.popMatrix();
+  }
 
   private void renderStarShell(PGraphicsOpenGL pg) {
     pg.pushStyle();
@@ -162,23 +291,19 @@ class Scene1 implements Scene {
     pg.translate(0, 40f + sin(time * 1.9f) * 18f, 0);
 
     // Glowing core.
-    pg.pushStyle();
-    applyPbrMaterial(pg, 255, 180, 120, 0.9f, 0.08f, 0.35f);
+    material(pg, 255, 180, 120, 0.9f, 0.08f, 0.35f);
     pg.pushMatrix();
     pg.rotateY(time * 0.7f);
-    pg.sphere(170f + 14f * sin(time * 2.7f));
+    drawSphere(pg, 170f + 14f * sin(time * 2.7f));
     pg.popMatrix();
-    pg.popStyle();
 
     // Mid shell.
-    pg.pushStyle();
-    applyPbrMaterial(pg, paletteC[0], paletteC[1], paletteC[2], 0.15f, 0.55f, 0.0f);
+    material(pg, paletteC[0], paletteC[1], paletteC[2], 0.15f, 0.55f, 0.0f);
     pg.pushMatrix();
     pg.rotateY(-time * 0.42f);
     pg.rotateZ(time * 0.16f);
-    pg.box(150f, 150f, 150f);
+    drawBox(pg, 150f, 150f, 150f);
     pg.popMatrix();
-    pg.popStyle();
 
     // Small inner satellites.
     for (int i = 0; i < 6; i++) {
@@ -190,11 +315,11 @@ class Scene1 implements Scene {
       pg.translate(x, y, z);
       pg.rotateY(time * 0.9f + i * 0.2f);
       if (i % 2 == 0) {
-        applyPbrMaterial(pg, paletteA[0], paletteA[1], paletteA[2], 0.75f, 0.18f, 0.08f);
-        pg.sphere(42f);
+        material(pg, paletteA[0], paletteA[1], paletteA[2], 0.75f, 0.18f, 0.08f);
+        drawSphere(pg, 42f);
       } else {
-        applyPbrMaterial(pg, paletteB[0], paletteB[1], paletteB[2], 0.25f, 0.4f, 0.03f);
-        pg.box(54f, 34f, 54f);
+        material(pg, paletteB[0], paletteB[1], paletteB[2], 0.25f, 0.4f, 0.03f);
+        drawBox(pg, 54f, 34f, 54f);
       }
       pg.popMatrix();
     }
@@ -216,29 +341,21 @@ class Scene1 implements Scene {
       pg.rotateX(ringTilt + sin(time + i) * 0.16f);
 
       if (i % 3 == 0) {
-        pg.pushStyle();
-        applyPbrMaterial(pg, 245, 245, 248, 0.95f, 0.12f, 0.0f);
-        pg.box(82f, 82f, 82f);
-        pg.popStyle();
+        material(pg, 245, 245, 248, 0.95f, 0.12f, 0.0f);
+        drawBox(pg, 82f, 82f, 82f);
       } else if (i % 3 == 1) {
-        pg.pushStyle();
-        applyPbrMaterial(pg, 96, 208, 255, 0.5f, 0.22f, 0.0f);
-        drawCylinder(pg, 30f, 128f, 16);
-        pg.popStyle();
+        material(pg, 96, 208, 255, 0.5f, 0.22f, 0.0f);
+        drawCylinder(pg, 30f, 128f);
       } else {
-        pg.pushStyle();
-        applyPbrMaterial(pg, 255, 165, 110, 0.2f, 0.65f, 0.1f);
-        pg.sphere(58f);
-        pg.popStyle();
+        material(pg, 255, 165, 110, 0.2f, 0.65f, 0.1f);
+        drawSphere(pg, 58f);
       }
 
       // Highlight cap.
       pg.pushMatrix();
       pg.translate(0, -70f, 0);
-      pg.pushStyle();
-      applyPbrMaterial(pg, 255, 250, 225, 0.1f, 0.1f, 0.15f);
-      pg.sphere(18f);
-      pg.popStyle();
+      material(pg, 255, 250, 225, 0.1f, 0.1f, 0.15f);
+      drawSphere(pg, 18f);
       pg.popMatrix();
 
       pg.popMatrix();
@@ -255,76 +372,168 @@ class Scene1 implements Scene {
       pg.pushMatrix();
       pg.translate(x, 260f, z);
       pg.rotateY(-a + HALF_PI);
-      pg.pushStyle();
-      applyPbrMaterial(pg, 170, 185, 215, 0.85f, 0.35f, 0.0f);
-      drawCylinder(pg, 24f, 340f, 12);
-      pg.popStyle();
+      material(pg, 170, 185, 215, 0.85f, 0.35f, 0.0f);
+      drawCylinder(pg, 24f, 340f);
       pg.popMatrix();
     }
   }
 
-  private void applyPbrMaterial(PGraphicsOpenGL pg, int r, int g, int b, float metallic, float roughness, float emissive) {
-    float ambientScale = lerp(0.28f, 0.08f, metallic);
-    float specStrength = lerp(80f, 255f, metallic);
-    float shininess = lerp(10f, 120f, 1f - roughness);
-    float emissiveScale = emissive;
+  // -------------------------------------------------------------------------
+  // Resource construction
+  // -------------------------------------------------------------------------
 
-    pg.noStroke();
-    pg.ambient(r * ambientScale, g * ambientScale, b * ambientScale);
-    pg.specular(specStrength, specStrength, specStrength);
-    pg.shininess(shininess);
-    if (emissiveScale > 0f) {
-      pg.emissive(r * emissiveScale, g * emissiveScale, b * emissiveScale);
+  private void loadPbrShader() {
+    try {
+      pbr = pApplet.loadShader("pbr.frag", "pbr.vert");
+      usePbr = pbr != null;
+      println("[FulldomePBR] PBR shader loaded: " + usePbr);
+    } catch (Exception e) {
+      pbr = null;
+      usePbr = false;
+      println("[FulldomePBR] PBR shader failed to load, using fixed-function: " + e.getMessage());
     }
-    pg.fill(r, g, b);
   }
 
-  private void drawCylinder(PGraphicsOpenGL pg, float radius, float height, int sides) {
-    pg.pushStyle();
-    float half = height * 0.5f;
+  private void buildPrimitives() {
+    unitSphere = buildSphere(48, 32);
+    unitBox = buildBox();
+    unitCylinder = buildCylinder(32);
+  }
+
+  // UV sphere of radius 1 built from PVector vertices (normals == positions).
+  private PShape buildSphere(int lon, int lat) {
+    PShape s = pApplet.createShape();
+    s.beginShape(TRIANGLES);
+    s.noStroke();
+    s.fill(255);
+    for (int j = 0; j < lat; j++) {
+      float t0 = map(j, 0, lat, 0, PI);
+      float t1 = map(j + 1, 0, lat, 0, PI);
+      for (int i = 0; i < lon; i++) {
+        float p0 = map(i, 0, lon, 0, TWO_PI);
+        float p1 = map(i + 1, 0, lon, 0, TWO_PI);
+
+        PVector a = sphPoint(t0, p0);
+        PVector b = sphPoint(t1, p0);
+        PVector c = sphPoint(t1, p1);
+        PVector d = sphPoint(t0, p1);
+
+        addVertex(s, a);
+        addVertex(s, b);
+        addVertex(s, c);
+
+        addVertex(s, a);
+        addVertex(s, c);
+        addVertex(s, d);
+      }
+    }
+    s.endShape();
+    return s;
+  }
+
+  private PVector sphPoint(float theta, float phi) {
+    float x = sin(theta) * cos(phi);
+    float y = cos(theta);
+    float z = sin(theta) * sin(phi);
+    return new PVector(x, y, z);
+  }
+
+  // Unit cube centered at origin (size 1), with per-face normals.
+  private PShape buildBox() {
+    PShape s = pApplet.createShape();
+    s.beginShape(TRIANGLES);
+    s.noStroke();
+    s.fill(255);
+    float h = 0.5f;
+
+    // +X
+    quad(s, new PVector(1, 0, 0), new PVector(h, -h, -h), new PVector(h, h, -h), new PVector(h, h, h), new PVector(h, -h, h));
+    // -X
+    quad(s, new PVector(-1, 0, 0), new PVector(-h, -h, h), new PVector(-h, h, h), new PVector(-h, h, -h), new PVector(-h, -h, -h));
+    // +Y
+    quad(s, new PVector(0, 1, 0), new PVector(-h, h, -h), new PVector(-h, h, h), new PVector(h, h, h), new PVector(h, h, -h));
+    // -Y
+    quad(s, new PVector(0, -1, 0), new PVector(-h, -h, h), new PVector(-h, -h, -h), new PVector(h, -h, -h), new PVector(h, -h, h));
+    // +Z
+    quad(s, new PVector(0, 0, 1), new PVector(-h, -h, h), new PVector(h, -h, h), new PVector(h, h, h), new PVector(-h, h, h));
+    // -Z
+    quad(s, new PVector(0, 0, -1), new PVector(h, -h, -h), new PVector(-h, -h, -h), new PVector(-h, h, -h), new PVector(h, h, -h));
+
+    s.endShape();
+    return s;
+  }
+
+  // Unit cylinder: radius 1, height 1 (y in [-0.5, 0.5]), axis Y.
+  private PShape buildCylinder(int sides) {
+    PShape s = pApplet.createShape();
+    s.beginShape(TRIANGLES);
+    s.noStroke();
+    s.fill(255);
+    float half = 0.5f;
     float step = TWO_PI / sides;
 
-    pg.beginShape(QUAD_STRIP);
-    for (int i = 0; i <= sides; i++) {
-      float a = i * step;
-      float nx = cos(a);
-      float nz = sin(a);
-      float x = nx * radius;
-      float z = nz * radius;
-      pg.normal(nx, 0, nz);
-      pg.vertex(x, -half, z);
-      pg.vertex(x, half, z);
-    }
-    pg.endShape();
+    for (int i = 0; i < sides; i++) {
+      float a0 = i * step;
+      float a1 = (i + 1) * step;
+      float x0 = cos(a0), z0 = sin(a0);
+      float x1 = cos(a1), z1 = sin(a1);
 
-    pg.beginShape(TRIANGLE_FAN);
-    pg.normal(0, -1, 0);
-    pg.vertex(0, -half, 0);
-    for (int i = 0; i <= sides; i++) {
-      float a = -i * step;
-      pg.vertex(cos(a) * radius, -half, sin(a) * radius);
-    }
-    pg.endShape();
+      // Side quad (radial normals).
+      PVector nA = new PVector(x0, 0, z0);
+      PVector nB = new PVector(x1, 0, z1);
+      addVertexN(s, new PVector(x0, -half, z0), nA);
+      addVertexN(s, new PVector(x0, half, z0), nA);
+      addVertexN(s, new PVector(x1, half, z1), nB);
 
-    pg.beginShape(TRIANGLE_FAN);
-    pg.normal(0, 1, 0);
-    pg.vertex(0, half, 0);
-    for (int i = 0; i <= sides; i++) {
-      float a = i * step;
-      pg.vertex(cos(a) * radius, half, sin(a) * radius);
+      addVertexN(s, new PVector(x0, -half, z0), nA);
+      addVertexN(s, new PVector(x1, half, z1), nB);
+      addVertexN(s, new PVector(x1, -half, z1), nB);
+
+      // Top cap (+Y).
+      PVector up = new PVector(0, 1, 0);
+      addVertexN(s, new PVector(0, half, 0), up);
+      addVertexN(s, new PVector(x0, half, z0), up);
+      addVertexN(s, new PVector(x1, half, z1), up);
+
+      // Bottom cap (-Y).
+      PVector down = new PVector(0, -1, 0);
+      addVertexN(s, new PVector(0, -half, 0), down);
+      addVertexN(s, new PVector(x1, -half, z1), down);
+      addVertexN(s, new PVector(x0, -half, z0), down);
     }
-    pg.endShape();
-    pg.popStyle();
+
+    s.endShape();
+    return s;
+  }
+
+  private void quad(PShape s, PVector n, PVector a, PVector b, PVector c, PVector d) {
+    addVertexN(s, a, n);
+    addVertexN(s, b, n);
+    addVertexN(s, c, n);
+    addVertexN(s, a, n);
+    addVertexN(s, c, n);
+    addVertexN(s, d, n);
+  }
+
+  private void addVertex(PShape s, PVector p) {
+    s.normal(p.x, p.y, p.z);
+    s.vertex(p.x, p.y, p.z);
+  }
+
+  private void addVertexN(PShape s, PVector p, PVector n) {
+    s.normal(n.x, n.y, n.z);
+    s.vertex(p.x, p.y, p.z);
   }
 
   private void buildStarShell() {
     for (int i = 0; i < starCount; i++) {
       float u = random(-1f, 1f);
       float theta = random(TWO_PI);
-      float s = sqrt(max(0f, 1f - u * u));
+      float ss = sqrt(max(0f, 1f - u * u));
       float radius = random(2100f, 2600f);
-      stars[i] = new PVector(cos(theta) * s * radius, u * radius, sin(theta) * s * radius);
+      stars[i] = new PVector(cos(theta) * ss * radius, u * radius, sin(theta) * ss * radius);
       starSizes[i] = random(1.0f, 2.6f);
     }
   }
 }
+
