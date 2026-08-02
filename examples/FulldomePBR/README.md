@@ -5,7 +5,7 @@ A new fulldome-oriented Processing sketch that demonstrates:
 - 3D primitives: spheres, boxes, and custom cylinders
 - PBR-inspired materials using Processing lighting controls
 - A star shell and dome grid for a more immersive fulldome composition
-- Interaction via the library's standard controls, plus scene-level orbit radius controls
+- Fluid quaternion-based camera navigation through space (same approach as the SolarSystem example)
 
 ## Controls
 
@@ -13,19 +13,21 @@ A new fulldome-oriented Processing sketch that demonstrates:
 - `-`: decrease orbital animation speed
 - `[` / `]`: shrink / grow the module orbit radius
 - `r`: reset orbit radius and rotation speed
-- `v`: reset the dome camera (yaw, pitch, roll, FOV) via the library API
+- `v`: reset the camera position/orientation
 
-### Camera navigation (dome views)
+### Camera navigation (all views)
 
-The scene drives the ziviDomeLive dome camera through the public API
-(`setYaw`, `setPitch`, `setRoll`, `setFov`):
+The scene owns a quaternion orbit camera that lives in **scene space** — it
+transforms the scene graphics directly and therefore works identically across
+every projection (fisheye, equirectangular, cubemap, standard). It never changes
+the dome parameters (`yaw`, `pitch`, `roll`, `fov`) that are articulated by the
+library's ControlManager.
 
-- Left-drag: look around (horizontal = yaw, vertical = pitch)
-- Right-drag: roll the horizon
-- Mouse wheel: zoom via field of view
+- Drag: orbit around the scene (quaternion rotation, gimbal-lock free)
+- Mouse wheel: fly toward / away from the target (smooth zoom, trackpad aware)
 
-In `STANDARD` view the library's own `MouseControlledCamera` handles navigation,
-so the scene defers to it and the mouse wheel adjusts the module orbit radius instead.
+All target/orientation/distance changes are smoothly interpolated (SLERP/LERP)
+for fluid motion.
 
 ## Notes
 
