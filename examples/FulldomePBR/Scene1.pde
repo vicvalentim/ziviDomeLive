@@ -14,6 +14,16 @@ class Scene1 implements Scene {
   private final int[] paletteB = { 102, 210, 255 };
   private final int[] paletteC = { 218, 198, 255 };
 
+  // --- Camera navigation state (drives the ziviDomeLive dome camera API) ---
+  private boolean dragging = false;
+  private int lastMouseX = 0;
+  private int lastMouseY = 0;
+  private final float lookSensitivity = 0.005f; // radians per pixel
+  private final float rollSensitivity = 0.004f; // radians per pixel
+  private final float fovMin = 30f;
+  private final float fovMax = 220f;
+  private final float defaultFov = 210f;
+
   Scene1(zividomelive parent) {
     this.parent = parent;
   }
@@ -61,6 +71,20 @@ class Scene1 implements Scene {
       case '-':
         orbitSpeed = max(0.002f, orbitSpeed - 0.002f);
         break;
+      case '[':
+        orbitRadius = constrain(orbitRadius - 40f, 520f, 1500f);
+        break;
+      case ']':
+        orbitRadius = constrain(orbitRadius + 40f, 520f, 1500f);
+        break;
+      case 'v':
+      case 'V':
+        // Reset the dome camera through the library API.
+        parent.setYaw(0f);
+        parent.setPitch(0f);
+        parent.setRoll(0f);
+        parent.setFov(defaultFov);
+        break;
       case 'r':
         orbitRadius = 840f;
         ringTilt = 0.42f;
@@ -70,8 +94,55 @@ class Scene1 implements Scene {
   }
 
   public void mouseEvent(MouseEvent event) {
-    if (event.getAction() == MouseEvent.WHEEL) {
-      orbitRadius = constrain(orbitRadius + event.getCount() * 24f, 520f, 1500f);
+    // In STANDARD view the library drives its own MouseControlledCamera,
+    // so we only navigate the dome camera for the fulldome projections.
+    boolean domeView = parent.getCurrentView() != zividomelive.ViewType.STANDARD;
+
+    switch (event.getAction()) {
+      case MouseEvent.PRESS:
+        dragging = true;
+        lastMouseX = event.getX();
+        lastMouseY = event.getY();
+        break;
+
+      case MouseEvent.RELEASE:
+        dragging = false;
+        break;
+
+      case MouseEvent.DRAG:
+        if (domeView && dragging) {
+          float dx = event.getX() - lastMouseX;
+          float dy = event.getY() - lastMouseY;
+          lastMouseX = event.getX();
+          lastMouseY = event.getY();
+
+          if (event.getButton() == RIGHT) {
+            // Right-drag rolls the horizon.
+            parent.setRoll(parent.getRoll() + dx * rollSensitivity);
+          } else {
+            // Left-drag looks around: horizontal = yaw, vertical = pitch.
+            float yaw = parent.getYaw() + dx * lookSensitivity;
+            float pitch = parent.getPitch() + dy * lookSensitivity;
+            pitch = constrain(pitch, -HALF_PI, HALF_PI);
+            parent.setYaw(yaw);
+            parent.setPitch(pitch);
+          }
+        }
+        break;
+
+      case MouseEvent.WHEEL:
+        if (domeView) {
+          // Wheel zooms the dome via field of view.
+          float fov = constrain(parent.getFov() + event.getCount() * 4f, fovMin, fovMax);
+          parent.setFov(fov);
+        } else {
+          // Non-dome fallback: adjust module orbit radius.
+          orbitRadius = constrain(orbitRadius + event.getCount() * 24f, 520f, 1500f);
+        }
+        break;
+
+      default:
+        break;
     }
   }
 
