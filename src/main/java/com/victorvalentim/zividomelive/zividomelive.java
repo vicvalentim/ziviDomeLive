@@ -49,8 +49,14 @@ public class zividomelive implements PConstants {
 	private int outputResolution = 1024;
 	private boolean showControlPanel = true;
 	private boolean showPreview = false;
-	private final boolean enableOutput = false;
 	private boolean controlPanelShownOnce = false;
+	private int targetFrameRate = 60;
+
+	// Shader resource paths (packaged under data/shaders by the build).
+	private static final String EQUIRECT_VERT = "data/shaders/equirectangular.vert";
+	private static final String EQUIRECT_FRAG = "data/shaders/equirectangular.frag";
+	private static final String DOME_VERT = "data/shaders/domemaster.vert";
+	private static final String DOME_FRAG = "data/shaders/domemaster.frag";
 
 	private ControlManager controlManager;
 	// Output pipeline (high resolution)
@@ -181,8 +187,8 @@ public class zividomelive implements PConstants {
 		LOGGER.info("Starting setup...");
 
 		try {
-			p.frameRate(70);
-			LOGGER.info("Frame rate set to 70.");
+			p.frameRate(targetFrameRate);
+			LOGGER.info("Frame rate set to " + targetFrameRate + ".");
 		} catch (Exception e) {
 			LOGGER.severe("Error setting frame rate: " + e.getMessage());
 		}
@@ -292,34 +298,43 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
-	 * Initializes various renderers required for different views.
+	 * Initializes renderers required for preview and standard views.
+	 * High-resolution output renderers are allocated lazily when an output is active.
 	 */
 	void initializeRenderers() {
 		try {
 			LOGGER.info("Initializing renderers...");
 
-			// Paths to shader files
-			String equirectangularVertexShaderPath = "data/shaders/equirectangular.vert";
-			String equirectangularFragmentShaderPath = "data/shaders/equirectangular.frag";
-			String domemasterVertexShaderPath = "data/shaders/domemaster.vert";
-			String domemasterFragmentShaderPath = "data/shaders/domemaster.frag";
-
-			cubemapRenderer = new CubemapRenderer(outputResolution, p);
-			LOGGER.info("CubemapRenderer initialized.");
-			equirectangularRenderer = new EquirectangularRenderer(outputResolution, equirectangularFragmentShaderPath, equirectangularVertexShaderPath, p);
-			LOGGER.info("EquirectangularRenderer initialized.");
 			standardRenderer = new StandardRenderer(p, p.width, p.height, currentScene);
 			LOGGER.info("StandardRenderer initialized.");
-			fisheyeDomemaster = new FisheyeDomemaster(outputResolution, domemasterFragmentShaderPath, domemasterVertexShaderPath, p);
-			LOGGER.info("FisheyeDomemaster initialized.");
-			cubemapViewRenderer = new CubemapViewRenderer(p, outputResolution);
-			LOGGER.info("CubemapViewRenderer initialized.");
+			if (isEnableOutput()) {
+				initializeOutputRenderers();
+			}
 			initializePreviewRenderers();
 			LOGGER.info("Preview renderers initialized.");
 			LOGGER.info("Renderers initialized successfully.");
 		} catch (Exception e) {
 			LOGGER.severe("Error initializing renderers");
 		}
+	}
+
+	/**
+	 * Allocates the high-resolution output renderers if they are not yet available.
+	 * Must be called from the Processing draw thread.
+	 */
+	private void initializeOutputRenderers() {
+		if (cubemapRenderer != null && equirectangularRenderer != null
+				&& fisheyeDomemaster != null && cubemapViewRenderer != null) {
+			return;
+		}
+		cubemapRenderer = new CubemapRenderer(outputResolution, p);
+		LOGGER.info("CubemapRenderer initialized.");
+		equirectangularRenderer = new EquirectangularRenderer(outputResolution, EQUIRECT_FRAG, EQUIRECT_VERT, p);
+		LOGGER.info("EquirectangularRenderer initialized.");
+		fisheyeDomemaster = new FisheyeDomemaster(outputResolution, DOME_FRAG, DOME_VERT, p);
+		LOGGER.info("FisheyeDomemaster initialized.");
+		cubemapViewRenderer = new CubemapViewRenderer(p, outputResolution);
+		LOGGER.info("CubemapViewRenderer initialized.");
 	}
 
 	private int computePreviewResolution() {
@@ -330,14 +345,10 @@ public class zividomelive implements PConstants {
 
 	private void initializePreviewRenderers() {
 		previewResolution = computePreviewResolution();
-		String equirectangularVertexShaderPath = "data/shaders/equirectangular.vert";
-		String equirectangularFragmentShaderPath = "data/shaders/equirectangular.frag";
-		String domemasterVertexShaderPath = "data/shaders/domemaster.vert";
-		String domemasterFragmentShaderPath = "data/shaders/domemaster.frag";
 
 		previewCubemapRenderer = new CubemapRenderer(previewResolution, p);
-		previewEquirectangularRenderer = new EquirectangularRenderer(previewResolution, equirectangularFragmentShaderPath, equirectangularVertexShaderPath, p);
-		previewFisheyeDomemaster = new FisheyeDomemaster(previewResolution, domemasterFragmentShaderPath, domemasterVertexShaderPath, p);
+		previewEquirectangularRenderer = new EquirectangularRenderer(previewResolution, EQUIRECT_FRAG, EQUIRECT_VERT, p);
+		previewFisheyeDomemaster = new FisheyeDomemaster(previewResolution, DOME_FRAG, DOME_VERT, p);
 		previewCubemapViewRenderer = new CubemapViewRenderer(p, previewResolution);
 	}
 
@@ -412,7 +423,7 @@ public class zividomelive implements PConstants {
 	}
 
 	void renderContent() {
-		if (cubemapRenderer == null || equirectangularRenderer == null || fisheyeDomemaster == null || standardRenderer == null || currentScene == null) {
+		if (standardRenderer == null || currentScene == null) {
 			LOGGER.severe("Error: Renderer or scene not initialized.");
 			return;
 		}
@@ -421,8 +432,9 @@ public class zividomelive implements PConstants {
 		handleGraphicsReset();
 		ensurePreviewRenderers();
 
-		// High-res pipeline is only required for external outputs.
+		// High-res pipeline is only required for external outputs; allocated lazily.
 		if (isEnableOutput()) {
+			initializeOutputRenderers();
 			captureCubemap();
 			updateRenderViews();
 			outputManager.sendOutput();
@@ -543,6 +555,7 @@ public class zividomelive implements PConstants {
 	private void renderWithCurrentView() {
 		clearBackground();
 		handleGraphicsReset();
+		initializeOutputRenderers();
 		captureCubemap();
 		updateRenderViews();
 		displayCurrentView();
@@ -551,11 +564,11 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
-	 * Renders the fisheye domemaster view by applying the shader and displaying the view.
-	 * If the FisheyeDomemaster is not initialized, an error message is printed.
+	 * Renders the fisheye domemaster view, switching the current view mode to FISHEYE_DOMEMASTER.
 	 */
 	public void renderFisheyeDomemaster() {
-		if (fisheyeDomemaster != null) {
+		setCurrentView(ViewType.FISHEYE_DOMEMASTER);
+		if (fisheyeDomemaster != null || previewFisheyeDomemaster != null) {
 			renderWithCurrentView();
 		} else {
 			LOGGER.severe("Error: FisheyeDomemaster not initialized.");
@@ -563,11 +576,11 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
-	 * Renders the equirectangular view by invoking the EquirectangularRenderer.
-	 * If the EquirectangularRenderer is not initialized, an error message is printed.
+	 * Renders the equirectangular view, switching the current view mode to EQUIRECTANGULAR.
 	 */
 	public void renderEquirectangular() {
-		if (equirectangularRenderer != null) {
+		setCurrentView(ViewType.EQUIRECTANGULAR);
+		if (equirectangularRenderer != null || previewEquirectangularRenderer != null) {
 			renderWithCurrentView();
 		} else {
 			LOGGER.severe("Error: EquirectangularRenderer not initialized.");
@@ -575,11 +588,11 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
-	 * Renders the cubemap view by drawing the cubemap faces to the graphics and displaying the view.
-	 * If the CubemapViewRenderer is not initialized, an error message is printed.
+	 * Renders the cubemap view, switching the current view mode to CUBEMAP.
 	 */
 	public void renderCubemap() {
-		if (cubemapViewRenderer != null) {
+		setCurrentView(ViewType.CUBEMAP);
+		if (cubemapViewRenderer != null || previewCubemapViewRenderer != null) {
 			renderWithCurrentView();
 		} else {
 			LOGGER.severe("Error: CubemapViewRenderer not initialized.");
@@ -587,10 +600,10 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
-	 * Renders the standard view by invoking the StandardRenderer.
-	 * If the StandardRenderer is not initialized, an error message is printed.
+	 * Renders the standard view, switching the current view mode to STANDARD.
 	 */
 	public void renderStandard() {
+		setCurrentView(ViewType.STANDARD);
 		if (standardRenderer != null) {
 			renderWithCurrentView();
 		} else {
@@ -681,15 +694,6 @@ public class zividomelive implements PConstants {
 		pendingOutputReset = true;
 		pendingOutputResolution = newResolution;
 		LOGGER.info("Changing output resolution to: " + newResolution);
-		ThreadManager.getExecutor().submit(() -> {
-			try {
-				Thread.sleep(100);
-				LOGGER.info("Output resolution change processed.");
-			} catch (InterruptedException e) {
-				LOGGER.severe("Error during output resolution change processing");
-				Thread.currentThread().interrupt();
-			}
-		});
 	}
 
 	/**
@@ -773,6 +777,7 @@ public class zividomelive implements PConstants {
 				switch (event.getKey()) {
 					case 'h':
 						showControlPanel = !showControlPanel;
+						controlManager.syncPanelVisibility(showControlPanel);
 						LOGGER.info("Toggling control panel visibility: " + showControlPanel);
 						break;
 
@@ -890,6 +895,12 @@ public class zividomelive implements PConstants {
 	 */
 	public void setFishSize(float fishSize) {
 		this.fishSize = fishSize;
+		if (fisheyeDomemaster != null) {
+			fisheyeDomemaster.setSizePercentage(fishSize);
+		}
+		if (previewFisheyeDomemaster != null) {
+			previewFisheyeDomemaster.setSizePercentage(fishSize);
+		}
 	}
 
 	/**
@@ -980,6 +991,32 @@ public class zividomelive implements PConstants {
 	 */
 	public void setCurrentView(ViewType currentView) {
 		this.currentView = currentView;
+	}
+
+	/**
+	 * Sets the target frame rate applied during setup. Defaults to 60.
+	 * Call before setup() to take effect at startup; calling afterwards applies immediately.
+	 *
+	 * @param fps desired frame rate, must be positive
+	 */
+	public void setTargetFrameRate(int fps) {
+		if (fps <= 0) {
+			LOGGER.warning("Ignoring invalid target frame rate: " + fps);
+			return;
+		}
+		this.targetFrameRate = fps;
+		if (initState != InitState.NOT_INITIALIZED) {
+			p.frameRate(fps);
+		}
+	}
+
+	/**
+	 * Returns the configured target frame rate.
+	 *
+	 * @return target frame rate in frames per second
+	 */
+	public int getTargetFrameRate() {
+		return targetFrameRate;
 	}
 
 	/**

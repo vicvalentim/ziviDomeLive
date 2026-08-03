@@ -62,9 +62,9 @@ public class FisheyeDomemaster {
      */
     void setFOV(float fov) {
         if (domemasterShader == null) {
-            initializeDomemaster();
+            LOGGER.warning("Domemaster shader not initialized; skipping FOV update.");
+            return;
         }
-        assert domemasterShader != null;
         domemasterShader.set("fov", fov);
     }
 
@@ -78,6 +78,15 @@ public class FisheyeDomemaster {
     }
 
     /**
+     * Returns the current size percentage of the domemaster projection.
+     *
+     * @return the size percentage, between 0 and 100
+     */
+    public float getSizePercentage() {
+        return sizePercentage;
+    }
+
+    /**
      * Applies the shader to the equirectangular map and renders the domemaster projection.
      *
      * @param equirectangular the PGraphics object representing the equirectangular map
@@ -86,6 +95,10 @@ public class FisheyeDomemaster {
     public void applyShader(PGraphicsOpenGL equirectangular, float fov) {
         if (equirectangular == null) {
             LOGGER.warning("Equirectangular PGraphics is null.");
+            return;
+        }
+        if (domemasterShader == null) {
+            LOGGER.warning("Domemaster shader not initialized; skipping shader pass.");
             return;
         }
 

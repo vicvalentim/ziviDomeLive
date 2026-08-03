@@ -19,6 +19,8 @@ public class LogManager {
 	private static final Logger globalLogger = Logger.getLogger("com.victorvalentim.zividomelive");
 	private static boolean isConfigured = false;
 	private static final AtomicReference<String> lastLogMessage = new AtomicReference<>("");
+	private static final java.util.concurrent.atomic.AtomicLong lastLogTimestamp = new java.util.concurrent.atomic.AtomicLong(0L);
+	private static final long DUPLICATE_LOG_THROTTLE_MS = 5000L;
 	private static Mode currentMode = Mode.RELEASE;
 
 	private LogManager() {}
@@ -88,14 +90,18 @@ public class LogManager {
 			globalLogger.log(Level.WARNING, "FileHandler configuration failed. Logs will only appear in the console.", e);
 		}
 
-		// Filter to suppress duplicate log messages (thread-safe)
+		// Time-based throttle for duplicate log messages: the same message is
+		// allowed through at most once every DUPLICATE_LOG_THROTTLE_MS.
 		globalLogger.setFilter(record -> {
 			String message = record.getMessage();
+			long now = System.currentTimeMillis();
 			String previousMessage = lastLogMessage.get();
-			if (message != null && message.equals(previousMessage)) {
-				return false; // Suppress duplicate message
+			if (message != null && message.equals(previousMessage)
+					&& (now - lastLogTimestamp.get()) < DUPLICATE_LOG_THROTTLE_MS) {
+				return false; // Suppress duplicate message within throttle window
 			}
 			lastLogMessage.set(message);
+			lastLogTimestamp.set(now);
 			return true;
 		});
 
