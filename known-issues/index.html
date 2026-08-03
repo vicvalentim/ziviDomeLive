@@ -1009,10 +1009,14 @@
 <h2 id="linux-external-outputs">Linux external outputs<a class="headerlink" href="#linux-external-outputs" title="Permanent link">&para;</a></h2>
 <p>Linux builds have reduced support for external video outputs compared with macOS and Windows because the Processing ecosystem dependencies used by this library do not provide the same native integrations for NDI, Syphon, and Spout.</p>
 <h2 id="opengl-error-1282">OpenGL error 1282<a class="headerlink" href="#opengl-error-1282" title="Permanent link">&para;</a></h2>
-<p>Older builds could emit:</p>
+<p>Some configurations emit:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>OpenGL error 1282 at bot endDraw(): invalid operation
 </span></code></pre></div>
-<p>This was caused by invalid OpenGL state during output frame capture. The fix shipped in <code>1.4.0</code>, and current builds avoid reopening the draw context while preparing NDI frames.</p>
+<p>This is a <code>GL_INVALID_OPERATION</code> raised by the JOGL/Processing OpenGL driver, typically triggered by invalid framebuffer state during rendering or output capture. The error is endemic to certain hardware and driver combinations and has not been fully eliminated. It is generally non-fatal — rendering continues — but may indicate instability in specific setups (particularly Apple Silicon, certain GPU drivers, or complex multi-pass rendering). We continue to investigate the root cause.</p>
+<p><strong>Workarounds that may reduce frequency:</strong>
+- Run Processing using the Intel (Rosetta 2) build on Apple Silicon.
+- Keep external outputs (NDI, Syphon, Spout) disabled when not in use.
+- Use the latest GPU drivers for your platform.</p>
 
 
 

@@ -838,6 +838,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Problemas Conhecidos
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -854,6 +872,58 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#apple-silicon-e-syphon" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Apple Silicon e Syphon
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outputs-externos-no-linux" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Outputs externos no Linux
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#opengl-error-1282" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenGL error 1282
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -934,7 +1004,19 @@
 
 
 <h1 id="problemas-conhecidos">Problemas Conhecidos<a class="headerlink" href="#problemas-conhecidos" title="Permanent link">&para;</a></h1>
-<p>Lista de problemas conhecidos na biblioteca.</p>
+<h2 id="apple-silicon-e-syphon">Apple Silicon e Syphon<a class="headerlink" href="#apple-silicon-e-syphon" title="Permanent link">&para;</a></h2>
+<p>No macOS com Apple Silicon, a interoperabilidade completa com Syphon pode exigir a versão Intel do Processing rodando via Rosetta 2. A stack ARM nativa do Processing não oferece o mesmo nível de suporte ao Syphon.</p>
+<h2 id="outputs-externos-no-linux">Outputs externos no Linux<a class="headerlink" href="#outputs-externos-no-linux" title="Permanent link">&para;</a></h2>
+<p>Builds Linux têm suporte reduzido para saídas de vídeo externas em comparação com macOS e Windows, pois as dependências do ecossistema Processing usadas por esta biblioteca não fornecem as mesmas integrações nativas para NDI, Syphon e Spout.</p>
+<h2 id="opengl-error-1282">OpenGL error 1282<a class="headerlink" href="#opengl-error-1282" title="Permanent link">&para;</a></h2>
+<p>Algumas configurações emitem:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>OpenGL error 1282 at bot endDraw(): invalid operation
+</span></code></pre></div>
+<p>Esse é um <code>GL_INVALID_OPERATION</code> emitido pelo driver OpenGL do JOGL/Processing, geralmente acionado por estado inválido do framebuffer durante renderização ou captura de output. O erro é endêmico em certas combinações de hardware e driver e <strong>não foi completamente eliminado</strong>. Em geral é não-fatal — a renderização continua — mas pode indicar instabilidade em configurações específicas (especialmente Apple Silicon, certos drivers de GPU, ou renderização multi-pass complexa). A investigação da causa raiz está em andamento.</p>
+<p><strong>Medidas que podem reduzir a frequência:</strong>
+- Rode o Processing na versão Intel (Rosetta 2) em Apple Silicon.
+- Mantenha os outputs externos (NDI, Syphon, Spout) desabilitados quando não estiverem em uso.
+- Use os drivers de GPU mais recentes para sua plataforma.</p>
 
 
 
