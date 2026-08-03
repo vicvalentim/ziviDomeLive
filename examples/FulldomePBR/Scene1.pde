@@ -19,7 +19,7 @@ class Scene1 implements Scene {
   private final int[] paletteC = { 218, 198, 255 };
 
   // --- Native scene-space camera service (ziviDomeLive OrbitCamera) ---
-  private final float initialDistance = 1900f;
+  private final float initialDistance = -900f;
 
   // --- PBR pipeline ---
   private PShader pbr;              // null => fall back to fixed-function lighting
@@ -41,7 +41,7 @@ class Scene1 implements Scene {
     this.pApplet = parent.getPApplet();
     // Configure and enable the native scene camera.
     parent.setSceneCameraInputEnabled(true);
-    parent.getSceneCamera().setDistanceLimits(200f, 6000f);
+    parent.getSceneCamera().setDistanceLimits(-1200f, 1200f);
     resetCamera();
   }
 
