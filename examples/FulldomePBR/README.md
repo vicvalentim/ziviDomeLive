@@ -11,8 +11,10 @@ A new fulldome-oriented Processing sketch that demonstrates:
 ## PBR pipeline
 
 - `data/pbr.vert` / `data/pbr.frag` implement a metallic-roughness workflow with
-  GGX distribution, Smith geometry and Schlick-Fresnel, plus Reinhard tone mapping
-  and gamma correction.
+  GGX distribution, Smith geometry and Schlick-Fresnel, plus hemispheric IBL
+  (sky/ground) and ACES filmic tone mapping with gamma correction. The shaders
+  target **GLSL `#version 410`** (OpenGL 4.1 core), matching the library's OpenGL
+  context.
 - Lighting is evaluated in **eye space**. World-space lights are transformed with a
   `uViewMatrix` uniform (the scene's camera/view matrix, captured each frame), which
   keeps lighting consistent across every projection and all six cubemap faces.
