@@ -193,13 +193,13 @@ void controlEvent(controlP5.ControlEvent theEvent) {
 
 1. **Fork the Repository**:
 
-    - Go to the [ziviDomeLive GitHub repository](https://github.com/vicvalentim/zividomelive) and click the **Fork** button to create your own copy of the repository.
+    - Go to the [ziviDomeLive GitHub repository](https://github.com/vicvalentim/ziviDomeLive) and click the **Fork** button to create your own copy of the repository.
 
 2. **Clone Your Fork**:
 
     - Clone the forked repository to your local machine by running:
       ```bash
-      git clone https://github.com/vicvalentim/zividomelive.git
+      git clone https://github.com/vicvalentim/ziviDomeLive.git
       ```
 
 3. **Create a New Branch**:
