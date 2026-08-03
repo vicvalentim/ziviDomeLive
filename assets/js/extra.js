@@ -1,3 +1,3 @@
 document$.subscribe(function () {
-    console.log("Documentação carregada. Iniciando scripts personalizados.");
+    document.documentElement.classList.add("docs-ready");
 });
