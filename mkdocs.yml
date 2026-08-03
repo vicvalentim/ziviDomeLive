@@ -2,7 +2,7 @@ site_name: ziviDomeLive - Processing Library Documentation
 site_url: https://vicvalentim.github.io/ziviDomeLive/
 repo_url: https://github.com/vicvalentim/ziviDomeLive
 repo_name: GitHub
-edit_uri: blob/main/docs/
+edit_uri: blob/main/docs/en/
 site_description: Real-time immersive visuals and 3D rendering framework for fulldome and VR in Processing
 site_author: Victor Valentim
 copyright: Copyright &copy; 2024 <a href="https://vicvalentim.com/" target="_blank">Victor Valentim</a> - GPL-2.0-only
