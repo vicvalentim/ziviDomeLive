@@ -1,12 +1,16 @@
 package com.victorvalentim.zividomelive.render.modes;
 
+import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.*;
 import processing.opengl.*;
+
+import java.util.logging.Logger;
 
 /**
  * The EquirectangularRenderer class handles the rendering of equirectangular projections from cubemap faces.
  */
 public class EquirectangularRenderer {
+    private static final Logger LOGGER = LogManager.getLogger();
     private PGraphics equirectangular;
     private final PShader equirectangularShader;
     private final PApplet parent;
@@ -42,6 +46,14 @@ public class EquirectangularRenderer {
      * @param faces an array of PGraphics objects representing the cubemap faces
      */
     public void render(PGraphicsOpenGL[] faces) {
+        if (equirectangularShader == null) {
+            LOGGER.warning("Equirectangular shader not initialized; skipping render.");
+            return;
+        }
+        if (!hasValidFaces(faces)) {
+            LOGGER.warning("Cubemap faces unavailable; skipping equirectangular render.");
+            return;
+        }
         if (equirectangular == null) {
             initializeEquirectangular();
         }
@@ -58,6 +70,18 @@ public class EquirectangularRenderer {
         equirectangular.shader(equirectangularShader);
         equirectangular.rect(0, 0, equirectangular.width, equirectangular.height);
         equirectangular.endDraw();
+    }
+
+    private boolean hasValidFaces(PGraphicsOpenGL[] faces) {
+        if (faces == null || faces.length < 6) {
+            return false;
+        }
+        for (int i = 0; i < 6; i++) {
+            if (faces[i] == null || faces[i].getTexture() == null) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

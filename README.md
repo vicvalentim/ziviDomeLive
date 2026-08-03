@@ -34,10 +34,10 @@
 
 >[!IMPORTANT]
 >**Disclaimer for Apple Silicon Users**:
->>For users on macOS with Apple Silicon processors (M series), it is recommended to use the Intel version of Processing (run via Rosetta 2) to ensure full **Syphon** functionality. The native ARM version of Processing currently lacks Syphon support, which may limit the real-time video-sharing capabilities of the **ziviDomeLive** library.
+>>For users on macOS with Apple Silicon processors (M series), it is recommended to use the Intel version of Processing (run via Rosetta 2) to ensure full **Syphon** functionality. The native ARM version of Processing currently lacks Syphon support, which may limit the real-time video-sharing capabilities of the **ziviDomeLive** library. External outputs remain opt-in and must be enabled explicitly from the control panel or API.
 >
 >**Disclaimer for Linux Users**:
->>Due to the absence of a native library for **NDI** in Processing, Linux users will not have access to external integration features, such as those provided by **Syphon** or **Spout** on macOS and Windows.
+>>Due to the absence of native support for **NDI**, **Syphon**, and **Spout** in this Processing setup, Linux users have reduced external-output options compared with macOS and Windows.
 >
 
 >[!NOTE]
@@ -46,7 +46,7 @@
 >   ```
 >   OpenGL error 1282 at bot endDraw(): invalid operation
 >   ```
->This was caused by invalid OpenGL state during output frame capture and has been fixed as of version 1.4.0. If you still see this warning, make sure you are running the latest version of **ziviDomeLive**.
+>This was caused by invalid OpenGL state during output frame capture and has been fixed as of version 1.4.0 by removing the invalid nested draw-context path from NDI capture. If you still see this warning, make sure you are running the latest version of **ziviDomeLive**.
 >
 
 ## Installation

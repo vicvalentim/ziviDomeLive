@@ -47,7 +47,7 @@ class Scene1 implements Scene {
     parent.setSceneCameraInputEnabled(true);
     parent.getSceneCamera().setDistanceLimits(-1200f, 1200f);
     // Protect against the collapse point at distance 0 (keeps the sign, no crossing).
-    parent.getSceneCamera().setCollapseGuard(100f);
+    parent.getSceneCamera().setCollapseGuard(0f);
     resetCamera();
   }
 

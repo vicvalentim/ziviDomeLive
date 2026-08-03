@@ -9,7 +9,6 @@ import processing.core.*;
 import processing.event.*;
 import processing.opengl.*;
 import controlP5.*;
-import java.util.concurrent.*;
 import java.util.logging.Logger;
 
 /**
@@ -78,7 +77,6 @@ public class zividomelive implements PConstants {
 	private OutputManager outputManager;
 	private SplashScreen splash;
 	private SceneManager sceneManager;
-	private final ExecutorService executorService = ThreadManager.getExecutor();
 
 	/**
 	 * Enum representing the different types of views available.
@@ -246,9 +244,9 @@ public class zividomelive implements PConstants {
 		if (p.g instanceof PGraphicsOpenGL pgl) {
 			PGL pglContext = pgl.beginPGL();
 
-			System.out.println("OpenGL Version: " + pglContext.getString(PGL.VERSION));
-			System.out.println("OpenGL Vendor: " + pglContext.getString(PGL.VENDOR));
-			System.out.println("OpenGL Renderer: " + pglContext.getString(PGL.RENDERER));
+			LOGGER.info("OpenGL Version: " + pglContext.getString(PGL.VERSION));
+			LOGGER.info("OpenGL Vendor: " + pglContext.getString(PGL.VENDOR));
+			LOGGER.info("OpenGL Renderer: " + pglContext.getString(PGL.RENDERER));
 
 			pgl.endPGL();
 		} else {
@@ -1244,9 +1242,6 @@ public class zividomelive implements PConstants {
 		if (outputManager != null) {
 			outputManager.shutdownOutputs();
 		}
-		if (executorService != null && !executorService.isShutdown()) {
-			executorService.shutdownNow();
-		}
 		LOGGER.info("All processes stopped.");
 	}
 
@@ -1292,10 +1287,6 @@ public class zividomelive implements PConstants {
 		if (cameraManager != null) {
 			cameraManager.dispose();
 			cameraManager = null;
-		}
-
-		if (executorService != null && !executorService.isShutdown()) {
-			executorService.shutdownNow();
 		}
 		LOGGER.info("Resources disposed successfully.");
 	}
