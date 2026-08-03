@@ -41,7 +41,7 @@ group = "com.victorvalentim.zividomelive"
 // - MINOR: Increases when you add new features that are backward-compatible.
 // - PATCH: Increases when you make backward-compatible bug fixes.
 // You can update these numbers as you release new versions of your library.
-version = "1.3.6"
+version = "1.4.0"
 
 // Centralized dependency versions for easier Maven sync/updates.
 val processingCoreVersion = "4.5.6"
