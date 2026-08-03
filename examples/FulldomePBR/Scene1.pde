@@ -34,6 +34,10 @@ class Scene1 implements Scene {
   private final float[] lightColor = new float[lightCount * 3];
   private final float[] lightType = new float[lightCount]; // 0 = directional, 1 = point
   private final float[] ambient = { 22f / 255f, 22f / 255f, 30f / 255f };
+  // Hemispheric IBL environment (enrichment): sky above, ground below.
+  private final float[] skyColor = { 0.10f, 0.14f, 0.26f };
+  private final float[] groundColor = { 0.02f, 0.02f, 0.05f };
+  private final float envIntensity = 1.0f;
   private final PMatrix3D viewMatrix = new PMatrix3D();
 
   Scene1(zividomelive parent) {
@@ -42,6 +46,8 @@ class Scene1 implements Scene {
     // Configure and enable the native scene camera.
     parent.setSceneCameraInputEnabled(true);
     parent.getSceneCamera().setDistanceLimits(-1200f, 1200f);
+    // Protect against the collapse point at distance 0 (keeps the sign, no crossing).
+    parent.getSceneCamera().setCollapseGuard(250f);
     resetCamera();
   }
 
@@ -187,6 +193,10 @@ class Scene1 implements Scene {
     pbr.set("uLightPos", lightPos, 3);
     pbr.set("uLightColor", lightColor, 3);
     pbr.set("uLightType", lightType, 1);
+    // Hemispheric IBL environment.
+    pbr.set("uSkyColor", skyColor[0], skyColor[1], skyColor[2]);
+    pbr.set("uGroundColor", groundColor[0], groundColor[1], groundColor[2]);
+    pbr.set("uEnvIntensity", envIntensity);
   }
 
   // Fixed-function equivalent of the shader lights (fallback path).

@@ -55,6 +55,13 @@ public class OrbitCamera implements PConstants {
     private float minDistance = 1f;
     /** Maximum allowed orbit distance. */
     private float maxDistance = 100000f;
+    /**
+     * Collapse-guard dead zone around distance 0. When positive, the orbit
+     * distance is never allowed inside (-collapseGuard, +collapseGuard) and can
+     * never flip sign through zero, preventing the view from collapsing when the
+     * allowed range spans negative and positive distances.
+     */
+    private float collapseGuard = 0f;
 
     /** Drag sensitivity in radians per pixel. */
     private float dragSensitivity = 0.01f;
@@ -125,7 +132,7 @@ public class OrbitCamera implements PConstants {
      * @param amount distance delta (positive flies away, negative flies in)
      */
     public void zoom(float amount) {
-        goalDistance = PApplet.constrain(goalDistance + amount, minDistance, maxDistance);
+        goalDistance = guardDistance(goalDistance + amount, goalDistance);
     }
 
     /**
@@ -195,7 +202,7 @@ public class OrbitCamera implements PConstants {
      * @param d desired distance
      */
     public void setDistance(float d) {
-        goalDistance = PApplet.constrain(d, minDistance, maxDistance);
+        goalDistance = guardDistance(d, d);
     }
 
     /**
@@ -221,7 +228,7 @@ public class OrbitCamera implements PConstants {
         goalTarget.set(tx, ty, tz);
         orientation = q.normalize();
         goalOrientation = new Quaternion(orientation.x, orientation.y, orientation.z, orientation.w);
-        distance = PApplet.constrain(d, minDistance, maxDistance);
+        distance = guardDistance(d, d);
         goalDistance = distance;
     }
 
@@ -247,8 +254,46 @@ public class OrbitCamera implements PConstants {
     public void setDistanceLimits(float min, float max) {
         this.minDistance = min;
         this.maxDistance = max;
-        this.goalDistance = PApplet.constrain(goalDistance, min, max);
-        this.distance = PApplet.constrain(distance, min, max);
+        this.goalDistance = guardDistance(goalDistance, goalDistance);
+        this.distance = guardDistance(distance, distance);
+    }
+
+    /**
+     * Sets a collapse-guard dead zone around distance 0. When positive, the orbit
+     * distance can never enter {@code (-guard, +guard)} nor flip sign through zero,
+     * which prevents the view from collapsing when the allowed distance range spans
+     * both negative and positive values. Set to 0 to disable.
+     *
+     * @param guard half-width of the forbidden zone around zero (>= 0)
+     */
+    public void setCollapseGuard(float guard) {
+        this.collapseGuard = Math.max(0f, guard);
+        this.goalDistance = guardDistance(goalDistance, goalDistance);
+        this.distance = guardDistance(distance, distance);
+    }
+
+    /**
+     * Clamps a desired distance to the allowed range and enforces the collapse
+     * guard: the result stays on the same side of zero as {@code reference} and
+     * never enters the forbidden dead zone.
+     *
+     * @param desired   requested distance
+     * @param reference distance whose sign defines the allowed side
+     * @return a safe distance value
+     */
+    private float guardDistance(float desired, float reference) {
+        float d = PApplet.constrain(desired, minDistance, maxDistance);
+        if (collapseGuard <= 0f) {
+            return d;
+        }
+        float sign = reference >= 0f ? 1f : -1f;
+        if (d * sign < 0f) {
+            // Would cross zero: stop at the near boundary on the reference side.
+            d = sign * collapseGuard;
+        } else if (Math.abs(d) < collapseGuard) {
+            d = sign * collapseGuard;
+        }
+        return PApplet.constrain(d, minDistance, maxDistance);
     }
 
     /**
