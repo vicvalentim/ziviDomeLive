@@ -122,10 +122,10 @@ extra:
   generator: false
   alternate:
     - name: English
-      link: /en/
+      link: /ziviDomeLive/en/
       lang: en
     - name: Português (Brasil)
-      link: /pt/
+      link: /ziviDomeLive/pt/
       lang: pt
 
 extra_css:
