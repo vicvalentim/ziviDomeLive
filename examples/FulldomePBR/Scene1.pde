@@ -11,7 +11,7 @@ class Scene1 implements Scene {
   private float orbitRadius = 840f;
   private float orbitSpeed = 0.012f;
   private float ringTilt = 0.42f;
-  private final int starCount = 220;
+  private final int starCount = 1220;
   private final PVector[] stars = new PVector[starCount];
   private final float[] starSizes = new float[starCount];
   private final int[] paletteA = { 244, 111, 94 };
@@ -35,9 +35,9 @@ class Scene1 implements Scene {
   private final float[] lightType = new float[lightCount]; // 0 = directional, 1 = point
   private final float[] ambient = { 22f / 255f, 22f / 255f, 30f / 255f };
   // Hemispheric IBL environment (enrichment): sky above, ground below.
-  private final float[] skyColor = { 0.10f, 0.14f, 0.26f };
-  private final float[] groundColor = { 0.02f, 0.02f, 0.05f };
-  private final float envIntensity = 1.0f;
+  private final float[] skyColor = { 0.12f, 0.20f, 0.42f };
+  private final float[] groundColor = { 0.06f, 0.02f, 0.10f };
+  private final float envIntensity = 1.15f;
   private final PMatrix3D viewMatrix = new PMatrix3D();
 
   Scene1(zividomelive parent) {
@@ -47,7 +47,7 @@ class Scene1 implements Scene {
     parent.setSceneCameraInputEnabled(true);
     parent.getSceneCamera().setDistanceLimits(-1200f, 1200f);
     // Protect against the collapse point at distance 0 (keeps the sign, no crossing).
-    parent.getSceneCamera().setCollapseGuard(250f);
+    parent.getSceneCamera().setCollapseGuard(0f);
     resetCamera();
   }
 
@@ -236,6 +236,36 @@ class Scene1 implements Scene {
     }
   }
 
+  // Vibrant material defined in HSB. h in [0,360), s/v in [0,1].
+  // Uses a pure HSB->RGB conversion so it never touches the buffer's colorMode.
+  private void materialHSB(PGraphicsOpenGL pg, float h, float s, float v, float metallic, float roughness, float emissive) {
+    int[] rgb = hsb2rgb(h, s, v);
+    material(pg, rgb[0], rgb[1], rgb[2], metallic, roughness, emissive);
+  }
+
+  // Pure HSB -> RGB (0..255). h in degrees [0,360), s and v in [0,1].
+  private int[] hsb2rgb(float h, float s, float v) {
+    h = ((h % 360f) + 360f) % 360f;
+    s = constrain(s, 0f, 1f);
+    v = constrain(v, 0f, 1f);
+    float c = v * s;
+    float hp = h / 60f;
+    float x = c * (1f - abs((hp % 2f) - 1f));
+    float r1 = 0f, g1 = 0f, b1 = 0f;
+    if (hp < 1f)      { r1 = c; g1 = x; }
+    else if (hp < 2f) { r1 = x; g1 = c; }
+    else if (hp < 3f) { g1 = c; b1 = x; }
+    else if (hp < 4f) { g1 = x; b1 = c; }
+    else if (hp < 5f) { r1 = x; b1 = c; }
+    else              { r1 = c; b1 = x; }
+    float m = v - c;
+    return new int[] {
+      round((r1 + m) * 255f),
+      round((g1 + m) * 255f),
+      round((b1 + m) * 255f)
+    };
+  }
+
   // -------------------------------------------------------------------------
   // Scene composition (retained-mode primitives)
   // -------------------------------------------------------------------------
@@ -297,18 +327,19 @@ class Scene1 implements Scene {
   }
 
   private void renderCentralCluster(PGraphicsOpenGL pg) {
+    float hueShift = time * 8f; // gentle animated hue rotation for liveliness
     pg.pushMatrix();
     pg.translate(0, 40f + sin(time * 1.9f) * 18f, 0);
 
-    // Glowing core.
-    material(pg, 255, 180, 120, 0.9f, 0.08f, 0.35f);
+    // Glowing core (vivid gold).
+    materialHSB(pg, 36f + 10f * sin(time * 0.7f), 0.95f, 1.0f, 0.9f, 0.08f, 0.55f);
     pg.pushMatrix();
     pg.rotateY(time * 0.7f);
     drawSphere(pg, 170f + 14f * sin(time * 2.7f));
     pg.popMatrix();
 
-    // Mid shell.
-    material(pg, paletteC[0], paletteC[1], paletteC[2], 0.15f, 0.55f, 0.0f);
+    // Mid shell (electric violet).
+    materialHSB(pg, 275f, 0.72f, 0.96f, 0.15f, 0.55f, 0.0f);
     pg.pushMatrix();
     pg.rotateY(-time * 0.42f);
     pg.rotateZ(time * 0.16f);
@@ -325,10 +356,10 @@ class Scene1 implements Scene {
       pg.translate(x, y, z);
       pg.rotateY(time * 0.9f + i * 0.2f);
       if (i % 2 == 0) {
-        material(pg, paletteA[0], paletteA[1], paletteA[2], 0.75f, 0.18f, 0.08f);
+        materialHSB(pg, 348f + hueShift, 0.9f, 1.0f, 0.75f, 0.18f, 0.12f); // hot magenta
         drawSphere(pg, 42f);
       } else {
-        material(pg, paletteB[0], paletteB[1], paletteB[2], 0.25f, 0.4f, 0.03f);
+        materialHSB(pg, 190f + hueShift, 0.88f, 1.0f, 0.25f, 0.4f, 0.05f); // aqua
         drawBox(pg, 54f, 34f, 54f);
       }
       pg.popMatrix();
@@ -351,20 +382,20 @@ class Scene1 implements Scene {
       pg.rotateX(ringTilt + sin(time + i) * 0.16f);
 
       if (i % 3 == 0) {
-        material(pg, 245, 245, 248, 0.95f, 0.12f, 0.0f);
+        materialHSB(pg, 205f, 0.18f, 0.98f, 0.95f, 0.12f, 0.0f); // bright polished metal
         drawBox(pg, 82f, 82f, 82f);
       } else if (i % 3 == 1) {
-        material(pg, 96, 208, 255, 0.5f, 0.22f, 0.0f);
+        materialHSB(pg, 192f, 0.9f, 1.0f, 0.5f, 0.22f, 0.03f);   // vivid cyan
         drawCylinder(pg, 30f, 128f);
       } else {
-        material(pg, 255, 165, 110, 0.2f, 0.65f, 0.1f);
+        materialHSB(pg, 28f, 0.95f, 1.0f, 0.2f, 0.65f, 0.14f);   // glowing orange
         drawSphere(pg, 58f);
       }
 
       // Highlight cap.
       pg.pushMatrix();
       pg.translate(0, -70f, 0);
-      material(pg, 255, 250, 225, 0.1f, 0.1f, 0.15f);
+      materialHSB(pg, 48f, 0.22f, 1.0f, 0.1f, 0.1f, 0.2f);       // warm glow
       drawSphere(pg, 18f);
       pg.popMatrix();
 
@@ -382,7 +413,7 @@ class Scene1 implements Scene {
       pg.pushMatrix();
       pg.translate(x, 260f, z);
       pg.rotateY(-a + HALF_PI);
-      material(pg, 170, 185, 215, 0.85f, 0.35f, 0.0f);
+      materialHSB(pg, 218f, 0.42f, 0.9f, 0.85f, 0.35f, 0.0f); // steel blue
       drawCylinder(pg, 24f, 340f);
       pg.popMatrix();
     }
