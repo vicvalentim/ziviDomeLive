@@ -19,7 +19,7 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 - Dynamic near/far clipping in standard view to avoid object disappearance at large camera distances.
-- OpenGL error `1282` caused by nested `beginDraw()/endDraw()` in scene rendering flow.
+- Reduced frequency of OpenGL error `1282` by removing invalid nested `beginDraw()/endDraw()` calls in the NDI capture path. Note: the error is endemic to certain hardware/driver combinations and may still occur in some configurations.
 - Lifecycle and initialization reliability improvements (register method flow, initialization state handling).
 - `LogManager` thread-safety race condition fix.
 - `FulldomePBR` camera handling corrected to scene-space navigation (without mutating dome control parameters).
