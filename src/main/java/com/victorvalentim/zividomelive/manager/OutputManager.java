@@ -133,7 +133,7 @@ public class OutputManager implements PConstants {
 				spoutEnabled = true;
 				logger.info("Spout initialized for Windows.");
 			}
-		} catch (Exception e) {
+		} catch (Exception | LinkageError e) {
 			logger.log(Level.SEVERE, "setupSyphonOrSpout failed.", e);
 		}
 	}

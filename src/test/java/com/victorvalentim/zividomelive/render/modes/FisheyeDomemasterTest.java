@@ -1,0 +1,56 @@
+package com.victorvalentim.zividomelive.render.modes;
+
+import org.junit.jupiter.api.Test;
+import processing.core.PApplet;
+import processing.opengl.PShader;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class FisheyeDomemasterTest {
+
+	/**
+	 * Headless PApplet stub that avoids any GPU/graphics context.
+	 * loadShader returns null so shader-dependent paths can be exercised safely.
+	 */
+	private static class StubApplet extends PApplet {
+		@Override
+		public PShader loadShader(String fragFilename, String vertFilename) {
+			return null;
+		}
+	}
+
+	private FisheyeDomemaster newFisheye() {
+		return new FisheyeDomemaster(1024, "frag", "vert", new StubApplet());
+	}
+
+	@Test
+	void sizePercentageDefaultsTo100() {
+		assertEquals(100.0f, newFisheye().getSizePercentage(), 1e-6f);
+	}
+
+	@Test
+	void setSizePercentageConstrainsToValidRange() {
+		FisheyeDomemaster fisheye = newFisheye();
+
+		fisheye.setSizePercentage(150f);
+		assertEquals(100f, fisheye.getSizePercentage(), 1e-6f);
+
+		fisheye.setSizePercentage(-10f);
+		assertEquals(0f, fisheye.getSizePercentage(), 1e-6f);
+
+		fisheye.setSizePercentage(42.5f);
+		assertEquals(42.5f, fisheye.getSizePercentage(), 1e-6f);
+	}
+
+	@Test
+	void setFOVWithNullShaderDoesNotThrow() {
+		FisheyeDomemaster fisheye = newFisheye();
+		assertDoesNotThrow(() -> fisheye.setFOV(210f));
+	}
+
+	@Test
+	void applyShaderWithNullInputsDoesNotThrow() {
+		FisheyeDomemaster fisheye = newFisheye();
+		assertDoesNotThrow(() -> fisheye.applyShader(null, 210f));
+	}
+}
