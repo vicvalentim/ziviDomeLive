@@ -1,3 +1,4 @@
+#version 410
 // PBR fragment shader (metallic-roughness, Cook-Torrance GGX) for FulldomePBR.
 // Lighting is evaluated in eye space. World-space lights are transformed to eye
 // space with uViewMatrix (the scene's camera/view matrix), which keeps lighting
@@ -6,10 +7,6 @@
 // Enrichment: hemispheric image-based ambient (sky/ground) with a roughness-aware
 // Fresnel ambient specular term, plus ACES filmic tone mapping.
 
-#ifdef GL_ES
-precision highp float;
-precision highp int;
-#endif
 
 #define MAX_LIGHTS 4
 #define PI 3.14159265359
@@ -30,9 +27,12 @@ uniform float uMetallic;
 uniform float uRoughness;
 uniform vec3  uEmissive;
 
-varying vec3 vEyePos;
-varying vec3 vEyeNormal;
-varying vec4 vColor;
+in vec3 vEyePos;
+in vec3 vEyeNormal;
+in vec4 vColor;
+
+out vec4 fragColor;
+
 
 float distributionGGX(vec3 N, vec3 H, float rough) {
   float a = rough * rough;
@@ -138,6 +138,6 @@ void main() {
   color = acesFilmic(color);
   color = pow(color, vec3(1.0 / 2.2));
 
-  gl_FragColor = vec4(color, 1.0);
+  fragColor = vec4(color, 1.0);
 }
 
