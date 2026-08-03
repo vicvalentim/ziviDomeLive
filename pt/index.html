@@ -568,10 +568,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#key-features" class="md-nav__link">
+  <a href="#recursos-principais" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Features
+        Recursos Principais
       
     </span>
   </a>
@@ -579,10 +579,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#getting-started-with-zividomelive" class="md-nav__link">
+  <a href="#comecando-com-o-zividomelive" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Getting Started with ziviDomeLive
+        Começando com o ziviDomeLive
       
     </span>
   </a>
@@ -992,47 +992,47 @@
 
 <h1 id="zividomelive">ziviDomeLive<a class="headerlink" href="#zividomelive" title="Permanent link">&para;</a></h1>
 <p><img src="/ziviDomeLive/assets/images/splash.jpg" width="40%" alt="ziviDomeLive - SplashScreen" /></p>
-<p><strong>ziviDomeLive</strong> is a versatile Processing library designed to create immersive visual experiences for fulldome projections, monoscopic VR environments, and interactive installations. It provides a flexible framework to manage scenes, handle 3D rendering, and integrate external controllers or projection technologies like <strong>Syphon</strong> and <strong>Spout</strong>. With its real-time rendering capabilities, <strong>ziviDomeLive</strong> is ideal for planetarium displays, live audiovisual performances, and interactive installations. This documentation will guide you through installation, key features, API references, usage examples, and advanced configurations to maximize the library’s potential.</p>
+<p><strong>ziviDomeLive</strong> é uma biblioteca versátil para Processing, projetada para criar experiências visuais imersivas em projeções de cúpula, ambientes de RV monoscópica e instalações interativas. Ela fornece uma estrutura flexível para gerenciar cenas, realizar renderização 3D e integrar controladores externos ou tecnologias de projeção como <strong>Syphon</strong> e <strong>Spout</strong>. Com capacidades de renderização em tempo real, <strong>ziviDomeLive</strong> é ideal para exibições de planetário, performances audiovisuais ao vivo e instalações interativas. Esta documentação guiará você pela instalação, principais recursos, referências de API, exemplos de uso e configurações avançadas para aproveitar ao máximo a biblioteca.</p>
 <hr />
-<h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
+<h2 id="recursos-principais">Recursos Principais<a class="headerlink" href="#recursos-principais" title="Permanent link">&para;</a></h2>
 <ul>
 <li>
-<p><strong>Multiple Projection Modes</strong>:<br />
-  Supports a wide range of projection formats, including <strong>fisheye domemaster</strong>, <strong>equirectangular</strong>, <strong>cubemap</strong>, and more. These projection modes allow you to create visuals that engage viewers by wrapping around or adapting dynamically to immersive displays, whether in VR setups or fulldome environments.</p>
+<p><strong>Múltiplos Modos de Projeção</strong>:<br />
+  Suporta uma ampla gama de formatos de projeção, incluindo <strong>fisheye domemaster</strong>, <strong>equiretangular</strong>, <strong>cubemap</strong> e mais. Esses modos de projeção permitem criar visuais que engajam o espectador, adaptando-se dinamicamente a exibições imersivas, sejam em configurações de RV ou cúpulas.</p>
 </li>
 <li>
-<p><strong>Resolution Switching for Domemaster</strong>:<br />
-  Enables seamless switching between <strong>1k, 2k, 3k,</strong> and <strong>4k</strong> resolutions for domemaster projection, ensuring sharp visuals across various dome sizes or display systems. This feature allows you to optimize performance based on your hardware and project requirements.</p>
+<p><strong>Troca de Resolução para Domemaster</strong>:<br />
+  Permite alternância suave entre resoluções <strong>1k, 2k, 3k</strong> e <strong>4k</strong> no modo de projeção domemaster, garantindo visuais nítidos em vários tamanhos de cúpula ou sistemas de exibição. Esse recurso permite otimizar o desempenho com base no seu hardware e nos requisitos do projeto.</p>
 </li>
 <li>
-<p><strong>Scene Management</strong>:<br />
-  Organize and dynamically switch between different visual scenes with the <strong>Scene</strong> interface, allowing for modular compositions. Each scene can have its own setup, rendering logic, and user interactions, making it versatile for both interactive installations and live performances.</p>
+<p><strong>Gerenciamento de Cenas</strong>:<br />
+  Organize e alterne dinamicamente entre diferentes cenas visuais com a interface <strong>Scene</strong>, permitindo composições modulares. Cada cena pode ter sua própria configuração, lógica de renderização e interações, tornando-o versátil para instalações interativas e apresentações ao vivo.</p>
 </li>
 <li>
-<p><strong>Real-time Rendering</strong>:<br />
-  Engineered for live visuals, <strong>ziviDomeLive</strong> is optimized for smooth frame-by-frame rendering, even with complex 3D scenes and shader effects. This feature makes it a strong choice for VJ work, live coding, and interactive art installations.</p>
+<p><strong>Renderização em Tempo Real</strong>:<br />
+  Projetado para visuais ao vivo, <strong>ziviDomeLive</strong> é otimizado para uma renderização suave quadro a quadro, mesmo com cenas 3D complexas e efeitos de shader. Esse recurso faz dele uma excelente escolha para VJs, live coding e instalações de arte interativa.</p>
 </li>
 <li>
-<p><strong>External Integration</strong>:<br />
-  Seamlessly integrates with other applications through <strong>Syphon</strong> (macOS) and <strong>Spout</strong> (Windows) to share rendered frames in real-time from Processing. This is valuable for multimedia performances, allowing visuals to be further processed or projected with other tools.</p>
+<p><strong>Integração com Aplicações Externas</strong>:<br />
+  Integra-se perfeitamente com outras aplicações via <strong>Syphon</strong> (macOS) e <strong>Spout</strong> (Windows), permitindo o compartilhamento de quadros renderizados em tempo real do Processing. Esse recurso é especialmente valioso para performances multimídia, permitindo que os visuais sejam processados ou projetados com outras ferramentas.</p>
 </li>
 <li>
-<p><strong>Interactive UI</strong>:<br />
-  Integrates with <strong>ControlP5</strong> for creating interactive controls directly in Processing, such as sliders, buttons, and toggle switches, which enable real-time manipulation of visual parameters.</p>
+<p><strong>Interface de Usuário Interativa</strong>:<br />
+  Integra-se ao <strong>ControlP5</strong> para criar controles interativos diretamente no Processing, como sliders, botões e interruptores, permitindo a manipulação em tempo real de parâmetros visuais.</p>
 </li>
 <li>
-<p><strong>Cross-Platform Compatibility</strong>:<br />
-  Runs on <strong>macOS, Windows,</strong> and <strong>Linux</strong>, ensuring accessibility and versatility across operating systems, so your visual creations can easily deploy on various platforms without compatibility issues.</p>
+<p><strong>Compatibilidade Multiplataforma</strong>:<br />
+  Funciona em <strong>macOS, Windows</strong> e <strong>Linux</strong>, garantindo acessibilidade e versatilidade entre sistemas operacionais. Assim, suas criações visuais podem ser facilmente implementadas em várias plataformas sem problemas de compatibilidade.</p>
 </li>
 <li>
-<p><strong>Customizable Rendering Pipelines</strong>:<br />
-  Tailor rendering pipelines to your project’s specific needs, whether it’s fulldome projection or interactive environments. The library allows adjustments to rendering resolution, projection mode, and other parameters to optimize performance and visual quality.</p>
+<p><strong>Pipelines de Renderização Personalizáveis</strong>:<br />
+  Personalize pipelines de renderização de acordo com as necessidades do seu projeto, seja em projeções de cúpula ou ambientes interativos. A biblioteca permite ajustes na resolução de renderização, modos de projeção e outros parâmetros para otimizar o desempenho e a qualidade visual.</p>
 </li>
 </ul>
 <hr />
-<h2 id="getting-started-with-zividomelive">Getting Started with ziviDomeLive<a class="headerlink" href="#getting-started-with-zividomelive" title="Permanent link">&para;</a></h2>
-<p>To start exploring the capabilities of <strong>ziviDomeLive</strong>, refer to the <strong><a href="getting-started/quickstart/">Quickstart Guide</a></strong>, which introduces you to setup, installation, and essential functionality for creating dynamic, interactive visuals in Processing. For more detailed setup steps and a list of dependencies, please see the <strong><a href="installation/installation-steps/">Installation Guide</a></strong>.</p>
-<p><strong>ziviDomeLive</strong> is a flexible toolset that encourages experimentation, providing everything needed to turn your Processing sketches into immersive, interactive experiences. Dive in, explore its features, and create real-time visual displays that captivate and engage your audience in new and innovative ways.</p>
+<h2 id="comecando-com-o-zividomelive">Começando com o ziviDomeLive<a class="headerlink" href="#comecando-com-o-zividomelive" title="Permanent link">&para;</a></h2>
+<p>Para começar a explorar as capacidades do <strong>ziviDomeLive</strong>, consulte o <strong><a href="getting-started/quickstart/">Guia Rápido</a></strong>, que apresenta as etapas de configuração, instalação e funcionalidade essencial para criar visuais dinâmicos e interativos no Processing. Para detalhes mais específicos de configuração e uma lista de dependências, consulte o <strong><a href="installation/installation-steps/">Guia de Instalação</a></strong>.</p>
+<p><strong>ziviDomeLive</strong> é um conjunto de ferramentas flexível que incentiva a experimentação, fornecendo tudo o que você precisa para transformar seus sketches no Processing em experiências interativas e imersivas. Mergulhe, explore seus recursos e crie displays visuais em tempo real que cativam e envolvem seu público de maneiras inovadoras.</p>
 
 
 

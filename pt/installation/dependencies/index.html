@@ -86,7 +86,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#dependencies-for-zividomelive" class="md-skip">
+        <a href="#dependencias-do-zividomelive" class="md-skip">
           Ir para o conteúdo
         </a>
       
@@ -712,15 +712,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#list-of-required-dependencies" class="md-nav__link">
+  <a href="#lista-de-dependencias-necessarias" class="md-nav__link">
     <span class="md-ellipsis">
       
-        List of Required Dependencies
+        Lista de Dependências Necessárias
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="List of Required Dependencies">
+    <nav class="md-nav" aria-label="Lista de Dependências Necessárias">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -735,10 +735,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-syphon-macos-only" class="md-nav__link">
+  <a href="#2-syphon-apenas-para-macos" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Syphon (macOS Only)
+        2. Syphon (Apenas para macOS)
       
     </span>
   </a>
@@ -746,10 +746,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-spout-windows-only" class="md-nav__link">
+  <a href="#3-spout-apenas-para-windows" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Spout (Windows Only)
+        3. Spout (Apenas para Windows)
       
     </span>
   </a>
@@ -762,10 +762,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#verifying-dependency-installation" class="md-nav__link">
+  <a href="#verificando-a-instalacao-das-dependencias" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Verifying Dependency Installation
+        Verificando a Instalação das Dependências
       
     </span>
   </a>
@@ -1128,81 +1128,81 @@
   
 
 
-<h1 id="dependencies-for-zividomelive">Dependencies for ziviDomeLive<a class="headerlink" href="#dependencies-for-zividomelive" title="Permanent link">&para;</a></h1>
-<p>The <strong>ziviDomeLive</strong> library is architected to support high-performance and interactive visual applications in immersive environments. To fully leverage its capabilities, <strong>ziviDomeLive</strong> requires several additional Processing libraries. These dependencies ensure compatibility and stability across macOS, Windows, and Linux, even though certain external integrations like <strong>Syphon</strong> and <strong>Spout</strong> may function only on specific operating systems.</p>
-<p>Installing all dependencies is recommended across all systems, as <strong>ziviDomeLive</strong> is architected with certain compatibility checks and fallback mechanisms that rely on the presence of these libraries.</p>
+<h1 id="dependencias-do-zividomelive">Dependências do ziviDomeLive<a class="headerlink" href="#dependencias-do-zividomelive" title="Permanent link">&para;</a></h1>
+<p>A biblioteca <strong>ziviDomeLive</strong> é projetada para suportar aplicações visuais interativas e de alto desempenho em ambientes imersivos. Para utilizar plenamente as capacidades da biblioteca, <strong>ziviDomeLive</strong> requer algumas bibliotecas adicionais no Processing. Essas dependências garantem compatibilidade e estabilidade no macOS, Windows e Linux, embora algumas integrações externas, como <strong>Syphon</strong> e <strong>Spout</strong>, funcionem apenas em sistemas operacionais específicos.</p>
+<p>Recomenda-se a instalação de todas as dependências em todos os sistemas, pois <strong>ziviDomeLive</strong> é arquitetado com verificações de compatibilidade e mecanismos de fallback que dependem da presença dessas bibliotecas.</p>
 <hr />
-<h2 id="list-of-required-dependencies">List of Required Dependencies<a class="headerlink" href="#list-of-required-dependencies" title="Permanent link">&para;</a></h2>
+<h2 id="lista-de-dependencias-necessarias">Lista de Dependências Necessárias<a class="headerlink" href="#lista-de-dependencias-necessarias" title="Permanent link">&para;</a></h2>
 <h3 id="1-controlp5">1. ControlP5<a class="headerlink" href="#1-controlp5" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p><strong>Purpose</strong>: The <strong>ControlP5</strong> library is essential for creating custom graphical user interfaces (GUIs) within Processing. It provides a suite of interactive components, such as sliders, buttons, toggles, and knobs, which enable users to dynamically adjust visual parameters. This library enhances <strong>ziviDomeLive</strong> by allowing real-time control over aspects of the immersive environment directly from the Processing sketch.</p>
+<p><strong>Propósito</strong>: A biblioteca <strong>ControlP5</strong> é essencial para criar interfaces gráficas de usuário (GUI) personalizadas nos sketches do Processing. Ela fornece uma variedade de componentes interativos, como sliders, botões, toggles e knobs, que permitem aos usuários ajustar parâmetros visuais dinamicamente. Essa biblioteca aprimora o <strong>ziviDomeLive</strong> ao permitir o controle em tempo real de aspectos do ambiente imersivo diretamente no sketch do Processing.</p>
 </li>
 <li>
-<p><strong>Installation Instructions</strong>:</p>
+<p><strong>Instruções de Instalação</strong>:</p>
 <ul>
 <li>
-<p><strong>Option 1</strong>: Install via Processing’s Contribution Manager:</p>
+<p><strong>Opção 1</strong>: Instale através do Gerenciador de Contribuições do Processing:</p>
 <ol>
-<li>Open Processing.</li>
-<li>Go to <strong>Sketch &gt; Import Library &gt; Add Library...</strong></li>
-<li>In the Contribution Manager, search for <strong>ControlP5</strong> and click <strong>Install</strong> to add it to your Processing environment.</li>
+<li>Abra o Processing.</li>
+<li>Vá para <strong>Sketch &gt; Import Library &gt; Add Library...</strong></li>
+<li>No Gerenciador de Contribuições, pesquise por <strong>ControlP5</strong> e clique em <strong>Install</strong> para adicioná-lo ao seu ambiente Processing.</li>
 </ol>
 </li>
 <li>
-<p><strong>Option 2</strong>: Download directly from <a href="https://github.com/sojamo/controlp5" target="_blank">ControlP5’s GitHub repository</a>:</p>
+<p><strong>Opção 2</strong>: Baixe diretamente do <a href="https://github.com/sojamo/controlp5" target="_blank">repositório ControlP5 no GitHub</a>:</p>
 <ol>
-<li>Visit the <a href="https://github.com/sojamo/controlp5" target="_blank">ControlP5 GitHub page</a>.</li>
-<li>Click <strong>Code</strong> and select <strong>Download ZIP</strong>.</li>
-<li>Extract the downloaded file and place the <code>ControlP5</code> folder into the <code>libraries</code> directory in Processing (usually located at <code>Documents/Processing/libraries/</code>).</li>
+<li>Visite a página do <a href="https://github.com/sojamo/controlp5" target="_blank">ControlP5 no GitHub</a>.</li>
+<li>Clique em <strong>Code</strong> e selecione <strong>Download ZIP</strong>.</li>
+<li>Extraia o arquivo baixado e coloque a pasta <code>ControlP5</code> no diretório <code>libraries</code> do Processing (normalmente localizado em <code>Documentos/Processing/libraries/</code>).</li>
 </ol>
 </li>
 </ul>
 </li>
 <li>
-<p><strong>Usage</strong>: Once installed, ControlP5 can be imported in Processing sketches to add various UI controls. It plays a critical role in facilitating real-time parameter adjustments in <strong>ziviDomeLive</strong> projects.</p>
+<p><strong>Uso</strong>: Após a instalação, o ControlP5 pode ser importado nos sketches do Processing para adicionar controles de interface. Ele desempenha um papel fundamental ao facilitar ajustes de parâmetros em tempo real em projetos com <strong>ziviDomeLive</strong>.</p>
 </li>
 </ul>
 <hr />
-<h3 id="2-syphon-macos-only">2. Syphon (macOS Only)<a class="headerlink" href="#2-syphon-macos-only" title="Permanent link">&para;</a></h3>
+<h3 id="2-syphon-apenas-para-macos">2. Syphon (Apenas para macOS)<a class="headerlink" href="#2-syphon-apenas-para-macos" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p><strong>Purpose</strong>: <strong>Syphon</strong> is a macOS-exclusive library that enables real-time frame sharing between Processing and other applications. This feature is particularly beneficial for multimedia artists and developers working in environments where visuals need to be routed to multiple software applications for further manipulation or display. While Syphon is macOS-specific, its presence ensures <strong>ziviDomeLive</strong> operates correctly on macOS, even if not all of its functionality is used.</p>
+<p><strong>Propósito</strong>: <strong>Syphon</strong> é uma biblioteca exclusiva para macOS que permite o compartilhamento de quadros em tempo real entre o Processing e outros aplicativos. Esse recurso é particularmente útil para artistas e desenvolvedores multimídia que trabalham em ambientes onde os visuais precisam ser direcionados para vários softwares para manipulação ou exibição adicional. Embora Syphon seja específico do macOS, sua presença assegura que o <strong>ziviDomeLive</strong> funcione corretamente no macOS, mesmo que nem toda a funcionalidade de Syphon seja usada.</p>
 </li>
 <li>
-<p><strong>Installation Instructions</strong>:</p>
+<p><strong>Instruções de Instalação</strong>:</p>
 <ol>
-<li>Visit the <a href="https://github.com/Syphon/Processing" target="_blank">Syphon for Processing GitHub repository</a>.</li>
-<li>Click <strong>Code</strong> and choose <strong>Download ZIP</strong>.</li>
-<li>Extract the ZIP file and move the <code>Syphon</code> folder into the Processing <code>libraries</code> directory (<code>Documents/Processing/libraries/</code>).</li>
+<li>Visite o <a href="https://github.com/Syphon/Processing" target="_blank">repositório Syphon for Processing no GitHub</a>.</li>
+<li>Clique em <strong>Code</strong> e selecione <strong>Download ZIP</strong>.</li>
+<li>Extraia o arquivo ZIP e mova a pasta <code>Syphon</code> para o diretório <code>libraries</code> do Processing (<code>Documentos/Processing/libraries/</code>).</li>
 </ol>
 </li>
 <li>
-<p><strong>Note</strong>: Syphon is only compatible with macOS. However, it is still recommended to include this library in your Processing setup for compatibility purposes, even if your project does not currently use Syphon’s frame-sharing features.</p>
+<p><strong>Nota</strong>: Syphon é compatível apenas com macOS. No entanto, recomenda-se incluir essa biblioteca na configuração do Processing para fins de compatibilidade, mesmo que o seu projeto atual não utilize os recursos de compartilhamento de quadros do Syphon.</p>
 </li>
 </ul>
 <hr />
-<h3 id="3-spout-windows-only">3. Spout (Windows Only)<a class="headerlink" href="#3-spout-windows-only" title="Permanent link">&para;</a></h3>
+<h3 id="3-spout-apenas-para-windows">3. Spout (Apenas para Windows)<a class="headerlink" href="#3-spout-apenas-para-windows" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p><strong>Purpose</strong>: <strong>Spout</strong> provides similar frame-sharing functionality to Syphon but is tailored specifically for Windows. Spout allows users to share real-time frames between Processing and other Spout-compatible applications on Windows. This library is widely used in multimedia and performance art to seamlessly transfer visuals across different software. Having Spout installed is beneficial even if your current project doesn’t use its features, as it helps maintain compatibility and flexibility within the <strong>ziviDomeLive</strong> architecture.</p>
+<p><strong>Propósito</strong>: <strong>Spout</strong> fornece uma funcionalidade de compartilhamento de quadros semelhante ao Syphon, mas é projetado especificamente para Windows. O Spout permite aos usuários compartilhar quadros em tempo real entre o Processing e outros aplicativos compatíveis com Spout no Windows. Esta biblioteca é amplamente utilizada em arte multimídia e performance para transferir visuais de forma contínua entre diferentes softwares. Ter o Spout instalado é benéfico mesmo que o seu projeto atual não utilize seus recursos, pois ajuda a manter a compatibilidade e flexibilidade na arquitetura do <strong>ziviDomeLive</strong>.</p>
 </li>
 <li>
-<p><strong>Installation Instructions</strong>:</p>
+<p><strong>Instruções de Instalação</strong>:</p>
 <ol>
-<li>Access the <a href="https://github.com/leadedge/SpoutProcessing" target="_blank">Spout for Processing GitHub repository</a>.</li>
-<li>Click <strong>Code</strong> and select <strong>Download ZIP</strong>.</li>
-<li>Unzip the downloaded file and place the <code>Spout</code> folder into the <code>libraries</code> directory in Processing (<code>Documents/Processing/libraries/</code>).</li>
+<li>Acesse o <a href="https://github.com/leadedge/SpoutProcessing" target="_blank">repositório Spout for Processing no GitHub</a>.</li>
+<li>Clique em <strong>Code</strong> e selecione <strong>Download ZIP</strong>.</li>
+<li>Extraia o arquivo e coloque a pasta <code>Spout</code> no diretório <code>libraries</code> do Processing (<code>Documentos/Processing/libraries/</code>).</li>
 </ol>
 </li>
 <li>
-<p><strong>Note</strong>: Spout is only available for Windows. Including it in your Processing setup can still be helpful for compatibility and ensures your environment is fully prepared for any <strong>ziviDomeLive</strong> projects that may incorporate frame-sharing in the future.</p>
+<p><strong>Nota</strong>: Spout está disponível apenas para Windows. Incluir esta biblioteca na sua configuração do Processing ainda pode ser útil para compatibilidade e garante que o ambiente esteja totalmente preparado para qualquer projeto <strong>ziviDomeLive</strong> que possa incorporar o compartilhamento de quadros no futuro.</p>
 </li>
 </ul>
 <hr />
-<h2 id="verifying-dependency-installation">Verifying Dependency Installation<a class="headerlink" href="#verifying-dependency-installation" title="Permanent link">&para;</a></h2>
-<p>After installing these dependencies, you can verify the installation by opening Processing and navigating to <strong>Sketch &gt; Import Library</strong>. Check that <strong>ControlP5</strong>, <strong>Syphon</strong> (for macOS), and <strong>Spout</strong> (for Windows) appear in the list. This confirmation ensures the libraries are available and ready to be used with <strong>ziviDomeLive</strong>.</p>
-<p>Installing all dependencies, even those specific to certain operating systems, maximizes compatibility and prepares your Processing environment for seamless performance with <strong>ziviDomeLive</strong>.</p>
+<h2 id="verificando-a-instalacao-das-dependencias">Verificando a Instalação das Dependências<a class="headerlink" href="#verificando-a-instalacao-das-dependencias" title="Permanent link">&para;</a></h2>
+<p>Após instalar essas dependências, você pode verificar a instalação abrindo o Processing e navegando até <strong>Sketch &gt; Import Library</strong>. Verifique se <strong>ControlP5</strong>, <strong>Syphon</strong> (para macOS) e <strong>Spout</strong> (para Windows) aparecem na lista. Esta confirmação garante que as bibliotecas estão disponíveis e prontas para uso com o <strong>ziviDomeLive</strong>.</p>
+<p>A instalação de todas as dependências, mesmo aquelas específicas para determinados sistemas operacionais, maximiza a compatibilidade e prepara o ambiente Processing para um desempenho contínuo com o <strong>ziviDomeLive</strong>.</p>
 
 
 

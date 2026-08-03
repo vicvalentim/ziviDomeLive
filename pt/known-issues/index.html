@@ -86,7 +86,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#known-issues" class="md-skip">
+        <a href="#problemas-conhecidos" class="md-skip">
           Ir para o conteúdo
         </a>
       
@@ -838,24 +838,6 @@
         
       
       
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Problemas Conhecidos
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -872,58 +854,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Índice">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Índice
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#apple-silicon-and-syphon" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Apple Silicon and Syphon
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#linux-external-outputs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Linux external outputs
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#opengl-error-1282" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        OpenGL error 1282
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
       
     </li>
   
@@ -1003,16 +933,8 @@
   
 
 
-<h1 id="known-issues">Known Issues<a class="headerlink" href="#known-issues" title="Permanent link">&para;</a></h1>
-<h2 id="apple-silicon-and-syphon">Apple Silicon and Syphon<a class="headerlink" href="#apple-silicon-and-syphon" title="Permanent link">&para;</a></h2>
-<p>On macOS with Apple Silicon, full Syphon interoperability may still require the Intel build of Processing running under Rosetta 2. The native ARM Processing stack does not currently provide the same Syphon support level.</p>
-<h2 id="linux-external-outputs">Linux external outputs<a class="headerlink" href="#linux-external-outputs" title="Permanent link">&para;</a></h2>
-<p>Linux builds have reduced support for external video outputs compared with macOS and Windows because the Processing ecosystem dependencies used by this library do not provide the same native integrations for NDI, Syphon, and Spout.</p>
-<h2 id="opengl-error-1282">OpenGL error 1282<a class="headerlink" href="#opengl-error-1282" title="Permanent link">&para;</a></h2>
-<p>Older builds could emit:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>OpenGL error 1282 at bot endDraw(): invalid operation
-</span></code></pre></div>
-<p>This was caused by invalid OpenGL state during output frame capture. The fix shipped in <code>1.4.0</code>, and current builds avoid reopening the draw context while preparing NDI frames.</p>
+<h1 id="problemas-conhecidos">Problemas Conhecidos<a class="headerlink" href="#problemas-conhecidos" title="Permanent link">&para;</a></h1>
+<p>Lista de problemas conhecidos na biblioteca.</p>
 
 
 

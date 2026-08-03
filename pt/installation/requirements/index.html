@@ -86,7 +86,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#system-requirements-for-zividomelive" class="md-skip">
+        <a href="#requisitos-do-sistema-para-zividomelive" class="md-skip">
           Ir para o conteúdo
         </a>
       
@@ -656,10 +656,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#processing-environment" class="md-nav__link">
+  <a href="#ambiente-processing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Processing Environment
+        Ambiente Processing
       
     </span>
   </a>
@@ -667,10 +667,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#hardware-recommendations" class="md-nav__link">
+  <a href="#recomendacao-de-hardware" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Hardware Recommendations
+        Recomendação de Hardware
       
     </span>
   </a>
@@ -678,10 +678,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#notes-for-apple-silicon-users-m1-m2-and-later" class="md-nav__link">
+  <a href="#notas-para-usuarios-de-apple-silicon-m1-m2-e-posteriores" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Notes for Apple Silicon Users (M1, M2, and Later)
+        Notas para Usuários de Apple Silicon (M1, M2 e Posteriores)
       
     </span>
   </a>
@@ -1100,49 +1100,49 @@
   
 
 
-<h1 id="system-requirements-for-zividomelive">System Requirements for ziviDomeLive<a class="headerlink" href="#system-requirements-for-zividomelive" title="Permanent link">&para;</a></h1>
-<p>The <strong>ziviDomeLive</strong> library is designed to powerfully support high-performance, immersive visual environments, including fulldome projections, virtual reality installations, and interactive media displays. Given its real-time 3D rendering capabilities, <strong>ziviDomeLive</strong> requires certain system specifications and dependencies to ensure optimal performance. Below are the detailed system, hardware, and software requirements.</p>
+<h1 id="requisitos-do-sistema-para-zividomelive">Requisitos do Sistema para ziviDomeLive<a class="headerlink" href="#requisitos-do-sistema-para-zividomelive" title="Permanent link">&para;</a></h1>
+<p>A biblioteca <strong>ziviDomeLive</strong> foi projetada para suportar ambientes visuais imersivos de alto desempenho, incluindo projeções fulldome, instalações de realidade virtual e displays de mídia interativa. Dada sua capacidade de renderização 3D em tempo real, o <strong>ziviDomeLive</strong> exige algumas especificações de sistema e dependências para garantir desempenho ideal. Abaixo estão os requisitos detalhados de sistema, hardware e software.</p>
 <hr />
-<h2 id="processing-environment">Processing Environment<a class="headerlink" href="#processing-environment" title="Permanent link">&para;</a></h2>
-<p>To fully leverage <strong>ziviDomeLive</strong> capabilities, use a compatible version of Processing with an appropriate environment configuration. These settings will enable the library to maximize graphical performance, compatibility, and user experience:</p>
+<h2 id="ambiente-processing">Ambiente Processing<a class="headerlink" href="#ambiente-processing" title="Permanent link">&para;</a></h2>
+<p>Para aproveitar ao máximo as capacidades do <strong>ziviDomeLive</strong>, use uma versão compatível do Processing com as configurações apropriadas de ambiente. Essas configurações permitem maximizar o desempenho gráfico e a compatibilidade com o sistema:</p>
 <ul>
 <li>
-<p><strong>Processing Version</strong>: Processing 4.x or newer. This library is optimized for the latest Processing releases, as they incorporate advanced 3D rendering updates and better compatibility with current hardware. Earlier versions may not fully support some features.</p>
+<p><strong>Versão do Processing</strong>: Processing 4.x ou superior. A biblioteca é otimizada para as versões mais recentes do Processing, que incorporam atualizações avançadas de renderização 3D e melhor compatibilidade com hardware atual. Versões mais antigas podem não suportar totalmente algumas funcionalidades.</p>
 </li>
 <li>
-<p><strong>Graphics Renderer</strong>: Set your Processing sketches to use <code>P3D</code> for 3D rendering. The <code>P3D</code> renderer is essential for handling complex 3D scenes, especially those involving immersive fisheye or equirectangular projections required in fulldome environments. Without <code>P3D</code>, 3D functionalities may be limited or unavailable.</p>
+<p><strong>Renderizador Gráfico</strong>: Defina seus sketches do Processing para usar o <code>P3D</code> para renderização 3D. O renderizador <code>P3D</code> é essencial para lidar com cenas complexas em 3D, especialmente aquelas envolvendo projeções imersivas fisheye ou equiretangulares necessárias em ambientes de cúpula. Sem o <code>P3D</code>, funcionalidades 3D podem ser limitadas ou indisponíveis.</p>
 </li>
 <li>
-<p><strong>Supported Operating Systems</strong>:</p>
+<p><strong>Sistemas Operacionais Suportados</strong>:</p>
 <ul>
-<li><strong>macOS</strong> (10.14 Mojave or later)</li>
-<li><strong>Windows</strong> (Windows 10 or later)</li>
-<li><strong>Linux</strong> (Ubuntu 18.04 LTS or later, Debian-based recommended)</li>
+<li><strong>macOS</strong> (10.14 Mojave ou posterior)</li>
+<li><strong>Windows</strong> (Windows 10 ou posterior)</li>
+<li><strong>Linux</strong> (Ubuntu 18.04 LTS ou posterior, Debian-based recomendado)</li>
 </ul>
 </li>
 </ul>
-<p>Keeping your OS updated can significantly improve performance and compatibility with external integrations, particularly <strong>Syphon</strong> on macOS and <strong>Spout</strong> on Windows.</p>
+<p>Manter o sistema operacional atualizado pode melhorar significativamente o desempenho e a compatibilidade com integrações externas, particularmente o <strong>Syphon</strong> no macOS e o <strong>Spout</strong> no Windows.</p>
 <hr />
-<h2 id="hardware-recommendations">Hardware Recommendations<a class="headerlink" href="#hardware-recommendations" title="Permanent link">&para;</a></h2>
-<p>For optimal real-time rendering, especially in high-resolution (up to 4K) fulldome or VR applications, <strong>ziviDomeLive</strong> requires robust hardware to ensure a smooth and responsive experience. Below are our hardware recommendations:</p>
+<h2 id="recomendacao-de-hardware">Recomendação de Hardware<a class="headerlink" href="#recomendacao-de-hardware" title="Permanent link">&para;</a></h2>
+<p>Para renderização em tempo real ideal, especialmente em alta resolução (até 4K) para cúpula completa ou VR, o <strong>ziviDomeLive</strong> exige um hardware robusto para garantir uma experiência fluida e responsiva. Abaixo estão as recomendações de hardware:</p>
 <ul>
-<li><strong>Dedicated GPU</strong>: Use a modern, dedicated graphics card (e.g., NVIDIA GeForce RTX or AMD Radeon RX series). Integrated graphics may struggle with high-resolution projections and shader-heavy scenes.</li>
-<li><strong>Memory (RAM)</strong>: 8GB is the minimum, but 16GB or more is recommended for handling larger scenes or simultaneous integrations.</li>
-<li><strong>Multi-core Processor</strong>: A multi-core CPU enhances performance for real-time rendering, especially when handling complex visual calculations and multiple libraries.</li>
+<li><strong>GPU Dedicada</strong>: Use uma placa gráfica moderna dedicada (por exemplo, NVIDIA GeForce RTX ou AMD Radeon RX). Gráficos integrados podem ter dificuldade com projeções em alta resolução e cenas com muitos shaders.</li>
+<li><strong>Memória (RAM)</strong>: 8GB é o mínimo, mas 16GB ou mais são recomendados para lidar com cenas maiores ou integrações simultâneas.</li>
+<li><strong>Processador Multi-core</strong>: Um processador com múltiplos núcleos aprimora o desempenho em renderização em tempo real, especialmente ao lidar com cálculos visuais complexos e múltiplas bibliotecas.</li>
 </ul>
 <hr />
-<h2 id="notes-for-apple-silicon-users-m1-m2-and-later">Notes for Apple Silicon Users (M1, M2, and Later)<a class="headerlink" href="#notes-for-apple-silicon-users-m1-m2-and-later" title="Permanent link">&para;</a></h2>
-<p>If you're using a <strong>macOS system with Apple Silicon (M series)</strong> processors, please consider the following:</p>
+<h2 id="notas-para-usuarios-de-apple-silicon-m1-m2-e-posteriores">Notas para Usuários de Apple Silicon (M1, M2 e Posteriores)<a class="headerlink" href="#notas-para-usuarios-de-apple-silicon-m1-m2-e-posteriores" title="Permanent link">&para;</a></h2>
+<p>Se estiver usando um sistema <strong>macOS com Apple Silicon (série M)</strong>, considere o seguinte:</p>
 <ul>
 <li>
-<p><strong>Syphon Compatibility</strong>: Syphon currently does not support the native ARM version of Processing on Apple Silicon. Therefore, if you need Syphon, run the <strong>Intel version of Processing</strong> using <strong>Rosetta 2</strong>. This allows you to retain full Syphon functionality.</p>
+<p><strong>Compatibilidade com Syphon</strong>: O Syphon atualmente não suporta a versão ARM nativa do Processing no Apple Silicon. Portanto, se você precisar do Syphon, execute a <strong>versão Intel do Processing</strong> usando <strong>Rosetta 2</strong>. Isso permite reter a funcionalidade completa do Syphon.</p>
 </li>
 <li>
-<p><strong>ARM Version Limitations</strong>: While the ARM (Apple Silicon native) version of Processing works for most standard functionalities, it may lack full support for certain real-time integrations. If Syphon is non-essential, using the ARM version is acceptable.</p>
+<p><strong>Limitações da Versão ARM</strong>: Embora a versão ARM (nativa para Apple Silicon) do Processing funcione para a maioria das funcionalidades padrão, ela pode não oferecer suporte total para certas integrações em tempo real. Se o Syphon não for essencial, a versão ARM é aceitável.</p>
 </li>
 </ul>
 <hr />
-<p>By following these requirements and recommendations, you’ll ensure <strong>ziviDomeLive</strong> performs at its best, delivering high-quality visuals and seamless interactivity for your immersive media projects.</p>
+<p>Seguindo esses requisitos e recomendações, você garantirá que o <strong>ziviDomeLive</strong> ofereça o melhor desempenho, entregando visuais de alta qualidade e interatividade contínua para seus projetos de mídia imersiva.</p>
 
 
 

@@ -86,7 +86,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#quickstart-guide-for-zividomelive" class="md-skip">
+        <a href="#guia-rapido-para-zividomelive" class="md-skip">
           Ir para o conteúdo
         </a>
       
@@ -709,10 +709,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#step-1-setting-up-your-sketch" class="md-nav__link">
+  <a href="#passo-1-configurando-seu-sketch" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 1: Setting Up Your Sketch
+        Passo 1: Configurando Seu Sketch
       
     </span>
   </a>
@@ -720,10 +720,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-2-activating-the-rendering-module" class="md-nav__link">
+  <a href="#passo-2-ativando-o-modulo-de-renderizacao" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 2: Activating the Rendering Module
+        Passo 2: Ativando o Módulo de Renderização
       
     </span>
   </a>
@@ -731,10 +731,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-3-enabling-basic-interaction-controls" class="md-nav__link">
+  <a href="#passo-3-ativando-os-controles-de-interacao-basica" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 3: Enabling Basic Interaction Controls
+        Passo 3: Ativando os Controles de Interação Básica
       
     </span>
   </a>
@@ -742,10 +742,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-4-creating-a-basic-scene-class" class="md-nav__link">
+  <a href="#passo-4-criando-uma-classe-de-cena-basica" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 4: Creating a Basic Scene Class
+        Passo 4: Criando uma Classe de Cena Básica
       
     </span>
   </a>
@@ -753,10 +753,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-5-running-and-interacting-with-the-sketch" class="md-nav__link">
+  <a href="#passo-5-executando-e-interagindo-com-o-sketch" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 5: Running and Interacting with the Sketch
+        Passo 5: Executando e Interagindo com o Sketch
       
     </span>
   </a>
@@ -764,10 +764,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#general-summary" class="md-nav__link">
+  <a href="#resumo-geral" class="md-nav__link">
     <span class="md-ellipsis">
       
-        General Summary
+        Resumo Geral
       
     </span>
   </a>
@@ -775,10 +775,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#whats-next" class="md-nav__link">
+  <a href="#o-que-vem-a-seguir" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What’s Next?
+        O Que Vem a Seguir?
       
     </span>
   </a>
@@ -1116,121 +1116,146 @@
   
 
 
-<h1 id="quickstart-guide-for-zividomelive">Quickstart Guide for ziviDomeLive<a class="headerlink" href="#quickstart-guide-for-zividomelive" title="Permanent link">&para;</a></h1>
-<p>Congratulations on installing <strong>ziviDomeLive</strong>! If you haven’t completed the installation yet, please refer to the <a href="../../installation/installation-steps/">Installation Steps</a> to set everything up. Once installed, you’re ready to start creating immersive visuals directly in Processing.</p>
+<h1 id="guia-rapido-para-zividomelive">Guia Rápido para ziviDomeLive<a class="headerlink" href="#guia-rapido-para-zividomelive" title="Permanent link">&para;</a></h1>
+<p>Parabéns pela instalação do <strong>ziviDomeLive</strong>! Se você ainda não completou a instalação, consulte os <a href="../../installation/installation-steps/">Passos de Instalação</a> para configurar tudo. Com a instalação pronta, você já está pronto para começar a criar visuais imersivos diretamente no Processing.</p>
 <hr />
-<h2 id="step-1-setting-up-your-sketch">Step 1: Setting Up Your Sketch<a class="headerlink" href="#step-1-setting-up-your-sketch" title="Permanent link">&para;</a></h2>
-<p>To begin, open Processing and create a new sketch. Setting up <strong>ziviDomeLive</strong> is simple and allows you to quickly explore its core functionalities.</p>
-<p>First, import <strong>ziviDomeLive</strong> and any essential dependencies at the start of your sketch. This ensures that all library functionalities are accessible and ready for use.</p>
+<h2 id="passo-1-configurando-seu-sketch">Passo 1: Configurando Seu Sketch<a class="headerlink" href="#passo-1-configurando-seu-sketch" title="Permanent link">&para;</a></h2>
+<p>Para começar, abra o Processing e crie um novo sketch. A configuração do <strong>ziviDomeLive</strong> é simples e permite explorar rapidamente suas funcionalidades principais.</p>
+<p>Primeiro, importe o <strong>ziviDomeLive</strong> e qualquer dependência essencial no início do seu sketch. Isso garantirá que todas as funcionalidades da biblioteca estejam acessíveis e prontas para uso.</p>
 <div class="language-java highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">com.victorvalentim.zividomelive.*</span><span class="p">;</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">controlP5.*</span><span class="p">;</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">codeanticode.syphon.*</span><span class="p">;</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">spout.*</span><span class="p">;</span>
 </span></code></pre></div>
-<p>Next, initialize <strong>ziviDomeLive</strong> by creating an instance of the library. This instance will be the foundation of your immersive environment, facilitating the management and rendering of scenes.</p>
-<div class="language-java highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">zividomelive</span><span class="w"> </span><span class="n">ziviDome</span><span class="p">;</span><span class="w"> </span><span class="c1">// Declares a ziviDome variable of type zividomelive. This variable will be used to instantiate and control the ziviDomeLive library.</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">Scene</span><span class="w"> </span><span class="n">currentScene</span><span class="p">;</span><span class="w"> </span><span class="c1">// Declares a currentScene variable of type Scene. This variable will store the current scene being rendered and interacting with ziviDomeLive.</span>
+<p>Em seguida, inicialize o <strong>ziviDomeLive</strong> criando uma instância da biblioteca. Essa instância será a base do seu ambiente imersivo, facilitando o gerenciamento e a renderização das cenas.</p>
+<p><div class="language-java highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">// Declara uma variável ziviDome do tipo zividomelive</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1">// Essa variável será usada para instanciar e controlar a biblioteca ziviDomeLive</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">zividomelive</span><span class="w"> </span><span class="n">ziviDome</span><span class="p">;</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1">// Declara uma variável currentScene do tipo Scene</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1">// Essa variável armazenará a cena atual que está sendo renderizada e interagindo com o ziviDomeLive</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">Scene</span><span class="w"> </span><span class="n">currentScene</span><span class="p">;</span><span class="w"> </span>
 </span></code></pre></div>
-<p>In the <code>settings()</code> and <code>setup()</code> functions, define the screen dimensions and the 3D rendering mode. Then, call the <strong>ziviDomeLive</strong> setup function to initialize it properly. With these steps, the environment is ready, and <strong>ziviDomeLive</strong> is prepared to manage your visuals.</p>
-<div class="language-java highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">settings</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">size</span><span class="p">(</span><span class="mi">1280</span><span class="p">,</span><span class="w"> </span><span class="mi">720</span><span class="p">,</span><span class="w"> </span><span class="n">P3D</span><span class="p">);</span><span class="w"> </span><span class="c1">// Sets the window size and enables 3D rendering mode (P3D)</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="p">}</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="kt">void</span><span class="w"> </span><span class="nf">setup</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">ziviDome</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">zividomelive</span><span class="p">(</span><span class="k">this</span><span class="p">);</span><span class="w"> </span><span class="c1">// Creates a new instance of ziviDomeLive, passing the reference of the current sketch</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="n">ziviDome</span><span class="p">.</span><span class="na">setup</span><span class="p">();</span><span class="w"> </span><span class="c1">// Configures ziviDomeLive, initializing its variables and preparing it for rendering</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="n">currentScene</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Scene</span><span class="p">(</span><span class="n">ziviDome</span><span class="p">);</span><span class="w"> </span><span class="c1">// Creates a new instance of a scene called currentScene, associating it with ziviDomeLive</span>
+Nas funções <code>settings()</code> e <code>setup()</code>, defina as dimensões da tela e o modo de renderização 3D. Depois, chame a função de configuração do <strong>ziviDomeLive</strong> para inicializá-lo corretamente. Com esses passos, o ambiente está pronto, e o <strong>ziviDomeLive</strong> está preparado para gerenciar seus visuais.</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// Função de configuração das definições de tela</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kt">void</span><span class="w"> </span><span class="nf">settings</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="c1">// Define o tamanho da janela e ativa o modo de renderização 3D (P3D)</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="n">size</span><span class="p">(</span><span class="mi">1280</span><span class="p">,</span><span class="w"> </span><span class="mi">720</span><span class="p">,</span><span class="w"> </span><span class="n">P3D</span><span class="p">);</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="p">}</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1">// Função de configuração inicial do sketch</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="kt">void</span><span class="w"> </span><span class="nf">setup</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="c1">// Cria uma nova instância do ziviDomeLive, passando a referência do sketch atual</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="n">ziviDome</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">zividomelive</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span><span class="n">ziviDome</span><span class="p">.</span><span class="na">setScene</span><span class="p">(</span><span class="n">currentScene</span><span class="p">);</span><span class="w"> </span><span class="c1">// Sets currentScene as the active scene within ziviDomeLive</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="p">}</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span><span class="c1">// Configura o ziviDomeLive, inicializando suas variáveis e preparando-o para renderizar</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="n">ziviDome</span><span class="p">.</span><span class="na">setup</span><span class="p">();</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">    </span><span class="c1">// Cria uma nova instância de uma cena chamada currentScene, associando-a ao ziviDomeLive</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">    </span><span class="n">currentScene</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Scene</span><span class="p">(</span><span class="n">ziviDome</span><span class="p">);</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">    </span><span class="c1">// Define a currentScene como a cena ativa dentro do ziviDomeLive</span>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">    </span><span class="n">ziviDome</span><span class="p">.</span><span class="na">setScene</span><span class="p">(</span><span class="n">currentScene</span><span class="p">);</span>
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="p">}</span>
 </span></code></pre></div>
-<p>Completing this step, the environment is ready, and <strong>ziviDomeLive</strong> is prepared to manage your visuals.</p>
+<p>Concluindo esse passo, o ambiente está pronto, e o <strong>ziviDomeLive</strong> está preparado para gerenciar seus visuais.</p>
 <hr />
-<h2 id="step-2-activating-the-rendering-module">Step 2: Activating the Rendering Module<a class="headerlink" href="#step-2-activating-the-rendering-module" title="Permanent link">&para;</a></h2>
-<p>With <strong>ziviDomeLive</strong> initialized, it’s time to start rendering! In the main <code>draw()</code> function of the sketch, you can call the <code>ziviDome.draw()</code> function to render the current scene. This ensures that the scene is drawn correctly in each frame.</p>
-<div class="language-java highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">draw</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">ziviDome</span><span class="p">.</span><span class="na">draw</span><span class="p">();</span><span class="w"> </span><span class="c1">// Calls the draw() method from ziviDomeLive to process and render the content of the current scene</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="p">}</span>
+<h2 id="passo-2-ativando-o-modulo-de-renderizacao">Passo 2: Ativando o Módulo de Renderização<a class="headerlink" href="#passo-2-ativando-o-modulo-de-renderizacao" title="Permanent link">&para;</a></h2>
+<p>Com o <strong>ziviDomeLive</strong> inicializado, é hora de começar a renderizar! Na função <code>draw()</code> principal do sketch, você pode chamar a função <code>ziviDome.draw()</code> para renderizar a cena atual. Isso garante que a cena seja desenhada corretamente em cada frame.</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// Função de desenho que é chamada repetidamente para renderizar o conteúdo da tela</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kt">void</span><span class="w"> </span><span class="nf">draw</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="c1">// Chama o método draw() do ziviDomeLive para processar e renderizar o conteúdo da cena atual</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="n">ziviDome</span><span class="p">.</span><span class="na">draw</span><span class="p">();</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">}</span>
 </span></code></pre></div>
 <hr />
-<h2 id="step-3-enabling-basic-interaction-controls">Step 3: Enabling Basic Interaction Controls<a class="headerlink" href="#step-3-enabling-basic-interaction-controls" title="Permanent link">&para;</a></h2>
-<p>The <strong>ziviDomeLive</strong> library offers an intuitive way to handle user interactions within scenes, allowing real-time responses for both simple and complex visual setups. You can enable controls by defining event functions directly in your main Processing sketch, managing interactions like keyboard input, mouse events, and user interface controls using <strong>ControlP5</strong> in an organized and efficient way.</p>
-<p>Here’s how to enable basic interaction for your scene using the following functions:</p>
+<h2 id="passo-3-ativando-os-controles-de-interacao-basica">Passo 3: Ativando os Controles de Interação Básica<a class="headerlink" href="#passo-3-ativando-os-controles-de-interacao-basica" title="Permanent link">&para;</a></h2>
+<p>A biblioteca <strong>ziviDomeLive</strong> oferece uma maneira intuitiva de lidar com interações do usuário dentro das cenas, possibilitando uma resposta em tempo real tanto para configurações visuais simples quanto complexas. Você pode ativar os controles definindo funções de evento diretamente no seu sketch principal do Processing, gerenciando interações como entradas de teclado, eventos de mouse e controles de interface usando o <strong>ControlP5</strong> de maneira organizada e eficiente.</p>
+<p>Veja como ativar a interação básica para sua cena usando as seguintes funções:</p>
 <ol>
-<li>
-<p><strong>Keyboard Input</strong>:
-   The <code>keyPressed()</code> function allows <strong>ziviDomeLive</strong> to capture and handle keyboard events. Within this function, any keyboard input can be directed to the current scene, enabling specific responses to key presses.</p>
-</li>
-<li>
-<p><strong>Mouse Events</strong>:
-   The <code>mouseEvent()</code> function captures and processes mouse events, like clicks and movements. Similar to keyboard input, mouse events can be directed to the current scene for custom interactions.</p>
-</li>
-<li>
-<p><strong>Control Events</strong>:
-   <strong>ControlP5</strong> is a user interface library that allows you to create custom controls like buttons, sliders, and text boxes. The <code>controlEvent()</code> function handles events generated by these controls, enabling you to adjust visual parameters in real-time.</p>
-</li>
+<li><strong>Entrada pelo Teclado</strong>:
+   A função <code>keyPressed()</code> permite que o <strong>ziviDomeLive</strong> capture e gerencie eventos do teclado. Dentro desta função, qualquer entrada de teclado pode ser encaminhada para a cena atual, permitindo respostas específicas para teclas pressionadas.</li>
+<li><strong>Eventos do Mouse</strong>:
+   A função <code>mouseEvent()</code> captura e processa eventos do mouse, como cliques e movimentos. Assim como a entrada do teclado, os eventos do mouse podem ser direcionados para a cena atual para interações personalizadas.</li>
+<li><strong>Eventos de Controle</strong>:
+   O <strong>ControlP5</strong> é uma biblioteca de interface do usuário que permite criar controles personalizados, como botões, sliders e caixas de texto. A função <code>controlEvent()</code> é usada para lidar com eventos gerados por esses controles, permitindo que você ajuste parâmetros visuais em tempo real.</li>
 </ol>
-<div class="language-java highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">keyPressed</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">ziviDome</span><span class="p">.</span><span class="na">keyPressed</span><span class="p">();</span><span class="w"> </span><span class="c1">// Passes the key press event to ziviDomeLive, allowing it to process the interaction</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">currentScene</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">        </span><span class="n">currentScene</span><span class="p">.</span><span class="na">keyPressed</span><span class="p">(</span><span class="n">key</span><span class="p">);</span><span class="w"> </span><span class="c1">// Forwards the key press event to the current scene, allowing the scene to respond</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">}</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="kt">void</span><span class="w"> </span><span class="nf">mouseEvent</span><span class="p">(</span><span class="n">processing</span><span class="p">.</span><span class="na">event</span><span class="p">.</span><span class="na">MouseEvent</span><span class="w"> </span><span class="n">event</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="n">ziviDome</span><span class="p">.</span><span class="na">mouseEvent</span><span class="p">(</span><span class="n">event</span><span class="p">);</span><span class="w"> </span><span class="c1">// Passes the mouse event to ziviDomeLive for processing, allowing interactivity with the mouse</span>
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">currentScene</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">        </span><span class="n">currentScene</span><span class="p">.</span><span class="na">mouseEvent</span><span class="p">(</span><span class="n">event</span><span class="p">);</span><span class="w"> </span><span class="c1">// Forwards the mouse event to the current scene, allowing the scene to respond</span>
-</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="p">}</span>
-</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>
-</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="kt">void</span><span class="w"> </span><span class="nf">controlEvent</span><span class="p">(</span><span class="n">controlP5</span><span class="p">.</span><span class="na">ControlEvent</span><span class="w"> </span><span class="n">theEvent</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="n">ziviDome</span><span class="p">.</span><span class="na">controlEvent</span><span class="p">(</span><span class="n">theEvent</span><span class="p">);</span><span class="w"> </span><span class="c1">// Passes the control event to ziviDomeLive for processing, allowing interaction with ControlP5 UI elements</span>
-</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="p">}</span>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// Função que responde aos eventos de teclas pressionadas</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kt">void</span><span class="w"> </span><span class="nf">keyPressed</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="c1">// Passa o evento de tecla pressionada para o ziviDomeLive, permitindo que ele processe a interação</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="n">ziviDome</span><span class="p">.</span><span class="na">keyPressed</span><span class="p">();</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="c1">// Verifica se existe uma cena ativa (currentScene) configurada</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">currentScene</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">        </span><span class="c1">// Encaminha o evento de tecla pressionada para a cena atual, permitindo que a cena responda ao evento</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">        </span><span class="n">currentScene</span><span class="p">.</span><span class="na">keyPressed</span><span class="p">(</span><span class="n">key</span><span class="p">);</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="p">}</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="c1">// Função que responde a eventos de mouse</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="kt">void</span><span class="w"> </span><span class="nf">mouseEvent</span><span class="p">(</span><span class="n">processing</span><span class="p">.</span><span class="na">event</span><span class="p">.</span><span class="na">MouseEvent</span><span class="w"> </span><span class="n">event</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">    </span><span class="c1">// Passa o evento de mouse para o ziviDomeLive para processamento, possibilitando interatividade com o mouse</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">    </span><span class="n">ziviDome</span><span class="p">.</span><span class="na">mouseEvent</span><span class="p">(</span><span class="n">event</span><span class="p">);</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">    </span><span class="c1">// Verifica se existe uma cena ativa (currentScene) configurada</span>
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">currentScene</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="w">        </span><span class="c1">// Encaminha o evento de mouse para a cena atual, permitindo que a cena responda ao evento de forma personalizada</span>
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="w">        </span><span class="n">currentScene</span><span class="p">.</span><span class="na">mouseEvent</span><span class="p">(</span><span class="n">event</span><span class="p">);</span>
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="p">}</span>
+</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>
+</span><span id="__span-4-25"><a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="c1">// Função que responde a eventos de controle gerados pelo ControlP5</span>
+</span><span id="__span-4-26"><a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="kt">void</span><span class="w"> </span><span class="nf">controlEvent</span><span class="p">(</span><span class="n">controlP5</span><span class="p">.</span><span class="na">ControlEvent</span><span class="w"> </span><span class="n">theEvent</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-27"><a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a><span class="w">    </span><span class="c1">// Passa o evento de controle para o ziviDomeLive para processamento, permitindo interação com elementos da interface ControlP5</span>
+</span><span id="__span-4-28"><a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a><span class="w">    </span><span class="n">ziviDome</span><span class="p">.</span><span class="na">controlEvent</span><span class="p">(</span><span class="n">theEvent</span><span class="p">);</span>
+</span><span id="__span-4-29"><a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="p">}</span>
 </span></code></pre></div>
 <hr />
-<h2 id="step-4-creating-a-basic-scene-class">Step 4: Creating a Basic Scene Class<a class="headerlink" href="#step-4-creating-a-basic-scene-class" title="Permanent link">&para;</a></h2>
-<p>The core of <strong>ziviDomeLive</strong> revolves around scenes, which allow you to organize different visual components and easily switch between them.</p>
-<p>To begin, create a basic scene class by implementing the <strong>Scene</strong> interface. Define the initial scene setup, including background colors, shapes, or 3D objects you want to display. In the main content of the scene, use the <code>sceneRender()</code> function to define what should be drawn in each frame.</p>
-<div class="language-java highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">class</span> <span class="nc">Scene</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">Scene</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">zividomelive</span><span class="w"> </span><span class="n">parent</span><span class="p">;</span><span class="w"> </span><span class="c1">// Declares a variable of type zividomelive called parent, representing a reference to the main ziviDomeLive instance</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="n">Scene1</span><span class="p">(</span><span class="n">zividomelive</span><span class="w"> </span><span class="n">parent</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="c1">// Constructor for the Scene1 class, which receives a zividomelive instance as a parameter and assigns it to the parent attribute</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">parent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parent</span><span class="p">;</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">setupScene</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">        </span><span class="c1">// Specific scene setup, if necessary</span>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">sceneRender</span><span class="p">(</span><span class="n">PGraphics</span><span class="w"> </span><span class="n">pg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">        </span><span class="c1">// Scene rendering logic</span>
+<h2 id="passo-4-criando-uma-classe-de-cena-basica">Passo 4: Criando uma Classe de Cena Básica<a class="headerlink" href="#passo-4-criando-uma-classe-de-cena-basica" title="Permanent link">&para;</a></h2>
+<p>O núcleo do <strong>ziviDomeLive</strong> gira em torno das cenas, que permitem organizar diferentes componentes visuais e alternar entre eles de forma prática.</p>
+<p>Para começar, crie uma classe de cena básica implementando a interface <strong>Scene</strong>. Defina a configuração inicial da cena, incluindo cores de fundo, formas ou objetos 3D que deseja exibir. No conteúdo principal da cena, utilize a função <code>sceneRender()</code> para definir o que deve ser desenhado em cada frame.</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// Define uma classe chamada Scene que implementa a interface Scene</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kd">class</span> <span class="nc">Scene</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">Scene</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="c1">// Declara uma variável do tipo zividomelive chamada parent, que representa uma referência à instância principal de ziviDomeLive</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="n">zividomelive</span><span class="w"> </span><span class="n">parent</span><span class="p">;</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="c1">// Construtor da classe Scene1 que recebe uma instância de zividomelive como parâmetro e atribui essa instância ao atributo parent</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="n">Scene1</span><span class="p">(</span><span class="n">zividomelive</span><span class="w"> </span><span class="n">parent</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">parent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parent</span><span class="p">;</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">    </span><span class="c1">// Método para configurar a cena</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">setupScene</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">        </span><span class="c1">// Configuração específica da cena, se necessário</span>
 </span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>
-</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">keyPressed</span><span class="p">(</span><span class="kt">char</span><span class="w"> </span><span class="n">key</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">        </span><span class="c1">// Key press response logic</span>
-</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>
-</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">mouseEvent</span><span class="p">(</span><span class="n">MouseEvent</span><span class="w"> </span><span class="n">event</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="w">        </span><span class="c1">// Mouse event response logic</span>
-</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="p">}</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">    </span><span class="c1">// Método responsável por renderizar a cena</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">sceneRender</span><span class="p">(</span><span class="n">PGraphics</span><span class="w"> </span><span class="n">pg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">        </span><span class="c1">// Lógica de renderização da cena</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="w">    </span><span class="c1">// Método que responde a eventos de tecla pressionada</span>
+</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">keyPressed</span><span class="p">(</span><span class="kt">char</span><span class="w"> </span><span class="n">key</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="w">        </span><span class="c1">// Lógica de resposta a teclas pressionadas</span>
+</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>
+</span><span id="__span-5-26"><a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="w">    </span><span class="c1">// Método que responde a eventos de mouse</span>
+</span><span id="__span-5-27"><a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">mouseEvent</span><span class="p">(</span><span class="n">MouseEvent</span><span class="w"> </span><span class="n">event</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-28"><a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a><span class="w">        </span><span class="c1">// Lógica de resposta a eventos de mouse</span>
+</span><span id="__span-5-29"><a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-5-30"><a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a><span class="p">}</span>
 </span></code></pre></div>
-<p>After defining the scene class, set it as the active scene in <strong>ziviDomeLive</strong> by assigning it in the <code>setup()</code> function. This allows <strong>ziviDomeLive</strong> to manage rendering and any interaction events, like key presses, directly in your scene.</p>
+<p>Depois que a classe de cena estiver definida, defina-a como a cena ativa no <strong>ziviDomeLive</strong>, atribuindo-a na função <code>setup()</code>. Isso permite que o <strong>ziviDomeLive</strong> gerencie a renderização e qualquer evento de interação, como pressionamento de teclas, diretamente na sua cena.</p>
 <hr />
-<h2 id="step-5-running-and-interacting-with-the-sketch">Step 5: Running and Interacting with the Sketch<a class="headerlink" href="#step-5-running-and-interacting-with-the-sketch" title="Permanent link">&para;</a></h2>
-<p>After setting up and assigning your scene, you’re ready to run the sketch. Simply click the Run button in Processing and watch <strong>ziviDomeLive</strong> bring your scene to life.</p>
-<p>With the sketch running, you can interact using keyboard inputs or other Processing events. Since <strong>ziviDomeLive</strong> supports interactive functionality, you can easily add controls, experiment with dynamic visuals, or adjust parameters in real-time.</p>
+<h2 id="passo-5-executando-e-interagindo-com-o-sketch">Passo 5: Executando e Interagindo com o Sketch<a class="headerlink" href="#passo-5-executando-e-interagindo-com-o-sketch" title="Permanent link">&para;</a></h2>
+<p>Após configurar e atribuir sua cena, você está pronto para executar o sketch. Basta clicar no botão Run no Processing e assistir o <strong>ziviDomeLive</strong> dar vida à sua cena.</p>
+<p>Com o sketch em execução, você pode interagir usando entradas de teclado ou outros eventos do Processing. Como o <strong>ziviDomeLive</strong> suporta funcionalidade interativa, você pode adicionar controles facilmente, experimentar visuais dinâmicos ou alterar parâmetros em tempo real.</p>
 <hr />
-<h2 id="general-summary">General Summary<a class="headerlink" href="#general-summary" title="Permanent link">&para;</a></h2>
-<p>These 5 steps form the essential foundation for using the <strong>ziviDomeLive</strong> library in Processing, enabling immersive visualization and interface control. With this setup, ziviDomeLive is ready to manage scenes and interactions, offering complete support for immersive visual experiences.</p>
+<h2 id="resumo-geral">Resumo Geral<a class="headerlink" href="#resumo-geral" title="Permanent link">&para;</a></h2>
+<p>Esses 5 passos formam a base essencial para o uso da biblioteca <strong>ziviDomeLive</strong> no Processing, habilitando recursos de visualização imersiva e controle da interface. Com essa configuração, ziviDomeLive está preparado para gerenciar cenas e interações, oferecendo suporte completo para experiências visuais imersivas.</p>
 <hr />
-<h2 id="whats-next">What’s Next?<a class="headerlink" href="#whats-next" title="Permanent link">&para;</a></h2>
-<p>Now that you’ve set up a basic scene, feel free to explore additional features. Try adding new scenes, integrating with external tools like <strong>Syphon</strong> or <strong>Spout</strong> for real-time sharing, or setting up custom user interfaces with <strong>ControlP5</strong>. <strong>ziviDomeLive</strong> provides a flexible framework for experimenting and creating dynamic visual experiences that respond to your interaction.</p>
+<h2 id="o-que-vem-a-seguir">O Que Vem a Seguir?<a class="headerlink" href="#o-que-vem-a-seguir" title="Permanent link">&para;</a></h2>
+<p>Agora que você configurou uma cena básica, sinta-se à vontade para explorar recursos adicionais. Experimente adicionar novas cenas, integrar com ferramentas externas como o <strong>Syphon</strong> ou <strong>Spout</strong> para compartilhamento em tempo real, ou configurar interfaces de usuário personalizadas com o <strong>ControlP5</strong>. O <strong>ziviDomeLive</strong> oferece uma estrutura flexível para experimentar e criar experiências visuais dinâmicas que respondem à sua interação.</p>
 
 
 
