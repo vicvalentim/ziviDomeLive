@@ -24,6 +24,13 @@ class OutputManagerTest {
 	}
 
 	@Test
+	void outputsAreDisabledByDefault() {
+		assertFalse(outputManager.isNdiEnabled());
+		assertFalse(outputManager.isSpoutEnabled());
+		assertFalse(outputManager.isSyphonEnabled());
+	}
+
+	@Test
 	void toggleOutputIgnoresEmptyMethod() {
 		assertDoesNotThrow(() -> outputManager.toggleOutput(""));
 		assertDoesNotThrow(() -> outputManager.toggleOutput("   "));
