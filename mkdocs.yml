@@ -57,12 +57,14 @@ plugins:
   - i18n:
       reconfigure_material: true
       reconfigure_search: true
-      docs_structure: suffix
+      docs_structure: folder
       languages:
         - locale: en
           default: true
           name: English
           build: true
+          site_name: ziviDomeLive - Processing Library Documentation
+          site_description: Real-time immersive visuals and 3D rendering framework for fulldome and VR in Processing
         - locale: pt
           name: Português (Brasil)
           build: true
