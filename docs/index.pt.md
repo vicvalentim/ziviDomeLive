@@ -1,6 +1,8 @@
 
 # ziviDomeLive
 
+<img src="/ziviDomeLive/assets/images/splash.jpg" width="40%" alt="ziviDomeLive - SplashScreen" />
+
 **ziviDomeLive** é uma biblioteca versátil para Processing, projetada para criar experiências visuais imersivas em projeções de cúpula, ambientes de RV monoscópica e instalações interativas. Ela fornece uma estrutura flexível para gerenciar cenas, realizar renderização 3D e integrar controladores externos ou tecnologias de projeção como **Syphon** e **Spout**. Com capacidades de renderização em tempo real, **ziviDomeLive** é ideal para exibições de planetário, performances audiovisuais ao vivo e instalações interativas. Esta documentação guiará você pela instalação, principais recursos, referências de API, exemplos de uso e configurações avançadas para aproveitar ao máximo a biblioteca.
 
 ---
