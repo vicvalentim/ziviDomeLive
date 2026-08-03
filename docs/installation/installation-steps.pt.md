@@ -31,7 +31,7 @@ O Gerenciador de Contribuições do Processing oferece o método mais simples pa
 Se você preferir ou precisar instalar o **ziviDomeLive** manualmente, pode baixar a biblioteca do GitHub e colocá-la na pasta `libraries` do Processing. Veja como:
 
 1. **Baixe do GitHub**:
-    - Acesse o repositório oficial do **ziviDomeLive** no GitHub: [https://github.com/vicvalentim/zividomelive](https://github.com/vicvalentim/zividomelive).
+    - Acesse o repositório oficial do **ziviDomeLive** no GitHub: [https://github.com/vicvalentim/ziviDomeLive](https://github.com/vicvalentim/ziviDomeLive).
     - Clique no botão **Code** e selecione **Download ZIP**. Isso baixará um arquivo ZIP do repositório para o seu computador.
 
 2. **Extraia o Arquivo ZIP Baixado**:

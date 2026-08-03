@@ -31,7 +31,7 @@ The Processing Contribution Manager offers the most straightforward method for i
 If you prefer or need to install **ziviDomeLive** manually, you can download the library from GitHub and place it in your Processing `libraries` folder. Here’s how:
 
 1. **Download from GitHub**:
-    - Visit the official **ziviDomeLive** repository on GitHub: [https://github.com/vicvalentim/zividomelive](https://github.com/vicvalentim/zividomelive).
+    - Visit the official **ziviDomeLive** repository on GitHub: [https://github.com/vicvalentim/ziviDomeLive](https://github.com/vicvalentim/ziviDomeLive).
     - Click on the **Code** button and select **Download ZIP**. This will download a zipped file of the repository to your computer.
 
 2. **Extract the Downloaded ZIP File**:
