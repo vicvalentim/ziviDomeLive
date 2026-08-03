@@ -106,6 +106,11 @@ dependencies {
     // Processing core is needed at test runtime for PApplet static math helpers
     // (sin, cos, sqrt, constrain) used by Quaternion and related classes.
     testImplementation(group = "org.processing", name = "core", version = processingCoreVersion)
+    // Local sketchbook libraries are needed at test runtime to load classes
+    // that reference ControlP5/Syphon/Spout types (zividomelive, managers).
+    testRuntimeOnly(fileTree("src/main/libs/controlP5.jar"))
+    testRuntimeOnly(fileTree("src/main/libs/spout.jar"))
+    testRuntimeOnly(fileTree("src/main/libs/Syphon.jar"))
 }
 
 tasks.test {

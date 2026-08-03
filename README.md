@@ -40,13 +40,13 @@
 >>Due to the absence of a native library for **NDI** in Processing, Linux users will not have access to external integration features, such as those provided by **Syphon** or **Spout** on macOS and Windows.
 >
 
->[!WARNING]
->**OpenGL Error 1282**:
-> Some users may encounter the following OpenGL error in the Processing console:
+>[!NOTE]
+>**OpenGL Error 1282 (resolved)**:
+> Earlier versions could emit the following OpenGL error in the Processing console:
 >   ```
 >   OpenGL error 1282 at bot endDraw(): invalid operation
 >   ```
->This error is related to specific OpenGL calls within Processing, but it does not impact the functionality of the **ziviDomeLive** library. Your visuals and performance should remain unaffected, and you can safely ignore this warning.
+>This was caused by invalid OpenGL state during output frame capture and has been fixed as of version 1.4.0. If you still see this warning, make sure you are running the latest version of **ziviDomeLive**.
 >
 
 ## Installation

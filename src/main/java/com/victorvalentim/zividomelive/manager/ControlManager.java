@@ -14,21 +14,21 @@ import java.util.function.Consumer;
  */
 public class ControlManager {
 
-    ControlP5 cp5;
-    boolean numberboxActive = false;
-    int baseResolution;
-    zividomelive parent;
-    Toggle previewToggle;
-    Toggle ndiToggle;
-    Toggle spoutToggle;
-    Toggle syphonToggle;
-    DropdownList resolutionDropdown;
-    DropdownList viewModeDropdown;
-    DropdownList ndiViewDropdown;
-    DropdownList spoutViewDropdown;
-    DropdownList syphonViewDropdown;
-    Textlabel fpsLabel;
-    PApplet p;
+    private ControlP5 cp5;
+    private boolean numberboxActive = false;
+    private int baseResolution;
+    private zividomelive parent;
+    private Toggle previewToggle;
+    private Toggle ndiToggle;
+    private Toggle spoutToggle;
+    private Toggle syphonToggle;
+    private DropdownList resolutionDropdown;
+    private DropdownList viewModeDropdown;
+    private DropdownList ndiViewDropdown;
+    private DropdownList spoutViewDropdown;
+    private DropdownList syphonViewDropdown;
+    private Textlabel fpsLabel;
+    private PApplet p;
 
     // Layout configuration
     // Layout configuration
@@ -355,6 +355,19 @@ public class ControlManager {
         cp5.hide();
     }
 
+    /**
+     * Synchronizes the ControlP5 widgets with the externally toggled panel visibility state.
+     *
+     * @param visible true to show the panel widgets, false to hide them
+     */
+    public void syncPanelVisibility(boolean visible) {
+        if (visible) {
+            show();
+        } else {
+            hide();
+        }
+    }
+
     void makeEditable(Numberbox n) {
         final NumberboxInput nin = new NumberboxInput(n, p);
         n.onClick(theEvent -> {
@@ -383,7 +396,6 @@ public class ControlManager {
                 break;
             case "size":
                 parent.setFishSize(value);
-                parent.getFisheyeDomemaster().setSizePercentage(value);
                 break;
         }
     }

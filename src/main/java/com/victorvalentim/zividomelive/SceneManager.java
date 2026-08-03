@@ -66,7 +66,18 @@ public class SceneManager {
 			LOGGER.info("Scene auto-registered during activation: " + scene.getName());
 		}
 
+		if (currentSceneIndex == index) {
+			LOGGER.info("Scene already active, skipping reinitialization: " + scene.getName());
+			return;
+		}
+
+		Scene leaving = (currentSceneIndex >= 0 && currentSceneIndex < scenes.size())
+				? scenes.get(currentSceneIndex)
+				: null;
 		currentSceneIndex = index;
+		if (leaving != null) {
+			leaving.dispose();
+		}
 		Scene activeScene = scenes.get(currentSceneIndex);
 		activeScene.setupScene();
 		LOGGER.info("Scene activated: " + activeScene.getName());
@@ -104,6 +115,7 @@ public class SceneManager {
 		currentSceneIndex = (currentSceneIndex + 1) % scenes.size();
 
 		if (previousIndex != currentSceneIndex) {
+			disposeScene(previousIndex);
 			Scene newScene = getCurrentScene();
 			newScene.setupScene();
 			LOGGER.info("Switched to the next scene: " + newScene.getName());
@@ -123,6 +135,7 @@ public class SceneManager {
 		int previousIndex = currentSceneIndex;
 		currentSceneIndex = (currentSceneIndex - 1 + scenes.size()) % scenes.size();
 		if (previousIndex != currentSceneIndex) {
+			disposeScene(previousIndex);
 			Scene newScene = getCurrentScene();
 			newScene.setupScene();
 			LOGGER.info("Switched to the previous scene: " + newScene.getName());
@@ -155,11 +168,33 @@ public class SceneManager {
 			return;
 		}
 
+		if (currentSceneIndex == index) {
+			return; // already active, do not reinitialize
+		}
+
+		int previousIndex = currentSceneIndex;
 		currentSceneIndex = index;
+		disposeScene(previousIndex);
 		Scene newScene = getCurrentScene();
 		if (newScene != null) {
 			newScene.setupScene();
 			LOGGER.info("Scene set to index " + index + ": " + newScene.getName());
+		}
+	}
+
+	/**
+	 * Disposes the scene at the given index, releasing its resources.
+	 *
+	 * @param index index of the scene to dispose; ignored if out of range
+	 */
+	private void disposeScene(int index) {
+		if (index < 0 || index >= scenes.size()) {
+			return;
+		}
+		try {
+			scenes.get(index).dispose();
+		} catch (RuntimeException e) {
+			LOGGER.warning("Error disposing scene " + scenes.get(index).getName() + ": " + e.getMessage());
 		}
 	}
 
