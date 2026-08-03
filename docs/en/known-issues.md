@@ -10,10 +10,15 @@ Linux builds have reduced support for external video outputs compared with macOS
 
 ## OpenGL error 1282
 
-Older builds could emit:
+Some configurations emit:
 
 ```text
 OpenGL error 1282 at bot endDraw(): invalid operation
 ```
 
-This was caused by invalid OpenGL state during output frame capture. The fix shipped in `1.4.0`, and current builds avoid reopening the draw context while preparing NDI frames.
+This is a `GL_INVALID_OPERATION` raised by the JOGL/Processing OpenGL driver, typically triggered by invalid framebuffer state during rendering or output capture. The error is endemic to certain hardware and driver combinations and has not been fully eliminated. It is generally non-fatal — rendering continues — but may indicate instability in specific setups (particularly Apple Silicon, certain GPU drivers, or complex multi-pass rendering). We continue to investigate the root cause.
+
+**Workarounds that may reduce frequency:**
+- Run Processing using the Intel (Rosetta 2) build on Apple Silicon.
+- Keep external outputs (NDI, Syphon, Spout) disabled when not in use.
+- Use the latest GPU drivers for your platform.

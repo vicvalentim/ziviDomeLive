@@ -40,13 +40,13 @@
 >>Due to the absence of native support for **NDI**, **Syphon**, and **Spout** in this Processing setup, Linux users have reduced external-output options compared with macOS and Windows.
 >
 
->[!NOTE]
->**OpenGL Error 1282 (resolved)**:
-> Earlier versions could emit the following OpenGL error in the Processing console:
+>[!WARNING]
+>**OpenGL Error 1282 (known endemic issue)**:
+> Some configurations may emit the following OpenGL error in the Processing console:
 >   ```
 >   OpenGL error 1282 at bot endDraw(): invalid operation
 >   ```
->This was caused by invalid OpenGL state during output frame capture and has been fixed as of version 1.4.0 by removing the invalid nested draw-context path from NDI capture. If you still see this warning, make sure you are running the latest version of **ziviDomeLive**.
+>This is a `GL_INVALID_OPERATION` emitted by the JOGL/Processing OpenGL driver, typically related to invalid framebuffer state during rendering or output capture. The error is endemic to certain hardware/driver combinations and has not been fully eliminated. It is usually non-fatal and does not interrupt rendering, but may indicate instability in specific setups. We continue to investigate the root cause.
 >
 
 ## Installation

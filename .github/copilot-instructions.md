@@ -253,12 +253,13 @@ Sempre invoca `setupScene()`, podendo reinicializar uma cena em uso.
 if (currentSceneIndex == index) return; // já ativa, não reinicializar
 ```
 
-### 3.12 README ainda lista OpenGL 1282 como known issue não resolvido
+### 3.12 OpenGL Error 1282 — problema endêmico, sem solução completa
 
-**Arquivo**: `README.md` (seção Known Issues)
+**Arquivo**: `README.md` e `docs/en/known-issues.md`
 
-O CHANGELOG 1.4.0 documenta a correção do 1282. O aviso no README deve ser atualizado
-para refletir que o bug foi resolvido (ou removido se a correção for completa em v1.5).
+O erro 1282 (`GL_INVALID_OPERATION`) é **endêmico** a certas combinações de hardware/driver e **não foi resolvido**. O CHANGELOG 1.4.0 documenta apenas a remoção de um caminho de captura NDI que amplificava o problema (nested `beginDraw`/`endDraw`), mas o erro persiste em outras situações (Apple Silicon, drivers específicos, multi-pass).
+
+**Não** tratar nem documentar o 1282 como resolvido. O README e `known-issues.md` devem mantê-lo listado como problema em investigação com workarounds parciais.
 
 ---
 
