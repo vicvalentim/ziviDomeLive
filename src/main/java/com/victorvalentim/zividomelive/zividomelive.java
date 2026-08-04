@@ -283,6 +283,12 @@ public class zividomelive implements PConstants {
 			// Rendering and UI resources must be created on the Processing thread.
 			initializeRenderers();
 
+			// Auto-enable the platform-local texture output (Syphon/Spout) now that
+			// renderers exist and the OpenGL context is fully active.
+			if (outputManager != null) {
+				outputManager.initializeLocalTextureOutput();
+			}
+
 			controlManager = new ControlManager(p, this, outputResolution);
 			LOGGER.info("ControlManager initialized.");
 
@@ -467,9 +473,14 @@ public class zividomelive implements PConstants {
 	private void handleGraphicsReset() {
 		if (pendingOutputReset) {
 			LOGGER.info("Pending output reset detected. Changing output resolution to: " + pendingOutputResolution);
-			releaseGraphicsResources(); // Libera os recursos gráficos antigos
+			releaseGraphicsResources();
 			outputResolution = pendingOutputResolution;
-			initializeRenderers(); // Inicializa novos recursos gráficos
+			initializeRenderers();
+			// Notify the output manager so Syphon/Spout recreate their sender/server
+			// at the new resolution now that the renderers are ready again.
+			if (outputManager != null) {
+				outputManager.notifyResolutionChanged(outputResolution);
+			}
 			pendingOutputReset = false;
 			LOGGER.info("Output graphics reset completed.");
 		}
