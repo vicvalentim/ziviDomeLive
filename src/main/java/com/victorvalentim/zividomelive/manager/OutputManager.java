@@ -18,7 +18,7 @@ import java.util.logging.Logger;
 /**
  * Manages frame output to NDI, Spout (Windows), and Syphon (macOS).
  *
- * <h3>Hot-path design</h3>
+ * <h2>Hot-path design</h2>
  * <ul>
  *   <li>Syphon and Spout are sent first — GPU-to-GPU share, no pixel copy, on the draw thread.
  *   <li>NDI uses a producer-consumer model with {@value NDI_SLOT_COUNT} typed slots:
