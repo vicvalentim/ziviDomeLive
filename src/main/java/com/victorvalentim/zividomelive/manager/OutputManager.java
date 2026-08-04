@@ -37,8 +37,17 @@ public class OutputManager implements PConstants {
 
 	/** Public output identifiers retained for compatibility with the current ControlManager API. */
 	public enum OutputType {
+        /**
+         * Network Device Interface (NDI) output. Requires the NDI runtime to be installed on the host.
+         */
 		NDI,
+        /**
+         * Spout output. Available on Windows platforms.
+         */
 		SPOUT,
+        /**
+         * Syphon output. Available on macOS platforms.
+         */
 		SYPHON
 	}
 
@@ -96,6 +105,10 @@ public class OutputManager implements PConstants {
 	/* Platform-local texture output. Only one of these can be active in a process. */
 	private Spout spoutSender;
 	private SyphonServer syphonServer;
+	/* Initialization state: backend resources have been created. */
+	private boolean spoutInitialized;
+	private boolean syphonInitialized;
+	/* Enable state: user has toggled sending on/off. */
 	private volatile boolean spoutEnabled;
 	private volatile boolean syphonEnabled;
 	private int spoutWidth = -1;
@@ -290,24 +303,23 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * Initializes the Windows Spout sender.
+	 * Initializes the Windows Spout sender without enabling it.
 	 *
-	 * <p>Dimensions are resolved from the currently active output graphics when available;
-	 * if no renderer has been allocated yet (e.g. on first startup), the configured output
-	 * resolution from the parent is used so that initialization never stalls.</p>
+	 * <p>Initialization is performed once; it creates the native Spout sender and registers it.
+	 * The sender remains idle until {@link #toggleOutput(String)} enables transmission.
+	 * Dimensions are resolved from the currently active output graphics when available;
+	 * if no renderer has been allocated yet, the configured output resolution is used.</p>
 	 */
-	private void initSpout() {
-		if (localTextureBackend != LocalTextureBackend.SPOUT) {
-			logger.warning("Spout initialization ignored: unsupported platform.");
+	private void initializeSpoutOnce() {
+		if (spoutInitialized) {
 			return;
 		}
 
-		if (spoutEnabled && spoutSender != null) {
+		if (localTextureBackend != LocalTextureBackend.SPOUT) {
 			return;
 		}
 
 		try {
-			/* Resolve the best available dimensions: live graphics or fallback to configured resolution. */
 			PGraphicsOpenGL graphics = resolveGraphics(spoutView);
 			int width;
 			int height;
@@ -318,8 +330,7 @@ public class OutputManager implements PConstants {
 				int res = parent.getOutputResolution();
 				width  = res;
 				height = res;
-				logger.info("Spout initializing with configured output resolution (" + res + "px); "
-						+ "will auto-resize on the first sent frame.");
+				logger.info("Spout initializing with configured output resolution (" + res + "px).");
 			}
 
 			Spout sender = new Spout(parent.getPApplet());
@@ -334,58 +345,66 @@ public class OutputManager implements PConstants {
 			spoutSender = sender;
 			spoutWidth  = width;
 			spoutHeight = height;
-			spoutEnabled = true;
+			spoutInitialized = true;
+			/* Do NOT set spoutEnabled. User must toggle output to enable transmission. */
 
-			logger.info("Spout initialized at " + spoutWidth + "x" + spoutHeight + ".");
+			logger.info("Spout initialized at " + spoutWidth + "x" + spoutHeight +
+					"; transmission disabled until toggled on.");
 		} catch (Exception | LinkageError error) {
-			spoutEnabled = false;
+			spoutInitialized = false;
 			disposeSpoutSender();
-			logger.log(Level.WARNING, "initSpout failed: Spout unavailable on this platform.", error);
+			logger.log(Level.WARNING, "initializeSpoutOnce failed: Spout unavailable on this platform.", error);
 		}
 	}
 
 	/**
-	 * Initializes the macOS Syphon server.
+	 * Initializes the macOS Syphon server without enabling it.
 	 *
-	 * <p>The Syphon server is resolution-agnostic; it accepts whatever {@link PGraphicsOpenGL}
-	 * is passed to {@code sendImage} on each frame. No pre-allocated dimensions are required.</p>
+	 * <p>Initialization is performed once; it creates the Syphon server wrapper and forces
+	 * the native JSyphonServer to be created by calling {@code hasClients()}.
+	 * The server remains idle until {@link #toggleOutput(String)} enables transmission.
+	 * Resolution-agnostic: the server reads texture dimensions on each sent frame.</p>
 	 */
-	private void initSyphon() {
-		if (localTextureBackend != LocalTextureBackend.SYPHON) {
-			logger.warning("Syphon initialization ignored: unsupported platform.");
+	private void initializeSyphonOnce() {
+		if (syphonInitialized) {
 			return;
 		}
 
-		if (syphonEnabled && syphonServer != null) {
+		if (localTextureBackend != LocalTextureBackend.SYPHON) {
 			return;
 		}
 
 		try {
-
 			syphonServer = new SyphonServer(parent.getPApplet(), SYPHON_SERVER_NAME);
-			syphonEnabled = true;
-			logger.info("Syphon server initialized for macOS.");
+			/* Force native JSyphonServer to be created now, not on the first sendImage(). */
+			syphonServer.hasClients();
+			syphonInitialized = true;
+			/* Do NOT set syphonEnabled. User must toggle output to enable transmission. */
+			logger.info("Syphon server initialized for macOS; transmission disabled until toggled on.");
 		} catch (Exception | LinkageError error) {
-			syphonEnabled = false;
+			syphonInitialized = false;
 			stopSyphonServer();
-			logger.log(Level.WARNING, "initSyphon failed: Syphon unavailable on this platform.", error);
+			logger.log(Level.WARNING, "initializeSyphonOnce failed: Syphon unavailable on this platform.", error);
 		}
 	}
 
 	/**
-	 * Starts the platform-local texture backend (Syphon on macOS, Spout on Windows) automatically.
+	 * Initializes the platform-local texture backend (Syphon on macOS, Spout on Windows).
 	 *
-	 * <p>Called once by the library after renderer managers are initialized. On unsupported
-	 * platforms this is a no-op. The output can still be toggled on/off at any time via
-	 * {@link #toggleOutput(String)}.</p>
+	 * <p>This method must be called once by the library after renderer managers are initialized
+	 * and the OpenGL context is fully active. It performs all resource allocation and native
+	 * server registration, but does NOT enable transmission. The output remains dormant until
+	 * {@link #toggleOutput(String)} is called by the user.</p>
+	 *
+	 * <p>On unsupported platforms, this is a no-op.</p>
 	 */
 	public void initializeLocalTextureOutput() {
 		switch (localTextureBackend) {
 			case SYPHON:
-				initSyphon();
+				initializeSyphonOnce();
 				break;
 			case SPOUT:
-				initSpout();
+				initializeSpoutOnce();
 				break;
 			case NONE:
 			default:
@@ -394,43 +413,13 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * Notifies that the output resolution has changed so the local texture backend
-	 * can recreate its sender/server at the new size.
+	 * Toggles NDI, Spout, or Syphon transmission on/off.
 	 *
-	 * <p>Spout recreates its sender because the DirectX shared texture is size-fixed.
-	 * Syphon is recreated for consistency, although it normally adapts per frame.
-	 * NDI does not need notification because it reads dimensions from {@code loadPixels()}
-	 * on every captured frame.</p>
+	 * <p>For NDI: creates or destroys the worker thread (expensive, deferred resource cleanup).</p>
 	 *
-	 * <p>This method must be called on the Processing draw thread after
-	 * {@code initializeRenderers()} completes.</p>
-	 *
-	 * @param newResolution new output resolution in pixels (square)
-	 */
-	public void notifyResolutionChanged(int newResolution) {
-		switch (localTextureBackend) {
-			case SPOUT:
-				if (spoutEnabled) {
-					logger.info("Spout: recreating sender for new resolution " + newResolution + "px.");
-					shutdownSpout();
-					initSpout();
-				}
-				break;
-			case SYPHON:
-				if (syphonEnabled) {
-					logger.info("Syphon: recreating server for new resolution " + newResolution + "px.");
-					shutdownSyphon();
-					initSyphon();
-				}
-				break;
-			case NONE:
-			default:
-				break;
-		}
-	}
-
-	/**
-	 * Toggles NDI, Spout, or Syphon. Spout and Syphon remain mutually exclusive by platform.
+	 * <p>For Syphon and Spout: only toggles a flag. The backend remains initialized and ready;
+	 * transmission is simply disabled or re-enabled on the next call to {@link #sendOutput()}.
+	 * No resource destruction or recreation occurs. This is a fast O(1) operation.</p>
 	 *
 	 * @param method output identifier: {@code "ndi"}, {@code "spout"}, or {@code "syphon"}
 	 */
@@ -456,11 +445,12 @@ public class OutputManager implements PConstants {
 					logger.warning("Spout toggle ignored: unsupported platform.");
 					return;
 				}
-				if (spoutEnabled) {
-					shutdownSpout();
-				} else {
-					initSpout();
+				if (!spoutInitialized) {
+					logger.warning("Spout not initialized; cannot toggle.");
+					return;
 				}
+				spoutEnabled = !spoutEnabled;
+				logger.info("Spout transmission " + (spoutEnabled ? "enabled" : "disabled") + ".");
 				break;
 
 			case "syphon":
@@ -468,11 +458,12 @@ public class OutputManager implements PConstants {
 					logger.warning("Syphon toggle ignored: unsupported platform.");
 					return;
 				}
-				if (syphonEnabled) {
-					shutdownSyphon();
-				} else {
-					initSyphon();
+				if (!syphonInitialized) {
+					logger.warning("Syphon not initialized; cannot toggle.");
+					return;
 				}
+				syphonEnabled = !syphonEnabled;
+				logger.info("Syphon transmission " + (syphonEnabled ? "enabled" : "disabled") + ".");
 				break;
 
 			default:
