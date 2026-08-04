@@ -333,6 +333,10 @@ public class zividomelive implements PConstants {
 		LOGGER.info("FisheyeDomemaster initialized.");
 		cubemapViewRenderer = new CubemapViewRenderer(p, outputResolution);
 		LOGGER.info("CubemapViewRenderer initialized.");
+		// Refresh OutputManager cache so Syphon/Spout have valid PGraphics references.
+		if (outputManager != null) {
+			outputManager.refreshCachedGraphics();
+		}
 	}
 
 	private int computePreviewResolution() {

@@ -44,7 +44,8 @@ public class OutputManager implements PConstants {
 	private boolean spoutEnabled = false;
 	private boolean syphonEnabled = false;
 
-	private PGraphicsOpenGL outputGraphics;
+	/** Per-type cached graphics reference — refreshed on init/reset/view change, not per frame. */
+	private final Map<OutputType, PGraphicsOpenGL> cachedGraphics = new EnumMap<>(OutputType.class);
 	private final boolean isMacOS;
 	private final boolean isWindows;
 	private ByteBuffer ndiBuffer;
@@ -82,7 +83,7 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * Sets the view type for a specific output type.
+	 * Sets the view type for a specific output type and refreshes the cached graphics reference.
 	 *
 	 * @param outputType the output type to configure
 	 * @param viewType the ViewType to set
@@ -90,7 +91,60 @@ public class OutputManager implements PConstants {
 	public void setViewForOutput(OutputType outputType, zividomelive.ViewType viewType) {
 		if (outputType != null && viewType != null) {
 			outputViews.put(outputType, viewType);
+			refreshCachedGraphics(outputType);
 			logger.info("Set view for " + outputType + " to " + viewType);
+		}
+	}
+
+	/**
+	 * Refreshes the cached PGraphicsOpenGL reference for a single output type.
+	 * Call this after changing the view for that output.
+	 */
+	private void refreshCachedGraphics(OutputType type) {
+		zividomelive.ViewType viewType = outputViews.getOrDefault(type, zividomelive.ViewType.FISHEYE_DOMEMASTER);
+		PGraphicsOpenGL pg = resolveGraphics(viewType);
+		if (pg != null) {
+			cachedGraphics.put(type, pg);
+		} else {
+			cachedGraphics.remove(type);
+		}
+	}
+
+	/**
+	 * Refreshes cached graphics references for all output types.
+	 * Must be called from the Processing draw thread after renderers are (re)allocated.
+	 */
+	public void refreshCachedGraphics() {
+		for (OutputType type : OutputType.values()) {
+			refreshCachedGraphics(type);
+		}
+	}
+
+	/**
+	 * Resolves the PGraphicsOpenGL for a given view type from the parent renderers.
+	 */
+	private PGraphicsOpenGL resolveGraphics(zividomelive.ViewType viewType) {
+		if (viewType == null) return null;
+		try {
+			switch (viewType) {
+				case FISHEYE_DOMEMASTER:
+					return parent.getFisheyeDomemaster() != null
+							? parent.getFisheyeDomemaster().getDomemasterGraphics() : null;
+				case EQUIRECTANGULAR:
+					return parent.getEquirectangularRenderer() != null
+							? parent.getEquirectangularRenderer().getEquirectangular() : null;
+				case CUBEMAP:
+					return parent.getCubemapViewRenderer() != null
+							? parent.getCubemapViewRenderer().getCubemap() : null;
+				case STANDARD:
+					return parent.getStandardRenderer() != null
+							? parent.getStandardRenderer().getStandardView() : null;
+				default:
+					return null;
+			}
+		} catch (Exception e) {
+			logger.log(Level.WARNING, "resolveGraphics failed for " + viewType + ".", e);
+			return null;
 		}
 	}
 
@@ -194,67 +248,32 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * Sets the view type for the output.
+	 * Sets the view type for the output (legacy single-view setter).
+	 * Updates all output types to the given view and refreshes the cache.
 	 *
 	 * @param viewType the desired view type
 	 */
 	public void setView(zividomelive.ViewType viewType) {
 		if (currentView != viewType) {
 			currentView = viewType;
-			prepareOutput(currentView);
+			for (OutputType type : OutputType.values()) {
+				outputViews.put(type, viewType);
+			}
+			refreshCachedGraphics();
 			logger.info("Current view set to " + currentView);
 		}
 	}
 
 	/**
-	 * Prepares the output view based on the specified view type.
-	 *
-	 * @param viewType the view type to prepare
-	 */
-	private void prepareOutput(zividomelive.ViewType viewType) {
-		outputGraphics = null;
-		if (viewType == null) {
-			return;
-		}
-
-		try {
-			switch (viewType) {
-				case FISHEYE_DOMEMASTER:
-					if (parent.getFisheyeDomemaster() != null) {
-						outputGraphics = parent.getFisheyeDomemaster().getDomemasterGraphics();
-					}
-					break;
-				case EQUIRECTANGULAR:
-					if (parent.getEquirectangularRenderer() != null) {
-						outputGraphics = parent.getEquirectangularRenderer().getEquirectangular();
-					}
-					break;
-				case CUBEMAP:
-					if (parent.getCubemapViewRenderer() != null) {
-						outputGraphics = parent.getCubemapViewRenderer().getCubemap();
-					}
-					break;
-				case STANDARD:
-					if (parent.getStandardRenderer() != null) {
-						outputGraphics = parent.getStandardRenderer().getStandardView();
-					}
-					break;
-			}
-		} catch (Exception e) {
-			logger.log(Level.WARNING, "prepareOutput failed for " + viewType + ".", e);
-			outputGraphics = null;
-		}
-	}
-
-	/**
-	 * Sends the prepared output to the enabled output methods (NDI, Spout, or Syphon).
+	 * Sends the current frame to all enabled output methods.
+	 * Syphon and Spout use cached PGraphicsOpenGL references (GPU-to-GPU, no pixel copy).
+	 * NDI copies pixels via loadPixels() and sends asynchronously via ThreadManager.
 	 */
 	public void sendOutput() {
 		if (ndiEnabled && ndiSender != null) {
 			try {
-				prepareOutput(getViewForOutput(OutputType.NDI));
-				DevolayVideoFrame ndiFrame = outputGraphics == null ? null : createNDIFrame(outputGraphics);
-
+				PGraphicsOpenGL ndiPg = cachedGraphics.get(OutputType.NDI);
+				DevolayVideoFrame ndiFrame = ndiPg == null ? null : createNDIFrame(ndiPg);
 				if (ndiFrame != null) {
 					ThreadManager.submitRunnable(() -> {
 						synchronized (this) {
@@ -271,9 +290,9 @@ public class OutputManager implements PConstants {
 
 		if (spoutEnabled && spoutSender != null && isWindows) {
 			try {
-				prepareOutput(getViewForOutput(OutputType.SPOUT));
-				if (outputGraphics != null) {
-					spoutSender.sendTexture(outputGraphics);
+				PGraphicsOpenGL spoutPg = cachedGraphics.get(OutputType.SPOUT);
+				if (spoutPg != null) {
+					spoutSender.sendTexture(spoutPg);
 				}
 			} catch (Exception e) {
 				logger.log(Level.WARNING, "sendOutput skipped Spout frame due to error.", e);
@@ -282,9 +301,9 @@ public class OutputManager implements PConstants {
 
 		if (syphonEnabled && syphonServer != null && isMacOS) {
 			try {
-				prepareOutput(getViewForOutput(OutputType.SYPHON));
-				if (outputGraphics != null) {
-					syphonServer.sendImage(outputGraphics);
+				PGraphicsOpenGL syphonPg = cachedGraphics.get(OutputType.SYPHON);
+				if (syphonPg != null) {
+					syphonServer.sendImage(syphonPg);
 				}
 			} catch (Exception e) {
 				logger.log(Level.WARNING, "sendOutput skipped Syphon frame due to error.", e);
