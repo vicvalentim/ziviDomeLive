@@ -476,11 +476,6 @@ public class zividomelive implements PConstants {
 			releaseGraphicsResources();
 			outputResolution = pendingOutputResolution;
 			initializeRenderers();
-			// Notify the output manager so Syphon/Spout recreate their sender/server
-			// at the new resolution now that the renderers are ready again.
-			if (outputManager != null) {
-				outputManager.notifyResolutionChanged(outputResolution);
-			}
 			pendingOutputReset = false;
 			LOGGER.info("Output graphics reset completed.");
 		}
