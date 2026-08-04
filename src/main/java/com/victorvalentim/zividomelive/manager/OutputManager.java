@@ -457,15 +457,22 @@ public class OutputManager implements PConstants {
 	// NDI metrics
 	// -------------------------------------------------------------------------
 
-	/** Returns the total number of NDI frames for which {@code loadPixels()} was called. */
+	/**
+	 * Returns the total number of NDI frames for which {@code loadPixels()} was called.
+	 * @return total captured frame count
+	 */
 	public long getNdiCapturedFrames() { return ndiCaptured.get(); }
 
-	/** Returns the total number of NDI frames successfully transmitted. */
+	/**
+	 * Returns the total number of NDI frames successfully transmitted.
+	 * @return total sent frame count
+	 */
 	public long getNdiSentFrames()     { return ndiSent.get(); }
 
 	/**
 	 * Returns the number of NDI frames dropped because no slot was available
 	 * (worker busy) or the ready queue was full.
+	 * @return total dropped frame count
 	 */
 	public long getNdiDroppedFrames()  { return ndiDropped.get(); }
 
@@ -554,16 +561,28 @@ public class OutputManager implements PConstants {
 	// Status
 	// -------------------------------------------------------------------------
 
-	/** Returns true if NDI output is currently enabled. */
+	/**
+	 * Returns true if NDI output is currently enabled.
+	 * @return {@code true} if NDI is enabled
+	 */
 	public boolean isNdiEnabled()    { return ndiEnabled;    }
 
-	/** Returns true if Spout output is currently enabled. */
+	/**
+	 * Returns true if Spout output is currently enabled.
+	 * @return {@code true} if Spout is enabled
+	 */
 	public boolean isSpoutEnabled()  { return spoutEnabled;  }
 
-	/** Returns true if Syphon output is currently enabled. */
+	/**
+	 * Returns true if Syphon output is currently enabled.
+	 * @return {@code true} if Syphon is enabled
+	 */
 	public boolean isSyphonEnabled() { return syphonEnabled; }
 
-	/** Returns true if at least one output method is currently active. */
+	/**
+	 * Returns true if at least one output method is currently active.
+	 * @return {@code true} if NDI, Spout, or Syphon has an active sender/server
+	 */
 	public boolean isActive() {
 		return (ndiEnabled    && ndiSender    != null)
 			|| (spoutEnabled  && spoutSender  != null)
@@ -574,13 +593,22 @@ public class OutputManager implements PConstants {
 	// Per-output view setters (ControlManager API)
 	// -------------------------------------------------------------------------
 
-	/** Sets the view type for NDI output. */
+	/**
+	 * Sets the view type for NDI output.
+	 * @param view the {@link zividomelive.ViewType} to use for NDI output
+	 */
 	public void setNdiView(zividomelive.ViewType view)    { setViewForOutput(OutputType.NDI,    view); }
 
-	/** Sets the view type for Spout output. */
+	/**
+	 * Sets the view type for Spout output.
+	 * @param view the {@link zividomelive.ViewType} to use for Spout output
+	 */
 	public void setSpoutView(zividomelive.ViewType view)  { setViewForOutput(OutputType.SPOUT,  view); }
 
-	/** Sets the view type for Syphon output. */
+	/**
+	 * Sets the view type for Syphon output.
+	 * @param view the {@link zividomelive.ViewType} to use for Syphon output
+	 */
 	public void setSyphonView(zividomelive.ViewType view) { setViewForOutput(OutputType.SYPHON, view); }
 
 	/**
