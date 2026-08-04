@@ -68,6 +68,12 @@ public class zividomelive implements PConstants {
 	private EquirectangularRenderer previewEquirectangularRenderer;
 	private FisheyeDomemaster previewFisheyeDomemaster;
 	private CubemapViewRenderer previewCubemapViewRenderer;
+	/**
+	 * Preview Standard renderer. Uses dynamic {@code parent.width × parent.height} so that
+	 * the window aspect ratio is preserved and resize is handled automatically.
+	 * This instance is independent from the output {@code standardRenderer}.
+	 */
+	private StandardRenderer standardRendererPreview;
 	private int previewResolution = 1024;
 	private StandardRenderer standardRenderer;
 	private CameraManager cameraManager;
@@ -92,7 +98,50 @@ public class zividomelive implements PConstants {
 		STANDARD
 	}
 
+	/**
+	 * Aspect policy used to compute Standard output dimensions.
+	 */
+	public enum StandardOutputAspectMode {
+		/** Snap to the closest supported family based on the current logical window ratio. */
+		AUTO,
+		/** Force 16:9 output dimensions. */
+		ASPECT_16_9,
+		/** Force 16:10 output dimensions. */
+		ASPECT_16_10,
+		/** Force 4:3 output dimensions. */
+		ASPECT_4_3,
+		/** Force 1:1 output dimensions. */
+		ASPECT_1_1
+	}
+
 	private ViewType currentView = ViewType.FISHEYE_DOMEMASTER;
+	private StandardOutputAspectMode standardOutputAspectMode = StandardOutputAspectMode.AUTO;
+
+	/**
+	 * Reusable per-frame view requirement scratch object.
+	 *
+	 * <p>The class is mutable only so the frame loop can avoid per-frame allocations while
+	 * still keeping the requirements grouped logically.</p>
+	 */
+	private static final class ViewRequirements {
+		private boolean needsFisheye;
+		private boolean needsEquirectangular;
+		private boolean needsCubemapLayout;
+		private boolean needsStandard;
+		private boolean needsCubemapSource;
+
+		void set(boolean needsFisheye, boolean needsEquirectangular, boolean needsCubemapLayout, boolean needsStandard) {
+			this.needsFisheye = needsFisheye;
+			this.needsEquirectangular = needsEquirectangular || needsFisheye;
+			this.needsCubemapLayout = needsCubemapLayout;
+			this.needsStandard = needsStandard;
+			this.needsCubemapSource = this.needsEquirectangular || needsCubemapLayout;
+		}
+	}
+
+	private final ViewRequirements previewRequirements = new ViewRequirements();
+	private final ViewRequirements outputRequirements = new ViewRequirements();
+
 	private boolean pendingOutputReset = false;
 	private int pendingOutputResolution = outputResolution;
 	private static final Logger LOGGER = LogManager.getLogger();
@@ -157,6 +206,9 @@ public class zividomelive implements PConstants {
 	/**
 	 * Sets the current scene to be rendered.
 	 *
+	 * <p>Both the output and preview Standard renderers are updated so that both pipelines
+	 * render the new scene content.</p>
+	 *
 	 * @param scene the Scene instance to be set
 	 */
 	public void setScene(Scene scene) {
@@ -168,6 +220,9 @@ public class zividomelive implements PConstants {
 		currentScene = sceneManager.getCurrentScene();
 		if (standardRenderer != null && currentScene != null) {
 			standardRenderer.setCurrentScene(currentScene);
+		}
+		if (standardRendererPreview != null && currentScene != null) {
+			standardRendererPreview.setCurrentScene(currentScene);
 		}
 	}
 
@@ -266,11 +321,18 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
-	 * Initializes various managers required for rendering and control.
+	 * Initializes the application managers after Processing setup has completed.
+	 *
+	 * <p>Renderer resources and the platform-local texture-sharing backend are prepared on the
+	 * Processing thread, after the OpenGL context is active. Preparing Syphon or Spout does not
+	 * enable frame publication; the corresponding UI toggle controls only the enabled state.</p>
 	 */
 	public void initializeManagers() {
 		if (initState != InitState.SETUP_COMPLETE) {
-			LOGGER.severe("Cannot initialize managers: Setup not complete. Current state: " + initState);
+			LOGGER.severe(
+					"Cannot initialize managers: Setup not complete. Current state: "
+							+ initState
+			);
 			return;
 		}
 
@@ -280,65 +342,129 @@ public class zividomelive implements PConstants {
 			cameraManager = new CameraManager();
 			LOGGER.info("CameraManager initialized.");
 
-			// Rendering and UI resources must be created on the Processing thread.
+			/*
+			 * Renderer targets must exist before Syphon or Spout is prepared.
+			 * This method is expected to execute on the Processing/OpenGL thread.
+			 */
 			initializeRenderers();
+			LOGGER.info("Renderers initialized.");
 
-			// Auto-enable the platform-local texture output (Syphon/Spout) now that
-			// renderers exist and the OpenGL context is fully active.
+			/*
+			 * Prepare the single valid local texture backend for this platform:
+			 *
+			 * - macOS: create and warm up Syphon;
+			 * - Windows: create the Spout sender;
+			 * - other systems: no operation.
+			 *
+			 * This call does not enable frame publication. It only absorbs native
+			 * initialization during library startup so the later UI toggle is immediate.
+			 */
 			if (outputManager != null) {
 				outputManager.initializeLocalTextureOutput();
+
+				if (outputManager.isLocalTextureInitialized()) {
+					LOGGER.info(
+							"Local texture output backend prepared: "
+									+ outputManager.getLocalTextureBackendName()
+									+ "."
+					);
+				} else if (outputManager.isLocalTextureAvailable()) {
+					LOGGER.warning(
+							"Local texture output backend was not prepared during startup: "
+									+ outputManager.getLocalTextureBackendName()
+									+ "."
+					);
+				} else {
+					LOGGER.info("No platform-local Syphon/Spout backend is available.");
+				}
 			}
 
-			controlManager = new ControlManager(p, this, outputResolution);
+			controlManager = new ControlManager(
+					p,
+					this,
+					outputResolution
+			);
 			LOGGER.info("ControlManager initialized.");
 
 			initState = InitState.MANAGERS_READY;
 			initialized = true;
 			LOGGER.info("Managers initialized successfully.");
-		} catch (Exception e) {
-			LOGGER.severe("Error initializing managers: " + e.getMessage());
-			initState = InitState.SETUP_COMPLETE; // Revert state on error
+
+		} catch (Exception | LinkageError error) {
+			LOGGER.severe(
+					"Error initializing managers: "
+							+ error.getClass().getSimpleName()
+							+ ": "
+							+ error.getMessage()
+			);
+
+			initState = InitState.SETUP_COMPLETE;
+			initialized = false;
 		}
 	}
 
 	/**
-	 * Initializes renderers required for preview and standard views.
-	 * High-resolution output renderers are allocated lazily when an output is active.
+	 * Initialises all render targets for both the preview and output pipelines.
+	 *
+	 * <p>Output FBOs are allocated at {@code outputResolution} even when no external output
+	 * is active; this avoids a first-frame stall when the user enables Syphon or Spout.
+	 * Preview FBOs are allocated at the resolution derived from the current window size via
+	 * {@link #computePreviewResolution()}.</p>
+	 *
+	 * <p>Must be called from the Processing/OpenGL thread.</p>
 	 */
 	void initializeRenderers() {
 		try {
 			LOGGER.info("Initializing renderers...");
 
-			standardRenderer = new StandardRenderer(p, p.width, p.height, currentScene);
-			LOGGER.info("StandardRenderer initialized.");
-			if (isEnableOutput()) {
-				initializeOutputRenderers();
-			}
+			initializeOutputRenderers();
+			LOGGER.info("Output renderers initialized.");
+
 			initializePreviewRenderers();
 			LOGGER.info("Preview renderers initialized.");
+
 			LOGGER.info("Renderers initialized successfully.");
 		} catch (Exception e) {
-			LOGGER.severe("Error initializing renderers");
+			LOGGER.severe("Error initializing renderers: " + e.getMessage());
 		}
 	}
 
 	/**
-	 * Allocates the high-resolution output renderers if they are not yet available.
-	 * Must be called from the Processing draw thread.
+	 * Allocates the high-resolution output render targets if they are not yet available.
+	 *
+	 * <p>All output FBOs use {@code outputResolution} as their base high-resolution budget.
+	 * Cubemap, equirectangular, and fisheye targets remain square or aspect-fixed as before.
+	 * Standard output is aspect-aware: it uses the logical window aspect ratio while keeping
+	 * the longest edge aligned to the selected {@code outputResolution} bucket (1k/2k/3k/4k).
+	 * Passing positive dimensions pre-allocates the FBO immediately so that Syphon or Spout
+	 * can obtain a valid texture reference during backend initialisation.</p>
+	 *
+	 * <p>This method is idempotent: it returns immediately when all targets already exist.
+	 * Must be called from the Processing draw thread.</p>
 	 */
 	private void initializeOutputRenderers() {
 		if (cubemapRenderer != null && equirectangularRenderer != null
-				&& fisheyeDomemaster != null && cubemapViewRenderer != null) {
+				&& fisheyeDomemaster != null && cubemapViewRenderer != null
+				&& standardRenderer != null) {
 			return;
 		}
 		cubemapRenderer = new CubemapRenderer(outputResolution, p);
-		LOGGER.info("CubemapRenderer initialized.");
+		LOGGER.info("CubemapRenderer (output) initialized at " + outputResolution + "px.");
 		equirectangularRenderer = new EquirectangularRenderer(outputResolution, EQUIRECT_FRAG, EQUIRECT_VERT, p);
-		LOGGER.info("EquirectangularRenderer initialized.");
+		LOGGER.info("EquirectangularRenderer (output) initialized.");
 		fisheyeDomemaster = new FisheyeDomemaster(outputResolution, DOME_FRAG, DOME_VERT, p);
-		LOGGER.info("FisheyeDomemaster initialized.");
+		LOGGER.info("FisheyeDomemaster (output) initialized.");
 		cubemapViewRenderer = new CubemapViewRenderer(p, outputResolution);
-		LOGGER.info("CubemapViewRenderer initialized.");
+		LOGGER.info("CubemapViewRenderer (output) initialized.");
+		int[] standardOutputDimensions = computeStandardOutputDimensions();
+		standardRenderer = new StandardRenderer(
+				p,
+				standardOutputDimensions[0],
+				standardOutputDimensions[1],
+				currentScene
+		);
+		LOGGER.info("StandardRenderer (output) initialized at "
+				+ standardOutputDimensions[0] + "×" + standardOutputDimensions[1] + "px.");
 		// Refresh OutputManager cache so Syphon/Spout have valid PGraphics references.
 		if (outputManager != null) {
 			outputManager.refreshCachedGraphics();
@@ -351,6 +477,189 @@ public class zividomelive implements PConstants {
 		return Math.min(1024, minDim);
 	}
 
+	private static final int BUCKET_1K = 1024;
+	private static final int BUCKET_2K = 2048;
+	private static final int BUCKET_3K = 3072;
+	private static final int BUCKET_4K = 4096;
+
+	/**
+	 * Computes Standard-output dimensions using explicit 1k/2k/3k/4k presets aligned to the
+	 * current logical window aspect ratio.
+	 *
+	 * <p>To avoid arbitrary non-standard sizes, this method snaps the window aspect ratio to one
+	 * of the common buckets ({@code 16:9}, {@code 16:10}, {@code 4:3}, {@code 1:1}), then selects
+	 * a pre-defined output pair for the configured resolution bucket ({@code 1024/2048/3072/4096}).
+	 * If the selected resolution is outside those buckets, it falls back to proportional scaling
+	 * of the closest aspect bucket while preserving orientation.</p>
+	 *
+	 * @return a two-element array containing {@code [width, height]}
+	 */
+	private int[] computeStandardOutputDimensions() {
+		int resolutionBucket = outputResolution;
+		float aspect = (p.width > 0 && p.height > 0)
+				? (p.width / (float) p.height)
+				: 1.0f;
+
+		boolean landscape = aspect >= 1.0f;
+		float normalizedAspect = landscape ? aspect : (1.0f / Math.max(0.0001f, aspect));
+
+		// Snap to a common aspect family for stable, predictable output sizes.
+		float a169 = 16.0f / 9.0f;
+		float a1610 = 16.0f / 10.0f;
+		float a43 = 4.0f / 3.0f;
+		float a11 = 1.0f;
+
+		float d169 = Math.abs(normalizedAspect - a169);
+		float d1610 = Math.abs(normalizedAspect - a1610);
+		float d43 = Math.abs(normalizedAspect - a43);
+		float d11 = Math.abs(normalizedAspect - a11);
+
+		int aspectFamily;
+		switch (standardOutputAspectMode) {
+			case ASPECT_16_9:
+				aspectFamily = 169;
+				break;
+			case ASPECT_16_10:
+				aspectFamily = 1610;
+				break;
+			case ASPECT_4_3:
+				aspectFamily = 43;
+				break;
+			case ASPECT_1_1:
+				aspectFamily = 11;
+				break;
+			case AUTO:
+			default:
+				if (d169 <= d1610 && d169 <= d43 && d169 <= d11) {
+					aspectFamily = 169;
+				} else if (d1610 <= d43 && d1610 <= d11) {
+					aspectFamily = 1610;
+				} else if (d43 <= d11) {
+					aspectFamily = 43;
+				} else {
+					aspectFamily = 11;
+				}
+				break;
+		}
+
+		int width;
+		int height;
+		switch (resolutionBucket) {
+			case BUCKET_1K:
+				int[] dims1k = dimensionsForFamily(aspectFamily, BUCKET_1K);
+				width = dims1k[0];
+				height = dims1k[1];
+				break;
+			case BUCKET_2K:
+				int[] dims2k = dimensionsForFamily(aspectFamily, BUCKET_2K);
+				width = dims2k[0];
+				height = dims2k[1];
+				break;
+			case BUCKET_3K:
+				int[] dims3k = dimensionsForFamily(aspectFamily, BUCKET_3K);
+				width = dims3k[0];
+				height = dims3k[1];
+				break;
+			case BUCKET_4K:
+				int[] dims4k = dimensionsForFamily(aspectFamily, BUCKET_4K);
+				width = dims4k[0];
+				height = dims4k[1];
+				break;
+			default:
+				// Fallback: scale from the 1k preset for the snapped aspect family.
+				int[] base = dimensionsForFamily(aspectFamily, BUCKET_1K);
+				float scale = Math.max(1, resolutionBucket) / (float) BUCKET_1K;
+				width = Math.max(1, Math.round(base[0] * scale));
+				height = Math.max(1, Math.round(base[1] * scale));
+				break;
+		}
+
+		if (!landscape) {
+			int tmp = width;
+			width = height;
+			height = tmp;
+		}
+
+		return new int[]{width, height};
+	}
+
+	/**
+	 * Returns explicit Standard-output dimensions for a given aspect family and bucket.
+	 */
+	private int[] dimensionsForFamily(int family, int bucket) {
+		switch (family) {
+			case 169:
+				switch (bucket) {
+					case BUCKET_1K: return new int[]{1024, 576};
+					case BUCKET_2K: return new int[]{2048, 1152};
+					case BUCKET_3K: return new int[]{3072, 1728};
+					default: return new int[]{4096, 2304};
+				}
+			case 1610:
+				switch (bucket) {
+					case BUCKET_1K: return new int[]{1024, 640};
+					case BUCKET_2K: return new int[]{2048, 1280};
+					case BUCKET_3K: return new int[]{3072, 1920};
+					default: return new int[]{4096, 2560};
+				}
+			case 43:
+				switch (bucket) {
+					case BUCKET_1K: return new int[]{1024, 768};
+					case BUCKET_2K: return new int[]{2048, 1536};
+					case BUCKET_3K: return new int[]{3072, 2304};
+					default: return new int[]{4096, 3072};
+				}
+			default:
+				switch (bucket) {
+					case BUCKET_1K: return new int[]{1024, 1024};
+					case BUCKET_2K: return new int[]{2048, 2048};
+					case BUCKET_3K: return new int[]{3072, 3072};
+					default: return new int[]{4096, 4096};
+				}
+		}
+	}
+
+	/**
+	 * Sets the aspect policy used to compute Standard output dimensions.
+	 *
+	 * <p>Changing this setting schedules an output-render-target rebuild on the next frame so the
+	 * Standard output FBO dimensions are updated without recreating preview targets.</p>
+	 *
+	 * @param mode desired aspect mode, ignored when {@code null}
+	 */
+	public void setStandardOutputAspectMode(StandardOutputAspectMode mode) {
+		if (mode == null || mode == this.standardOutputAspectMode) {
+			return;
+		}
+		this.standardOutputAspectMode = mode;
+		pendingOutputReset = true;
+		pendingOutputResolution = outputResolution;
+		LOGGER.info("Standard output aspect mode set to: " + mode);
+	}
+
+	/**
+	 * Returns the aspect policy currently used to compute Standard output dimensions.
+	 *
+	 * @return current Standard output aspect mode
+	 */
+	public StandardOutputAspectMode getStandardOutputAspectMode() {
+		return standardOutputAspectMode;
+	}
+
+	/**
+	 * Allocates the window-resolution preview render targets.
+	 *
+	 * <p>Fisheye, equirectangular, and cubemap preview FBOs use a square resolution derived
+	 * from the window's smaller dimension via {@link #computePreviewResolution()}. The Standard
+	 * preview renderer uses {@code p.width × p.height} (dynamic, window aspect ratio preserved)
+	 * by passing {@code 0, 0} to the constructor.</p>
+	 *
+	 * <p>The Standard preview renderer shares the same
+	 * {@link com.victorvalentim.zividomelive.render.camera.MouseControlledCamera} as the output
+	 * Standard renderer so that both always show the same framing.</p>
+	 *
+	 * <p>Must be called from the Processing draw thread.</p>
+	 */
 	private void initializePreviewRenderers() {
 		previewResolution = computePreviewResolution();
 
@@ -358,12 +667,31 @@ public class zividomelive implements PConstants {
 		previewEquirectangularRenderer = new EquirectangularRenderer(previewResolution, EQUIRECT_FRAG, EQUIRECT_VERT, p);
 		previewFisheyeDomemaster = new FisheyeDomemaster(previewResolution, DOME_FRAG, DOME_VERT, p);
 		previewCubemapViewRenderer = new CubemapViewRenderer(p, previewResolution);
+
+		// Dynamic dimensions (0, 0) → renderer uses parent.width/parent.height each frame,
+		// preserving the window aspect ratio and handling window resize automatically.
+		standardRendererPreview = new StandardRenderer(p, 0, 0, currentScene);
+
+		// Share camera so preview and output Standard views are always framing the same scene.
+		if (standardRenderer != null) {
+			standardRendererPreview.setCam(standardRenderer.getCam());
+		}
 	}
 
+	/**
+	 * Recreates preview render targets when the computed preview resolution has changed.
+	 *
+	 * <p>Called at the beginning of each draw cycle. The Standard preview renderer is included
+	 * in the check because it belongs to the preview pipeline.</p>
+	 */
 	private void ensurePreviewRenderers() {
-		int expectedPreviewResolution = computePreviewResolution();
-		if (previewCubemapRenderer == null || previewEquirectangularRenderer == null || previewFisheyeDomemaster == null
-				|| previewCubemapViewRenderer == null || previewResolution != expectedPreviewResolution) {
+		int expected = computePreviewResolution();
+		if (previewCubemapRenderer == null
+				|| previewEquirectangularRenderer == null
+				|| previewFisheyeDomemaster == null
+				|| previewCubemapViewRenderer == null
+				|| standardRendererPreview == null
+				|| previewResolution != expected) {
 			releasePreviewGraphicsResources();
 			initializePreviewRenderers();
 		}
@@ -375,14 +703,168 @@ public class zividomelive implements PConstants {
 		}
 	}
 
-	private void updatePreviewRenderViews(PGraphicsOpenGL[] sourceFaces) {
-		previewEquirectangularRenderer.render(sourceFaces);
-		previewFisheyeDomemaster.applyShader(previewEquirectangularRenderer.getEquirectangular(), getFov());
-		if (getCurrentView() == ViewType.CUBEMAP) {
-			previewCubemapViewRenderer.drawCubemapToGraphics(sourceFaces);
+	/**
+	 * Computes the window-preview requirements for the current frame.
+	 *
+	 * <p>{@code showPreview=true} forces the fisheye chain so the floating thumbnail can be
+	 * composed even when the main preview view is Standard.</p>
+	 *
+	 * @return reusable requirements scratch object populated for the current frame
+	 */
+	private ViewRequirements computePreviewRequirements() {
+		ViewType previewView = getCurrentView();
+		previewRequirements.set(
+				previewView == ViewType.FISHEYE_DOMEMASTER || showPreview,
+				previewView == ViewType.EQUIRECTANGULAR,
+				previewView == ViewType.CUBEMAP,
+				previewView == ViewType.STANDARD
+		);
+		return previewRequirements;
+	}
+
+	/**
+	 * Computes the external-output requirements for the current frame.
+	 *
+	 * @return reusable requirements scratch object populated for the current frame
+	 */
+	private ViewRequirements computeOutputRequirements() {
+		if (outputManager == null || !outputManager.isActive()) {
+			outputRequirements.set(false, false, false, false);
+			return outputRequirements;
+		}
+
+		outputRequirements.set(
+				outputManager.requiresView(ViewType.FISHEYE_DOMEMASTER),
+				outputManager.requiresView(ViewType.EQUIRECTANGULAR),
+				outputManager.requiresView(ViewType.CUBEMAP),
+				outputManager.requiresView(ViewType.STANDARD)
+		);
+		return outputRequirements;
+	}
+
+	/**
+	 * Captures at most one cubemap for the current frame.
+	 *
+	 * <p>If an active output requires cubemap data, the output-resolution cubemap becomes the
+	 * master source for both output and preview projections. Otherwise, the preview-resolution
+	 * cubemap is captured only when the window preview or floating fisheye thumbnail needs it.</p>
+	 *
+	 * @param preview preview requirements for the current frame
+	 * @param output output requirements for the current frame
+	 * @return master cubemap faces, or {@code null} when no cubemap is required
+	 */
+	private PGraphicsOpenGL[] captureMasterCubemap(ViewRequirements preview, ViewRequirements output) {
+		if (output.needsCubemapSource) {
+			captureCubemap();
+			return cubemapRenderer != null ? cubemapRenderer.getCubemapFaces() : null;
+		}
+
+		if (preview.needsCubemapSource) {
+			capturePreviewCubemap();
+			return previewCubemapRenderer != null ? previewCubemapRenderer.getCubemapFaces() : null;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Renders only the passes required by the application preview window.
+	 *
+	 * <p>All FBOs used here belong to the preview pipeline (window resolution) and are
+	 * independent from the high-resolution output FBOs. This method is always called, even
+	 * when external outputs are active, ensuring the window always shows preview content.</p>
+	 *
+	 * <p>Pass counts per frame (0 or 1 of each):</p>
+	 * <ul>
+	 *   <li>Cubemap capture: skipped when the current view is {@link ViewType#STANDARD} and
+	 *       {@code showPreview} is {@code false}.</li>
+	 *   <li>Fisheye: rendered whenever the current view is fisheye <em>or</em>
+	 *       {@code showPreview} is {@code true} (the floating thumbnail always shows fisheye
+	 *       regardless of the main view).</li>
+	 * </ul>
+	 *
+	 * <p>Must be called from the Processing draw thread after {@link #ensurePreviewRenderers()}.</p>
+	 */
+	private void renderPreviewPipeline(ViewRequirements preview, ViewRequirements output, PGraphicsOpenGL[] masterFaces) {
+		if (preview.needsStandard) {
+			standardRendererPreview.render();
+		}
+
+		if (preview.needsEquirectangular) {
+			if (output.needsEquirectangular && output.needsCubemapSource) {
+				copyToPreview(equirectangularRenderer.getEquirectangular(), previewEquirectangularRenderer.getEquirectangular());
+			} else {
+				previewEquirectangularRenderer.render(masterFaces);
+			}
+		}
+
+		if (preview.needsFisheye) {
+			if (output.needsFisheye) {
+				copyToPreview(fisheyeDomemaster.getDomemasterGraphics(), previewFisheyeDomemaster.getDomemasterGraphics());
+			} else {
+				previewFisheyeDomemaster.applyShader(previewEquirectangularRenderer.getEquirectangular(), getFov());
+			}
+		}
+
+		if (preview.needsCubemapLayout) {
+			if (output.needsCubemapLayout && output.needsCubemapSource) {
+				copyToPreview(cubemapViewRenderer.getCubemap(), previewCubemapViewRenderer.getCubemap());
+			} else {
+				previewCubemapViewRenderer.drawCubemapToGraphics(masterFaces);
+			}
 		}
 	}
 
+	/**
+	 * Renders only the high-resolution passes required by enabled external outputs.
+	 *
+	 * <p>All FBOs produced here belong to the output pipeline ({@code outputResolution})
+	 * and remain offscreen. They are never composited onto the Processing window. After this
+	 * method returns, all relevant {@code endDraw()} calls have completed and the FBOs are
+	 * ready for
+	 * {@link com.victorvalentim.zividomelive.manager.OutputManager#sendOutput()}.</p>
+	 *
+	 * <p>The set of passes is derived from
+	 * {@link com.victorvalentim.zividomelive.manager.OutputManager#requiresView(ViewType)}:
+	 * only the minimal dependency chain is executed. A single cubemap capture supplies all
+	 * output passes that need it.</p>
+	 *
+	 * <p>Example: NDI requests equirectangular, Syphon requests fisheye →
+	 * one cubemap capture → one equirectangular pass → one fisheye pass.</p>
+	 *
+	 * <p>Returns immediately when {@code outputManager} is {@code null} or inactive.
+	 * Must be called from the Processing draw thread.</p>
+	 */
+	private void renderOutputPipeline(ViewRequirements output, PGraphicsOpenGL[] masterFaces) {
+		if (output.needsCubemapSource && masterFaces == null) {
+			return;
+		}
+
+		if (output.needsEquirectangular) {
+			equirectangularRenderer.render(masterFaces);
+		}
+
+		if (output.needsFisheye) {
+			fisheyeDomemaster.applyShader(
+					equirectangularRenderer.getEquirectangular(), getFov());
+		}
+
+		if (output.needsCubemapLayout) {
+			cubemapViewRenderer.drawCubemapToGraphics(masterFaces);
+		}
+
+		if (output.needsStandard) {
+			standardRenderer.render();
+		}
+	}
+
+	/**
+	 * Composites the current preview FBO onto the Processing window.
+	 *
+	 * <p>Only preview-resolution FBOs are passed to
+	 * {@link processing.core.PApplet#image(processing.core.PImage, float, float, float, float)}
+	 * here. Output FBOs are never drawn onto the main window by this method.</p>
+	 */
 	private void displayPreviewCurrentView() {
 		switch (getCurrentView()) {
 			case CUBEMAP:
@@ -395,7 +877,7 @@ public class zividomelive implements PConstants {
 				displayView(previewFisheyeDomemaster.getDomemasterGraphics());
 				break;
 			case STANDARD:
-				displayView(standardRenderer.getStandardView());
+				displayView(standardRendererPreview.getStandardView());
 				break;
 		}
 	}
@@ -430,9 +912,29 @@ public class zividomelive implements PConstants {
 		}
 	}
 
+	/**
+	 * Executes the independent preview and external-output rendering pipelines for one frame.
+	 *
+	 * <p>The Processing window always displays preview-resolution FBOs. High-resolution output
+	 * FBOs remain offscreen and are submitted only to enabled backends after all relevant
+	 * {@code endDraw()} calls have completed.</p>
+	 *
+	 * <p>Frame order:</p>
+	 * <ol>
+	 *   <li>Clear the window background.</li>
+	 *   <li>Apply any pending output-resolution change (output FBOs only, preview unaffected).</li>
+	 *   <li>Ensure preview FBOs are valid for the current window size.</li>
+	 *   <li>Run the preview pipeline (0 or 1 cubemap capture, ≤3 projection passes).</li>
+	 *   <li>When at least one output is active, run the output pipeline (0 or 1 cubemap
+	 *       capture, minimal passes from {@code requiresView}) then submit to all backends.</li>
+	 *   <li>Composite the preview FBO onto the window.</li>
+	 *   <li>Optionally draw the floating fisheye thumbnail (preview FBO only).</li>
+	 *   <li>Draw the control panel.</li>
+	 * </ol>
+	 */
 	void renderContent() {
-		if (standardRenderer == null || currentScene == null) {
-			LOGGER.severe("Error: Renderer or scene not initialized.");
+		if (standardRendererPreview == null || standardRenderer == null || currentScene == null) {
+			LOGGER.severe("Cannot render content: renderer or scene not initialized.");
 			return;
 		}
 
@@ -440,21 +942,18 @@ public class zividomelive implements PConstants {
 		handleGraphicsReset();
 		ensurePreviewRenderers();
 
-		// High-res pipeline is only required for external outputs; allocated lazily.
-		if (isEnableOutput()) {
-			initializeOutputRenderers();
-			captureCubemap();
-			updateRenderViews();
+		ViewRequirements preview = computePreviewRequirements();
+		ViewRequirements output = computeOutputRequirements();
+		PGraphicsOpenGL[] masterFaces = captureMasterCubemap(preview, output);
+
+		if (outputManager != null && outputManager.isActive()) {
+			renderOutputPipeline(output, masterFaces);
 			outputManager.sendOutput();
-			updatePreviewRenderViews(cubemapRenderer.getCubemapFaces());
-		} else {
-			capturePreviewCubemap();
-			updatePreviewRenderViews(previewCubemapRenderer.getCubemapFaces());
-			if (getCurrentView() == ViewType.STANDARD) {
-				standardRenderer.render();
-			}
 		}
 
+		renderPreviewPipeline(preview, output, masterFaces);
+
+		// Only preview FBOs are composited onto the main window.
 		displayPreviewCurrentView();
 
 		if (showPreview) {
@@ -468,16 +967,27 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
-	 * Handles resetting the graphics if a reset is pending.
+	 * Applies a pending output-resolution change by recreating only the output render targets.
+	 *
+	 * <p>Preview FBOs are not affected. Syphon is not recreated; Spout will resize its sender
+	 * on the next published frame via
+	 * {@link com.victorvalentim.zividomelive.manager.OutputManager#notifyResolutionChanged(int)}.</p>
 	 */
 	private void handleGraphicsReset() {
 		if (pendingOutputReset) {
-			LOGGER.info("Pending output reset detected. Changing output resolution to: " + pendingOutputResolution);
-			releaseGraphicsResources();
+			LOGGER.info("Applying output resolution change: " + pendingOutputResolution + "px.");
+			releaseOutputGraphicsResources();
 			outputResolution = pendingOutputResolution;
-			initializeRenderers();
+			initializeOutputRenderers();
+			// Restore camera sharing after the new output StandardRenderer is created.
+			if (standardRendererPreview != null && standardRenderer != null) {
+				standardRendererPreview.setCam(standardRenderer.getCam());
+			}
+			if (outputManager != null) {
+				outputManager.notifyResolutionChanged(outputResolution);
+			}
 			pendingOutputReset = false;
-			LOGGER.info("Output graphics reset completed.");
+			LOGGER.info("Output graphics reset completed at " + outputResolution + "px.");
 		}
 	}
 
@@ -512,119 +1022,46 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
-	 * Updates the render views based on the current view type.
+	 * Sets the current view to {@link ViewType#FISHEYE_DOMEMASTER}.
+	 *
+	 * @deprecated The library's internal draw loop ({@code draw()} → {@code renderContent()})
+	 *             renders every frame automatically. Call {@link #setCurrentView(ViewType)}
+	 *             directly and let the pipeline handle the rest. This method is retained for
+	 *             source compatibility only.
 	 */
-	private void updateRenderViews() {
-		PGraphicsOpenGL[] cubemapFaces = cubemapRenderer.getCubemapFaces();
-
-		// Equirectangular and fisheye are always updated — domemaster depends on equirectangular.
-		equirectangularRenderer.render(cubemapFaces);
-		fisheyeDomemaster.applyShader(equirectangularRenderer.getEquirectangular(), getFov());
-
-		// Cubemap view: render when selected as preview OR when an output needs it.
-		boolean cubemapRequired = getCurrentView() == zividomelive.ViewType.CUBEMAP
-				|| (outputManager != null && outputManager.requiresView(zividomelive.ViewType.CUBEMAP));
-		if (cubemapRequired) {
-			cubemapViewRenderer.drawCubemapToGraphics(cubemapFaces);
-		}
-
-		// Standard view: render when selected as preview OR when an output needs it.
-		boolean standardRequired = getCurrentView() == zividomelive.ViewType.STANDARD
-				|| (outputManager != null && outputManager.requiresView(zividomelive.ViewType.STANDARD));
-		if (standardRequired) {
-			standardRenderer.render();
-		}
-	}
-
-	/**
-	 * Displays the current view based on the view type.
-	 */
-	private void displayCurrentView() {
-		switch (getCurrentView()) {
-			case CUBEMAP:
-				displayView(cubemapViewRenderer.getCubemap());
-				break;
-			case EQUIRECTANGULAR:
-				displayView(equirectangularRenderer.getEquirectangular());
-				break;
-			case FISHEYE_DOMEMASTER:
-				displayView(fisheyeDomemaster.getDomemasterGraphics());
-				break;
-			case STANDARD:
-				displayView(standardRenderer.getStandardView());
-				break;
-		}
-	}
-
-	/**
-	 * Renders the view by updating and displaying the current view.
-	 */
-	private void renderView() {
-		updateRenderViews();
-		displayCurrentView();
-	}
-
-	/**
-	 * Generic renderer for individual view modes (avoids duplicated logic).
-	 * Prepares the scene and captures cubemap, then uses the current view mode's renderer.
-	 */
-	private void renderWithCurrentView() {
-		clearBackground();
-		handleGraphicsReset();
-		initializeOutputRenderers();
-		captureCubemap();
-		updateRenderViews();
-		displayCurrentView();
-		outputManager.sendOutput();
-		drawControlPanel();
-	}
-
-	/**
-	 * Renders the fisheye domemaster view, switching the current view mode to FISHEYE_DOMEMASTER.
-	 */
+	@Deprecated
 	public void renderFisheyeDomemaster() {
 		setCurrentView(ViewType.FISHEYE_DOMEMASTER);
-		if (fisheyeDomemaster != null || previewFisheyeDomemaster != null) {
-			renderWithCurrentView();
-		} else {
-			LOGGER.severe("Error: FisheyeDomemaster not initialized.");
-		}
 	}
 
 	/**
-	 * Renders the equirectangular view, switching the current view mode to EQUIRECTANGULAR.
+	 * Sets the current view to {@link ViewType#EQUIRECTANGULAR}.
+	 *
+	 * @deprecated See {@link #renderFisheyeDomemaster()} for migration guidance.
 	 */
+	@Deprecated
 	public void renderEquirectangular() {
 		setCurrentView(ViewType.EQUIRECTANGULAR);
-		if (equirectangularRenderer != null || previewEquirectangularRenderer != null) {
-			renderWithCurrentView();
-		} else {
-			LOGGER.severe("Error: EquirectangularRenderer not initialized.");
-		}
 	}
 
 	/**
-	 * Renders the cubemap view, switching the current view mode to CUBEMAP.
+	 * Sets the current view to {@link ViewType#CUBEMAP}.
+	 *
+	 * @deprecated See {@link #renderFisheyeDomemaster()} for migration guidance.
 	 */
+	@Deprecated
 	public void renderCubemap() {
 		setCurrentView(ViewType.CUBEMAP);
-		if (cubemapViewRenderer != null || previewCubemapViewRenderer != null) {
-			renderWithCurrentView();
-		} else {
-			LOGGER.severe("Error: CubemapViewRenderer not initialized.");
-		}
 	}
 
 	/**
-	 * Renders the standard view, switching the current view mode to STANDARD.
+	 * Sets the current view to {@link ViewType#STANDARD}.
+	 *
+	 * @deprecated See {@link #renderFisheyeDomemaster()} for migration guidance.
 	 */
+	@Deprecated
 	public void renderStandard() {
 		setCurrentView(ViewType.STANDARD);
-		if (standardRenderer != null) {
-			renderWithCurrentView();
-		} else {
-			LOGGER.severe("Error: StandardRenderer not initialized.");
-		}
 	}
 
 	/**
@@ -643,20 +1080,83 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
-	 * Draws a floating preview of the fisheye domemaster view.
+	 * Draws a floating 200×200 fisheye domemaster thumbnail in the bottom-right corner.
+	 *
+	 * <p>Uses exclusively the preview fisheye FBO ({@code previewFisheyeDomemaster}).
+	 * If the FBO is not yet available the method returns safely without drawing anything.
+	 * The output fisheye FBO is never used as a fallback.</p>
+	 *
+	 * <p>{@code renderPreviewPipeline()} guarantees the fisheye FBO is populated before
+	 * this method is called whenever {@code showPreview} is {@code true}.</p>
 	 */
 	public void drawFloatingPreview() {
-		float previewWidth = 200f;
+		if (previewFisheyeDomemaster == null) {
+			return;
+		}
+		PGraphicsOpenGL previewGraphics = previewFisheyeDomemaster.getDomemasterGraphics();
+		if (previewGraphics == null) {
+			return;
+		}
+		float previewWidth  = 200f;
 		float previewHeight = 200f;
-		float x = p.width - previewWidth;
+		float x = p.width  - previewWidth;
 		float y = p.height - previewHeight;
-
-		PGraphicsOpenGL previewGraphics = previewFisheyeDomemaster != null
-				? previewFisheyeDomemaster.getDomemasterGraphics()
-				: fisheyeDomemaster.getDomemasterGraphics();
 		p.image(previewGraphics, x, y, previewWidth, previewHeight);
 	}
 
+	/**
+	 * Copies a rendered texture into a preview-resolution FBO.
+	 *
+	 * <p>This operation remains entirely on the GPU. It does not use CPU readback or
+	 * intermediate {@link PImage} objects.</p>
+	 *
+	 * @param source rendered source texture
+	 * @param destination preview destination FBO
+	 */
+	private void copyToPreview(PGraphicsOpenGL source, PGraphicsOpenGL destination) {
+		if (source == null || destination == null || source == destination) {
+			return;
+		}
+
+		destination.beginDraw();
+		destination.clear();
+		destination.image(source, 0, 0, destination.width, destination.height);
+		destination.endDraw();
+	}
+
+	/**
+	 * Releases all high-resolution output render targets.
+	 *
+	 * <p>Preview FBOs and external output backends (Syphon, Spout, NDI) are not affected.</p>
+	 */
+	private void releaseOutputGraphicsResources() {
+		if (cubemapRenderer != null) {
+			cubemapRenderer.dispose();
+			cubemapRenderer = null;
+		}
+		if (equirectangularRenderer != null) {
+			equirectangularRenderer.dispose();
+			equirectangularRenderer = null;
+		}
+		if (fisheyeDomemaster != null) {
+			fisheyeDomemaster.dispose();
+			fisheyeDomemaster = null;
+		}
+		if (cubemapViewRenderer != null) {
+			cubemapViewRenderer.dispose();
+			cubemapViewRenderer = null;
+		}
+		if (standardRenderer != null) {
+			standardRenderer.dispose();
+			standardRenderer = null;
+		}
+	}
+
+	/**
+	 * Releases all window-resolution preview render targets.
+	 *
+	 * <p>Output FBOs and external output backends are not affected.</p>
+	 */
 	private void releasePreviewGraphicsResources() {
 		if (previewCubemapRenderer != null) {
 			previewCubemapRenderer.dispose();
@@ -674,29 +1174,19 @@ public class zividomelive implements PConstants {
 			previewCubemapViewRenderer.dispose();
 			previewCubemapViewRenderer = null;
 		}
+		if (standardRendererPreview != null) {
+			standardRendererPreview.dispose();
+			standardRendererPreview = null;
+		}
 	}
 
+	/**
+	 * Releases all render targets — both output and preview.
+	 *
+	 * <p>Used during full teardown ({@link #dispose()}).</p>
+	 */
 	private void releaseGraphicsResources() {
-		if (cubemapRenderer != null) {
-			cubemapRenderer.dispose();
-			cubemapRenderer = null;
-		}
-		if (equirectangularRenderer != null) {
-			equirectangularRenderer.dispose();
-			equirectangularRenderer = null;
-		}
-		if (standardRenderer != null) {
-			standardRenderer.dispose();
-			standardRenderer = null;
-		}
-		if (fisheyeDomemaster != null) {
-			fisheyeDomemaster.dispose();
-			fisheyeDomemaster = null;
-		}
-		if (cubemapViewRenderer != null) {
-			cubemapViewRenderer.dispose();
-			cubemapViewRenderer = null;
-		}
+		releaseOutputGraphicsResources();
 		releasePreviewGraphicsResources();
 	}
 
@@ -723,13 +1213,17 @@ public class zividomelive implements PConstants {
 
 	/**
 	 * Sets the current scene to be rendered and updates all relevant components.
+	 *
 	 * @param newScene the new scene to be set as the current scene
 	 */
 	public void setCurrentScene(Scene newScene) {
 		this.currentScene = newScene;
-		this.setScene(newScene); // Update the scene in the parent PApplet
+		this.setScene(newScene);
 		if (standardRenderer != null) {
-			standardRenderer.setCurrentScene(newScene); // Update the scene in StandardRenderer
+			standardRenderer.setCurrentScene(newScene);
+		}
+		if (standardRendererPreview != null) {
+			standardRendererPreview.setCurrentScene(newScene);
 		}
 	}
 
@@ -811,6 +1305,7 @@ public class zividomelive implements PConstants {
 							currentScene = sceneManager.getCurrentScene();
 							if (currentScene != null) {
 								if (standardRenderer != null) standardRenderer.setCurrentScene(currentScene);
+								if (standardRendererPreview != null) standardRendererPreview.setCurrentScene(currentScene);
 								LOGGER.info("Switched to the previous scene: " + currentScene.getName());
 							} else {
 								LOGGER.warning("No previous scene available.");
@@ -824,6 +1319,7 @@ public class zividomelive implements PConstants {
 							currentScene = sceneManager.getCurrentScene();
 							if (currentScene != null) {
 								if (standardRenderer != null) standardRenderer.setCurrentScene(currentScene);
+								if (standardRendererPreview != null) standardRendererPreview.setCurrentScene(currentScene);
 								LOGGER.info("Switched to the next scene: " + currentScene.getName());
 							} else {
 								LOGGER.warning("No next scene available.");

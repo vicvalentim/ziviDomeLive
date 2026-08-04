@@ -17,41 +17,41 @@ import java.util.Locale;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Manages ziviDomeLive video outputs.
+ * Manages all external video outputs produced by ziviDomeLive.
  *
- * <p>There are two independent output domains:</p>
+ * <p>The manager keeps two independent output domains:</p>
  * <ul>
  *     <li>a platform-local GPU texture output: Syphon on macOS or Spout on Windows;</li>
- *     <li>an NDI network output, captured on the Processing draw thread and sent by a dedicated worker.</li>
+ *     <li>an NDI network output backed by a dedicated CPU worker.</li>
  * </ul>
  *
- * <p>Syphon and Spout are mutually exclusive. Their calls remain on the Processing/OpenGL thread,
- * because both libraries access the current OpenGL context directly. NDI performs only the required
- * {@code loadPixels()} capture on that thread; pixel conversion and transmission run independently.</p>
+ * <p>Syphon and Spout are mutually exclusive because only one of them is valid for the
+ * current operating system. Their native backend is prepared once, after the Processing
+ * OpenGL context and renderer targets exist. UI toggles only enable or disable frame
+ * publication; they never create, destroy, or recreate the native backend.</p>
+ *
+ * <p>Syphon and Spout receive the selected {@link PGraphicsOpenGL} directly. They do not
+ * use {@code loadPixels()}, CPU copies, intermediate graphics targets, or worker threads.
+ * NDI is isolated from that path: the Processing draw thread only performs the required
+ * pixel readback and a bounded copy, while conversion and network transmission run on a
+ * dedicated worker.</p>
  */
 public class OutputManager implements PConstants {
 
-	/** Public output identifiers retained for compatibility with the current ControlManager API. */
+	/** Public output identifiers retained for ControlManager compatibility. */
 	public enum OutputType {
-        /**
-         * Network Device Interface (NDI) output. Requires the NDI runtime to be installed on the host.
-         */
+		/** Network Device Interface output. */
 		NDI,
-        /**
-         * Spout output. Available on Windows platforms.
-         */
+		/** Windows Spout texture output. */
 		SPOUT,
-        /**
-         * Syphon output. Available on macOS platforms.
-         */
+		/** macOS Syphon texture output. */
 		SYPHON
 	}
 
-	/** The single local texture-sharing backend available in the current process. */
+	/** The single platform-local texture-sharing implementation available in this process. */
 	private enum LocalTextureBackend {
 		SYPHON,
 		SPOUT,
@@ -62,12 +62,12 @@ public class OutputManager implements PConstants {
 	private static final String SPOUT_SENDER_NAME = "ziviDomeLive Spout";
 	private static final String SYPHON_SERVER_NAME = "ziviDomeLive Syphon";
 
-	/** Triple buffering: one slot may be sending while two remain available or pending. */
+	/** One slot may be sent while the remaining slots are free or queued. */
 	private static final int NDI_SLOT_COUNT = 3;
 
-	/** Retains the frame-rate value used by the previous OutputManager implementation. */
-	private static final int DEFAULT_NDI_FRAME_RATE_N = 150;
-	private static final int DEFAULT_NDI_FRAME_RATE_D = 1;
+	/** Preserves the frame-rate metadata used by the previous implementation. */
+	private static final int DEFAULT_NDI_FRAME_RATE_NUMERATOR = 150;
+	private static final int DEFAULT_NDI_FRAME_RATE_DENOMINATOR = 1;
 
 	private final Logger logger = LogManager.getLogger();
 	private final zividomelive parent;
@@ -75,10 +75,21 @@ public class OutputManager implements PConstants {
 	private final boolean isWindows;
 	private final LocalTextureBackend localTextureBackend;
 
-	/* Independent view selections. Preview/viewer state is deliberately not stored here. */
+	/* Independent output routing. Preview/viewer state is intentionally not stored here. */
 	private volatile zividomelive.ViewType ndiView = zividomelive.ViewType.FISHEYE_DOMEMASTER;
 	private volatile zividomelive.ViewType spoutView = zividomelive.ViewType.FISHEYE_DOMEMASTER;
 	private volatile zividomelive.ViewType syphonView = zividomelive.ViewType.FISHEYE_DOMEMASTER;
+
+	/* Platform-local texture output. Only one backend can exist in a process. */
+	private Spout spoutSender;
+	private SyphonServer syphonServer;
+	private volatile boolean spoutEnabled;
+	private volatile boolean syphonEnabled;
+	private volatile boolean localTextureInitialized;
+	private volatile boolean localTextureUnavailable;
+	private volatile String localTextureUnavailableReason = "";
+	private int spoutWidth = -1;
+	private int spoutHeight = -1;
 
 	/* NDI lifecycle and worker state. */
 	private final Object ndiLifecycleLock = new Object();
@@ -95,32 +106,21 @@ public class OutputManager implements PConstants {
 			new ArrayBlockingQueue<>(NDI_SLOT_COUNT);
 	private final NdiFrameSlot[] ndiSlots = new NdiFrameSlot[NDI_SLOT_COUNT];
 
-	private volatile int ndiFrameRateNumerator = DEFAULT_NDI_FRAME_RATE_N;
-	private volatile int ndiFrameRateDenominator = DEFAULT_NDI_FRAME_RATE_D;
+	private volatile int ndiFrameRateNumerator = DEFAULT_NDI_FRAME_RATE_NUMERATOR;
+	private volatile int ndiFrameRateDenominator = DEFAULT_NDI_FRAME_RATE_DENOMINATOR;
 
 	private final AtomicLong ndiCapturedFrames = new AtomicLong();
 	private final AtomicLong ndiSentFrames = new AtomicLong();
 	private final AtomicLong ndiDroppedFrames = new AtomicLong();
 
-	/* Platform-local texture output. Only one of these can be active in a process. */
-	private Spout spoutSender;
-	private SyphonServer syphonServer;
-	/* Initialization state: backend resources have been created. */
-	private boolean spoutInitialized;
-	private boolean syphonInitialized;
-	/* Enable state: user has toggled sending on/off. */
-	private volatile boolean spoutEnabled;
-	private volatile boolean syphonEnabled;
-	private int spoutWidth = -1;
-	private int spoutHeight = -1;
-
 	/** Prevents repeated warnings from the deprecated single-view setter. */
 	private boolean legacySetViewWarningLogged;
 
 	/**
-	 * Creates an output manager and selects the only valid local texture backend for the platform.
+	 * Creates an output manager and selects the valid local texture backend for the host platform.
 	 *
-	 * @param parent main ziviDomeLive application
+	 * @param parent main ziviDomeLive application; must not be {@code null}
+	 * @throws IllegalArgumentException if {@code parent} is {@code null}
 	 */
 	public OutputManager(zividomelive parent) {
 		if (parent == null) {
@@ -147,7 +147,7 @@ public class OutputManager implements PConstants {
 	 *
 	 * @param outputType output whose configured view should be returned
 	 * @return configured view, or {@link zividomelive.ViewType#FISHEYE_DOMEMASTER}
-	 *         when {@code outputType} is {@code null} or unsupported
+	 *         when {@code outputType} is {@code null}
 	 */
 	public zividomelive.ViewType getViewForOutput(OutputType outputType) {
 		if (outputType == null) {
@@ -167,7 +167,9 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * Changes only the selected output view. It does not modify the application preview/viewer.
+	 * Changes only the selected external-output view.
+	 *
+	 * <p>This method does not alter the application preview or any other output.</p>
 	 *
 	 * @param outputType output whose view should be changed
 	 * @param viewType view to route to the selected output
@@ -195,15 +197,19 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * Compatibility method retained for callers that previously refreshed cached PGraphics references.
-	 * References are now resolved on every frame, so this method intentionally does nothing.
+	 * Compatibility method retained for callers that previously refreshed cached graphics references.
+	 *
+	 * <p>Graphics references are resolved on every frame, so this method intentionally does nothing.</p>
 	 */
 	public void refreshCachedGraphics() {
-		// No-op by design: prevents stale PGraphicsOpenGL references after renderer reallocation.
+		// No-op by design: resolving per frame prevents stale references after renderer reallocation.
 	}
 
 	/**
-	 * Resolves the current PGraphicsOpenGL directly from the active renderer.
+	 * Resolves the current graphics target directly from the corresponding renderer.
+	 *
+	 * @param viewType view whose graphics target should be returned
+	 * @return current graphics target, or {@code null} when unavailable
 	 */
 	private PGraphicsOpenGL resolveGraphics(zividomelive.ViewType viewType) {
 		if (viewType == null) {
@@ -232,9 +238,155 @@ public class OutputManager implements PConstants {
 					return null;
 			}
 		} catch (RuntimeException error) {
-			logger.log(Level.WARNING, "resolveGraphics failed for " + viewType + ".", error);
+			logger.warning("resolveGraphics failed for " + viewType + ": " + rootCauseMessage(error));
 			return null;
 		}
+	}
+
+	/**
+	 * Prepares the platform-local texture-sharing backend without enabling frame publication.
+	 *
+	 * <p>This method must be called on the Processing/OpenGL thread after renderer resources have
+	 * been created. It is idempotent: repeated calls never recreate an existing backend.</p>
+	 *
+	 * <p>On macOS, the method creates and warms up the Syphon server. On Windows, it creates the
+	 * Spout sender. On unsupported platforms, it performs no operation.</p>
+	 */
+	public void initializeLocalTextureOutput() {
+		if (localTextureInitialized || localTextureUnavailable) {
+			return;
+		}
+
+		switch (localTextureBackend) {
+			case SYPHON:
+				initializeSyphonBackend();
+				break;
+			case SPOUT:
+				initializeSpoutBackend();
+				break;
+			case NONE:
+			default:
+				break;
+		}
+	}
+
+	/**
+	 * Creates and warms up the macOS Syphon server without enabling publication.
+	 */
+	private void initializeSyphonBackend() {
+		if (localTextureBackend != LocalTextureBackend.SYPHON || syphonServer != null) {
+			return;
+		}
+
+		SyphonServer server = null;
+		try {
+			server = new SyphonServer(parent.getPApplet(), SYPHON_SERVER_NAME);
+
+			/*
+			 * Processing-Syphon initializes its native server lazily. hasClients() forces that
+			 * initialization now, during library startup, rather than on the first enabled frame.
+			 */
+			server.hasClients();
+
+			syphonServer = server;
+			localTextureInitialized = true;
+			logger.info("Syphon backend initialized and ready; frame publication remains disabled.");
+		} catch (Exception | LinkageError error) {
+			if (server != null) {
+				try {
+					server.stop();
+				} catch (Exception | LinkageError cleanupError) {
+					logger.warning(
+							"Failed to release Syphon after initialization error: "
+									+ rootCauseMessage(cleanupError)
+					);
+				}
+			}
+
+			syphonServer = null;
+			syphonEnabled = false;
+			markLocalTextureUnavailable("Syphon", error);
+		}
+	}
+
+	/**
+	 * Creates the Windows Spout sender without enabling publication.
+	 */
+	private void initializeSpoutBackend() {
+		if (localTextureBackend != LocalTextureBackend.SPOUT || spoutSender != null) {
+			return;
+		}
+
+		Spout sender = null;
+		try {
+			PGraphicsOpenGL graphics = resolveGraphics(spoutView);
+
+			int width;
+			int height;
+
+			if (graphics != null && graphics.width > 0 && graphics.height > 0) {
+				width = graphics.width;
+				height = graphics.height;
+			} else {
+				/*
+				 * Renderer allocation should already be complete, but this fallback keeps startup
+				 * deterministic. sendSpoutFrame() will update the sender to the live dimensions.
+				 */
+				int outputResolution = parent.getOutputResolution();
+				width = outputResolution;
+				height = outputResolution;
+			}
+
+			sender = new Spout(parent.getPApplet());
+			boolean created = sender.createSender(SPOUT_SENDER_NAME, width, height);
+
+			if (!created) {
+				sender.dispose();
+				throw new IllegalStateException("Spout createSender returned false");
+			}
+
+			spoutSender = sender;
+			spoutWidth = width;
+			spoutHeight = height;
+			localTextureInitialized = true;
+
+			logger.info(
+					"Spout backend initialized at " + width + "x" + height
+							+ "; frame publication remains disabled."
+			);
+		} catch (Exception | LinkageError error) {
+			if (sender != null && sender != spoutSender) {
+				try {
+					sender.dispose();
+				} catch (Exception | LinkageError cleanupError) {
+					logger.warning(
+							"Failed to release Spout after initialization error: "
+									+ rootCauseMessage(cleanupError)
+					);
+				}
+			}
+
+			disposeSpoutSender();
+			spoutEnabled = false;
+			spoutWidth = -1;
+			spoutHeight = -1;
+			markLocalTextureUnavailable("Spout", error);
+		}
+	}
+
+	/**
+	 * Marks the platform-local backend unavailable after an initialization failure.
+	 *
+	 * @param backendName human-readable backend name
+	 * @param error initialization failure
+	 */
+	private void markLocalTextureUnavailable(String backendName, Throwable error) {
+		localTextureInitialized = false;
+		localTextureUnavailable = true;
+		localTextureUnavailableReason = rootCauseMessage(error);
+		logger.warning(
+				backendName + " backend initialization failed: " + localTextureUnavailableReason
+		);
 	}
 
 	/**
@@ -251,7 +403,6 @@ public class OutputManager implements PConstants {
 				return;
 			}
 
-			/* Clean up a previous worker failure before retrying. */
 			if (ndiSender != null || ndiWorkerThread != null) {
 				shutdownNDILocked();
 			}
@@ -276,20 +427,20 @@ public class OutputManager implements PConstants {
 				ndiUnavailable = true;
 				ndiUnavailableReason = rootCauseMessage(error);
 
-				logger.log(
-						Level.WARNING,
-						"initNDI failed: NDI unavailable on this platform ("
-								+ System.getProperty("os.name", "unknown") + "/"
-								+ System.getProperty("os.arch", "unknown") + "): "
-								+ ndiUnavailableReason,
-						error
+				logger.warning(
+						"NDI unavailable on "
+								+ System.getProperty("os.name", "unknown")
+								+ "/"
+								+ System.getProperty("os.arch", "unknown")
+								+ ": "
+								+ ndiUnavailableReason
 				);
 			}
 		}
 	}
 
 	/**
-	 * Creates the fixed NDI frame pool after the native Devolay library has initialized successfully.
+	 * Creates the fixed NDI frame pool after Devolay initializes successfully.
 	 */
 	private void initializeNdiSlots() {
 		ndiFreeSlots.clear();
@@ -303,123 +454,10 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * Initializes the Windows Spout sender without enabling it.
+	 * Toggles an output without coupling it to preview selection or another output.
 	 *
-	 * <p>Initialization is performed once; it creates the native Spout sender and registers it.
-	 * The sender remains idle until {@link #toggleOutput(String)} enables transmission.
-	 * Dimensions are resolved from the currently active output graphics when available;
-	 * if no renderer has been allocated yet, the configured output resolution is used.</p>
-	 */
-	private void initializeSpoutOnce() {
-		if (spoutInitialized) {
-			return;
-		}
-
-		if (localTextureBackend != LocalTextureBackend.SPOUT) {
-			return;
-		}
-
-		try {
-			PGraphicsOpenGL graphics = resolveGraphics(spoutView);
-			int width;
-			int height;
-			if (graphics != null && graphics.width > 0 && graphics.height > 0) {
-				width  = graphics.width;
-				height = graphics.height;
-			} else {
-				int res = parent.getOutputResolution();
-				width  = res;
-				height = res;
-				logger.info("Spout initializing with configured output resolution (" + res + "px).");
-			}
-
-			Spout sender = new Spout(parent.getPApplet());
-			boolean created = sender.createSender(SPOUT_SENDER_NAME, width, height);
-
-			if (!created) {
-				sender.dispose();
-				logger.warning("Spout sender creation failed.");
-				return;
-			}
-
-			spoutSender = sender;
-			spoutWidth  = width;
-			spoutHeight = height;
-			spoutInitialized = true;
-			/* Do NOT set spoutEnabled. User must toggle output to enable transmission. */
-
-			logger.info("Spout initialized at " + spoutWidth + "x" + spoutHeight +
-					"; transmission disabled until toggled on.");
-		} catch (Exception | LinkageError error) {
-			spoutInitialized = false;
-			disposeSpoutSender();
-			logger.log(Level.WARNING, "initializeSpoutOnce failed: Spout unavailable on this platform.", error);
-		}
-	}
-
-	/**
-	 * Initializes the macOS Syphon server without enabling it.
-	 *
-	 * <p>Initialization is performed once; it creates the Syphon server wrapper and forces
-	 * the native JSyphonServer to be created by calling {@code hasClients()}.
-	 * The server remains idle until {@link #toggleOutput(String)} enables transmission.
-	 * Resolution-agnostic: the server reads texture dimensions on each sent frame.</p>
-	 */
-	private void initializeSyphonOnce() {
-		if (syphonInitialized) {
-			return;
-		}
-
-		if (localTextureBackend != LocalTextureBackend.SYPHON) {
-			return;
-		}
-
-		try {
-			syphonServer = new SyphonServer(parent.getPApplet(), SYPHON_SERVER_NAME);
-			/* Force native JSyphonServer to be created now, not on the first sendImage(). */
-			syphonServer.hasClients();
-			syphonInitialized = true;
-			/* Do NOT set syphonEnabled. User must toggle output to enable transmission. */
-			logger.info("Syphon server initialized for macOS; transmission disabled until toggled on.");
-		} catch (Exception | LinkageError error) {
-			syphonInitialized = false;
-			stopSyphonServer();
-			logger.log(Level.WARNING, "initializeSyphonOnce failed: Syphon unavailable on this platform.", error);
-		}
-	}
-
-	/**
-	 * Initializes the platform-local texture backend (Syphon on macOS, Spout on Windows).
-	 *
-	 * <p>This method must be called once by the library after renderer managers are initialized
-	 * and the OpenGL context is fully active. It performs all resource allocation and native
-	 * server registration, but does NOT enable transmission. The output remains dormant until
-	 * {@link #toggleOutput(String)} is called by the user.</p>
-	 *
-	 * <p>On unsupported platforms, this is a no-op.</p>
-	 */
-	public void initializeLocalTextureOutput() {
-		switch (localTextureBackend) {
-			case SYPHON:
-				initializeSyphonOnce();
-				break;
-			case SPOUT:
-				initializeSpoutOnce();
-				break;
-			case NONE:
-			default:
-				break;
-		}
-	}
-
-	/**
-	 * Toggles NDI, Spout, or Syphon transmission on/off.
-	 *
-	 * <p>For NDI: creates or destroys the worker thread (expensive, deferred resource cleanup).</p>
-	 *
-	 * <p>For Syphon and Spout: only toggles a flag. The backend remains initialized and ready;
-	 * transmission is simply disabled or re-enabled on the next call to {@link #sendOutput()}.
-	 * No resource destruction or recreation occurs. This is a fast O(1) operation.</p>
+	 * <p>NDI owns a dynamic worker lifecycle. Syphon and Spout do not: their native backend is
+	 * prepared once and the toggle changes only the publication boolean.</p>
 	 *
 	 * @param method output identifier: {@code "ndi"}, {@code "spout"}, or {@code "syphon"}
 	 */
@@ -445,12 +483,7 @@ public class OutputManager implements PConstants {
 					logger.warning("Spout toggle ignored: unsupported platform.");
 					return;
 				}
-				if (!spoutInitialized) {
-					logger.warning("Spout not initialized; cannot toggle.");
-					return;
-				}
-				spoutEnabled = !spoutEnabled;
-				logger.info("Spout transmission " + (spoutEnabled ? "enabled" : "disabled") + ".");
+				toggleSpoutPublication();
 				break;
 
 			case "syphon":
@@ -458,12 +491,7 @@ public class OutputManager implements PConstants {
 					logger.warning("Syphon toggle ignored: unsupported platform.");
 					return;
 				}
-				if (!syphonInitialized) {
-					logger.warning("Syphon not initialized; cannot toggle.");
-					return;
-				}
-				syphonEnabled = !syphonEnabled;
-				logger.info("Syphon transmission " + (syphonEnabled ? "enabled" : "disabled") + ".");
+				toggleSyphonPublication();
 				break;
 
 			default:
@@ -472,23 +500,60 @@ public class OutputManager implements PConstants {
 		}
 	}
 
+	/** Toggles Windows Spout publication without destroying or recreating its native sender. */
+	private void toggleSpoutPublication() {
+		if (!localTextureInitialized) {
+			initializeLocalTextureOutput();
+		}
+
+		if (spoutSender == null) {
+			logger.warning(
+					"Spout cannot be enabled: "
+							+ (localTextureUnavailableReason.isEmpty()
+							? "backend is not initialized"
+							: localTextureUnavailableReason)
+			);
+			return;
+		}
+
+		spoutEnabled = !spoutEnabled;
+		logger.info("Spout frame publication " + (spoutEnabled ? "enabled." : "disabled."));
+	}
+
+	/** Toggles macOS Syphon publication without destroying or recreating its native server. */
+	private void toggleSyphonPublication() {
+		if (!localTextureInitialized) {
+			initializeLocalTextureOutput();
+		}
+
+		if (syphonServer == null) {
+			logger.warning(
+					"Syphon cannot be enabled: "
+							+ (localTextureUnavailableReason.isEmpty()
+							? "backend is not initialized"
+							: localTextureUnavailableReason)
+			);
+			return;
+		}
+
+		syphonEnabled = !syphonEnabled;
+		logger.info("Syphon frame publication " + (syphonEnabled ? "enabled." : "disabled."));
+	}
+
 	/**
 	 * Legacy method retained only for source compatibility.
 	 *
-	 * <p>It no longer changes NDI, Syphon, or Spout, because coupling the application preview mode
-	 * to every external output prevents independent routing. Use {@link #setNdiView(zividomelive.ViewType)},
-	 * {@link #setSpoutView(zividomelive.ViewType)}, or {@link #setSyphonView(zividomelive.ViewType)}.</p>
-	 *
-	 * @param viewType ignored; retained only for source compatibility
-	 * @deprecated configure each output independently with the dedicated view setter
+	 * @param viewType ignored; configure each output with its dedicated setter
+	 * @deprecated use {@link #setNdiView(zividomelive.ViewType)},
+	 *             {@link #setSpoutView(zividomelive.ViewType)}, or
+	 *             {@link #setSyphonView(zividomelive.ViewType)}
 	 */
 	@Deprecated
 	public void setView(zividomelive.ViewType viewType) {
 		if (!legacySetViewWarningLogged) {
 			legacySetViewWarningLogged = true;
 			logger.warning(
-					"OutputManager.setView() is deprecated and no longer changes external outputs. "
-							+ "Configure NDI and the platform-local texture output independently."
+					"OutputManager.setView() is deprecated and no longer changes external outputs."
 			);
 		}
 	}
@@ -496,18 +561,15 @@ public class OutputManager implements PConstants {
 	/**
 	 * Sends one frame to every enabled output.
 	 *
-	 * <p>This method must be called once per Processing draw cycle, after all relevant PGraphics
-	 * instances have completed {@code endDraw()}.</p>
-	 *
-	 * <p>The platform-local GPU texture is published first. NDI capture occurs afterwards, so its
-	 * required GPU-to-CPU readback cannot delay the current Syphon/Spout publication.</p>
+	 * <p>This method must run once per Processing draw cycle, after all relevant graphics targets
+	 * have completed {@code endDraw()}. The local GPU output is published before NDI readback.</p>
 	 */
 	public void sendOutput() {
 		sendLocalTextureFrame();
 		captureNdiFrame();
 	}
 
-	/** Publishes the single platform-local texture output directly on the Processing/OpenGL thread. */
+	/** Publishes the single platform-local texture output on the Processing/OpenGL thread. */
 	private void sendLocalTextureFrame() {
 		switch (localTextureBackend) {
 			case SPOUT:
@@ -522,7 +584,11 @@ public class OutputManager implements PConstants {
 		}
 	}
 
-	/** Direct GPU-to-GPU Spout publication. */
+	/**
+	 * Publishes the selected graphics target directly through Spout.
+	 *
+	 * <p>No pixel readback or intermediate graphics target is created.</p>
+	 */
 	private void sendSpoutFrame() {
 		if (!spoutEnabled || spoutSender == null || !isWindows) {
 			return;
@@ -542,12 +608,19 @@ public class OutputManager implements PConstants {
 
 			spoutSender.sendTexture(graphics);
 		} catch (Exception | LinkageError error) {
-			logger.log(Level.WARNING, "Spout frame publication failed; Spout has been disabled.", error);
-			shutdownSpout();
+			spoutEnabled = false;
+			logger.warning(
+					"Spout frame publication failed and was disabled without destroying the backend: "
+							+ rootCauseMessage(error)
+			);
 		}
 	}
 
-	/** Direct GPU-to-GPU Syphon publication. */
+	/**
+	 * Publishes the selected graphics target directly through Syphon.
+	 *
+	 * <p>No pixel readback or intermediate graphics target is created.</p>
+	 */
 	private void sendSyphonFrame() {
 		if (!syphonEnabled || syphonServer == null || !isMacOS) {
 			return;
@@ -559,17 +632,52 @@ public class OutputManager implements PConstants {
 				syphonServer.sendImage(graphics);
 			}
 		} catch (Exception | LinkageError error) {
-			logger.log(Level.WARNING, "Syphon frame publication failed; Syphon has been disabled.", error);
-			shutdownSyphon();
+			syphonEnabled = false;
+			logger.warning(
+					"Syphon frame publication failed and was disabled without destroying the backend: "
+							+ rootCauseMessage(error)
+			);
 		}
 	}
 
 	/**
-	 * Captures the selected NDI PGraphics into a pooled CPU slot.
+	 * Notifies the manager that renderer dimensions changed.
 	 *
-	 * <p>{@code loadPixels()} must remain on the Processing/OpenGL thread. The expensive ARGB-to-RGBA
-	 * conversion and synchronous NDI send are performed by the dedicated worker. A bounded latest-frame
-	 * policy prevents an overloaded NDI receiver from accumulating latency or blocking Syphon/Spout.</p>
+	 * <p>Syphon requires no action because each frame carries its texture dimensions. Spout uses
+	 * {@code updateSender()} on the next published frame; its sender is never destroyed or recreated.</p>
+	 *
+	 * @param newResolution new configured output resolution in pixels
+	 */
+	public void notifyResolutionChanged(int newResolution) {
+		if (newResolution <= 0) {
+			logger.warning("Ignoring invalid output resolution: " + newResolution);
+			return;
+		}
+
+		if (localTextureBackend == LocalTextureBackend.SPOUT && spoutSender != null) {
+			PGraphicsOpenGL graphics = resolveGraphics(spoutView);
+			if (graphics != null && graphics.width > 0 && graphics.height > 0) {
+				try {
+					spoutSender.updateSender(graphics.width, graphics.height);
+					spoutWidth = graphics.width;
+					spoutHeight = graphics.height;
+				} catch (Exception | LinkageError error) {
+					spoutEnabled = false;
+					logger.warning(
+							"Spout resolution update failed; publication was disabled without "
+									+ "destroying the sender: "
+									+ rootCauseMessage(error)
+					);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Captures the selected NDI graphics target into a pooled CPU slot.
+	 *
+	 * <p>{@code loadPixels()} must remain on the Processing/OpenGL thread. Conversion and synchronous
+	 * NDI sending are performed by the dedicated worker. The latest-frame policy keeps latency bounded.</p>
 	 */
 	private void captureNdiFrame() {
 		if (!ndiEnabled || ndiSender == null || !ndiWorkerRunning) {
@@ -613,7 +721,7 @@ public class OutputManager implements PConstants {
 				ndiCapturedFrames.incrementAndGet();
 			}
 		} catch (RuntimeException error) {
-			logger.log(Level.WARNING, "NDI frame capture failed.", error);
+			logger.warning("NDI frame capture failed: " + rootCauseMessage(error));
 		} finally {
 			if (!queued) {
 				ndiFreeSlots.offer(slot);
@@ -622,8 +730,12 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * Obtains a free slot. If all slots are occupied, the oldest frame still waiting in the ready
-	 * queue is replaced, preserving low latency without touching the slot currently used by the worker.
+	 * Obtains a slot for the next NDI capture.
+	 *
+	 * <p>If no slot is free, the oldest frame still waiting in the ready queue is replaced. The slot
+	 * currently owned by the worker is never touched.</p>
+	 *
+	 * @return slot available for capture, or {@code null} when all slots are unavailable
 	 */
 	private NdiFrameSlot acquireNdiCaptureSlot() {
 		NdiFrameSlot slot = ndiFreeSlots.poll();
@@ -638,7 +750,12 @@ public class OutputManager implements PConstants {
 		return slot;
 	}
 
-	/** Queues the newest NDI frame, replacing the oldest pending frame if required. */
+	/**
+	 * Queues the newest NDI frame, replacing the oldest pending frame when required.
+	 *
+	 * @param slot prepared NDI slot
+	 * @return {@code true} if the slot was queued
+	 */
 	private boolean offerLatestNdiFrame(NdiFrameSlot slot) {
 		if (ndiReadySlots.offer(slot)) {
 			return true;
@@ -670,11 +787,6 @@ public class OutputManager implements PConstants {
 				}
 
 				slot.prepareDevolayFrame();
-
-				/*
-				 * Synchronous send is intentional here: it runs only on the dedicated worker and makes
-				 * ownership of each pooled frame/buffer explicit. The render thread remains independent.
-				 */
 				sender.sendVideoFrame(slot.frame);
 				ndiSentFrames.incrementAndGet();
 			} catch (InterruptedException interrupted) {
@@ -685,7 +797,7 @@ public class OutputManager implements PConstants {
 			} catch (Exception | LinkageError error) {
 				ndiEnabled = false;
 				ndiWorkerRunning = false;
-				logger.log(Level.WARNING, "NDI sender worker failed; NDI has been disabled.", error);
+				logger.warning("NDI sender worker failed and was disabled: " + rootCauseMessage(error));
 			} finally {
 				if (slot != null) {
 					ndiFreeSlots.offer(slot);
@@ -703,17 +815,23 @@ public class OutputManager implements PConstants {
 	 */
 	public void setNdiFrameRate(int numerator, int denominator) {
 		if (numerator <= 0 || denominator <= 0) {
-			throw new IllegalArgumentException("NDI frame-rate numerator and denominator must be positive.");
+			throw new IllegalArgumentException(
+					"NDI frame-rate numerator and denominator must be positive."
+			);
 		}
+
 		ndiFrameRateNumerator = numerator;
 		ndiFrameRateDenominator = denominator;
 	}
 
-	/** Shuts down all output methods. */
+	/**
+	 * Shuts down every output and releases native resources.
+	 *
+	 * <p>This is the only normal lifecycle path that destroys Syphon or Spout.</p>
+	 */
 	public void shutdownOutputs() {
 		shutdownNDI();
-		shutdownSpout();
-		shutdownSyphon();
+		releaseLocalTextureBackend();
 		logger.info("All output services have been shut down.");
 	}
 
@@ -750,7 +868,50 @@ public class OutputManager implements PConstants {
 		logger.info("NDI output shut down.");
 	}
 
-	/** Closes every pooled DevolayVideoFrame. */
+	/** Releases the platform-local backend during final application shutdown. */
+	private void releaseLocalTextureBackend() {
+		spoutEnabled = false;
+		syphonEnabled = false;
+
+		disposeSpoutSender();
+		stopSyphonServer();
+
+		spoutWidth = -1;
+		spoutHeight = -1;
+		localTextureInitialized = false;
+	}
+
+	/** Releases the native Windows Spout sender, if present. */
+	private void disposeSpoutSender() {
+		Spout sender = spoutSender;
+		spoutSender = null;
+
+		if (sender != null) {
+			try {
+				sender.dispose();
+				logger.info("Spout backend released.");
+			} catch (Exception | LinkageError error) {
+				logger.warning("Failed to dispose the Spout sender: " + rootCauseMessage(error));
+			}
+		}
+	}
+
+	/** Releases the native macOS Syphon server, if present. */
+	private void stopSyphonServer() {
+		SyphonServer server = syphonServer;
+		syphonServer = null;
+
+		if (server != null) {
+			try {
+				server.stop();
+				logger.info("Syphon backend released.");
+			} catch (Exception | LinkageError error) {
+				logger.warning("Failed to stop the Syphon server: " + rootCauseMessage(error));
+			}
+		}
+	}
+
+	/** Closes every pooled Devolay frame. */
 	private void closeNdiSlots() {
 		for (int index = 0; index < ndiSlots.length; index++) {
 			NdiFrameSlot slot = ndiSlots[index];
@@ -760,7 +921,7 @@ public class OutputManager implements PConstants {
 				try {
 					slot.close();
 				} catch (RuntimeException | LinkageError error) {
-					logger.log(Level.FINE, "Failed to close an NDI frame slot cleanly.", error);
+					logger.warning("Failed to close an NDI frame slot: " + rootCauseMessage(error));
 				}
 			}
 		}
@@ -775,84 +936,60 @@ public class OutputManager implements PConstants {
 			try {
 				sender.close();
 			} catch (RuntimeException | LinkageError error) {
-				logger.log(Level.FINE, "Failed to close the NDI sender cleanly.", error);
-			}
-		}
-	}
-
-	/** Releases the Windows Spout sender. */
-	private void shutdownSpout() {
-		spoutEnabled = false;
-		disposeSpoutSender();
-		spoutWidth = -1;
-		spoutHeight = -1;
-	}
-
-	private void disposeSpoutSender() {
-		Spout sender = spoutSender;
-		spoutSender = null;
-
-		if (sender != null) {
-			try {
-				sender.dispose();
-				logger.info("Spout output shut down.");
-			} catch (Exception | LinkageError error) {
-				logger.log(Level.FINE, "Failed to dispose the Spout sender cleanly.", error);
-			}
-		}
-	}
-
-	/** Stops the macOS Syphon server. */
-	private void shutdownSyphon() {
-		syphonEnabled = false;
-		stopSyphonServer();
-	}
-
-	private void stopSyphonServer() {
-		SyphonServer server = syphonServer;
-		syphonServer = null;
-
-		if (server != null) {
-			try {
-				server.stop();
-				logger.info("Syphon output shut down.");
-			} catch (Exception | LinkageError error) {
-				logger.log(Level.FINE, "Failed to stop the Syphon server cleanly.", error);
+				logger.warning("Failed to close the NDI sender: " + rootCauseMessage(error));
 			}
 		}
 	}
 
 	/**
-	 * Reports whether the NDI sender and its worker are active.
+	 * Reports whether NDI is enabled and ready to send frames.
 	 *
-	 * @return {@code true} when NDI is enabled and ready to send frames
+	 * @return {@code true} when NDI is active
 	 */
 	public boolean isNdiEnabled() {
 		return ndiEnabled && ndiSender != null && ndiWorkerRunning;
 	}
 
 	/**
-	 * Reports whether the Windows Spout sender is active.
+	 * Reports whether Spout publication is enabled.
 	 *
-	 * @return {@code true} when running on Windows with Spout enabled and initialized
+	 * @return {@code true} on Windows when Spout is initialized and enabled
 	 */
 	public boolean isSpoutEnabled() {
 		return isWindows && spoutEnabled && spoutSender != null;
 	}
 
 	/**
-	 * Reports whether the macOS Syphon server is active.
+	 * Reports whether Syphon publication is enabled.
 	 *
-	 * @return {@code true} when running on macOS with Syphon enabled and initialized
+	 * @return {@code true} on macOS when Syphon is initialized and enabled
 	 */
 	public boolean isSyphonEnabled() {
 		return isMacOS && syphonEnabled && syphonServer != null;
 	}
 
 	/**
+	 * Reports whether the platform-local backend has been prepared.
+	 *
+	 * @return {@code true} when Syphon or Spout initialization completed successfully
+	 */
+	public boolean isLocalTextureInitialized() {
+		return localTextureBackend != LocalTextureBackend.NONE && localTextureInitialized;
+	}
+
+	/**
+	 * Reports whether platform-local texture sharing is available.
+	 *
+	 * @return {@code true} when a supported backend exists and has not failed initialization
+	 */
+	public boolean isLocalTextureAvailable() {
+		return localTextureBackend != LocalTextureBackend.NONE && !localTextureUnavailable;
+	}
+
+	/**
 	 * Selects the view sent through NDI.
 	 *
-	 * @param view view to route to the NDI output
+	 * @param view view to route to NDI
 	 */
 	public void setNdiView(zividomelive.ViewType view) {
 		setViewForOutput(OutputType.NDI, view);
@@ -861,7 +998,7 @@ public class OutputManager implements PConstants {
 	/**
 	 * Selects the view sent through Spout.
 	 *
-	 * @param view view to route to the Spout output
+	 * @param view view to route to Spout
 	 */
 	public void setSpoutView(zividomelive.ViewType view) {
 		setViewForOutput(OutputType.SPOUT, view);
@@ -870,14 +1007,14 @@ public class OutputManager implements PConstants {
 	/**
 	 * Selects the view sent through Syphon.
 	 *
-	 * @param view view to route to the Syphon output
+	 * @param view view to route to Syphon
 	 */
 	public void setSyphonView(zividomelive.ViewType view) {
 		setViewForOutput(OutputType.SYPHON, view);
 	}
 
 	/**
-	 * Sets the view of whichever local texture backend exists on this platform.
+	 * Sets the view of the valid platform-local texture backend.
 	 *
 	 * @param view view to route to Syphon on macOS or Spout on Windows
 	 */
@@ -901,10 +1038,9 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * Returns the view of the platform-local texture backend.
+	 * Returns the view routed to the platform-local texture backend.
 	 *
-	 * @return Spout view on Windows, Syphon view on macOS, or
-	 *         {@link zividomelive.ViewType#FISHEYE_DOMEMASTER} when no local backend exists
+	 * @return Spout view on Windows, Syphon view on macOS, or fisheye when unsupported
 	 */
 	public zividomelive.ViewType getLocalTextureView() {
 		switch (localTextureBackend) {
@@ -919,7 +1055,7 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * Returns a stable backend name for UI and diagnostics.
+	 * Returns a stable local-backend name for UI and diagnostics.
 	 *
 	 * @return {@code "Spout"}, {@code "Syphon"}, or {@code "None"}
 	 */
@@ -936,38 +1072,39 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * Returns the number of NDI frames copied from Processing into an available slot.
+	 * Returns the number of NDI frames copied into capture slots.
 	 *
-	 * @return total captured NDI frames for the lifetime of this manager
+	 * @return total captured NDI frames
 	 */
 	public long getNdiCapturedFrames() {
 		return ndiCapturedFrames.get();
 	}
 
 	/**
-	 * Returns the number of NDI frames successfully submitted by the sender worker.
+	 * Returns the number of NDI frames sent by the worker.
 	 *
-	 * @return total transmitted NDI frames for the lifetime of this manager
+	 * @return total sent NDI frames
 	 */
 	public long getNdiSentFrames() {
 		return ndiSentFrames.get();
 	}
 
 	/**
-	 * Returns the number of NDI frames discarded because no free slot was available.
+	 * Returns the number of NDI frames discarded by the bounded latest-frame policy.
 	 *
-	 * @return total dropped NDI frames for the lifetime of this manager
+	 * @return total dropped NDI frames
 	 */
 	public long getNdiDroppedFrames() {
 		return ndiDroppedFrames.get();
 	}
 
 	/**
-	 * Returns whether an enabled external output currently requires the specified high-resolution view.
-	 * The render pipeline can use this to update Cubemap and Standard targets independently of preview mode.
+	 * Reports whether an enabled external output requires a view independently of preview mode.
+	 *
+	 * <p>A backend that is merely initialized does not request rendering. Only an enabled output does.</p>
 	 *
 	 * @param view view whose external-output requirement should be checked
-	 * @return {@code true} if an enabled NDI, Spout, or Syphon output is configured for {@code view}
+	 * @return {@code true} when an enabled output is routed to {@code view}
 	 */
 	public boolean requiresView(zividomelive.ViewType view) {
 		if (view == null) {
@@ -984,9 +1121,9 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * Checks whether NDI or the single valid local texture backend is active.
+	 * Checks whether at least one external output is active.
 	 *
-	 * @return {@code true} when at least one output is enabled and initialized
+	 * @return {@code true} when NDI or the valid local texture output is enabled
 	 */
 	public boolean isActive() {
 		return isNdiEnabled() || isSpoutEnabled() || isSyphonEnabled();
@@ -997,7 +1134,12 @@ public class OutputManager implements PConstants {
 		shutdownOutputs();
 	}
 
-	/** Finds the most specific error message in a nested initialization failure. */
+	/**
+	 * Finds the most specific message in a nested failure.
+	 *
+	 * @param error failure whose root cause should be inspected
+	 * @return root-cause class and message
+	 */
 	private static String rootCauseMessage(Throwable error) {
 		Throwable root = error;
 		while (root.getCause() != null && root.getCause() != root) {
@@ -1012,8 +1154,10 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * A reusable NDI frame slot. The Processing ARGB copy is filled on the draw thread; conversion and
-	 * Devolay submission happen exclusively on the NDI worker.
+	 * Reusable NDI frame slot.
+	 *
+	 * <p>The Processing ARGB copy is written on the draw thread. RGBA conversion and Devolay
+	 * submission occur exclusively on the NDI worker.</p>
 	 */
 	private static final class NdiFrameSlot implements AutoCloseable {
 
@@ -1026,6 +1170,7 @@ public class OutputManager implements PConstants {
 		private int frameRateNumerator;
 		private int frameRateDenominator;
 
+		/** Ensures the slot buffers exactly match the requested frame dimensions. */
 		private void ensureCapacity(int requiredWidth, int requiredHeight) {
 			int requiredPixels = Math.multiplyExact(requiredWidth, requiredHeight);
 			int requiredBytes = Math.multiplyExact(requiredPixels, 4);
@@ -1041,6 +1186,7 @@ public class OutputManager implements PConstants {
 			}
 		}
 
+		/** Converts the stored ARGB frame to RGBA and configures the reusable Devolay frame. */
 		private void prepareDevolayFrame() {
 			rgbaBuffer.clear();
 
@@ -1062,7 +1208,7 @@ public class OutputManager implements PConstants {
 			frame.setFrameRate(frameRateNumerator, frameRateDenominator);
 		}
 
-		/** {@inheritDoc} */
+		/** Releases the native Devolay frame and clears Java buffer references. */
 		@Override
 		public void close() {
 			frame.close();
