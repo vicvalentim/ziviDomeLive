@@ -509,16 +509,24 @@ public class zividomelive implements PConstants {
 	 * Updates the render views based on the current view type.
 	 */
 	private void updateRenderViews() {
-		equirectangularRenderer.render(cubemapRenderer.getCubemapFaces());
+		PGraphicsOpenGL[] cubemapFaces = cubemapRenderer.getCubemapFaces();
+
+		// Equirectangular and fisheye are always updated — domemaster depends on equirectangular.
+		equirectangularRenderer.render(cubemapFaces);
 		fisheyeDomemaster.applyShader(equirectangularRenderer.getEquirectangular(), getFov());
 
-		switch (getCurrentView()) {
-			case CUBEMAP:
-				cubemapViewRenderer.drawCubemapToGraphics(cubemapRenderer.getCubemapFaces());
-				break;
-			case STANDARD:
-				standardRenderer.render();
-				break;
+		// Cubemap view: render when selected as preview OR when an output needs it.
+		boolean cubemapRequired = getCurrentView() == zividomelive.ViewType.CUBEMAP
+				|| (outputManager != null && outputManager.requiresView(zividomelive.ViewType.CUBEMAP));
+		if (cubemapRequired) {
+			cubemapViewRenderer.drawCubemapToGraphics(cubemapFaces);
+		}
+
+		// Standard view: render when selected as preview OR when an output needs it.
+		boolean standardRequired = getCurrentView() == zividomelive.ViewType.STANDARD
+				|| (outputManager != null && outputManager.requiresView(zividomelive.ViewType.STANDARD));
+		if (standardRequired) {
+			standardRenderer.render();
 		}
 	}
 

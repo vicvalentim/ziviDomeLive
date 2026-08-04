@@ -11,28 +11,41 @@ import spout.Spout;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * The `OutputManager` class manages the output of frames to various systems such as NDI, Spout, and Syphon.
- * It handles the initialization, configuration, and frame sending for these output methods.
- * Depending on the operating system, it sets up either Spout (Windows) or Syphon (macOS).
+ * Manages frame output to NDI, Spout (Windows), and Syphon (macOS).
+ *
+ * <p>Hot-path design:
+ * <ul>
+ *   <li>Syphon and Spout are sent first — GPU-to-GPU share, no pixel copy, on the draw thread.
+ *   <li>NDI pixels are captured via {@code loadPixels()} on the draw thread, then
+ *       ARGB→RGBA conversion + {@code sendVideoFrame()} run on a shared worker thread.
+ *   <li>Three pre-allocated NDI frame slots rotate round-robin. An {@link AtomicBoolean}
+ *       guard ensures at most one NDI task is queued at any time; excess frames are dropped
+ *       (counted via {@link #getNdiDroppedFrames()}) to keep latency bounded.
+ *   <li>Graphics references are resolved per-frame so they are always valid after
+ *       a {@code resetGraphics()} call.
+ * </ul>
  */
 public class OutputManager implements PConstants {
 
-	/** Enum representing different output types. */
+	/** Supported output types. */
 	public enum OutputType {
-		/** NDI output type. */
+		/** NDI output (cross-platform, pixel-copy path). */
 		NDI,
-		/** Spout output type. */
+		/** Spout output (Windows only, GPU texture share). */
 		SPOUT,
-		/** Syphon output type. */
+		/** Syphon output (macOS only, GPU texture share). */
 		SYPHON
 	}
 
+	private static final int NDI_SLOT_COUNT = 3;
+
 	private final Logger logger = LogManager.getLogger();
-	private zividomelive.ViewType currentView;
 	private final Map<OutputType, zividomelive.ViewType> outputViews;
 	private final zividomelive parent;
 
@@ -40,91 +53,108 @@ public class OutputManager implements PConstants {
 	private Spout spoutSender;
 	private SyphonServer syphonServer;
 
-	private boolean ndiEnabled = false;
-	private boolean spoutEnabled = false;
+	private boolean ndiEnabled    = false;
+	private boolean spoutEnabled  = false;
 	private boolean syphonEnabled = false;
 
-	/** Per-type cached graphics reference — refreshed on init/reset/view change, not per frame. */
-	private final Map<OutputType, PGraphicsOpenGL> cachedGraphics = new EnumMap<>(OutputType.class);
 	private final boolean isMacOS;
 	private final boolean isWindows;
-	private ByteBuffer ndiBuffer;
-	private DevolayVideoFrame reusableFrame; // Reusable NDI video frame
+
+	// NDI triple-buffering
+	private final DevolayVideoFrame[] ndiFrames  = new DevolayVideoFrame[NDI_SLOT_COUNT];
+	private final ByteBuffer[]        ndiBuffers = new ByteBuffer[NDI_SLOT_COUNT];
+	private int ndiSlot = 0;
+	private final AtomicBoolean ndiTaskPending = new AtomicBoolean(false);
+
+	// NDI metrics
+	private final AtomicLong ndiCaptured = new AtomicLong(0);
+	private final AtomicLong ndiSent     = new AtomicLong(0);
+	private final AtomicLong ndiDropped  = new AtomicLong(0);
+
+	// Spout resolution change tracking
+	private int spoutLastWidth  = 0;
+	private int spoutLastHeight = 0;
 
 	/**
-	 * Constructs the OutputManager, initializing it with the parent application instance.
-	 * Determines the OS type to configure either Spout or Syphon.
+	 * Constructs the OutputManager.
 	 *
-	 * @param parent the zividomelive instance representing the main application
+	 * @param parent the zividomelive instance
 	 */
 	public OutputManager(zividomelive parent) {
 		this.parent = parent;
-		this.currentView = zividomelive.ViewType.FISHEYE_DOMEMASTER;
 		this.outputViews = new EnumMap<>(OutputType.class);
-		
-		// Initialize output views with default value
 		for (OutputType type : OutputType.values()) {
 			outputViews.put(type, zividomelive.ViewType.FISHEYE_DOMEMASTER);
 		}
-
 		String osName = System.getProperty("os.name").toLowerCase();
-		this.isMacOS = osName.contains("mac");
+		this.isMacOS   = osName.contains("mac");
 		this.isWindows = osName.contains("win");
 	}
 
+	// -------------------------------------------------------------------------
+	// View management
+	// -------------------------------------------------------------------------
+
 	/**
-	 * Gets the view type configured for a specific output type.
+	 * Returns the view type configured for a specific output type.
 	 *
 	 * @param outputType the output type to query
-	 * @return the ViewType configured for the output, or FISHEYE_DOMEMASTER if not set
+	 * @return the ViewType, or FISHEYE_DOMEMASTER if not set
 	 */
 	public zividomelive.ViewType getViewForOutput(OutputType outputType) {
 		return outputViews.getOrDefault(outputType, zividomelive.ViewType.FISHEYE_DOMEMASTER);
 	}
 
 	/**
-	 * Sets the view type for a specific output type and refreshes the cached graphics reference.
+	 * Configures which view a specific output type should send.
 	 *
 	 * @param outputType the output type to configure
-	 * @param viewType the ViewType to set
+	 * @param viewType   the ViewType to assign
 	 */
 	public void setViewForOutput(OutputType outputType, zividomelive.ViewType viewType) {
 		if (outputType != null && viewType != null) {
 			outputViews.put(outputType, viewType);
-			refreshCachedGraphics(outputType);
 			logger.info("Set view for " + outputType + " to " + viewType);
 		}
 	}
 
 	/**
-	 * Refreshes the cached PGraphicsOpenGL reference for a single output type.
-	 * Call this after changing the view for that output.
+	 * Legacy single-view setter — kept for API compatibility only.
+	 *
+	 * @param viewType ignored
+	 * @deprecated Use {@link #setViewForOutput(OutputType, zividomelive.ViewType)} per output.
 	 */
-	private void refreshCachedGraphics(OutputType type) {
-		zividomelive.ViewType viewType = outputViews.getOrDefault(type, zividomelive.ViewType.FISHEYE_DOMEMASTER);
-		PGraphicsOpenGL pg = resolveGraphics(viewType);
-		if (pg != null) {
-			cachedGraphics.put(type, pg);
-		} else {
-			cachedGraphics.remove(type);
-		}
+	@Deprecated
+	public void setView(zividomelive.ViewType viewType) {
+		// No-op — each output has its own view via setViewForOutput().
 	}
 
 	/**
-	 * Refreshes cached graphics references for all output types.
-	 * Must be called from the Processing draw thread after renderers are (re)allocated.
+	 * Returns {@code true} if at least one enabled output is configured to receive
+	 * the given view type. Used by {@code updateRenderViews()} to ensure a view is
+	 * rendered even when it is not the active preview mode.
+	 *
+	 * @param viewType the view type to check
+	 * @return true if any enabled output needs this view
 	 */
-	public void refreshCachedGraphics() {
-		for (OutputType type : OutputType.values()) {
-			refreshCachedGraphics(type);
-		}
+	public boolean requiresView(zividomelive.ViewType viewType) {
+		if (viewType == null) return false;
+		if (ndiEnabled    && getViewForOutput(OutputType.NDI)    == viewType) return true;
+		if (spoutEnabled  && getViewForOutput(OutputType.SPOUT)  == viewType) return true;
+		if (syphonEnabled && getViewForOutput(OutputType.SYPHON) == viewType) return true;
+		return false;
 	}
 
-	/**
-	 * Resolves the PGraphicsOpenGL for a given view type from the parent renderers.
-	 */
-	private PGraphicsOpenGL resolveGraphics(zividomelive.ViewType viewType) {
-		if (viewType == null) return null;
+	// -------------------------------------------------------------------------
+	// Per-frame graphics resolution (avoids stale references after resetGraphics)
+	// -------------------------------------------------------------------------
+
+	private PGraphicsOpenGL resolveGraphics(OutputType type) {
+		return resolveGraphicsForView(
+				outputViews.getOrDefault(type, zividomelive.ViewType.FISHEYE_DOMEMASTER));
+	}
+
+	private PGraphicsOpenGL resolveGraphicsForView(zividomelive.ViewType viewType) {
 		try {
 			switch (viewType) {
 				case FISHEYE_DOMEMASTER:
@@ -143,34 +173,32 @@ public class OutputManager implements PConstants {
 					return null;
 			}
 		} catch (Exception e) {
-			logger.log(Level.WARNING, "resolveGraphics failed for " + viewType + ".", e);
+			logger.log(Level.WARNING, "resolveGraphics failed for " + viewType, e);
 			return null;
 		}
 	}
 
-	/**
-	 * Initializes NDI output if it is not already enabled.
-	 */
+	// -------------------------------------------------------------------------
+	// Initialization / shutdown
+	// -------------------------------------------------------------------------
+
 	private void initNDI() {
-		if (!ndiEnabled && ndiSender == null) {
-			try {
-				ndiSender = new DevolaySender("ziviDomeLive NDI Output");
-				reusableFrame = new DevolayVideoFrame();
-				ndiEnabled = true;
-				logger.info("NDI output initialized.");
-			} catch (ExceptionInInitializerError | UnsatisfiedLinkError | IllegalStateException e) {
-				ndiSender = null;
-				reusableFrame = null;
-				ndiEnabled = false;
-				logger.log(Level.WARNING, "initNDI failed: NDI unavailable on this platform.", e);
+		if (ndiEnabled || ndiSender != null) return;
+		try {
+			ndiSender = new DevolaySender("ziviDomeLive NDI Output");
+			for (int i = 0; i < NDI_SLOT_COUNT; i++) {
+				ndiFrames[i] = new DevolayVideoFrame();
 			}
+			ndiEnabled = true;
+			logger.info("NDI output initialized.");
+		} catch (LinkageError | IllegalStateException e) {
+			ndiSender = null;
+			Arrays.fill(ndiFrames, null);
+			ndiEnabled = false;
+			logger.log(Level.WARNING, "initNDI failed: NDI unavailable on this platform.", e);
 		}
 	}
 
-	/**
-	 * Sets up Syphon (for macOS) or Spout (for Windows) based on the OS.
-	 * Initializes the corresponding output method if the platform is supported.
-	 */
 	private void initSpout() {
 		try {
 			if (spoutSender == null) {
@@ -200,173 +228,173 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * Toggles the specified output method (NDI, Spout, or Syphon) on or off.
+	 * Toggles the specified output method on or off.
 	 *
-	 * @param method the name of the output method to toggle ("ndi", "spout", "syphon")
+	 * @param method "ndi", "spout", or "syphon" (case-insensitive)
 	 */
 	public void toggleOutput(String method) {
 		if (method == null || method.trim().isEmpty()) {
 			logger.warning("Ignoring output toggle request with empty method.");
 			return;
 		}
-		String normalizedMethod = method.trim().toLowerCase(Locale.ROOT);
-
-		switch (normalizedMethod) {
+		switch (method.trim().toLowerCase(Locale.ROOT)) {
 			case "ndi":
-				if (!ndiEnabled) {
-					initNDI();
-				} else {
-					shutdownNDI();
-				}
+				if (!ndiEnabled) initNDI(); else shutdownNDI();
 				break;
 			case "spout":
 				if (!isWindows) {
 					logger.warning("Spout toggle ignored: unsupported platform.");
 					return;
 				}
-				if (!spoutEnabled) {
-					initSpout();
-				} else {
-					shutdownSpout();
-				}
+				if (!spoutEnabled) initSpout(); else shutdownSpout();
 				break;
 			case "syphon":
 				if (!isMacOS) {
 					logger.warning("Syphon toggle ignored: unsupported platform.");
 					return;
 				}
-				if (!syphonEnabled) {
-					initSyphon();
-				} else {
-					shutdownSyphon();
-				}
+				if (!syphonEnabled) initSyphon(); else shutdownSyphon();
 				break;
 			default:
-				logger.warning("Unknown output method: " + normalizedMethod);
-				break;
+				logger.warning("Unknown output method: " + method.trim());
 		}
 	}
 
+	// -------------------------------------------------------------------------
+	// sendOutput — hot path called every draw frame
+	// -------------------------------------------------------------------------
+
 	/**
-	 * Sets the view type for the output (legacy single-view setter).
-	 * Updates all output types to the given view and refreshes the cache.
+	 * Sends the current rendered frame to all active outputs.
 	 *
-	 * @param viewType the desired view type
-	 */
-	public void setView(zividomelive.ViewType viewType) {
-		if (currentView != viewType) {
-			currentView = viewType;
-			for (OutputType type : OutputType.values()) {
-				outputViews.put(type, viewType);
-			}
-			refreshCachedGraphics();
-			logger.info("Current view set to " + currentView);
-		}
-	}
-
-	/**
-	 * Sends the current frame to all enabled output methods.
-	 * Syphon and Spout use cached PGraphicsOpenGL references (GPU-to-GPU, no pixel copy).
-	 * NDI copies pixels via loadPixels() and sends asynchronously via ThreadManager.
+	 * <p>Must be called from the Processing draw thread after all render views have
+	 * been updated. Syphon and Spout are processed first (GPU texture share, minimal
+	 * overhead). NDI pixels are captured here and forwarded to a worker thread.
 	 */
 	public void sendOutput() {
-		if (ndiEnabled && ndiSender != null) {
-			try {
-				PGraphicsOpenGL ndiPg = cachedGraphics.get(OutputType.NDI);
-				DevolayVideoFrame ndiFrame = ndiPg == null ? null : createNDIFrame(ndiPg);
-				if (ndiFrame != null) {
-					ThreadManager.submitRunnable(() -> {
-						synchronized (this) {
-							if (ndiSender != null && ndiEnabled) {
-								ndiSender.sendVideoFrameAsync(ndiFrame);
-							}
-						}
-					});
-				}
-			} catch (Exception e) {
-				logger.log(Level.WARNING, "sendOutput skipped NDI frame due to error.", e);
-			}
-		}
-
-		if (spoutEnabled && spoutSender != null && isWindows) {
-			try {
-				PGraphicsOpenGL spoutPg = cachedGraphics.get(OutputType.SPOUT);
-				if (spoutPg != null) {
-					spoutSender.sendTexture(spoutPg);
-				}
-			} catch (Exception e) {
-				logger.log(Level.WARNING, "sendOutput skipped Spout frame due to error.", e);
-			}
-		}
-
+		// Syphon — macOS GPU-to-GPU, remains on draw thread
 		if (syphonEnabled && syphonServer != null && isMacOS) {
 			try {
-				PGraphicsOpenGL syphonPg = cachedGraphics.get(OutputType.SYPHON);
-				if (syphonPg != null) {
-					syphonServer.sendImage(syphonPg);
+				PGraphicsOpenGL pg = resolveGraphics(OutputType.SYPHON);
+				if (pg != null) {
+					syphonServer.sendImage(pg);
 				}
 			} catch (Exception e) {
-				logger.log(Level.WARNING, "sendOutput skipped Syphon frame due to error.", e);
+				logger.log(Level.WARNING, "sendOutput: Syphon error.", e);
+			}
+		}
+
+		// Spout — Windows GPU-to-GPU, remains on draw thread
+		if (spoutEnabled && spoutSender != null && isWindows) {
+			try {
+				PGraphicsOpenGL pg = resolveGraphics(OutputType.SPOUT);
+				if (pg != null) {
+					if (pg.width != spoutLastWidth || pg.height != spoutLastHeight) {
+						spoutLastWidth  = pg.width;
+						spoutLastHeight = pg.height;
+						logger.info("Spout resolution: " + spoutLastWidth + "×" + spoutLastHeight);
+					}
+					spoutSender.sendTexture(pg);
+				}
+			} catch (Exception e) {
+				logger.log(Level.WARNING, "sendOutput: Spout error.", e);
+			}
+		}
+
+		// NDI — pixel capture on draw thread, conversion + send on worker thread
+		if (ndiEnabled && ndiSender != null) {
+			try {
+				PGraphicsOpenGL pg = resolveGraphics(OutputType.NDI);
+				if (pg != null && pg.width > 0 && pg.height > 0) {
+					pg.loadPixels(); // must stay on draw thread
+					int[] pixels = pg.pixels;
+					if (pixels != null && pixels.length == pg.width * pg.height) {
+						submitNDIFrame(pixels, pg.width, pg.height);
+					}
+				}
+			} catch (Exception e) {
+				logger.log(Level.WARNING, "sendOutput: NDI capture error.", e);
 			}
 		}
 	}
 
 	/**
-	 * Creates an NDI video frame from the provided PGraphics in RGBA format.
-	 * The Processing render target is already finalized by the render pipeline, so
-	 * this method must not reopen the draw context with beginDraw/endDraw.
-	 *
-	 * @param pg the PGraphics instance containing the image data
-	 * @return the created NDI video frame
+	 * Copies pixel data into the next NDI slot and submits a worker task to send it.
+	 * Drops the frame (incrementing the dropped counter) if the previous task is still running.
 	 */
- 	private synchronized DevolayVideoFrame createNDIFrame(PGraphicsOpenGL pg) {
-		if (pg == null || reusableFrame == null) {
-			return null;
-		}
-
-		int width = pg.width;
-		int height = pg.height;
-		if (width <= 0 || height <= 0) {
-			return null;
-		}
-
-		pg.loadPixels();
-		int[] pixels = pg.pixels;
-		if (pixels == null || pixels.length != width * height) {
-			logger.warning("createNDIFrame skipped: pixel buffer is not available.");
-			return null;
-		}
+	private void submitNDIFrame(int[] pixels, int width, int height) {
+		int slot = ndiSlot;
+		ndiSlot = (ndiSlot + 1) % NDI_SLOT_COUNT;
 
 		int byteCount = width * height * 4;
-		if (ndiBuffer == null || ndiBuffer.capacity() != byteCount) {
-			ndiBuffer = ByteBuffer.allocateDirect(byteCount).order(ByteOrder.LITTLE_ENDIAN);
+		if (ndiBuffers[slot] == null || ndiBuffers[slot].capacity() != byteCount) {
+			ndiBuffers[slot] = ByteBuffer.allocateDirect(byteCount).order(ByteOrder.LITTLE_ENDIAN);
+		}
+		ByteBuffer buf = ndiBuffers[slot];
+		buf.clear();
+		for (int px : pixels) {
+			buf.put((byte) ((px >> 16) & 0xFF)); // R
+			buf.put((byte) ((px >> 8)  & 0xFF)); // G
+			buf.put((byte)  (px        & 0xFF)); // B
+			buf.put((byte) ((px >> 24) & 0xFF)); // A
+		}
+		buf.flip();
+
+		DevolayVideoFrame frame = ndiFrames[slot];
+		if (frame == null) return;
+		frame.setResolution(width, height);
+		frame.setData(buf);
+		frame.setFourCCType(DevolayFrameFourCCType.RGBA);
+		frame.setLineStride(width * 4);
+		frame.setFormatType(DevolayFrameFormatType.INTERLEAVED);
+		frame.setFrameRate(60, 1);
+
+		ndiCaptured.incrementAndGet();
+
+		if (!ndiTaskPending.compareAndSet(false, true)) {
+			// Worker busy — drop frame to keep queue bounded
+			ndiDropped.incrementAndGet();
+			return;
 		}
 
-		ndiBuffer.clear();
-		for (int pixel : pixels) {
-			ndiBuffer.put((byte) ((pixel >> 16) & 0xFF));
-			ndiBuffer.put((byte) ((pixel >> 8) & 0xFF));
-			ndiBuffer.put((byte) (pixel & 0xFF));
-			ndiBuffer.put((byte) ((pixel >> 24) & 0xFF));
-		}
-		ndiBuffer.flip();
-
-		reusableFrame.setResolution(width, height);
-		reusableFrame.setData(ndiBuffer);
-		reusableFrame.setFourCCType(DevolayFrameFourCCType.RGBA);
-		reusableFrame.setLineStride(width * 4);
-		reusableFrame.setFormatType(DevolayFrameFormatType.INTERLEAVED);
-		reusableFrame.setFrameRate(150, 1);
-
-		return reusableFrame;
+		final int capturedSlot = slot;
+		ThreadManager.submitRunnable(() -> {
+			try {
+				synchronized (OutputManager.this) {
+					if (ndiSender != null && ndiEnabled) {
+						ndiSender.sendVideoFrame(ndiFrames[capturedSlot]);
+						ndiSent.incrementAndGet();
+					}
+				}
+			} catch (Exception e) {
+				logger.log(Level.WARNING, "NDI sendVideoFrame error.", e);
+			} finally {
+				ndiTaskPending.set(false);
+			}
+		});
 	}
 
-	/**
-	 * Shuts down all output methods (NDI, Spout, Syphon).
-	 */
+	// -------------------------------------------------------------------------
+	// NDI metrics
+	// -------------------------------------------------------------------------
+
+	/** Returns the total number of NDI frames for which loadPixels() was called. */
+	public long getNdiCapturedFrames() { return ndiCaptured.get(); }
+
+	/** Returns the total number of NDI frames successfully transmitted. */
+	public long getNdiSentFrames()     { return ndiSent.get(); }
+
+	/** Returns the number of NDI frames dropped due to a busy worker thread. */
+	public long getNdiDroppedFrames()  { return ndiDropped.get(); }
+
+	// -------------------------------------------------------------------------
+	// Shutdown
+	// -------------------------------------------------------------------------
+
+	/** Shuts down all active output methods and releases resources. */
 	public void shutdownOutputs() {
-		ndiEnabled = false;
-		spoutEnabled = false;
+		ndiEnabled    = false;
+		spoutEnabled  = false;
 		syphonEnabled = false;
 		shutdownNDI();
 		shutdownSpout();
@@ -374,116 +402,77 @@ public class OutputManager implements PConstants {
 		logger.info("All output services have been shut down.");
 	}
 
-	/**
-	 * Shuts down NDI output, releasing resources.
-	 */
 	private synchronized void shutdownNDI() {
 		if (ndiSender != null) {
 			ndiSender.close();
 			ndiSender = null;
-			logger.info("NDI output shut down.");
 		}
-
-		reusableFrame = null;
+		Arrays.fill(ndiFrames,  null);
+		Arrays.fill(ndiBuffers, null);
 		ndiEnabled = false;
+		ndiTaskPending.set(false);
+		logger.info("NDI output shut down.");
 	}
 
-	/**
-	 * Shuts down Spout output, releasing resources.
-	 */
 	private void shutdownSpout() {
 		if (spoutSender != null) {
 			spoutSender.dispose();
 			spoutSender = null;
-			logger.info("Spout output shut down.");
 		}
-		spoutEnabled = false;
+		spoutEnabled    = false;
+		spoutLastWidth  = 0;
+		spoutLastHeight = 0;
+		logger.info("Spout output shut down.");
 	}
 
-	/**
-	 * Shuts down Syphon output, releasing resources.
-	 */
 	private void shutdownSyphon() {
 		if (syphonServer != null) {
 			syphonServer.stop();
 			syphonServer = null;
-			logger.info("Syphon output shut down.");
 		}
 		syphonEnabled = false;
+		logger.info("Syphon output shut down.");
 	}
 
-	// Getter methods for each output method status
+	// -------------------------------------------------------------------------
+	// Status
+	// -------------------------------------------------------------------------
 
-	/**
-	 * Checks if NDI output is enabled.
-	 *
-	 * @return true if NDI output is enabled, false otherwise
-	 */
-	public boolean isNdiEnabled() {
-		return ndiEnabled;
-	}
+	/** Returns true if NDI output is enabled. */
+	public boolean isNdiEnabled()    { return ndiEnabled;    }
 
-	/**
-	 * Checks if Spout output is enabled.
-	 *
-	 * @return true if Spout output is enabled, false otherwise
-	 */
-	public boolean isSpoutEnabled() {
-		return spoutEnabled;
-	}
+	/** Returns true if Spout output is enabled. */
+	public boolean isSpoutEnabled()  { return spoutEnabled;  }
 
-	/**
-	 * Checks if Syphon output is enabled.
-	 *
-	 * @return true if Syphon output is enabled, false otherwise
-	 */
-	public boolean isSyphonEnabled() {
-		return syphonEnabled;
-	}
+	/** Returns true if Syphon output is enabled. */
+	public boolean isSyphonEnabled() { return syphonEnabled; }
 
-	/**
-	 * Sets the view type for NDI output.
-	 *
-	 * @param view the desired view type for NDI output
-	 */
-	public void setNdiView(zividomelive.ViewType view) {
-		setViewForOutput(OutputType.NDI, view);
-	}
-
-	/**
-	 * Sets the view type for Spout output.
-	 *
-	 * @param view the desired view type for Spout output
-	 */
-	public void setSpoutView(zividomelive.ViewType view) {
-		setViewForOutput(OutputType.SPOUT, view);
-	}
-
-	/**
-	 * Sets the view type for Syphon output.
-	 *
-	 * @param view the desired view type for Syphon output
-	 */
-	public void setSyphonView(zividomelive.ViewType view) {
-		setViewForOutput(OutputType.SYPHON, view);
-	}
-
-	/**
-	 * Checks if any output method (NDI, Spout, or Syphon) is currently active.
-	 *
-	 * @return true if any output method is enabled, false otherwise
-	 */
+	/** Returns true if at least one output is currently active. */
 	public boolean isActive() {
-		return (ndiEnabled && ndiSender != null)
-				|| (spoutEnabled && spoutSender != null)
-				|| (syphonEnabled && syphonServer != null);
+		return (ndiEnabled    && ndiSender    != null)
+			|| (spoutEnabled  && spoutSender  != null)
+			|| (syphonEnabled && syphonServer != null);
 	}
 
+	// -------------------------------------------------------------------------
+	// Per-output view setters (ControlManager API)
+	// -------------------------------------------------------------------------
+
+	/** Sets the view type for NDI output. */
+	public void setNdiView(zividomelive.ViewType view)    { setViewForOutput(OutputType.NDI,    view); }
+
+	/** Sets the view type for Spout output. */
+	public void setSpoutView(zividomelive.ViewType view)  { setViewForOutput(OutputType.SPOUT,  view); }
+
+	/** Sets the view type for Syphon output. */
+	public void setSyphonView(zividomelive.ViewType view) { setViewForOutput(OutputType.SYPHON, view); }
+
+	/** Stops all output methods. Alias for {@link #shutdownOutputs()}. */
+	public void stopOutput() { shutdownOutputs(); }
+
 	/**
-	 * Stops all output methods and shuts down the OutputManager.
-	 * This method ensures that all output resources are released.
+	 * No-op — retained for call-site compatibility with the previous cached-graphics
+	 * implementation. Graphics references are now resolved per-frame.
 	 */
-	public void stopOutput() {
-		shutdownOutputs();
-	}
+	public void refreshCachedGraphics() { /* per-frame resolution — no cache to refresh */ }
 }
