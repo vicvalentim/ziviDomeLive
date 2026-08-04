@@ -6,12 +6,29 @@ import processing.core.*;
 import processing.opengl.PGraphicsOpenGL;
 
 /**
- * The StandardRenderer class handles the rendering of a standard view using a PGraphics object.
- * It utilizes a {@link MouseControlledCamera} (quaternion-based orbit) for camera control
- * and a {@link Scene} interface for rendering the scene content.
+ * Renders a standard free-perspective view into an off-screen {@link PGraphicsOpenGL} buffer.
  *
- * <p>An infinite sky background is painted before each scene render. The sky color
- * can be customised via {@link #setSkyColor(int, int, int)}.</p>
+ * <p>Two operating modes are supported:</p>
+ * <ul>
+ *   <li><b>Dynamic (preview)</b>: constructed with {@code width=0, height=0}. The buffer is
+ *       sized to {@code parent.width × parent.height} and reallocated automatically when the
+ *       Processing window changes dimensions, preserving the window's aspect ratio.</li>
+ *   <li><b>Fixed (output)</b>: constructed with positive {@code width} and {@code height}. The
+ *       buffer is pre-allocated immediately at those dimensions and is never resized
+ *       automatically. Use {@code outputResolution × outputResolution} for a square output
+ *       buffer consistent with the rest of the high-resolution output pipeline.</li>
+ * </ul>
+ *
+ * <p>A {@link MouseControlledCamera} (quaternion-based orbit) drives the view. Preview and
+ * output instances can share the same camera via {@link #setCam(MouseControlledCamera)} so that
+ * both always show the same framing at different resolutions.</p>
+ *
+ * <p>An infinite sky background is painted before each scene render. The sky colour can be
+ * customised via {@link #setSkyColor(int, int, int)}.</p>
+ *
+ * <p>This renderer must only be driven from the Processing draw thread. It calls
+ * {@code beginDraw()} and {@code endDraw()} internally; {@link Scene#sceneRender} must
+ * <em>not</em> call those methods.</p>
  */
 public class StandardRenderer {
     private PGraphicsOpenGL standardView;
@@ -19,41 +36,75 @@ public class StandardRenderer {
     private MouseControlledCamera cam;
     private final PApplet parent;
 
-    /** Sky background color components (R, G, B). Default: dark space blue. */
+    /**
+     * Fixed buffer width. Zero signals dynamic mode ({@code parent.width} is used each frame).
+     */
+    private final int fixedWidth;
+
+    /**
+     * Fixed buffer height. Zero signals dynamic mode ({@code parent.height} is used each frame).
+     */
+    private final int fixedHeight;
+
+    /** Sky background colour (R, G, B). Default: dark space blue. */
     private int skyR = 10;
     private int skyG = 10;
     private int skyB = 30;
 
     /**
-     * Near clipping plane distance. Keep small to avoid clipping close geometry.
-     * Dynamically derived as {@code distance * nearFactor} each frame.
+     * Near clipping plane multiplier. {@code near = distance * nearFactor}.
      */
     private float nearFactor = 0.001f;
 
     /**
-     * Far clipping plane distance multiplier relative to orbit distance.
-     * Increase this if distant objects disappear. Default gives far = distance * 2000.
+     * Far clipping plane multiplier. {@code far = distance * farFactor}.
      */
     private float farFactor = 2000f;
 
     /**
-     * Constructs a StandardRenderer with the specified parent PApplet, width, height, and current scene.
+     * Constructs a {@code StandardRenderer}.
      *
-     * @param parent       the parent PApplet instance
-     * @param width        the width of the standard view (currently unused; lazily sized to window)
-     * @param height       the height of the standard view (currently unused; lazily sized to window)
-     * @param currentScene the current scene to be rendered
+     * <p>Pass {@code width=0, height=0} for a <em>dynamic</em> buffer that follows the
+     * Processing window dimensions (preview mode). Pass positive values to lock the buffer
+     * to exact pixel dimensions (output mode); the FBO is pre-allocated immediately so that
+     * Syphon or Spout can obtain a valid texture reference during backend initialisation.</p>
+     *
+     * @param parent       the parent {@link PApplet} instance; must not be {@code null}
+     * @param width        desired buffer width, or {@code 0} to use {@code parent.width}
+     *                     dynamically
+     * @param height       desired buffer height, or {@code 0} to use {@code parent.height}
+     *                     dynamically
+     * @param currentScene the initial scene to render; may be {@code null}
      */
     public StandardRenderer(PApplet parent, int width, int height, Scene currentScene) {
-        this.parent = parent;
+        this.parent       = parent;
         this.currentScene = currentScene;
-        this.standardView = null;
+        this.fixedWidth   = Math.max(0, width);
+        this.fixedHeight  = Math.max(0, height);
         setCam(new MouseControlledCamera());
+
+        // Pre-allocate when fixed dimensions are provided so that the FBO exists before
+        // Syphon or Spout may request a texture reference during backend initialisation.
+        if (this.fixedWidth > 0 && this.fixedHeight > 0) {
+            initializeStandardView(this.fixedWidth, this.fixedHeight);
+        }
     }
 
-    /**
-     * Initializes or reinitializes the PGraphics object for the standard view.
-     */
+    // -------------------------------------------------------------------------
+    // Internal helpers
+    // -------------------------------------------------------------------------
+
+    /** Returns the target buffer width for the current frame. */
+    private int effectiveWidth() {
+        return fixedWidth > 0 ? fixedWidth : parent.width;
+    }
+
+    /** Returns the target buffer height for the current frame. */
+    private int effectiveHeight() {
+        return fixedHeight > 0 ? fixedHeight : parent.height;
+    }
+
+    /** Allocates or reallocates the off-screen buffer at the requested dimensions. */
     private void initializeStandardView(int width, int height) {
         if (standardView != null) {
             standardView.dispose();
@@ -61,17 +112,21 @@ public class StandardRenderer {
         standardView = (PGraphicsOpenGL) parent.createGraphics(width, height, PApplet.P3D);
     }
 
+    // -------------------------------------------------------------------------
+    // Public API
+    // -------------------------------------------------------------------------
+
     /**
      * Sets the current scene to be rendered.
      *
-     * @param newScene the new scene to be set as the current scene
+     * @param newScene the scene to render; may be {@code null}
      */
     public void setCurrentScene(Scene newScene) {
         this.currentScene = newScene;
     }
 
     /**
-     * Sets the sky (infinite background) color for the Standard View.
+     * Sets the sky (infinite background) colour.
      *
      * @param r red component (0–255)
      * @param g green component (0–255)
@@ -86,12 +141,12 @@ public class StandardRenderer {
     /**
      * Configures the clipping plane multipliers used to compute near/far each frame.
      *
-     * <p>near = distance * nearFactor, far = distance * farFactor.
-     * Increase {@code farFactor} if distant objects disappear; decrease {@code nearFactor}
-     * only if very close geometry clips unexpectedly.</p>
+     * <p>{@code near = distance * nearFactor}, {@code far = distance * farFactor}.
+     * Increase {@code farFactor} when distant objects disappear; decrease
+     * {@code nearFactor} only if very close geometry clips unexpectedly.</p>
      *
-     * @param nearFactor multiplier for near plane (default 0.001)
-     * @param farFactor  multiplier for far plane  (default 2000)
+     * @param nearFactor multiplier for near plane (default {@code 0.001})
+     * @param farFactor  multiplier for far plane  (default {@code 2000})
      */
     public void setClipFactors(float nearFactor, float farFactor) {
         this.nearFactor = Math.max(0.0001f, nearFactor);
@@ -99,75 +154,96 @@ public class StandardRenderer {
     }
 
     /**
-     * Renders the current scene using the standard view PGraphics object.
+     * Renders the current scene into the off-screen buffer.
+     *
+     * <p>For <em>dynamic</em> (preview) renderers the buffer is reallocated automatically
+     * when the Processing window dimensions change. For <em>fixed</em> (output) renderers
+     * the dimensions are permanent.</p>
      *
      * <p>Pipeline per frame:</p>
      * <ol>
-     *   <li>Lazy-initialise the off-screen buffer if needed.</li>
+     *   <li>Allocate or reallocate the off-screen buffer if dimensions changed.</li>
      *   <li>Update camera position from quaternion + distance.</li>
-     *   <li>Fill the buffer with the sky color (infinite background).</li>
+     *   <li>Fill the buffer with the sky colour (infinite background).</li>
      *   <li>Apply camera transform.</li>
-     *   <li>Delegate to {@link Scene#sceneRender(PGraphicsOpenGL)} – scene must NOT call
-     *       {@code beginDraw/endDraw}.</li>
+     *   <li>Delegate to {@link Scene#sceneRender(PGraphicsOpenGL)} — the scene must
+     *       <em>not</em> call {@code beginDraw()}/{@code endDraw()}.</li>
      * </ol>
+     *
+     * <p>Must be called from the Processing draw thread.</p>
      */
     public void render() {
-        if (standardView == null) {
-            initializeStandardView(parent.width, parent.height);
+        int w = effectiveWidth();
+        int h = effectiveHeight();
+
+        // Dynamic renderers: reallocate when the window has been resized.
+        if (standardView == null || standardView.width != w || standardView.height != h) {
+            initializeStandardView(w, h);
         }
 
         getCam().update(parent);
 
         standardView.beginDraw();
-        // Set perspective with distance-relative clipping planes so objects never
-        // disappear because they exceed the default far plane.
-        float dist  = getCam().getDistance();
-        float near  = Math.max(0.1f, dist * nearFactor);
-        float far   = dist * farFactor;
+        float dist   = getCam().getDistance();
+        float near   = Math.max(0.1f, dist * nearFactor);
+        float far    = dist * farFactor;
         float aspect = (float) standardView.width / standardView.height;
         standardView.perspective(PApplet.radians(60), aspect, near, far);
-
-        // Infinite sky: solid fill so every pixel is covered regardless of scene geometry
         standardView.background(skyR, skyG, skyB);
         getCam().apply(standardView);
 
-        currentScene.sceneRender(standardView);
+        if (currentScene != null) {
+            currentScene.sceneRender(standardView);
+        }
 
         standardView.endDraw();
     }
 
     /**
-     * Returns the PGraphics object for the standard view.
+     * Returns the off-screen buffer, allocating or reallocating it on demand when necessary.
      *
-     * @return the PGraphics object representing the standard view
+     * <p>For dynamic renderers a new buffer is created whenever the Processing window
+     * dimensions differ from the current buffer dimensions.</p>
+     *
+     * @return the {@link PGraphicsOpenGL} buffer; never {@code null} after this call
      */
     public PGraphicsOpenGL getStandardView() {
-        if (standardView == null) {
-            initializeStandardView(parent.width, parent.height);
+        int w = effectiveWidth();
+        int h = effectiveHeight();
+        if (standardView == null || standardView.width != w || standardView.height != h) {
+            initializeStandardView(w, h);
         }
         return standardView;
     }
 
     /**
-     * Returns the instance of the MouseControlledCamera.
+     * Returns the {@link MouseControlledCamera} driving this renderer.
      *
-     * @return the MouseControlledCamera instance
+     * @return the camera; never {@code null}
      */
     public MouseControlledCamera getCam() {
         return cam;
     }
 
     /**
-     * Sets a new instance of the MouseControlledCamera.
+     * Replaces the camera used by this renderer.
      *
-     * @param cam the new MouseControlledCamera instance
+     * <p>Preview and output {@code StandardRenderer} instances can share a single camera so
+     * that both always show the same framing at different resolutions:</p>
+     * <pre>{@code
+     * standardRendererPreview.setCam(standardRenderer.getCam());
+     * }</pre>
+     *
+     * @param cam the new camera; must not be {@code null}
      */
     public void setCam(MouseControlledCamera cam) {
         this.cam = cam;
     }
 
     /**
-     * Releases the graphical resources used by the standard view.
+     * Releases the graphical resources used by this renderer.
+     *
+     * <p>After disposal {@link #getStandardView()} will allocate a fresh buffer on demand.</p>
      */
     public void dispose() {
         if (standardView != null) {
