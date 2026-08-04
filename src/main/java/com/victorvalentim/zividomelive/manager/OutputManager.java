@@ -1,637 +1,1082 @@
 package com.victorvalentim.zividomelive.manager;
 
+import codeanticode.syphon.SyphonServer;
 import com.victorvalentim.zividomelive.support.LogManager;
 import com.victorvalentim.zividomelive.zividomelive;
-import me.walkerknapp.devolay.*;
+import me.walkerknapp.devolay.DevolayFrameFormatType;
+import me.walkerknapp.devolay.DevolayFrameFourCCType;
+import me.walkerknapp.devolay.DevolaySender;
+import me.walkerknapp.devolay.DevolayVideoFrame;
 import processing.core.PConstants;
-import codeanticode.syphon.SyphonServer;
 import processing.opengl.PGraphicsOpenGL;
 import spout.Spout;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Locale;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Manages frame output to NDI, Spout (Windows), and Syphon (macOS).
+ * Manages ziviDomeLive video outputs.
  *
- * <h2>Hot-path design</h2>
+ * <p>There are two independent output domains:</p>
  * <ul>
- *   <li>Syphon and Spout are sent first — GPU-to-GPU share, no pixel copy, on the draw thread.
- *   <li>NDI uses a producer-consumer model with {@value NDI_SLOT_COUNT} typed slots:
- *       <ol>
- *         <li>Draw thread: check slot availability <em>before</em> {@code loadPixels()},
- *             then {@code System.arraycopy()} raw ARGB pixels into the slot.
- *         <li>Dedicated NDI worker: ARGB→RGBA conversion, frame configuration, and
- *             {@code sendVideoFrame()} — all off the draw thread.
- *         <li>Worker returns slot to the free pool when done.
- *       </ol>
- *   <li>If no slot is free when the draw thread checks, the frame is dropped
- *       ({@link #getNdiDroppedFrames()}) without calling {@code loadPixels()}.
- *   <li>Graphics references are resolved per-frame so they remain valid after
- *       {@code resetGraphics()}.
- *   <li>The NDI worker runs in a dedicated single-thread executor that is created on
- *       NDI activation and shut down on deactivation, preventing stale tasks after restart.
+ *     <li>a platform-local GPU texture output: Syphon on macOS or Spout on Windows;</li>
+ *     <li>an NDI network output, captured on the Processing draw thread and sent by a dedicated worker.</li>
  * </ul>
+ *
+ * <p>Syphon and Spout are mutually exclusive. Their calls remain on the Processing/OpenGL thread,
+ * because both libraries access the current OpenGL context directly. NDI performs only the required
+ * {@code loadPixels()} capture on that thread; pixel conversion and transmission run independently.</p>
  */
 public class OutputManager implements PConstants {
 
-	/** Supported output types. */
+	/** Public output identifiers retained for compatibility with the current ControlManager API. */
 	public enum OutputType {
-		/** NDI output (cross-platform, pixel-copy path). */
 		NDI,
-		/** Spout output (Windows only, GPU texture share). */
 		SPOUT,
-		/** Syphon output (macOS only, GPU texture share). */
 		SYPHON
 	}
 
+	/** The single local texture-sharing backend available in the current process. */
+	private enum LocalTextureBackend {
+		SYPHON,
+		SPOUT,
+		NONE
+	}
+
+	private static final String NDI_SENDER_NAME = "ziviDomeLive NDI Output";
+	private static final String SPOUT_SENDER_NAME = "ziviDomeLive Spout";
+	private static final String SYPHON_SERVER_NAME = "ziviDomeLive Syphon";
+
+	/** Triple buffering: one slot may be sending while two remain available or pending. */
 	private static final int NDI_SLOT_COUNT = 3;
 
-	// -------------------------------------------------------------------------
-	// NDI slot — owns pixel data from copy to send; exclusive ownership via queues.
-	// -------------------------------------------------------------------------
-
-	private static final class NdiSlot implements AutoCloseable {
-		int[] argbPixels = new int[0];
-		ByteBuffer rgbaBuffer = ByteBuffer.allocateDirect(0).order(ByteOrder.LITTLE_ENDIAN);
-		final DevolayVideoFrame frame;
-		int width;
-		int height;
-
-		NdiSlot() { frame = new DevolayVideoFrame(); }
-
-		/** Copies src into this slot and records dimensions. Resizes buffers if needed. */
-		void prepare(int[] src, int w, int h) {
-			int count = w * h;
-			if (argbPixels.length < count) {
-				argbPixels = new int[count];
-				rgbaBuffer = ByteBuffer.allocateDirect(count * 4).order(ByteOrder.LITTLE_ENDIAN);
-			}
-			System.arraycopy(src, 0, argbPixels, 0, count);
-			this.width  = w;
-			this.height = h;
-		}
-
-		@Override
-		public void close() {
-			try { frame.close(); } catch (Exception ignored) {}
-		}
-	}
+	/** Retains the frame-rate value used by the previous OutputManager implementation. */
+	private static final int DEFAULT_NDI_FRAME_RATE_N = 150;
+	private static final int DEFAULT_NDI_FRAME_RATE_D = 1;
 
 	private final Logger logger = LogManager.getLogger();
-	private final Map<OutputType, zividomelive.ViewType> outputViews;
 	private final zividomelive parent;
-
-	private DevolaySender ndiSender;
-	private Spout spoutSender;
-	private SyphonServer syphonServer;
-
-	private volatile boolean ndiEnabled = false;
-	private boolean spoutEnabled  = false;
-	private boolean syphonEnabled = false;
-
 	private final boolean isMacOS;
 	private final boolean isWindows;
+	private final LocalTextureBackend localTextureBackend;
 
-	// NDI slot queues — capacity enforces backpressure without blocking the draw thread.
-	private final ArrayBlockingQueue<NdiSlot> freeSlots  = new ArrayBlockingQueue<>(NDI_SLOT_COUNT);
-	private final ArrayBlockingQueue<NdiSlot> readySlots = new ArrayBlockingQueue<>(NDI_SLOT_COUNT - 1);
+	/* Independent view selections. Preview/viewer state is deliberately not stored here. */
+	private volatile zividomelive.ViewType ndiView = zividomelive.ViewType.FISHEYE_DOMEMASTER;
+	private volatile zividomelive.ViewType spoutView = zividomelive.ViewType.FISHEYE_DOMEMASTER;
+	private volatile zividomelive.ViewType syphonView = zividomelive.ViewType.FISHEYE_DOMEMASTER;
 
-	// Dedicated NDI worker — one instance per activation cycle; prevents stale tasks after restart.
-	private ExecutorService ndiWorkerExecutor;
+	/* NDI lifecycle and worker state. */
+	private final Object ndiLifecycleLock = new Object();
+	private volatile DevolaySender ndiSender;
+	private volatile boolean ndiEnabled;
+	private volatile boolean ndiUnavailable;
+	private volatile String ndiUnavailableReason = "";
+	private volatile boolean ndiWorkerRunning;
+	private Thread ndiWorkerThread;
 
-	// NDI frame rate metadata (set via setNdiFrameRate; default 60/1)
-	private int ndiFrameRateNum = 60;
-	private int ndiFrameRateDen = 1;
+	private final ArrayBlockingQueue<NdiFrameSlot> ndiFreeSlots =
+			new ArrayBlockingQueue<>(NDI_SLOT_COUNT);
+	private final ArrayBlockingQueue<NdiFrameSlot> ndiReadySlots =
+			new ArrayBlockingQueue<>(NDI_SLOT_COUNT);
+	private final NdiFrameSlot[] ndiSlots = new NdiFrameSlot[NDI_SLOT_COUNT];
 
-	// NDI metrics
-	private final AtomicLong ndiCaptured = new AtomicLong(0);
-	private final AtomicLong ndiSent     = new AtomicLong(0);
-	private final AtomicLong ndiDropped  = new AtomicLong(0);
+	private volatile int ndiFrameRateNumerator = DEFAULT_NDI_FRAME_RATE_N;
+	private volatile int ndiFrameRateDenominator = DEFAULT_NDI_FRAME_RATE_D;
 
-	// Spout state — reset to 0 on init/shutdown to force explicit createSender on next send.
-	private int spoutLastWidth  = 0;
-	private int spoutLastHeight = 0;
+	private final AtomicLong ndiCapturedFrames = new AtomicLong();
+	private final AtomicLong ndiSentFrames = new AtomicLong();
+	private final AtomicLong ndiDroppedFrames = new AtomicLong();
 
-	// setView() deprecation: warn once to avoid log spam.
-	private boolean setViewWarningLogged = false;
+	/* Platform-local texture output. Only one of these can be active in a process. */
+	private Spout spoutSender;
+	private SyphonServer syphonServer;
+	private volatile boolean spoutEnabled;
+	private volatile boolean syphonEnabled;
+	private int spoutWidth = -1;
+	private int spoutHeight = -1;
+
+	/** Prevents repeated warnings from the deprecated single-view setter. */
+	private boolean legacySetViewWarningLogged;
 
 	/**
-	 * Constructs the OutputManager.
+	 * Creates an output manager and selects the only valid local texture backend for the platform.
 	 *
-	 * @param parent the zividomelive instance
+	 * @param parent main ziviDomeLive application
 	 */
 	public OutputManager(zividomelive parent) {
-		this.parent = parent;
-		this.outputViews = new EnumMap<>(OutputType.class);
-		for (OutputType type : OutputType.values()) {
-			outputViews.put(type, zividomelive.ViewType.FISHEYE_DOMEMASTER);
+		if (parent == null) {
+			throw new IllegalArgumentException("parent cannot be null");
 		}
-		String osName = System.getProperty("os.name").toLowerCase();
-		this.isMacOS   = osName.contains("mac");
+
+		this.parent = parent;
+
+		String osName = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+		this.isMacOS = osName.contains("mac");
 		this.isWindows = osName.contains("win");
+
+		if (isMacOS) {
+			this.localTextureBackend = LocalTextureBackend.SYPHON;
+		} else if (isWindows) {
+			this.localTextureBackend = LocalTextureBackend.SPOUT;
+		} else {
+			this.localTextureBackend = LocalTextureBackend.NONE;
+		}
 	}
 
-	// -------------------------------------------------------------------------
-	// View management
-	// -------------------------------------------------------------------------
-
 	/**
-	 * Returns the view type configured for a specific output type.
+	 * Returns the independently configured view for an output.
 	 *
-	 * @param outputType the output type to query
-	 * @return the ViewType, or FISHEYE_DOMEMASTER if not set
+	 * @param outputType output whose configured view should be returned
+	 * @return configured view, or {@link zividomelive.ViewType#FISHEYE_DOMEMASTER}
+	 *         when {@code outputType} is {@code null} or unsupported
 	 */
 	public zividomelive.ViewType getViewForOutput(OutputType outputType) {
-		return outputViews.getOrDefault(outputType, zividomelive.ViewType.FISHEYE_DOMEMASTER);
+		if (outputType == null) {
+			return zividomelive.ViewType.FISHEYE_DOMEMASTER;
+		}
+
+		switch (outputType) {
+			case NDI:
+				return ndiView;
+			case SPOUT:
+				return spoutView;
+			case SYPHON:
+				return syphonView;
+			default:
+				return zividomelive.ViewType.FISHEYE_DOMEMASTER;
+		}
 	}
 
 	/**
-	 * Configures which view a specific output type should send.
+	 * Changes only the selected output view. It does not modify the application preview/viewer.
 	 *
-	 * @param outputType the output type to configure
-	 * @param viewType   the ViewType to assign
+	 * @param outputType output whose view should be changed
+	 * @param viewType view to route to the selected output
 	 */
 	public void setViewForOutput(OutputType outputType, zividomelive.ViewType viewType) {
-		if (outputType != null && viewType != null) {
-			outputViews.put(outputType, viewType);
-			logger.info("Set view for " + outputType + " to " + viewType);
+		if (outputType == null || viewType == null) {
+			return;
 		}
+
+		switch (outputType) {
+			case NDI:
+				ndiView = viewType;
+				break;
+			case SPOUT:
+				spoutView = viewType;
+				break;
+			case SYPHON:
+				syphonView = viewType;
+				break;
+			default:
+				return;
+		}
+
+		logger.info("Set view for " + outputType + " to " + viewType + ".");
 	}
 
 	/**
-	 * Legacy single-view setter — kept for API compatibility only.  Logs a one-time warning.
-	 *
-	 * @param viewType ignored
-	 * @deprecated Use {@link #setViewForOutput(OutputType, zividomelive.ViewType)} per output.
+	 * Compatibility method retained for callers that previously refreshed cached PGraphics references.
+	 * References are now resolved on every frame, so this method intentionally does nothing.
 	 */
-	@Deprecated
-	public void setView(zividomelive.ViewType viewType) {
-		if (!setViewWarningLogged) {
-			logger.warning("setView() is deprecated and has no effect. "
-					+ "Use setViewForOutput() per output type.");
-			setViewWarningLogged = true;
-		}
+	public void refreshCachedGraphics() {
+		// No-op by design: prevents stale PGraphicsOpenGL references after renderer reallocation.
 	}
 
 	/**
-	 * Returns {@code true} if at least one enabled output is configured to receive
-	 * the given view type.  Used by {@code updateRenderViews()} to ensure a view is
-	 * rendered even when it is not the active preview mode.
-	 *
-	 * @param viewType the view type to check
-	 * @return true if any enabled output needs this view
+	 * Resolves the current PGraphicsOpenGL directly from the active renderer.
 	 */
-	public boolean requiresView(zividomelive.ViewType viewType) {
-		if (viewType == null) return false;
-		if (ndiEnabled    && getViewForOutput(OutputType.NDI)    == viewType) return true;
-		if (spoutEnabled  && getViewForOutput(OutputType.SPOUT)  == viewType) return true;
-		if (syphonEnabled && getViewForOutput(OutputType.SYPHON) == viewType) return true;
-		return false;
-	}
+	private PGraphicsOpenGL resolveGraphics(zividomelive.ViewType viewType) {
+		if (viewType == null) {
+			return null;
+		}
 
-	// -------------------------------------------------------------------------
-	// Per-frame graphics resolution
-	// -------------------------------------------------------------------------
-
-	private PGraphicsOpenGL resolveGraphics(OutputType type) {
-		return resolveGraphicsForView(
-				outputViews.getOrDefault(type, zividomelive.ViewType.FISHEYE_DOMEMASTER));
-	}
-
-	private PGraphicsOpenGL resolveGraphicsForView(zividomelive.ViewType viewType) {
 		try {
 			switch (viewType) {
 				case FISHEYE_DOMEMASTER:
 					return parent.getFisheyeDomemaster() != null
-							? parent.getFisheyeDomemaster().getDomemasterGraphics() : null;
+							? parent.getFisheyeDomemaster().getDomemasterGraphics()
+							: null;
 				case EQUIRECTANGULAR:
 					return parent.getEquirectangularRenderer() != null
-							? parent.getEquirectangularRenderer().getEquirectangular() : null;
+							? parent.getEquirectangularRenderer().getEquirectangular()
+							: null;
 				case CUBEMAP:
 					return parent.getCubemapViewRenderer() != null
-							? parent.getCubemapViewRenderer().getCubemap() : null;
+							? parent.getCubemapViewRenderer().getCubemap()
+							: null;
 				case STANDARD:
 					return parent.getStandardRenderer() != null
-							? parent.getStandardRenderer().getStandardView() : null;
+							? parent.getStandardRenderer().getStandardView()
+							: null;
 				default:
 					return null;
 			}
-		} catch (Exception e) {
-			logger.log(Level.WARNING, "resolveGraphics failed for " + viewType, e);
+		} catch (RuntimeException error) {
+			logger.log(Level.WARNING, "resolveGraphics failed for " + viewType + ".", error);
 			return null;
 		}
 	}
 
-	// -------------------------------------------------------------------------
-	// Initialization / shutdown
-	// -------------------------------------------------------------------------
-
-	private void initNDI() {
-		if (ndiEnabled || ndiSender != null) return;
-		try {
-			ndiSender = new DevolaySender("ziviDomeLive NDI Output");
-			for (int i = 0; i < NDI_SLOT_COUNT; i++) {
-				freeSlots.offer(new NdiSlot());
-			}
-			ndiEnabled = true;
-			ndiWorkerExecutor = Executors.newSingleThreadExecutor(r -> {
-				Thread t = new Thread(r, "zividomelive-ndi-worker");
-				t.setDaemon(true);
-				return t;
-			});
-			ndiWorkerExecutor.submit(this::runNdiWorker);
-			logger.info("NDI output initialized.");
-		} catch (LinkageError | IllegalStateException e) {
-			cleanupFailedNdiInit();
-			logger.log(Level.WARNING, "initNDI failed: NDI unavailable on this platform.", e);
-		}
-	}
-
 	/**
-	 * Long-running NDI worker loop — runs in {@link #ndiWorkerExecutor}.
-	 * Consumes ready slots, performs ARGB→RGBA conversion, and sends via NDI.
+	 * Initializes NDI and starts its dedicated sender worker.
 	 */
-	private void runNdiWorker() {
-		while (ndiEnabled && !Thread.currentThread().isInterrupted()) {
-			NdiSlot slot = null;
+	private void initNDI() {
+		synchronized (ndiLifecycleLock) {
+			if (ndiEnabled) {
+				return;
+			}
+
+			if (ndiUnavailable) {
+				logger.warning("NDI initialization ignored: " + ndiUnavailableReason);
+				return;
+			}
+
+			/* Clean up a previous worker failure before retrying. */
+			if (ndiSender != null || ndiWorkerThread != null) {
+				shutdownNDILocked();
+			}
+
 			try {
-				slot = readySlots.poll(100, TimeUnit.MILLISECONDS);
-				if (slot == null) continue;
+				ndiSender = new DevolaySender(NDI_SENDER_NAME);
+				initializeNdiSlots();
 
-				// ARGB → RGBA conversion (off the draw thread)
-				int count = slot.width * slot.height;
-				slot.rgbaBuffer.clear();
-				for (int i = 0; i < count; i++) {
-					int px = slot.argbPixels[i];
-					slot.rgbaBuffer.put((byte) ((px >> 16) & 0xFF)); // R
-					slot.rgbaBuffer.put((byte) ((px >> 8)  & 0xFF)); // G
-					slot.rgbaBuffer.put((byte)  (px        & 0xFF)); // B
-					slot.rgbaBuffer.put((byte) ((px >> 24) & 0xFF)); // A
-				}
-				slot.rgbaBuffer.flip();
+				ndiWorkerRunning = true;
+				ndiEnabled = true;
+				ndiWorkerThread = new Thread(this::ndiWorkerLoop, "ziviDomeLive-NDI-Sender");
+				ndiWorkerThread.setDaemon(true);
+				ndiWorkerThread.start();
 
-				slot.frame.setResolution(slot.width, slot.height);
-				slot.frame.setData(slot.rgbaBuffer);
-				slot.frame.setFourCCType(DevolayFrameFourCCType.RGBA);
-				slot.frame.setLineStride(slot.width * 4);
-				slot.frame.setFormatType(DevolayFrameFormatType.INTERLEAVED);
-				slot.frame.setFrameRate(ndiFrameRateNum, ndiFrameRateDen);
+				logger.info("NDI output initialized with a dedicated sender worker.");
+			} catch (LinkageError | RuntimeException error) {
+				ndiEnabled = false;
+				ndiWorkerRunning = false;
+				closeNdiSlots();
+				closeNdiSender();
 
-				// Check sender while holding lock to guard against concurrent shutdown.
-				DevolaySender sender;
-				synchronized (this) {
-					sender = ndiEnabled ? ndiSender : null;
-				}
-				if (sender != null) {
-					sender.sendVideoFrame(slot.frame);
-					ndiSent.incrementAndGet();
-				}
-				freeSlots.offer(slot);
+				ndiUnavailable = true;
+				ndiUnavailableReason = rootCauseMessage(error);
 
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-				if (slot != null) freeSlots.offer(slot);
-				break;
-			} catch (Exception e) {
-				logger.log(Level.WARNING, "NDI worker error.", e);
-				if (slot != null) freeSlots.offer(slot);
+				logger.log(
+						Level.WARNING,
+						"initNDI failed: NDI unavailable on this platform ("
+								+ System.getProperty("os.name", "unknown") + "/"
+								+ System.getProperty("os.arch", "unknown") + "): "
+								+ ndiUnavailableReason,
+						error
+				);
 			}
-		}
-		// Drain any remaining ready slots back to the free pool.
-		NdiSlot s;
-		while ((s = readySlots.poll()) != null) {
-			freeSlots.offer(s);
-		}
-	}
-
-	private void initSpout() {
-		try {
-			if (spoutSender == null) {
-				spoutSender = new Spout(parent.getPApplet());
-			}
-			spoutEnabled    = true;
-			spoutLastWidth  = 0; // force explicit createSender on first sendOutput
-			spoutLastHeight = 0;
-			logger.info("Spout initialized for Windows.");
-		} catch (Exception | LinkageError e) {
-			spoutSender  = null;
-			spoutEnabled = false;
-			logger.log(Level.WARNING, "initSpout failed: Spout unavailable on this platform.", e);
-		}
-	}
-
-	private void initSyphon() {
-		try {
-			if (syphonServer == null) {
-				syphonServer = new SyphonServer(parent.getPApplet(), "ziviDomeLive Syphon");
-			}
-			syphonEnabled = true;
-			logger.info("SyphonServer initialized for macOS.");
-		} catch (Exception | LinkageError e) {
-			syphonServer  = null;
-			syphonEnabled = false;
-			logger.log(Level.WARNING, "initSyphon failed: Syphon unavailable on this platform.", e);
 		}
 	}
 
 	/**
-	 * Toggles the specified output method on or off.
+	 * Creates the fixed NDI frame pool after the native Devolay library has initialized successfully.
+	 */
+	private void initializeNdiSlots() {
+		ndiFreeSlots.clear();
+		ndiReadySlots.clear();
+
+		for (int index = 0; index < NDI_SLOT_COUNT; index++) {
+			NdiFrameSlot slot = new NdiFrameSlot();
+			ndiSlots[index] = slot;
+			ndiFreeSlots.offer(slot);
+		}
+	}
+
+	/**
+	 * Initializes the Windows Spout sender.
 	 *
-	 * @param method "ndi", "spout", or "syphon" (case-insensitive)
+	 * <p>Dimensions are resolved from the currently active output graphics when available;
+	 * if no renderer has been allocated yet (e.g. on first startup), the configured output
+	 * resolution from the parent is used so that initialization never stalls.</p>
+	 */
+	private void initSpout() {
+		if (localTextureBackend != LocalTextureBackend.SPOUT) {
+			logger.warning("Spout initialization ignored: unsupported platform.");
+			return;
+		}
+
+		if (spoutEnabled && spoutSender != null) {
+			return;
+		}
+
+		try {
+			/* Resolve the best available dimensions: live graphics or fallback to configured resolution. */
+			PGraphicsOpenGL graphics = resolveGraphics(spoutView);
+			int width;
+			int height;
+			if (graphics != null && graphics.width > 0 && graphics.height > 0) {
+				width  = graphics.width;
+				height = graphics.height;
+			} else {
+				int res = parent.getOutputResolution();
+				width  = res;
+				height = res;
+				logger.info("Spout initializing with configured output resolution (" + res + "px); "
+						+ "will auto-resize on the first sent frame.");
+			}
+
+			Spout sender = new Spout(parent.getPApplet());
+			boolean created = sender.createSender(SPOUT_SENDER_NAME, width, height);
+
+			if (!created) {
+				sender.dispose();
+				logger.warning("Spout sender creation failed.");
+				return;
+			}
+
+			spoutSender = sender;
+			spoutWidth  = width;
+			spoutHeight = height;
+			spoutEnabled = true;
+
+			logger.info("Spout initialized at " + spoutWidth + "x" + spoutHeight + ".");
+		} catch (Exception | LinkageError error) {
+			spoutEnabled = false;
+			disposeSpoutSender();
+			logger.log(Level.WARNING, "initSpout failed: Spout unavailable on this platform.", error);
+		}
+	}
+
+	/**
+	 * Initializes the macOS Syphon server.
+	 *
+	 * <p>The Syphon server is resolution-agnostic; it accepts whatever {@link PGraphicsOpenGL}
+	 * is passed to {@code sendImage} on each frame. No pre-allocated dimensions are required.</p>
+	 */
+	private void initSyphon() {
+		if (localTextureBackend != LocalTextureBackend.SYPHON) {
+			logger.warning("Syphon initialization ignored: unsupported platform.");
+			return;
+		}
+
+		if (syphonEnabled && syphonServer != null) {
+			return;
+		}
+
+		try {
+
+			syphonServer = new SyphonServer(parent.getPApplet(), SYPHON_SERVER_NAME);
+			syphonEnabled = true;
+			logger.info("Syphon server initialized for macOS.");
+		} catch (Exception | LinkageError error) {
+			syphonEnabled = false;
+			stopSyphonServer();
+			logger.log(Level.WARNING, "initSyphon failed: Syphon unavailable on this platform.", error);
+		}
+	}
+
+	/**
+	 * Starts the platform-local texture backend (Syphon on macOS, Spout on Windows) automatically.
+	 *
+	 * <p>Called once by the library after renderer managers are initialized. On unsupported
+	 * platforms this is a no-op. The output can still be toggled on/off at any time via
+	 * {@link #toggleOutput(String)}.</p>
+	 */
+	public void initializeLocalTextureOutput() {
+		switch (localTextureBackend) {
+			case SYPHON:
+				initSyphon();
+				break;
+			case SPOUT:
+				initSpout();
+				break;
+			case NONE:
+			default:
+				break;
+		}
+	}
+
+	/**
+	 * Notifies that the output resolution has changed so the local texture backend
+	 * can recreate its sender/server at the new size.
+	 *
+	 * <p>Spout recreates its sender because the DirectX shared texture is size-fixed.
+	 * Syphon is recreated for consistency, although it normally adapts per frame.
+	 * NDI does not need notification because it reads dimensions from {@code loadPixels()}
+	 * on every captured frame.</p>
+	 *
+	 * <p>This method must be called on the Processing draw thread after
+	 * {@code initializeRenderers()} completes.</p>
+	 *
+	 * @param newResolution new output resolution in pixels (square)
+	 */
+	public void notifyResolutionChanged(int newResolution) {
+		switch (localTextureBackend) {
+			case SPOUT:
+				if (spoutEnabled) {
+					logger.info("Spout: recreating sender for new resolution " + newResolution + "px.");
+					shutdownSpout();
+					initSpout();
+				}
+				break;
+			case SYPHON:
+				if (syphonEnabled) {
+					logger.info("Syphon: recreating server for new resolution " + newResolution + "px.");
+					shutdownSyphon();
+					initSyphon();
+				}
+				break;
+			case NONE:
+			default:
+				break;
+		}
+	}
+
+	/**
+	 * Toggles NDI, Spout, or Syphon. Spout and Syphon remain mutually exclusive by platform.
+	 *
+	 * @param method output identifier: {@code "ndi"}, {@code "spout"}, or {@code "syphon"}
 	 */
 	public void toggleOutput(String method) {
 		if (method == null || method.trim().isEmpty()) {
 			logger.warning("Ignoring output toggle request with empty method.");
 			return;
 		}
-		switch (method.trim().toLowerCase(Locale.ROOT)) {
+
+		String normalizedMethod = method.trim().toLowerCase(Locale.ROOT);
+
+		switch (normalizedMethod) {
 			case "ndi":
-				if (!ndiEnabled) initNDI(); else shutdownNDI();
+				if (ndiEnabled) {
+					shutdownNDI();
+				} else {
+					initNDI();
+				}
 				break;
+
 			case "spout":
-				if (!isWindows) { logger.warning("Spout toggle ignored: unsupported platform."); return; }
-				if (!spoutEnabled) initSpout(); else shutdownSpout();
+				if (!isWindows) {
+					logger.warning("Spout toggle ignored: unsupported platform.");
+					return;
+				}
+				if (spoutEnabled) {
+					shutdownSpout();
+				} else {
+					initSpout();
+				}
 				break;
+
 			case "syphon":
-				if (!isMacOS) { logger.warning("Syphon toggle ignored: unsupported platform."); return; }
-				if (!syphonEnabled) initSyphon(); else shutdownSyphon();
+				if (!isMacOS) {
+					logger.warning("Syphon toggle ignored: unsupported platform.");
+					return;
+				}
+				if (syphonEnabled) {
+					shutdownSyphon();
+				} else {
+					initSyphon();
+				}
 				break;
+
 			default:
-				logger.warning("Unknown output method: " + method.trim());
+				logger.warning("Unknown output method: " + normalizedMethod);
+				break;
 		}
 	}
 
-	// -------------------------------------------------------------------------
-	// sendOutput — hot path, called every draw frame
-	// -------------------------------------------------------------------------
+	/**
+	 * Legacy method retained only for source compatibility.
+	 *
+	 * <p>It no longer changes NDI, Syphon, or Spout, because coupling the application preview mode
+	 * to every external output prevents independent routing. Use {@link #setNdiView(zividomelive.ViewType)},
+	 * {@link #setSpoutView(zividomelive.ViewType)}, or {@link #setSyphonView(zividomelive.ViewType)}.</p>
+	 *
+	 * @param viewType ignored; retained only for source compatibility
+	 * @deprecated configure each output independently with the dedicated view setter
+	 */
+	@Deprecated
+	public void setView(zividomelive.ViewType viewType) {
+		if (!legacySetViewWarningLogged) {
+			legacySetViewWarningLogged = true;
+			logger.warning(
+					"OutputManager.setView() is deprecated and no longer changes external outputs. "
+							+ "Configure NDI and the platform-local texture output independently."
+			);
+		}
+	}
 
 	/**
-	 * Sends the current rendered frame to all active outputs.
+	 * Sends one frame to every enabled output.
 	 *
-	 * <p>Must be called from the Processing draw thread after all render views have
-	 * been updated (i.e., after {@code updateRenderViews()} completes).
+	 * <p>This method must be called once per Processing draw cycle, after all relevant PGraphics
+	 * instances have completed {@code endDraw()}.</p>
 	 *
-	 * <p>Syphon and Spout are sent first (GPU texture share, minimal overhead).
-	 * NDI availability is checked before {@code loadPixels()} to avoid unnecessary
-	 * CPU work when the NDI worker is busy.
+	 * <p>The platform-local GPU texture is published first. NDI capture occurs afterwards, so its
+	 * required GPU-to-CPU readback cannot delay the current Syphon/Spout publication.</p>
 	 */
 	public void sendOutput() {
-		// Syphon — macOS GPU-to-GPU, stays on draw thread
-		if (syphonEnabled && syphonServer != null && isMacOS) {
-			try {
-				PGraphicsOpenGL pg = resolveGraphics(OutputType.SYPHON);
-				if (pg != null) {
-					syphonServer.sendImage(pg);
-				}
-			} catch (Exception | LinkageError e) {
-				logger.log(Level.WARNING, "sendOutput: Syphon error.", e);
-			}
+		sendLocalTextureFrame();
+		captureNdiFrame();
+	}
+
+	/** Publishes the single platform-local texture output directly on the Processing/OpenGL thread. */
+	private void sendLocalTextureFrame() {
+		switch (localTextureBackend) {
+			case SPOUT:
+				sendSpoutFrame();
+				break;
+			case SYPHON:
+				sendSyphonFrame();
+				break;
+			case NONE:
+			default:
+				break;
+		}
+	}
+
+	/** Direct GPU-to-GPU Spout publication. */
+	private void sendSpoutFrame() {
+		if (!spoutEnabled || spoutSender == null || !isWindows) {
+			return;
 		}
 
-		// Spout — Windows GPU-to-GPU, stays on draw thread
-		if (spoutEnabled && spoutSender != null && isWindows) {
-			try {
-				PGraphicsOpenGL pg = resolveGraphics(OutputType.SPOUT);
-				if (pg != null) {
-					if (spoutLastWidth == 0 || spoutLastHeight == 0) {
-						// Explicit sender creation on first frame avoids the lost-first-frame
-						// issue caused by Spout's lazy createSender inside sendTexture().
-						spoutSender.createSender("ziviDomeLive Spout", pg.width, pg.height);
-						spoutLastWidth  = pg.width;
-						spoutLastHeight = pg.height;
-					} else if (pg.width != spoutLastWidth || pg.height != spoutLastHeight) {
-						// Explicit update before sendTexture prevents the lost-frame-on-resize
-						// issue caused by Spout's lazy updateSender inside sendTexture().
-						spoutSender.updateSender(pg.width, pg.height);
-						spoutLastWidth  = pg.width;
-						spoutLastHeight = pg.height;
-					}
-					spoutSender.sendTexture(pg);
-				}
-			} catch (Exception | LinkageError e) {
-				logger.log(Level.WARNING, "sendOutput: Spout error.", e);
+		try {
+			PGraphicsOpenGL graphics = resolveGraphics(spoutView);
+			if (graphics == null) {
+				return;
 			}
+
+			if (graphics.width != spoutWidth || graphics.height != spoutHeight) {
+				spoutSender.updateSender(graphics.width, graphics.height);
+				spoutWidth = graphics.width;
+				spoutHeight = graphics.height;
+			}
+
+			spoutSender.sendTexture(graphics);
+		} catch (Exception | LinkageError error) {
+			logger.log(Level.WARNING, "Spout frame publication failed; Spout has been disabled.", error);
+			shutdownSpout();
+		}
+	}
+
+	/** Direct GPU-to-GPU Syphon publication. */
+	private void sendSyphonFrame() {
+		if (!syphonEnabled || syphonServer == null || !isMacOS) {
+			return;
 		}
 
-		// NDI — pixel copy on draw thread, conversion + send in dedicated worker
-		if (ndiEnabled && ndiSender != null) {
-			try {
-				PGraphicsOpenGL pg = resolveGraphics(OutputType.NDI);
-				if (pg == null || pg.width <= 0 || pg.height <= 0) return;
+		try {
+			PGraphicsOpenGL graphics = resolveGraphics(syphonView);
+			if (graphics != null) {
+				syphonServer.sendImage(graphics);
+			}
+		} catch (Exception | LinkageError error) {
+			logger.log(Level.WARNING, "Syphon frame publication failed; Syphon has been disabled.", error);
+			shutdownSyphon();
+		}
+	}
 
-				// Availability check BEFORE loadPixels — drops frame without CPU work if busy.
-				NdiSlot slot = freeSlots.poll();
-				if (slot == null) {
-					ndiDropped.incrementAndGet();
-					return;
-				}
+	/**
+	 * Captures the selected NDI PGraphics into a pooled CPU slot.
+	 *
+	 * <p>{@code loadPixels()} must remain on the Processing/OpenGL thread. The expensive ARGB-to-RGBA
+	 * conversion and synchronous NDI send are performed by the dedicated worker. A bounded latest-frame
+	 * policy prevents an overloaded NDI receiver from accumulating latency or blocking Syphon/Spout.</p>
+	 */
+	private void captureNdiFrame() {
+		if (!ndiEnabled || ndiSender == null || !ndiWorkerRunning) {
+			return;
+		}
 
-				pg.loadPixels(); // must run on draw thread
-				int[] pixels = pg.pixels;
-				if (pixels == null || pixels.length < pg.width * pg.height) {
-					freeSlots.offer(slot); // return slot on bad state
-					return;
-				}
+		PGraphicsOpenGL graphics = resolveGraphics(ndiView);
+		if (graphics == null || graphics.width <= 0 || graphics.height <= 0) {
+			return;
+		}
 
-				// System.arraycopy is significantly faster than element-wise copy.
-				slot.prepare(pixels, pg.width, pg.height);
-				ndiCaptured.incrementAndGet();
+		NdiFrameSlot slot = acquireNdiCaptureSlot();
+		if (slot == null) {
+			ndiDroppedFrames.incrementAndGet();
+			return;
+		}
 
-				if (!readySlots.offer(slot)) {
-					// readySlots full — worker is overloaded, drop and return slot.
-					freeSlots.offer(slot);
-					ndiDropped.incrementAndGet();
-				}
-			} catch (Exception | LinkageError e) {
-				logger.log(Level.WARNING, "sendOutput: NDI capture error.", e);
+		boolean queued = false;
+		try {
+			graphics.loadPixels();
+
+			int width = graphics.width;
+			int height = graphics.height;
+			int pixelCount = Math.multiplyExact(width, height);
+
+			if (graphics.pixels == null || graphics.pixels.length < pixelCount) {
+				logger.warning("NDI frame skipped: Processing pixel buffer is unavailable or incomplete.");
+				return;
+			}
+
+			slot.ensureCapacity(width, height);
+			System.arraycopy(graphics.pixels, 0, slot.argbPixels, 0, pixelCount);
+			slot.width = width;
+			slot.height = height;
+			slot.pixelCount = pixelCount;
+			slot.frameRateNumerator = ndiFrameRateNumerator;
+			slot.frameRateDenominator = ndiFrameRateDenominator;
+
+			queued = offerLatestNdiFrame(slot);
+			if (queued) {
+				ndiCapturedFrames.incrementAndGet();
+			}
+		} catch (RuntimeException error) {
+			logger.log(Level.WARNING, "NDI frame capture failed.", error);
+		} finally {
+			if (!queued) {
+				ndiFreeSlots.offer(slot);
 			}
 		}
 	}
 
-	// -------------------------------------------------------------------------
-	// NDI metrics
-	// -------------------------------------------------------------------------
+	/**
+	 * Obtains a free slot. If all slots are occupied, the oldest frame still waiting in the ready
+	 * queue is replaced, preserving low latency without touching the slot currently used by the worker.
+	 */
+	private NdiFrameSlot acquireNdiCaptureSlot() {
+		NdiFrameSlot slot = ndiFreeSlots.poll();
+		if (slot != null) {
+			return slot;
+		}
+
+		slot = ndiReadySlots.poll();
+		if (slot != null) {
+			ndiDroppedFrames.incrementAndGet();
+		}
+		return slot;
+	}
+
+	/** Queues the newest NDI frame, replacing the oldest pending frame if required. */
+	private boolean offerLatestNdiFrame(NdiFrameSlot slot) {
+		if (ndiReadySlots.offer(slot)) {
+			return true;
+		}
+
+		NdiFrameSlot stale = ndiReadySlots.poll();
+		if (stale != null) {
+			ndiDroppedFrames.incrementAndGet();
+			ndiFreeSlots.offer(stale);
+		}
+
+		return ndiReadySlots.offer(slot);
+	}
+
+	/** Dedicated NDI conversion and sender loop. No OpenGL calls are made here. */
+	private void ndiWorkerLoop() {
+		while (ndiWorkerRunning || !ndiReadySlots.isEmpty()) {
+			NdiFrameSlot slot = null;
+
+			try {
+				slot = ndiReadySlots.poll(100, TimeUnit.MILLISECONDS);
+				if (slot == null) {
+					continue;
+				}
+
+				DevolaySender sender = ndiSender;
+				if (!ndiEnabled || sender == null) {
+					continue;
+				}
+
+				slot.prepareDevolayFrame();
+
+				/*
+				 * Synchronous send is intentional here: it runs only on the dedicated worker and makes
+				 * ownership of each pooled frame/buffer explicit. The render thread remains independent.
+				 */
+				sender.sendVideoFrame(slot.frame);
+				ndiSentFrames.incrementAndGet();
+			} catch (InterruptedException interrupted) {
+				if (!ndiWorkerRunning) {
+					Thread.currentThread().interrupt();
+					break;
+				}
+			} catch (Exception | LinkageError error) {
+				ndiEnabled = false;
+				ndiWorkerRunning = false;
+				logger.log(Level.WARNING, "NDI sender worker failed; NDI has been disabled.", error);
+			} finally {
+				if (slot != null) {
+					ndiFreeSlots.offer(slot);
+				}
+			}
+		}
+	}
 
 	/**
-	 * Returns the total number of NDI frames for which {@code loadPixels()} was called.
-	 * @return total captured frame count
+	 * Changes the NDI frame-rate metadata used for subsequently captured frames.
+	 *
+	 * @param numerator positive frame-rate numerator
+	 * @param denominator positive frame-rate denominator
+	 * @throws IllegalArgumentException if either value is zero or negative
 	 */
-	public long getNdiCapturedFrames() { return ndiCaptured.get(); }
+	public void setNdiFrameRate(int numerator, int denominator) {
+		if (numerator <= 0 || denominator <= 0) {
+			throw new IllegalArgumentException("NDI frame-rate numerator and denominator must be positive.");
+		}
+		ndiFrameRateNumerator = numerator;
+		ndiFrameRateDenominator = denominator;
+	}
 
-	/**
-	 * Returns the total number of NDI frames successfully transmitted.
-	 * @return total sent frame count
-	 */
-	public long getNdiSentFrames()     { return ndiSent.get(); }
-
-	/**
-	 * Returns the number of NDI frames dropped because no slot was available
-	 * (worker busy) or the ready queue was full.
-	 * @return total dropped frame count
-	 */
-	public long getNdiDroppedFrames()  { return ndiDropped.get(); }
-
-	// -------------------------------------------------------------------------
-	// Shutdown
-	// -------------------------------------------------------------------------
-
-	/** Shuts down all active output methods and releases resources. */
+	/** Shuts down all output methods. */
 	public void shutdownOutputs() {
-		ndiEnabled    = false;
-		spoutEnabled  = false;
-		syphonEnabled = false;
 		shutdownNDI();
 		shutdownSpout();
 		shutdownSyphon();
 		logger.info("All output services have been shut down.");
 	}
 
+	/** Stops the NDI worker before releasing its native sender and frame resources. */
 	private void shutdownNDI() {
-		ndiEnabled = false; // volatile write — worker sees this immediately
+		synchronized (ndiLifecycleLock) {
+			shutdownNDILocked();
+		}
+	}
 
-		// Capture and clear the executor reference before waiting for termination
-		// to avoid holding a lock across awaitTermination (which could deadlock if
-		// the worker tries to acquire the same lock during shutdown).
-		ExecutorService executor;
-		synchronized (this) {
-			executor = ndiWorkerExecutor;
-			ndiWorkerExecutor = null;
-		}
-		if (executor != null) {
-			executor.shutdownNow();
+	/** Must be called while holding {@link #ndiLifecycleLock}. */
+	private void shutdownNDILocked() {
+		ndiEnabled = false;
+		ndiWorkerRunning = false;
+
+		Thread worker = ndiWorkerThread;
+		ndiWorkerThread = null;
+
+		if (worker != null && worker != Thread.currentThread()) {
+			worker.interrupt();
 			try {
-				executor.awaitTermination(500, TimeUnit.MILLISECONDS);
-			} catch (InterruptedException e) {
+				worker.join();
+			} catch (InterruptedException interrupted) {
 				Thread.currentThread().interrupt();
+				logger.warning("Interrupted while waiting for the NDI sender worker to stop.");
 			}
 		}
-		// Close sender after worker has exited to avoid concurrent use.
-		synchronized (this) {
-			if (ndiSender != null) {
-				ndiSender.close();
-				ndiSender = null;
-			}
-		}
-		drainAndCloseSlots(freeSlots);
-		drainAndCloseSlots(readySlots);
+
+		ndiReadySlots.clear();
+		ndiFreeSlots.clear();
+		closeNdiSlots();
+		closeNdiSender();
+
 		logger.info("NDI output shut down.");
 	}
 
+	/** Closes every pooled DevolayVideoFrame. */
+	private void closeNdiSlots() {
+		for (int index = 0; index < ndiSlots.length; index++) {
+			NdiFrameSlot slot = ndiSlots[index];
+			ndiSlots[index] = null;
+
+			if (slot != null) {
+				try {
+					slot.close();
+				} catch (RuntimeException | LinkageError error) {
+					logger.log(Level.FINE, "Failed to close an NDI frame slot cleanly.", error);
+				}
+			}
+		}
+	}
+
+	/** Closes the native NDI sender. */
+	private void closeNdiSender() {
+		DevolaySender sender = ndiSender;
+		ndiSender = null;
+
+		if (sender != null) {
+			try {
+				sender.close();
+			} catch (RuntimeException | LinkageError error) {
+				logger.log(Level.FINE, "Failed to close the NDI sender cleanly.", error);
+			}
+		}
+	}
+
+	/** Releases the Windows Spout sender. */
 	private void shutdownSpout() {
-		if (spoutSender != null) {
-			spoutSender.dispose();
-			spoutSender = null;
-		}
-		spoutEnabled    = false;
-		spoutLastWidth  = 0;
-		spoutLastHeight = 0;
-		logger.info("Spout output shut down.");
+		spoutEnabled = false;
+		disposeSpoutSender();
+		spoutWidth = -1;
+		spoutHeight = -1;
 	}
 
+	private void disposeSpoutSender() {
+		Spout sender = spoutSender;
+		spoutSender = null;
+
+		if (sender != null) {
+			try {
+				sender.dispose();
+				logger.info("Spout output shut down.");
+			} catch (Exception | LinkageError error) {
+				logger.log(Level.FINE, "Failed to dispose the Spout sender cleanly.", error);
+			}
+		}
+	}
+
+	/** Stops the macOS Syphon server. */
 	private void shutdownSyphon() {
-		if (syphonServer != null) {
-			syphonServer.stop();
-			syphonServer = null;
-		}
 		syphonEnabled = false;
-		logger.info("Syphon output shut down.");
+		stopSyphonServer();
 	}
 
-	private void cleanupFailedNdiInit() {
-		if (ndiSender != null) { ndiSender.close(); ndiSender = null; }
-		ndiEnabled = false;
-		drainAndCloseSlots(freeSlots);
-		drainAndCloseSlots(readySlots);
-	}
+	private void stopSyphonServer() {
+		SyphonServer server = syphonServer;
+		syphonServer = null;
 
-	/** Drains {@code queue}, calling {@link NdiSlot#close()} on each slot. */
-	private void drainAndCloseSlots(Queue<NdiSlot> queue) {
-		NdiSlot slot;
-		while ((slot = queue.poll()) != null) {
-			slot.close();
+		if (server != null) {
+			try {
+				server.stop();
+				logger.info("Syphon output shut down.");
+			} catch (Exception | LinkageError error) {
+				logger.log(Level.FINE, "Failed to stop the Syphon server cleanly.", error);
+			}
 		}
 	}
 
-	// -------------------------------------------------------------------------
-	// Status
-	// -------------------------------------------------------------------------
-
 	/**
-	 * Returns true if NDI output is currently enabled.
-	 * @return {@code true} if NDI is enabled
+	 * Reports whether the NDI sender and its worker are active.
+	 *
+	 * @return {@code true} when NDI is enabled and ready to send frames
 	 */
-	public boolean isNdiEnabled()    { return ndiEnabled;    }
+	public boolean isNdiEnabled() {
+		return ndiEnabled && ndiSender != null && ndiWorkerRunning;
+	}
 
 	/**
-	 * Returns true if Spout output is currently enabled.
-	 * @return {@code true} if Spout is enabled
+	 * Reports whether the Windows Spout sender is active.
+	 *
+	 * @return {@code true} when running on Windows with Spout enabled and initialized
 	 */
-	public boolean isSpoutEnabled()  { return spoutEnabled;  }
+	public boolean isSpoutEnabled() {
+		return isWindows && spoutEnabled && spoutSender != null;
+	}
 
 	/**
-	 * Returns true if Syphon output is currently enabled.
-	 * @return {@code true} if Syphon is enabled
+	 * Reports whether the macOS Syphon server is active.
+	 *
+	 * @return {@code true} when running on macOS with Syphon enabled and initialized
 	 */
-	public boolean isSyphonEnabled() { return syphonEnabled; }
+	public boolean isSyphonEnabled() {
+		return isMacOS && syphonEnabled && syphonServer != null;
+	}
 
 	/**
-	 * Returns true if at least one output method is currently active.
-	 * @return {@code true} if NDI, Spout, or Syphon has an active sender/server
+	 * Selects the view sent through NDI.
+	 *
+	 * @param view view to route to the NDI output
+	 */
+	public void setNdiView(zividomelive.ViewType view) {
+		setViewForOutput(OutputType.NDI, view);
+	}
+
+	/**
+	 * Selects the view sent through Spout.
+	 *
+	 * @param view view to route to the Spout output
+	 */
+	public void setSpoutView(zividomelive.ViewType view) {
+		setViewForOutput(OutputType.SPOUT, view);
+	}
+
+	/**
+	 * Selects the view sent through Syphon.
+	 *
+	 * @param view view to route to the Syphon output
+	 */
+	public void setSyphonView(zividomelive.ViewType view) {
+		setViewForOutput(OutputType.SYPHON, view);
+	}
+
+	/**
+	 * Sets the view of whichever local texture backend exists on this platform.
+	 *
+	 * @param view view to route to Syphon on macOS or Spout on Windows
+	 */
+	public void setLocalTextureView(zividomelive.ViewType view) {
+		if (view == null) {
+			return;
+		}
+
+		switch (localTextureBackend) {
+			case SPOUT:
+				setSpoutView(view);
+				break;
+			case SYPHON:
+				setSyphonView(view);
+				break;
+			case NONE:
+			default:
+				logger.warning("Local texture view ignored: no Syphon/Spout backend on this platform.");
+				break;
+		}
+	}
+
+	/**
+	 * Returns the view of the platform-local texture backend.
+	 *
+	 * @return Spout view on Windows, Syphon view on macOS, or
+	 *         {@link zividomelive.ViewType#FISHEYE_DOMEMASTER} when no local backend exists
+	 */
+	public zividomelive.ViewType getLocalTextureView() {
+		switch (localTextureBackend) {
+			case SPOUT:
+				return spoutView;
+			case SYPHON:
+				return syphonView;
+			case NONE:
+			default:
+				return zividomelive.ViewType.FISHEYE_DOMEMASTER;
+		}
+	}
+
+	/**
+	 * Returns a stable backend name for UI and diagnostics.
+	 *
+	 * @return {@code "Spout"}, {@code "Syphon"}, or {@code "None"}
+	 */
+	public String getLocalTextureBackendName() {
+		switch (localTextureBackend) {
+			case SPOUT:
+				return "Spout";
+			case SYPHON:
+				return "Syphon";
+			case NONE:
+			default:
+				return "None";
+		}
+	}
+
+	/**
+	 * Returns the number of NDI frames copied from Processing into an available slot.
+	 *
+	 * @return total captured NDI frames for the lifetime of this manager
+	 */
+	public long getNdiCapturedFrames() {
+		return ndiCapturedFrames.get();
+	}
+
+	/**
+	 * Returns the number of NDI frames successfully submitted by the sender worker.
+	 *
+	 * @return total transmitted NDI frames for the lifetime of this manager
+	 */
+	public long getNdiSentFrames() {
+		return ndiSentFrames.get();
+	}
+
+	/**
+	 * Returns the number of NDI frames discarded because no free slot was available.
+	 *
+	 * @return total dropped NDI frames for the lifetime of this manager
+	 */
+	public long getNdiDroppedFrames() {
+		return ndiDroppedFrames.get();
+	}
+
+	/**
+	 * Returns whether an enabled external output currently requires the specified high-resolution view.
+	 * The render pipeline can use this to update Cubemap and Standard targets independently of preview mode.
+	 *
+	 * @param view view whose external-output requirement should be checked
+	 * @return {@code true} if an enabled NDI, Spout, or Syphon output is configured for {@code view}
+	 */
+	public boolean requiresView(zividomelive.ViewType view) {
+		if (view == null) {
+			return false;
+		}
+
+		if (isNdiEnabled() && ndiView == view) {
+			return true;
+		}
+		if (isSpoutEnabled() && spoutView == view) {
+			return true;
+		}
+		return isSyphonEnabled() && syphonView == view;
+	}
+
+	/**
+	 * Checks whether NDI or the single valid local texture backend is active.
+	 *
+	 * @return {@code true} when at least one output is enabled and initialized
 	 */
 	public boolean isActive() {
-		return (ndiEnabled    && ndiSender    != null)
-			|| (spoutEnabled  && spoutSender  != null)
-			|| (syphonEnabled && syphonServer != null);
+		return isNdiEnabled() || isSpoutEnabled() || isSyphonEnabled();
 	}
 
-	// -------------------------------------------------------------------------
-	// Per-output view setters (ControlManager API)
-	// -------------------------------------------------------------------------
+	/** Stops and releases every output owned by this manager. */
+	public void stopOutput() {
+		shutdownOutputs();
+	}
+
+	/** Finds the most specific error message in a nested initialization failure. */
+	private static String rootCauseMessage(Throwable error) {
+		Throwable root = error;
+		while (root.getCause() != null && root.getCause() != root) {
+			root = root.getCause();
+		}
+
+		String message = root.getMessage();
+		if (message == null || message.trim().isEmpty()) {
+			return root.getClass().getSimpleName();
+		}
+		return root.getClass().getSimpleName() + ": " + message;
+	}
 
 	/**
-	 * Sets the view type for NDI output.
-	 * @param view the {@link zividomelive.ViewType} to use for NDI output
+	 * A reusable NDI frame slot. The Processing ARGB copy is filled on the draw thread; conversion and
+	 * Devolay submission happen exclusively on the NDI worker.
 	 */
-	public void setNdiView(zividomelive.ViewType view)    { setViewForOutput(OutputType.NDI,    view); }
+	private static final class NdiFrameSlot implements AutoCloseable {
 
-	/**
-	 * Sets the view type for Spout output.
-	 * @param view the {@link zividomelive.ViewType} to use for Spout output
-	 */
-	public void setSpoutView(zividomelive.ViewType view)  { setViewForOutput(OutputType.SPOUT,  view); }
+		private final DevolayVideoFrame frame = new DevolayVideoFrame();
+		private int[] argbPixels;
+		private ByteBuffer rgbaBuffer;
+		private int width;
+		private int height;
+		private int pixelCount;
+		private int frameRateNumerator;
+		private int frameRateDenominator;
 
-	/**
-	 * Sets the view type for Syphon output.
-	 * @param view the {@link zividomelive.ViewType} to use for Syphon output
-	 */
-	public void setSyphonView(zividomelive.ViewType view) { setViewForOutput(OutputType.SYPHON, view); }
+		private void ensureCapacity(int requiredWidth, int requiredHeight) {
+			int requiredPixels = Math.multiplyExact(requiredWidth, requiredHeight);
+			int requiredBytes = Math.multiplyExact(requiredPixels, 4);
 
-	/**
-	 * Sets the NDI frame rate metadata. Common values:
-	 * <ul>
-	 *   <li>{@code 60, 1} → 60 fps (default)
-	 *   <li>{@code 30, 1} → 30 fps
-	 *   <li>{@code 60000, 1001} → 59.94 fps
-	 * </ul>
-	 *
-	 * @param numerator   frame rate numerator (must be &gt; 0)
-	 * @param denominator frame rate denominator (must be &gt; 0)
-	 */
-	public void setNdiFrameRate(int numerator, int denominator) {
-		if (numerator > 0 && denominator > 0) {
-			ndiFrameRateNum = numerator;
-			ndiFrameRateDen = denominator;
+			if (argbPixels == null || argbPixels.length != requiredPixels) {
+				argbPixels = new int[requiredPixels];
+			}
+
+			if (rgbaBuffer == null || rgbaBuffer.capacity() != requiredBytes) {
+				rgbaBuffer = ByteBuffer
+						.allocateDirect(requiredBytes)
+						.order(ByteOrder.LITTLE_ENDIAN);
+			}
+		}
+
+		private void prepareDevolayFrame() {
+			rgbaBuffer.clear();
+
+			for (int index = 0; index < pixelCount; index++) {
+				int pixel = argbPixels[index];
+				rgbaBuffer.put((byte) ((pixel >>> 16) & 0xFF));
+				rgbaBuffer.put((byte) ((pixel >>> 8) & 0xFF));
+				rgbaBuffer.put((byte) (pixel & 0xFF));
+				rgbaBuffer.put((byte) ((pixel >>> 24) & 0xFF));
+			}
+
+			rgbaBuffer.flip();
+
+			frame.setResolution(width, height);
+			frame.setData(rgbaBuffer);
+			frame.setFourCCType(DevolayFrameFourCCType.RGBA);
+			frame.setLineStride(width * 4);
+			frame.setFormatType(DevolayFrameFormatType.INTERLEAVED);
+			frame.setFrameRate(frameRateNumerator, frameRateDenominator);
+		}
+
+		/** {@inheritDoc} */
+		@Override
+		public void close() {
+			frame.close();
+			argbPixels = null;
+			rgbaBuffer = null;
 		}
 	}
-
-	/** Stops all output methods. Alias for {@link #shutdownOutputs()}. */
-	public void stopOutput() { shutdownOutputs(); }
-
-	/** No-op — retained for call-site compatibility. Graphics are now resolved per-frame. */
-	public void refreshCachedGraphics() { /* per-frame resolution — no cache to refresh */ }
 }
