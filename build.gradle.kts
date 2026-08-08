@@ -45,7 +45,7 @@ version = "1.4.0"
 
 // Centralized dependency versions for easier Maven sync/updates.
 val processingCoreVersion = "4.5.6"
-val devolayVersion = "2.1.1"
+val devolayVersion = "2.2.0-vic.1"
 
 // The location of your sketchbook folder. The sketchbook folder holds your installed
 // libraries, tools, and modes. It is needed if you:
@@ -88,7 +88,7 @@ dependencies {
     compileOnly(group = "org.processing", name = "core", version = processingCoreVersion)
 
     // insert your external dependencies
-    implementation(group = "me.walkerknapp", name = "devolay", version = devolayVersion)
+    implementation(group = "io.github.vicvalentim", name = "devolay", version = devolayVersion)
     //implementation(group = "org.apache.commons", name = "commons-math3", version = "3.6.1")
     // The provided example uses commons-math3. Replace or add as needed.
 
