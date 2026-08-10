@@ -65,9 +65,10 @@ public class OutputManager implements PConstants {
 	/** One slot may be sent while the remaining slots are free or queued. */
 	private static final int NDI_SLOT_COUNT = 3;
 
-	/** Preserves the frame-rate metadata used by the previous implementation. */
-	private static final int DEFAULT_NDI_FRAME_RATE_NUMERATOR = 150;
-	private static final int DEFAULT_NDI_FRAME_RATE_DENOMINATOR = 1;
+	/** Default metadata follows the facade's default Processing frame rate. */
+	static final int DEFAULT_NDI_FRAME_RATE_NUMERATOR = 60;
+	static final int DEFAULT_NDI_FRAME_RATE_DENOMINATOR = 1;
+	static final DevolayFrameFormatType NDI_FRAME_FORMAT_TYPE = DevolayFrameFormatType.PROGRESSIVE;
 
 	private final Logger logger = LogManager.getLogger();
 	private final zividomelive parent;
@@ -128,6 +129,8 @@ public class OutputManager implements PConstants {
 		}
 
 		this.parent = parent;
+		this.ndiFrameRateNumerator = parent.getTargetFrameRate();
+		this.ndiFrameRateDenominator = DEFAULT_NDI_FRAME_RATE_DENOMINATOR;
 
 		String osName = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
 		this.isMacOS = osName.contains("mac");
@@ -1204,7 +1207,7 @@ public class OutputManager implements PConstants {
 			frame.setData(rgbaBuffer);
 			frame.setFourCCType(DevolayFrameFourCCType.RGBA);
 			frame.setLineStride(width * 4);
-			frame.setFormatType(DevolayFrameFormatType.INTERLEAVED);
+			frame.setFormatType(NDI_FRAME_FORMAT_TYPE);
 			frame.setFrameRate(frameRateNumerator, frameRateDenominator);
 		}
 

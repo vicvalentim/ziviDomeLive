@@ -81,6 +81,10 @@ public class zividomelive implements PConstants {
 	private final OrbitCamera sceneCamera = new OrbitCamera();
 	private boolean sceneCameraInputEnabled = false;
 	private OutputManager outputManager;
+	private boolean outputsPaused;
+	private boolean resumeNdiOutput;
+	private boolean resumeSpoutOutput;
+	private boolean resumeSyphonOutput;
 	private SplashScreen splash;
 	private SceneManager sceneManager;
 
@@ -393,13 +397,34 @@ public class zividomelive implements PConstants {
 		} catch (Exception | LinkageError error) {
 			LOGGER.severe(
 					"Error initializing managers: "
-							+ error.getClass().getSimpleName()
-							+ ": "
-							+ error.getMessage()
+						+ error.getClass().getSimpleName()
+						+ ": "
+						+ error.getMessage()
 			);
 
-			initState = InitState.SETUP_COMPLETE;
-			initialized = false;
+			try {
+				rollbackManagerInitialization();
+			} catch (Exception | LinkageError cleanupError) {
+				LOGGER.warning("Manager initialization rollback failed: " + cleanupError.getMessage());
+			} finally {
+				initState = InitState.SETUP_COMPLETE;
+				initialized = false;
+			}
+		}
+	}
+
+	private void rollbackManagerInitialization() {
+		if (controlManager != null) {
+			controlManager.dispose();
+			controlManager = null;
+		}
+		if (cameraManager != null) {
+			cameraManager.dispose();
+			cameraManager = null;
+		}
+		releaseGraphicsResources();
+		if (outputManager != null) {
+			outputManager.shutdownOutputs();
 		}
 	}
 
@@ -414,19 +439,15 @@ public class zividomelive implements PConstants {
 	 * <p>Must be called from the Processing/OpenGL thread.</p>
 	 */
 	void initializeRenderers() {
-		try {
-			LOGGER.info("Initializing renderers...");
+		LOGGER.info("Initializing renderers...");
 
-			initializeOutputRenderers();
-			LOGGER.info("Output renderers initialized.");
+		initializeOutputRenderers();
+		LOGGER.info("Output renderers initialized.");
 
-			initializePreviewRenderers();
-			LOGGER.info("Preview renderers initialized.");
+		initializePreviewRenderers();
+		LOGGER.info("Preview renderers initialized.");
 
-			LOGGER.info("Renderers initialized successfully.");
-		} catch (Exception e) {
-			LOGGER.severe("Error initializing renderers: " + e.getMessage());
-		}
+		LOGGER.info("Renderers initialized successfully.");
 	}
 
 	/**
@@ -453,6 +474,7 @@ public class zividomelive implements PConstants {
 		equirectangularRenderer = new EquirectangularRenderer(outputResolution, EQUIRECT_FRAG, EQUIRECT_VERT, p);
 		LOGGER.info("EquirectangularRenderer (output) initialized.");
 		fisheyeDomemaster = new FisheyeDomemaster(outputResolution, DOME_FRAG, DOME_VERT, p);
+		fisheyeDomemaster.setSizePercentage(fishSize);
 		LOGGER.info("FisheyeDomemaster (output) initialized.");
 		cubemapViewRenderer = new CubemapViewRenderer(p, outputResolution);
 		LOGGER.info("CubemapViewRenderer (output) initialized.");
@@ -666,6 +688,7 @@ public class zividomelive implements PConstants {
 		previewCubemapRenderer = new CubemapRenderer(previewResolution, p);
 		previewEquirectangularRenderer = new EquirectangularRenderer(previewResolution, EQUIRECT_FRAG, EQUIRECT_VERT, p);
 		previewFisheyeDomemaster = new FisheyeDomemaster(previewResolution, DOME_FRAG, DOME_VERT, p);
+		previewFisheyeDomemaster.setSizePercentage(fishSize);
 		previewCubemapViewRenderer = new CubemapViewRenderer(p, previewResolution);
 
 		// Dynamic dimensions (0, 0) → renderer uses parent.width/parent.height each frame,
@@ -1367,7 +1390,7 @@ public class zividomelive implements PConstants {
 
 	/**
 	 * Handles control events from the ControlP5 library.
-	 * This method must be registered using p.registerMethod("controlEvent", this).
+	 * The built-in ControlManager registers this callback as a ControlP5 listener.
 	 *
 	 * @param theEvent the ControlEvent object containing details of the control event
 	 */
@@ -1507,7 +1530,8 @@ public class zividomelive implements PConstants {
 
 	/**
 	 * Sets the target frame rate applied during setup. Defaults to 60.
-	 * Call before setup() to take effect at startup; calling afterwards applies immediately.
+	 * Call before setup() to take effect at startup; calling afterwards applies immediately and
+	 * updates the default NDI frame-rate metadata.
 	 *
 	 * @param fps desired frame rate, must be positive
 	 */
@@ -1517,6 +1541,9 @@ public class zividomelive implements PConstants {
 			return;
 		}
 		this.targetFrameRate = fps;
+		if (outputManager != null) {
+			outputManager.setNdiFrameRate(fps, 1);
+		}
 		if (initState != InitState.NOT_INITIALIZED) {
 			p.frameRate(fps);
 		}
@@ -1572,6 +1599,9 @@ public class zividomelive implements PConstants {
 	 */
 	public void setFisheyeDomemaster(FisheyeDomemaster fisheyeDomemaster) {
 		this.fisheyeDomemaster = fisheyeDomemaster;
+		if (this.fisheyeDomemaster != null) {
+			this.fisheyeDomemaster.setSizePercentage(fishSize);
+		}
 	}
 
 	/**
@@ -1740,8 +1770,12 @@ public class zividomelive implements PConstants {
 		if (initState == InitState.SETUP_COMPLETE) {
 			try {
 				initializeManagers();
-				p.unregisterMethod("post", this);
-				LOGGER.info("Post-initialization completed successfully.");
+				if (initState == InitState.MANAGERS_READY) {
+					p.unregisterMethod("post", this);
+					LOGGER.info("Post-initialization completed successfully.");
+				} else {
+					LOGGER.warning("Post-initialization did not complete; the next post hook will retry.");
+				}
 			} catch (Exception e) {
 				LOGGER.severe("Error during post-initialization: " + e.getMessage());
 			}
@@ -1753,6 +1787,7 @@ public class zividomelive implements PConstants {
 	 */
 	public void stop() {
 		LOGGER.info("Stopping all processes...");
+		clearPausedOutputState();
 		if (outputManager != null) {
 			outputManager.shutdownOutputs();
 		}
@@ -1764,8 +1799,17 @@ public class zividomelive implements PConstants {
 	 */
 	public void resume() {
 		LOGGER.info("Resuming processes...");
-		if (outputManager != null && !outputManager.isActive()) {
-			outputManager.sendOutput();
+		if (outputManager != null && outputsPaused) {
+			if (resumeNdiOutput && !outputManager.isNdiEnabled()) {
+				outputManager.toggleOutput("ndi");
+			}
+			if (resumeSpoutOutput && !outputManager.isSpoutEnabled()) {
+				outputManager.toggleOutput("spout");
+			}
+			if (resumeSyphonOutput && !outputManager.isSyphonEnabled()) {
+				outputManager.toggleOutput("syphon");
+			}
+			clearPausedOutputState();
 		}
 		LOGGER.info("Processes resumed.");
 	}
@@ -1775,10 +1819,21 @@ public class zividomelive implements PConstants {
 	 */
 	public void pause() {
 		LOGGER.info("Pausing processes...");
-		if (outputManager != null) {
+		if (outputManager != null && !outputsPaused) {
+			resumeNdiOutput = outputManager.isNdiEnabled();
+			resumeSpoutOutput = outputManager.isSpoutEnabled();
+			resumeSyphonOutput = outputManager.isSyphonEnabled();
+			outputsPaused = true;
 			outputManager.stopOutput();
 		}
 		LOGGER.info("Processes paused.");
+	}
+
+	private void clearPausedOutputState() {
+		outputsPaused = false;
+		resumeNdiOutput = false;
+		resumeSpoutOutput = false;
+		resumeSyphonOutput = false;
 	}
 
 	/**
@@ -1786,6 +1841,7 @@ public class zividomelive implements PConstants {
 	 */
 	public void dispose() {
 		LOGGER.info("Disposing resources...");
+		clearPausedOutputState();
 
 		releaseGraphicsResources();
 
