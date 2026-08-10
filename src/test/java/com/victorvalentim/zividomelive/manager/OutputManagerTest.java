@@ -1,10 +1,13 @@
 package com.victorvalentim.zividomelive.manager;
 
 import com.victorvalentim.zividomelive.zividomelive;
+import me.walkerknapp.devolay.DevolayFrameFormatType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assumptions;
 import processing.core.PApplet;
+
+import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -98,5 +101,50 @@ class OutputManagerTest {
 		outputManager.setViewForOutput(OutputManager.OutputType.NDI, zividomelive.ViewType.EQUIRECTANGULAR);
 		assertEquals(zividomelive.ViewType.EQUIRECTANGULAR,
 				outputManager.getViewForOutput(OutputManager.OutputType.NDI));
+	}
+
+	@Test
+	void ndiMetadataDefaultsToFacadeFrameRateAndProgressiveFrames() throws Exception {
+		zividomelive lib = new zividomelive(new PApplet());
+		lib.setTargetFrameRate(30);
+		OutputManager manager = new OutputManager(lib);
+
+		assertEquals(30, readIntField(manager, "ndiFrameRateNumerator"));
+		assertEquals(1, readIntField(manager, "ndiFrameRateDenominator"));
+		assertEquals(DevolayFrameFormatType.PROGRESSIVE, OutputManager.NDI_FRAME_FORMAT_TYPE);
+	}
+
+	@Test
+	void ndiFrameRateSupportsFractionalMetadataAndRejectsInvalidValues() throws Exception {
+		outputManager.setNdiFrameRate(60000, 1001);
+
+		assertEquals(60000, readIntField(outputManager, "ndiFrameRateNumerator"));
+		assertEquals(1001, readIntField(outputManager, "ndiFrameRateDenominator"));
+		assertThrows(IllegalArgumentException.class, () -> outputManager.setNdiFrameRate(0, 1));
+		assertThrows(IllegalArgumentException.class, () -> outputManager.setNdiFrameRate(60, 0));
+	}
+
+	@Test
+	void facadeFrameRateChangesUpdateNdiMetadataAfterSetup() throws Exception {
+		zividomelive lib = new zividomelive(new HeadlessApplet());
+		lib.setup();
+
+		lib.setTargetFrameRate(24);
+
+		assertEquals(24, readIntField(lib.getOutputManager(), "ndiFrameRateNumerator"));
+		assertEquals(1, readIntField(lib.getOutputManager(), "ndiFrameRateDenominator"));
+	}
+
+	private static int readIntField(OutputManager manager, String fieldName) throws Exception {
+		Field field = OutputManager.class.getDeclaredField(fieldName);
+		field.setAccessible(true);
+		return field.getInt(manager);
+	}
+
+	private static class HeadlessApplet extends PApplet {
+		@Override
+		public void frameRate(float fps) {
+			// No Processing surface exists in this unit test.
+		}
 	}
 }

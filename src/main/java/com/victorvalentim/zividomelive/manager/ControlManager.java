@@ -15,6 +15,7 @@ import java.util.function.Consumer;
 public class ControlManager {
 
     private ControlP5 cp5;
+    private final ControlListener parentControlListener;
     private boolean numberboxActive = false;
     private int baseResolution;
     private zividomelive parent;
@@ -74,6 +75,9 @@ public class ControlManager {
 
         // Reset controls to default state
         resetControls();
+
+        parentControlListener = parent::controlEvent;
+        cp5.addListener(parentControlListener);
     }
 
     /**
@@ -404,6 +408,7 @@ public class ControlManager {
      * Disposes of the ControlManager by releasing all resources and clearing the ControlP5 instance.
      */
     public void dispose() {
+        cp5.removeListener(parentControlListener);
         cp5.dispose();
     }
 
@@ -491,14 +496,17 @@ public class ControlManager {
      * @param theEvent the ControlEvent that triggered this method
      */
     public void handleEvent(ControlEvent theEvent) {
+        if (theEvent == null) {
+            return;
+        }
+
         if (theEvent.isFrom(previewToggle)) {
             parent.setShowPreview(previewToggle.getState());
-        } else if (theEvent.isFrom(ndiToggle)) {
-            parent.getOutputManager().toggleOutput("ndi");
-        } else if (theEvent.isFrom(spoutToggle) && spoutToggle != null) {
-            parent.getOutputManager().toggleOutput("spout");
-        } else if (theEvent.isFrom(syphonToggle) && syphonToggle != null) {
-            parent.getOutputManager().toggleOutput("syphon");
+        } else if (theEvent.isFrom(ndiToggle)
+                || (spoutToggle != null && theEvent.isFrom(spoutToggle))
+                || (syphonToggle != null && theEvent.isFrom(syphonToggle))) {
+            // Output publication is changed exclusively by each toggle's onChange callback.
+            toggleDropdownVisibility();
         }
     }
 
