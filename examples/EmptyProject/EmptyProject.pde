@@ -28,6 +28,5 @@ void setup() {
   ziviDome.setScene(sceneManager.getCurrentScene());
 }
 void draw() {
-  // Call the draw method of the library for additional rendering
-  ziviDome.draw();
+  // ziviDomeLive renders through its registered Processing draw hook.
 }

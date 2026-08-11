@@ -12,9 +12,7 @@ Primeiro, importe o **ziviDomeLive** e qualquer dependência essencial no iníci
 
 ```java
 import com.victorvalentim.zividomelive.*;
-import controlP5.*;
-import codeanticode.syphon.*;
-import spout.*;
+import processing.opengl.PGraphicsOpenGL;
 ```
 
 Em seguida, inicialize o **ziviDomeLive** criando uma instância da biblioteca. Essa instância será a base do seu ambiente imersivo, facilitando o gerenciamento e a renderização das cenas.
@@ -46,7 +44,7 @@ void setup() {
 	ziviDome.setup();
 
 	// Cria uma nova instância de uma cena chamada currentScene, associando-a ao ziviDomeLive
-	currentScene = new Scene(ziviDome);
+	currentScene = new Scene1(ziviDome);
 
 	// Define a currentScene como a cena ativa dentro do ziviDomeLive
 	ziviDome.setScene(currentScene);
@@ -57,61 +55,43 @@ Concluindo esse passo, o ambiente está pronto, e o **ziviDomeLive** está prepa
 
 ---
 
-## Passo 2: Ativando o Módulo de Renderização
+## Passo 2: Deixando a Biblioteca Renderizar
 
-Com o **ziviDomeLive** inicializado, é hora de começar a renderizar! Na função `draw()` principal do sketch, você pode chamar a função `ziviDome.draw()` para renderizar a cena atual. Isso garante que a cena seja desenhada corretamente em cada frame.
+O construtor de `zividomelive` registra seu próprio hook `draw` no Processing. Não chame `ziviDome.draw()` no sketch, pois isso executa o pipeline duas vezes por frame. O sketch pode manter um `draw()` vazio para lógica futura:
 
 ```java
-// Função de desenho que é chamada repetidamente para renderizar o conteúdo da tela
 void draw() {
-	// Chama o método draw() do ziviDomeLive para processar e renderizar o conteúdo da cena atual
-	ziviDome.draw();
+	// ziviDomeLive renderiza automaticamente.
 }
 ```
 ___
 
 ## Passo 3: Ativando os Controles de Interação Básica
 
-A biblioteca **ziviDomeLive** oferece uma maneira intuitiva de lidar com interações do usuário dentro das cenas, possibilitando uma resposta em tempo real tanto para configurações visuais simples quanto complexas. Você pode ativar os controles definindo funções de evento diretamente no seu sketch principal do Processing, gerenciando interações como entradas de teclado, eventos de mouse e controles de interface usando o **ControlP5** de maneira organizada e eficiente.
+A biblioteca registra automaticamente os hooks de teclado e mouse do Processing e encaminha cada evento para a cena ativa. O painel ControlP5 interno encaminha seus eventos pelo mesmo contrato de `Scene`. Implemente apenas os callbacks necessários na cena; não os encaminhe novamente pelo sketch principal.
 
 Veja como ativar a interação básica para sua cena usando as seguintes funções:
 
 1. **Entrada pelo Teclado**:
-   A função `keyPressed()` permite que o **ziviDomeLive** capture e gerencie eventos do teclado. Dentro desta função, qualquer entrada de teclado pode ser encaminhada para a cena atual, permitindo respostas específicas para teclas pressionadas.
+   `keyEvent()` recebe os eventos depois que a biblioteca processa seus atalhos globais.
 2. **Eventos do Mouse**:
-   A função `mouseEvent()` captura e processa eventos do mouse, como cliques e movimentos. Assim como a entrada do teclado, os eventos do mouse podem ser direcionados para a cena atual para interações personalizadas.
+   `mouseEvent()` recebe cliques, movimento, arraste e roda do mouse.
 3. **Eventos de Controle**:
-   O **ControlP5** é uma biblioteca de interface do usuário que permite criar controles personalizados, como botões, sliders e caixas de texto. A função `controlEvent()` é usada para lidar com eventos gerados por esses controles, permitindo que você ajuste parâmetros visuais em tempo real.
+   `controlEvent()` recebe eventos do painel ControlP5 interno da biblioteca.
 
 ```java
-// Função que responde aos eventos de teclas pressionadas
-void keyPressed() {
-	// Passa o evento de tecla pressionada para o ziviDomeLive, permitindo que ele processe a interação
-	ziviDome.keyPressed();
-
-	// Verifica se existe uma cena ativa (currentScene) configurada
-	if (currentScene != null) {
-		// Encaminha o evento de tecla pressionada para a cena atual, permitindo que a cena responda ao evento
-		currentScene.keyPressed(key);
+public void keyEvent(processing.event.KeyEvent event) {
+	if (event.getAction() == processing.event.KeyEvent.PRESS) {
+		println("Tecla pressionada: " + event.getKey());
 	}
 }
 
-// Função que responde a eventos de mouse
-void mouseEvent(processing.event.MouseEvent event) {
-	// Passa o evento de mouse para o ziviDomeLive para processamento, possibilitando interatividade com o mouse
-	ziviDome.mouseEvent(event);
-
-	// Verifica se existe uma cena ativa (currentScene) configurada
-	if (currentScene != null) {
-		// Encaminha o evento de mouse para a cena atual, permitindo que a cena responda ao evento de forma personalizada
-		currentScene.mouseEvent(event);
-	}
+public void mouseEvent(processing.event.MouseEvent event) {
+	// Trate a entrada de mouse da cena.
 }
 
-// Função que responde a eventos de controle gerados pelo ControlP5
-void controlEvent(controlP5.ControlEvent theEvent) {
-	// Passa o evento de controle para o ziviDomeLive para processamento, permitindo interação com elementos da interface ControlP5
-	ziviDome.controlEvent(theEvent);
+public void controlEvent(controlP5.ControlEvent event) {
+	// Trate eventos do painel interno relevantes para esta cena.
 }
 ```
 ___
@@ -123,34 +103,23 @@ O núcleo do **ziviDomeLive** gira em torno das cenas, que permitem organizar di
 Para começar, crie uma classe de cena básica implementando a interface **Scene**. Defina a configuração inicial da cena, incluindo cores de fundo, formas ou objetos 3D que deseja exibir. No conteúdo principal da cena, utilize a função `sceneRender()` para definir o que deve ser desenhado em cada frame.
 
 ```java
-// Define uma classe chamada Scene que implementa a interface Scene
-class Scene implements Scene {
-	// Declara uma variável do tipo zividomelive chamada parent, que representa uma referência à instância principal de ziviDomeLive
+class Scene1 implements Scene {
 	zividomelive parent;
 
-	// Construtor da classe Scene1 que recebe uma instância de zividomelive como parâmetro e atribui essa instância ao atributo parent
 	Scene1(zividomelive parent) {
 		this.parent = parent;
 	}
 
-	// Método para configurar a cena
+	@Override
 	public void setupScene() {
-		// Configuração específica da cena, se necessário
+		// Configuração inicial opcional da cena.
 	}
 
-	// Método responsável por renderizar a cena
-	public void sceneRender(PGraphics pg) {
-		// Lógica de renderização da cena
-	}
-
-	// Método que responde a eventos de tecla pressionada
-	public void keyPressed(char key) {
-		// Lógica de resposta a teclas pressionadas
-	}
-
-	// Método que responde a eventos de mouse
-	public void mouseEvent(MouseEvent event) {
-		// Lógica de resposta a eventos de mouse
+	@Override
+	public void sceneRender(PGraphicsOpenGL pg) {
+		pg.background(0);
+		pg.box(200);
+		// A biblioteca controla beginDraw() e endDraw().
 	}
 }
 ```

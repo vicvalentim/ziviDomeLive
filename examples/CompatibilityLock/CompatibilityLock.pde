@@ -1,4 +1,7 @@
 import com.victorvalentim.zividomelive.*;
+import controlP5.*;
+import codeanticode.syphon.*;
+import spout.*;
 import processing.opengl.PGraphicsOpenGL;
 
 zividomelive ziviDome;
