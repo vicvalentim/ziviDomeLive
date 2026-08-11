@@ -1,8 +1,8 @@
 {
   "title": "ziviDomeLive: Processing library for immersive fulldome visuals",
   "upload_type": "software",
-  "description": "ziviDomeLive is a Java library for Processing that simplifies the creation of immersive fulldome and VR visual experiences. It offers multiple projection modes, real-time scene management and Syphon/Spout integration for live video routing.",
-  "version": "1.4.0",
+  "description": "ziviDomeLive is a Java library for Processing that simplifies immersive fulldome and VR visual experiences. It provides explicit render modes, independent Standard and spherical pipelines, real-time scene lifecycle management, and optional NDI, Syphon, or Spout output routing.",
+  "version": "1.5.0",
   "license": "GPL-2.0-only",
   "creators": [
     {

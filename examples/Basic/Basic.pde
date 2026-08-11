@@ -19,6 +19,7 @@ void setup() {
   // Initialize the zividomelive library
   ziviDome = new zividomelive(this);
   ziviDome.setup();  // Initial setup of the library
+  ziviDome.setRenderMode(RenderMode.FULL);  // Compatibility default; outputs may route independently
 
   // Create and configure the SceneManager
   sceneManager = new SceneManager();

@@ -2,6 +2,42 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.5.0] - 2026-08-10
+
+### Added
+- Public `RenderMode` API with `FULL`, `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR`, and `SKYBOX`; `FULL` remains the compatibility default.
+- Compatibility-lock tests for the public API, preview sizing, Standard aspect policy, scene contract, output routing, spherical orientation, and render requirements.
+- Static asymmetric GPU qualification scene and a documented visual/hardware qualification protocol.
+- Public output lifecycle states and diagnostics through `OutputState`, `getOutputState()`, and `getOutputFailureReason()`.
+- NDI failed-frame telemetry alongside the existing captured, sent, and dropped counters.
+
+### Changed
+- Centralized render-requirement resolution so preview, floating domemaster, and enabled outputs request only the passes they need.
+- Consolidated active-scene ownership in `SceneManager`, including deterministic setup, switching, disposal, pause/resume, and terminal shutdown behavior.
+- Organized ControlP5 controls into global, spherical, view, and output scopes while preserving widget order and callback ownership.
+- Hardened NDI around three bounded frame slots, latest-frame-wins backpressure, a dedicated non-OpenGL worker, packed RGBA progressive frames, and bounded shutdown.
+- Made Syphon and Spout initialization, publication, resize, failure reporting, shutdown, and explicit retry states observable without moving them off the GPU-native `PGraphicsOpenGL` path.
+- Pinned Processing-side dependency downloads to immutable assets with SHA-256 verification.
+
+### Fixed
+- Preserved domemaster Size% when render targets are recreated after an output-resolution change.
+- Removed duplicate rendering and duplicate event forwarding from examples and documentation.
+- Removed nested `beginDraw()` / `endDraw()` ownership from scene examples.
+- Prevented ControlP5 output toggles from being processed twice.
+- Prevented partial renderer initialization from advancing the lifecycle incorrectly.
+- Restored enabled outputs after pause/resume and made repeated disposal idempotent.
+- Replaced hard-coded NDI `150/1` interlaced metadata with the configured target frame rate and progressive frames.
+- Added explicit recovery after local-output or NDI initialization failures.
+
+### Compatibility
+- The public `zividomelive` facade and `ViewType` order remain unchanged.
+- Legacy render convenience methods remain available as deprecated compatibility shims.
+- The current 1.x cubemap-to-equirectangular-to-domemaster backend remains internal and is not promoted to a permanent API contract.
+- No experimental 2.0 renderer, native cube-map backend, PBO, or OpenGL fence pipeline is included.
+
+### Docs
+- Reworked the README, bilingual documentation, examples, Javadocs, release metadata, platform matrix, and qualification checklist for the 1.5.0 release.
+
 ## [1.4.0] - 2026-08-02
 
 ### Added

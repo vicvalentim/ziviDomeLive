@@ -1,42 +1,44 @@
+# ziviDomeLive 1.5.0
 
-# ziviDomeLive
+![Splash do ziviDomeLive](../assets/images/splash.jpg){ width="520" }
 
-<img src="/ziviDomeLive/assets/images/splash.jpg" width="40%" alt="ziviDomeLive - SplashScreen" />
+ziviDomeLive é uma biblioteca para Processing 4 voltada a gráficos fulldome, VR monoscópico e instalações imersivas em tempo real. Ela combina gerenciamento do ciclo de vida de cenas, renderização Standard e esférica independentes, calibração de domemaster e roteamento opcional por NDI, Syphon ou Spout.
 
-**ziviDomeLive** é uma biblioteca versátil para Processing, projetada para criar experiências visuais imersivas em projeções de cúpula, ambientes de RV monoscópica e instalações interativas. Ela fornece uma estrutura flexível para gerenciar cenas, realizar renderização 3D e integrar controladores externos ou tecnologias de projeção como **Syphon** e **Spout**. Com capacidades de renderização em tempo real, **ziviDomeLive** é ideal para exibições de planetário, performances audiovisuais ao vivo e instalações interativas. Esta documentação guiará você pela instalação, principais recursos, referências de API, exemplos de uso e configurações avançadas para aproveitar ao máximo a biblioteca.
+A versão 1.5.0 consolida a arquitetura madura da geração 1.x. Ela preserva a fachada pública `zividomelive` e o comportamento legado de `ViewType`, adicionando `RenderMode`, requisitos de renderização centralizados, ownership previsível do lifecycle e estados observáveis para outputs.
 
----
+## Comece Aqui
 
-## Recursos Principais
+1. Consulte os [requisitos do sistema](installation/requirements.md) e as [dependências](installation/dependencies.md).
+2. Instale o pacote seguindo os [passos de instalação](installation/installation-steps.md).
+3. Crie a primeira cena com o [guia rápido](getting-started/quickstart.md).
+4. Escolha entre roteamento independente e renderização dedicada em [uso básico](usage/basic-usage.md).
 
-- **Múltiplos Modos de Projeção**:  
-  Suporta uma ampla gama de formatos de projeção, incluindo **fisheye domemaster**, **equiretangular**, **cubemap** e mais. Esses modos de projeção permitem criar visuais que engajam o espectador, adaptando-se dinamicamente a exibições imersivas, sejam em configurações de RV ou cúpulas.
+## Contratos Estáveis da 1.5
 
-- **Troca de Resolução para Domemaster**:  
-  Permite alternância suave entre resoluções **1k, 2k, 3k** e **4k** no modo de projeção domemaster, garantindo visuais nítidos em vários tamanhos de cúpula ou sistemas de exibição. Esse recurso permite otimizar o desempenho com base no seu hardware e nos requisitos do projeto.
+- `Scene.sceneRender(PGraphicsOpenGL)` recebe um target já aberto; a biblioteca controla `beginDraw()` e `endDraw()`.
+- `RenderMode.FULL` é o padrão e preserva rotas independentes de preview e output.
+- A renderização Standard é independente da captura cubemap esférica.
+- Pitch, yaw e roll esféricos compartilham uma única fonte de orientação.
+- O FOV do domemaster varia de `0..360`, com padrão `210`.
+- O Size% do domemaster varia de `0..100`, com padrão `100`.
+- Os presets de resolução de output são `1024`, `2048`, `3072` e `4096`.
+- A publicação por outputs externos começa desabilitada.
 
-- **Gerenciamento de Cenas**:  
-  Organize e alterne dinamicamente entre diferentes cenas visuais com a interface **Scene**, permitindo composições modulares. Cada cena pode ter sua própria configuração, lógica de renderização e interações, tornando-o versátil para instalações interativas e apresentações ao vivo.
+## Domínios de Renderização
 
-- **Renderização em Tempo Real**:  
-  Projetado para visuais ao vivo, **ziviDomeLive** é otimizado para uma renderização suave quadro a quadro, mesmo com cenas 3D complexas e efeitos de shader. Esse recurso faz dele uma excelente escolha para VJs, live coding e instalações de arte interativa.
+```text
+STANDARD
+Scene -> StandardRenderer -> target Standard
 
-- **Integração com Aplicações Externas**:  
-  Integra-se perfeitamente com outras aplicações via **Syphon** (macOS) e **Spout** (Windows), permitindo o compartilhamento de quadros renderizados em tempo real do Processing. Esse recurso é especialmente valioso para performances multimídia, permitindo que os visuais sejam processados ou projetados com outras ferramentas.
+ESFÉRICO
+Scene -> seis faces cubemap -> equiretangular -> domemaster
+                              \-> layout cubemap
+```
 
-- **Interface de Usuário Interativa**:  
-  Integra-se ao **ControlP5** para criar controles interativos diretamente no Processing, como sliders, botões e interruptores, permitindo a manipulação em tempo real de parâmetros visuais.
+A topologia esférica acima continua sendo um detalhe interno da geração 1.x. Ela não obriga futuras versões major a usar `PGraphicsOpenGL[]` nem a derivar domemaster de equiretangular.
 
-- **Compatibilidade Multiplataforma**:  
-  Funciona em **macOS, Windows** e **Linux**, garantindo acessibilidade e versatilidade entre sistemas operacionais. Assim, suas criações visuais podem ser facilmente implementadas em várias plataformas sem problemas de compatibilidade.
+## Qualificação
 
-- **Pipelines de Renderização Personalizáveis**:  
-  Personalize pipelines de renderização de acordo com as necessidades do seu projeto, seja em projeções de cúpula ou ambientes interativos. A biblioteca permite ajustes na resolução de renderização, modos de projeção e outros parâmetros para otimizar o desempenho e a qualidade visual.
+A suíte Java valida API, estado, lifecycle, routing, matemática, metadata e contratos de release sem exigir GPU. Paridade visual e interoperabilidade de outputs nativos exigem o exemplo [CompatibilityLock](examples/advanced.md) em hardware qualificado. O repositório não fabrica imagens golden.
 
----
-
-## Começando com o ziviDomeLive
-
-Para começar a explorar as capacidades do **ziviDomeLive**, consulte o **[Guia Rápido](getting-started/quickstart.md)**, que apresenta as etapas de configuração, instalação e funcionalidade essencial para criar visuais dinâmicos e interativos no Processing. Para detalhes mais específicos de configuração e uma lista de dependências, consulte o **[Guia de Instalação](installation/installation-steps.md)**.
-
-**ziviDomeLive** é um conjunto de ferramentas flexível que incentiva a experimentação, fornecendo tudo o que você precisa para transformar seus sketches no Processing em experiências interativas e imersivas. Mergulhe, explore seus recursos e crie displays visuais em tempo real que cativam e envolvem seu público de maneiras inovadoras.
+Consulte os [problemas conhecidos](known-issues.md) antes de uma implantação de produção.

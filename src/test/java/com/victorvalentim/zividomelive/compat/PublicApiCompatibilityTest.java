@@ -147,6 +147,18 @@ class PublicApiCompatibilityTest {
 	}
 
 	@Test
+	void outputLifecycleAndTelemetryMethodsRemainAvailable() throws Exception {
+		assertNotNull(OutputManager.class.getMethod(
+				"getOutputState", OutputManager.OutputType.class));
+		assertNotNull(OutputManager.class.getMethod(
+				"getOutputFailureReason", OutputManager.OutputType.class));
+		assertNotNull(OutputManager.class.getMethod("getNdiCapturedFrames"));
+		assertNotNull(OutputManager.class.getMethod("getNdiSentFrames"));
+		assertNotNull(OutputManager.class.getMethod("getNdiDroppedFrames"));
+		assertNotNull(OutputManager.class.getMethod("getNdiFailedFrames"));
+	}
+
+	@Test
 	void deprecatedRenderConvenienceMethodsRemainDeprecatedCompatibilityShims() throws Exception {
 		for (String name : Arrays.asList(
 				"renderFisheyeDomemaster",
