@@ -2,6 +2,7 @@ package com.victorvalentim.zividomelive.compat;
 
 import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.SceneManager;
+import com.victorvalentim.zividomelive.RenderMode;
 import com.victorvalentim.zividomelive.manager.OutputManager;
 import com.victorvalentim.zividomelive.render.CubemapRenderer;
 import com.victorvalentim.zividomelive.render.Quaternion;
@@ -49,6 +50,13 @@ class PublicApiCompatibilityTest {
 
 	@Test
 	void publicEnumsRemainSourceCompatible() {
+		assertArrayEquals(new RenderMode[]{
+				RenderMode.FULL,
+				RenderMode.STANDARD,
+				RenderMode.DOMEMASTER,
+				RenderMode.EQUIRECTANGULAR,
+				RenderMode.SKYBOX
+		}, RenderMode.values());
 		assertArrayEquals(new zividomelive.InitState[]{
 				zividomelive.InitState.NOT_INITIALIZED,
 				zividomelive.InitState.SETUP_COMPLETE,
@@ -76,6 +84,7 @@ class PublicApiCompatibilityTest {
 	@Test
 	void primaryPublicTypesRemainAvailable() {
 		Class<?>[] publicTypes = {
+				RenderMode.class,
 				Scene.class,
 				SceneManager.class,
 				OutputManager.class,
@@ -111,6 +120,8 @@ class PublicApiCompatibilityTest {
 		assertMethod("setScene", Scene.class);
 		assertMethod("setCurrentScene", Scene.class);
 		assertMethod("setSceneManager", SceneManager.class);
+		assertMethod("getRenderMode");
+		assertMethod("setRenderMode", RenderMode.class);
 		assertMethod("keyEvent", KeyEvent.class);
 		assertMethod("mouseEvent", MouseEvent.class);
 		assertControlEventMethod();
