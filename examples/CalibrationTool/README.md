@@ -4,7 +4,7 @@
 
 ## Scene 1: Cube Focus and Color
 
-Six GLSL 4.10 targets form a closed cube around the observer. Every pattern is generated in face-local coordinates, so it remains attached to its face during spherical rotations.
+Six GLSL 4.10 targets form a closed cube around the observer. Every quad has an explicit local `0..1` mapping. A transparent 1024-pixel annotation layer is composited into the same fragment pass, while resolution-sensitive lines, points, grids, and gradients remain procedural at the active cubemap-face resolution. Pitch, yaw, and roll are applied afterward by the spherical capture matrix, so the complete mapped cube follows continuous controls and 90-degree steps without screen-space drift.
 
 - 24 x 24 grid with quarter divisions and a two-pixel face boundary
 - Safe-area rectangles, concentric circles, radial spokes, and center crosshairs
