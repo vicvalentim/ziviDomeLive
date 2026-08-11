@@ -20,4 +20,4 @@ mkdocs build --strict
 - Keep Syphon/Spout on the `PGraphicsOpenGL` path.
 - Do not add experimental 2.0 render backends to the 1.x line.
 
-GPU or output changes require the CompatibilityLock visual protocol and target-platform hardware evidence in addition to unit tests.
+GPU or output changes require the CalibrationTool visual protocol and target-platform hardware evidence in addition to unit tests.

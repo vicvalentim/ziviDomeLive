@@ -7,7 +7,7 @@ Open each sketch from Processing after installing ziviDomeLive and its declared 
 | `EmptyProject` | Empty starter template for a first scene | None |
 | `Basic` | Multiple scenes, all `RenderMode` values, and an alignment grid | `1..5`, `+`/`-`, mouse wheel, Left/Right arrows |
 | `SphereParticle` | Threaded particle simulation | Click/drag |
-| `CompatibilityLock` | Static face, alignment, color, and grayscale calibration | `1..4`, brackets, `+`/`-`, `P`, `Y`, `R`, `F`, `0` |
+| `CalibrationTool` | Cube-face focus/color tests and a 360-degree Paul Bourke spherical reference | Left/Right, `1..4`, brackets, `+`/`-`, `P`, `Y`, `R`, `F`, `Space`, `,`/`.`, `C`, `0` |
 | `FulldomePBR` | Retained geometry, PBR shader fallback, and scene-space camera | Drag, wheel, `P`, `V`, brackets, `+`/`-`, `R` |
 | `SolarSystem` | Large multi-file application | See the sketch's own source and configuration |
 
@@ -19,4 +19,4 @@ Open each sketch from Processing after installing ziviDomeLive and its declared 
 - Entry tabs retain ControlP5, Syphon, and Spout imports because Processing uses them to assemble the contributed-library runtime classpath.
 - External outputs remain disabled until explicitly enabled through the control panel or API.
 
-`CompatibilityLock` is a qualification instrument, not a generated golden reference. Use independently captured baseline evidence on the target GPU and native-output stack.
+`CalibrationTool` is a qualification instrument, not a generated golden reference. Use independently captured baseline evidence on the target GPU and native-output stack. Its Paul Bourke image remains subject to the bundled third-party notice.
