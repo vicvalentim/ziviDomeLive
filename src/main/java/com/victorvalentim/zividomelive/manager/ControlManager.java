@@ -16,11 +16,10 @@ import java.util.function.Consumer;
  */
 public class ControlManager {
 
-    private ControlP5 cp5;
+    private final ControlP5 cp5;
     private final ControlListener parentControlListener;
     private boolean numberboxActive = false;
-    private int baseResolution;
-    private zividomelive parent;
+    private final zividomelive parent;
     private Toggle previewToggle;
     private Toggle ndiToggle;
     private Toggle spoutToggle;
@@ -31,15 +30,8 @@ public class ControlManager {
     private DropdownList spoutViewDropdown;
     private DropdownList syphonViewDropdown;
     private Textlabel fpsLabel;
-    private PApplet p;
+    private final PApplet p;
     private final List<NumberboxInput> numberboxInputs = new ArrayList<>();
-
-    // Layout configuration
-    // Layout configuration
-    private final int controlSpacing = 35;
-    private final int controlHeight = 20;
-    private final int initialYOffset = 20;
-    private int currentYOffset;
 
     /**
      * Constructs a ControlManager with the specified PApplet, parent object, and base resolution.
@@ -51,30 +43,12 @@ public class ControlManager {
     public ControlManager(PApplet p, zividomelive parent, int baseResolution) {
         this.p = p;
         this.parent = parent;
-        this.baseResolution = baseResolution;
         cp5 = new ControlP5(p);
-        this.currentYOffset = initialYOffset;
 
-        // Initialize and increment Y offset
-        initializeControls(currentYOffset);
-        currentYOffset += controlSpacing;
-
-        // Add number boxes and sliders
-        addNumberboxesAndSliders(currentYOffset);
-        currentYOffset += 5 * controlSpacing;
-
-        // Add buttons
-        addButtons(currentYOffset);
-        currentYOffset += 2 * controlSpacing;
-
-        // Add dropdown lists
-        addDropdownLists(currentYOffset);
-        currentYOffset += 2 * controlSpacing;
-
-        // Add toggles and output view dropdowns
-        addOutputToggles(currentYOffset);
-        currentYOffset += 2 * controlSpacing;
-        addOutputViewDropdowns(currentYOffset);
+        addGlobalControls();
+        addSphericalControls();
+        addViewControls();
+        addOutputControls(baseResolution);
 
         // Reset controls to default state
         resetControls();
@@ -84,86 +58,78 @@ public class ControlManager {
     }
 
     /**
-     * Initializes the FPS label control.
-     * @param yOffset the initial vertical offset for placing the FPS label.
+     * Adds controls whose values describe the application as a whole.
      */
-    private void initializeControls(int yOffset) {
+    private void addGlobalControls() {
         fpsLabel = cp5.addTextlabel("fpsLabel")
-                .setPosition(10, yOffset)
-                .setSize(200, controlHeight)
+                .setPosition(
+                        ControlPanelLayout.CONTROL_X,
+                        ControlPanelLayout.yFor(ControlScope.GLOBAL, "fpsLabel"))
+                .setSize(ControlPanelLayout.PANEL_WIDTH, ControlPanelLayout.CONTROL_HEIGHT)
                 .setText("FPS: 0");
     }
 
     /**
-     * Adds number boxes and sliders for controlling parameters like pitch, yaw, roll, fov, and size.
-     * @param yOffset the initial vertical offset for placing controls.
+     * Adds the shared spherical orientation and domemaster calibration controls.
      */
-    private void addNumberboxesAndSliders(int yOffset) {
-        addNumberbox("pitch", yOffset, -PApplet.PI, PApplet.PI, parent.getPitch());
-        addSlider("pitch", yOffset, -PApplet.PI, PApplet.PI, parent.getPitch());
+    private void addSphericalControls() {
+        for (ControlPanelLayout.SphericalControlSpec control : ControlPanelLayout.sphericalControls()) {
+            float y = ControlPanelLayout.yFor(ControlScope.SPHERICAL, control.name());
+            float minimum = (float) control.minimum();
+            float maximum = (float) control.maximum();
+            float value = getParentValue(control.name());
+            addNumberbox(control.name(), y, minimum, maximum, value);
+            addSlider(control.name(), y, minimum, maximum, value);
+        }
 
-        yOffset += controlSpacing;
-        addNumberbox("yaw", yOffset, -PApplet.PI, PApplet.PI, parent.getYaw());
-        addSlider("yaw", yOffset, -PApplet.PI, PApplet.PI, parent.getYaw());
-
-        yOffset += controlSpacing;
-        addNumberbox("roll", yOffset, -PApplet.PI, PApplet.PI, parent.getRoll());
-        addSlider("roll", yOffset, -PApplet.PI, PApplet.PI, parent.getRoll());
-
-        yOffset += controlSpacing;
-        addNumberbox("fov", yOffset, 0, 360, parent.getFov());
-        addSlider("fov", yOffset, 0, 360, parent.getFov());
-
-        yOffset += controlSpacing;
-        addNumberbox("size", yOffset, 0, 100, parent.getFishSize());
-        addSlider("size", yOffset, 0, 100, parent.getFishSize());
-    }
-
-    /**
-     * Adds buttons for resetting controls and controlling preview mode.
-     * @param yOffset the vertical offset for placing buttons.
-     */
-    private void addButtons(int yOffset) {
         cp5.addButton("resetControls")
-                .setPosition(10, yOffset)
-                .setSize(200, controlHeight)
+                .setPosition(
+                        ControlPanelLayout.CONTROL_X,
+                        ControlPanelLayout.yFor(ControlScope.SPHERICAL, "resetControls"))
+                .setSize(ControlPanelLayout.PANEL_WIDTH, ControlPanelLayout.CONTROL_HEIGHT)
                 .setLabel("Reset Controls")
                 .getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER)
                 .setPaddingX(5);
         cp5.getController("resetControls").onClick(event -> parent.resetControls());
+    }
 
-        yOffset += controlSpacing;
-
+    /** Adds preview representation controls without changing their legacy positions. */
+    private void addViewControls() {
         previewToggle = cp5.addToggle("previewToggle")
-                .setPosition(10, yOffset)
-                .setSize(20, controlHeight)
+                .setPosition(
+                        ControlPanelLayout.CONTROL_X,
+                        ControlPanelLayout.yFor(ControlScope.VIEW, "previewToggle"))
+                .setSize(ControlPanelLayout.CONTROL_HEIGHT, ControlPanelLayout.CONTROL_HEIGHT)
                 .setValue(parent.isShowPreview());
         previewToggle.getCaptionLabel()
                 .align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER)
                 .setPaddingX(5)
                 .setText("Preview Domemaster");
         previewToggle.onChange(event -> parent.setShowPreview(previewToggle.getState()));
+
+        addViewModeDropdown(ControlPanelLayout.yFor(ControlScope.VIEW, "View Mode"));
     }
 
-    /**
-     * Adds dropdown lists for selecting resolution and view mode.
-     * @param yOffset the vertical offset for placing dropdowns.
-     */
-    private void addDropdownLists(int yOffset) {
-        addViewModeDropdown(yOffset);
-        addResolutionDropdown(yOffset + controlSpacing);
+    /** Adds output resolution, publication toggles, and per-output view routing. */
+    private void addOutputControls(int baseResolution) {
+        addResolutionDropdown(
+                ControlPanelLayout.yFor(ControlScope.OUTPUTS, "Output Resolution"),
+                baseResolution);
+        addOutputToggles();
+        addOutputViewDropdowns();
     }
 
     /**
      * Adds toggles for enabling/disabling output methods: NDI, Spout, and Syphon.
      * Each toggle controls the visibility of a corresponding view mode dropdown list.
-     * @param yOffset the vertical offset for placing output toggles.
      */
-    private void addOutputToggles(int yOffset) {
+    private void addOutputToggles() {
         // NDI Toggle
         ndiToggle = cp5.addToggle("ndiToggle")
-                .setPosition(10, yOffset)
-                .setSize(20, controlHeight)
+                .setPosition(
+                        ControlPanelLayout.CONTROL_X,
+                        ControlPanelLayout.yFor(ControlScope.OUTPUTS, "ndiToggle"))
+                .setSize(ControlPanelLayout.CONTROL_HEIGHT, ControlPanelLayout.CONTROL_HEIGHT)
                 .setValue(parent.getOutputManager().isNdiEnabled());
         ndiToggle.getCaptionLabel()
                 .align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER)
@@ -174,13 +140,14 @@ public class ControlManager {
             toggleDropdownVisibility();
         });
 
-        yOffset += controlSpacing;
-
-        // Spout Toggle (Windows only)
-        if (System.getProperty("os.name").toLowerCase().contains("win")) {
+        ControlPanelLayout.LocalOutput localOutput =
+                ControlPanelLayout.localOutputFor(System.getProperty("os.name"));
+        if (localOutput == ControlPanelLayout.LocalOutput.SPOUT) {
             spoutToggle = cp5.addToggle("spoutToggle")
-                    .setPosition(10, yOffset)
-                    .setSize(20, controlHeight)
+                    .setPosition(
+                            ControlPanelLayout.CONTROL_X,
+                            ControlPanelLayout.yFor(ControlScope.OUTPUTS, "spoutToggle"))
+                    .setSize(ControlPanelLayout.CONTROL_HEIGHT, ControlPanelLayout.CONTROL_HEIGHT)
                     .setValue(parent.getOutputManager().isSpoutEnabled());
             spoutToggle.getCaptionLabel()
                     .align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER)
@@ -190,14 +157,12 @@ public class ControlManager {
                 parent.getOutputManager().toggleOutput("spout");
                 toggleDropdownVisibility();
             });
-            yOffset += controlSpacing;
-        }
-
-        // Syphon Toggle (macOS only)
-        if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+        } else if (localOutput == ControlPanelLayout.LocalOutput.SYPHON) {
             syphonToggle = cp5.addToggle("syphonToggle")
-                    .setPosition(10, yOffset)
-                    .setSize(20, controlHeight)
+                    .setPosition(
+                            ControlPanelLayout.CONTROL_X,
+                            ControlPanelLayout.yFor(ControlScope.OUTPUTS, "syphonToggle"))
+                    .setSize(ControlPanelLayout.CONTROL_HEIGHT, ControlPanelLayout.CONTROL_HEIGHT)
                     .setValue(parent.getOutputManager().isSyphonEnabled());
             syphonToggle.getCaptionLabel()
                     .align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER)
@@ -213,17 +178,25 @@ public class ControlManager {
     /**
      * Adds dropdowns for selecting the view mode to be used with each output method.
      * These are only visible when the corresponding toggle is enabled.
-     * @param yOffset the vertical offset for placing view mode dropdowns.
      */
-    private void addOutputViewDropdowns(int yOffset) {
-        String[] viewModes = {"Fisheye Domemaster", "Equirectangular", "Cubemap Skybox", "Standard"};
+    private void addOutputViewDropdowns() {
+        ndiViewDropdown = createViewDropdown(
+                "NDI View",
+                parent.getOutputManager().getViewForOutput(OutputManager.OutputType.NDI),
+                view -> parent.getOutputManager().setNdiView(view));
 
-        // Adiciona os dropdowns, cada um com o espaçamento padrão
-        ndiViewDropdown = createViewDropdown("NDI View", yOffset, viewModes, view -> parent.getOutputManager().setNdiView(view));
-        yOffset += controlSpacing;
-
-        spoutViewDropdown = createViewDropdown("Spout View", yOffset, viewModes, view -> parent.getOutputManager().setSpoutView(view));
-        syphonViewDropdown = createViewDropdown("Syphon View", yOffset, viewModes, view -> parent.getOutputManager().setSyphonView(view));
+        if (spoutToggle != null) {
+            spoutViewDropdown = createViewDropdown(
+                    "Spout View",
+                    parent.getOutputManager().getViewForOutput(OutputManager.OutputType.SPOUT),
+                    view -> parent.getOutputManager().setSpoutView(view));
+        }
+        if (syphonToggle != null) {
+            syphonViewDropdown = createViewDropdown(
+                    "Syphon View",
+                    parent.getOutputManager().getViewForOutput(OutputManager.OutputType.SYPHON),
+                    view -> parent.getOutputManager().setSyphonView(view));
+        }
 
         toggleDropdownVisibility();
     }
@@ -231,25 +204,30 @@ public class ControlManager {
     /**
      * Helper method to create a view mode dropdown for an output toggle.
      * @param label the label for the dropdown.
-     * @param yOffset the vertical position of the dropdown.
-     * @param viewModes the available view modes to select from.
+     * @param initialView the view currently configured for the output.
      * @param setView the consumer function to set the view type in OutputManager.
      * @return the created DropdownList.
      */
-    private DropdownList createViewDropdown(String label, int yOffset, String[] viewModes, Consumer<zividomelive.ViewType> setView) {
+    private DropdownList createViewDropdown(
+            String label,
+            zividomelive.ViewType initialView,
+            Consumer<zividomelive.ViewType> setView) {
         DropdownList dropdown = cp5.addDropdownList(label)
-                .setPosition(10, yOffset)
-                .setSize(200, 200)
-                .setBarHeight(controlHeight)
-                .setItemHeight(controlHeight)
-                .setVisible(false) // Inicialmente oculto
+                .setPosition(
+                        ControlPanelLayout.CONTROL_X,
+                        ControlPanelLayout.yFor(ControlScope.OUTPUTS, label))
+                .setSize(ControlPanelLayout.PANEL_WIDTH, ControlPanelLayout.PANEL_WIDTH)
+                .setBarHeight(ControlPanelLayout.CONTROL_HEIGHT)
+                .setItemHeight(ControlPanelLayout.CONTROL_HEIGHT)
+                .setVisible(false)
                 .close();
-        for (String viewMode : viewModes) {
+        for (String viewMode : ControlPanelLayout.viewLabels()) {
             dropdown.addItem(viewMode, dropdown.getItems().size());
         }
+        dropdown.setValue(ControlPanelLayout.indexForView(initialView));
         dropdown.onChange(event -> {
             int selectedIndex = (int) event.getController().getValue();
-            setView.accept(zividomelive.ViewType.values()[selectedIndex]);
+            setView.accept(ControlPanelLayout.viewForIndex(selectedIndex));
         });
         dropdown.onClick(event -> dropdown.bringToFront());
         return dropdown;
@@ -260,14 +238,18 @@ public class ControlManager {
      */
     private void toggleDropdownVisibility() {
         ndiViewDropdown.setVisible(ndiToggle.getState());
-        if (spoutToggle != null) spoutViewDropdown.setVisible(spoutToggle.getState());
-        if (syphonToggle != null) syphonViewDropdown.setVisible(syphonToggle.getState());
+        if (spoutViewDropdown != null) {
+            spoutViewDropdown.setVisible(spoutToggle.getState());
+        }
+        if (syphonViewDropdown != null) {
+            syphonViewDropdown.setVisible(syphonToggle.getState());
+        }
     }
 
     private void addNumberbox(String name, float y, float min, float max, float value) {
         Numberbox numberbox = cp5.addNumberbox(name + "Value")
-                .setPosition(10, y)
-                .setSize(50, controlHeight)
+                .setPosition(ControlPanelLayout.CONTROL_X, y)
+                .setSize(50, ControlPanelLayout.CONTROL_HEIGHT)
                 .setRange(min, max)
                 .setScrollSensitivity(0.1f)
                 .setValue(value)
@@ -287,7 +269,7 @@ public class ControlManager {
     private void addSlider(String name, float y, float min, float max, float value) {
         cp5.addSlider(name)
                 .setPosition(70, y)
-                .setSize(140, controlHeight)
+                .setSize(140, ControlPanelLayout.CONTROL_HEIGHT)
                 .setRange(min, max)
                 .setValue(value)
                 .onChange(event -> {
@@ -300,20 +282,26 @@ public class ControlManager {
                 });
     }
 
-    void addResolutionDropdown(float y) {
+    void addResolutionDropdown(float y, int baseResolution) {
         resolutionDropdown = cp5.addDropdownList("Output Resolution")
-                .setPosition(10, y)
-                .setSize(200, 200)
-                .setBarHeight(controlHeight)
-                .setItemHeight(controlHeight)
+                .setPosition(ControlPanelLayout.CONTROL_X, y)
+                .setSize(ControlPanelLayout.PANEL_WIDTH, ControlPanelLayout.PANEL_WIDTH)
+                .setBarHeight(ControlPanelLayout.CONTROL_HEIGHT)
+                .setItemHeight(ControlPanelLayout.CONTROL_HEIGHT)
                 .close();
-        String[] resolutionLabels = {"1024", "2048", "3072", "4096"};
-        for (int i = 0; i < resolutionLabels.length; i++) {
-            resolutionDropdown.addItem("Resolution " + (i + 1) + "k " + resolutionLabels[i], i);
+        List<Integer> resolutions = ControlPanelLayout.outputResolutions();
+        for (int i = 0; i < resolutions.size(); i++) {
+            resolutionDropdown.addItem(
+                    "Resolution " + (i + 1) + "k " + resolutions.get(i),
+                    i);
+        }
+        int selectedIndex = ControlPanelLayout.indexForOutputResolution(baseResolution);
+        if (selectedIndex >= 0) {
+            resolutionDropdown.setValue(selectedIndex);
         }
         resolutionDropdown.onChange(event -> {
-            int selectedIndex = (int) event.getController().getValue();
-            int newResolution = 1024 * (selectedIndex + 1);
+            int index = (int) event.getController().getValue();
+            int newResolution = ControlPanelLayout.outputResolutionForIndex(index);
             parent.resetGraphics(newResolution);
         });
         resolutionDropdown.onClick(event -> resolutionDropdown.bringToFront());
@@ -321,18 +309,18 @@ public class ControlManager {
 
     void addViewModeDropdown(float y) {
         viewModeDropdown = cp5.addDropdownList("View Mode")
-                .setPosition(10, y)
-                .setSize(200, 200)
-                .setItemHeight(controlHeight)
-                .setBarHeight(controlHeight)
+                .setPosition(ControlPanelLayout.CONTROL_X, y)
+                .setSize(ControlPanelLayout.PANEL_WIDTH, ControlPanelLayout.PANEL_WIDTH)
+                .setItemHeight(ControlPanelLayout.CONTROL_HEIGHT)
+                .setBarHeight(ControlPanelLayout.CONTROL_HEIGHT)
                 .close();
-        String[] viewModes = {"Fisheye Domemaster", "Equirectangular", "Cubemap Skybox", "Standard"};
-        for (String viewMode : viewModes) {
+        for (String viewMode : ControlPanelLayout.viewLabels()) {
             viewModeDropdown.addItem(viewMode, viewModeDropdown.getItems().size());
         }
+        viewModeDropdown.setValue(ControlPanelLayout.indexForView(parent.getCurrentView()));
         viewModeDropdown.onChange(event -> {
             int selectedIndex = (int) event.getController().getValue();
-            parent.setCurrentView(zividomelive.ViewType.values()[selectedIndex]);
+            parent.setCurrentView(ControlPanelLayout.viewForIndex(selectedIndex));
         });
         viewModeDropdown.onClick(event -> viewModeDropdown.bringToFront());
     }
@@ -341,10 +329,8 @@ public class ControlManager {
      * Resets all the controls to their default state.
      */
     public void resetControls() {
-        String[] controlNames = {"pitch", "yaw", "roll", "fov", "size"};
-        float[] defaultValues = {0.0f, 0.0f, 0.0f, 210.0f, 100.0f};
-        for (int i = 0; i < controlNames.length; i++) {
-            cp5.getController(controlNames[i]).setValue(defaultValues[i]);
+        for (ControlPanelLayout.SphericalControlSpec control : ControlPanelLayout.sphericalControls()) {
+            cp5.getController(control.name()).setValue(control.defaultValue());
         }
     }
 
@@ -405,6 +391,25 @@ public class ControlManager {
             case "size":
                 parent.setFishSize(value);
                 break;
+            default:
+                throw new IllegalArgumentException("Unknown spherical control: " + name);
+        }
+    }
+
+    private float getParentValue(String name) {
+        switch (name) {
+            case "pitch":
+                return parent.getPitch();
+            case "yaw":
+                return parent.getYaw();
+            case "roll":
+                return parent.getRoll();
+            case "fov":
+                return parent.getFov();
+            case "size":
+                return parent.getFishSize();
+            default:
+                throw new IllegalArgumentException("Unknown spherical control: " + name);
         }
     }
 
