@@ -1,6 +1,6 @@
 // Implementação da cena otimizando o cálculo e renderização de partículas
 class Scene1 implements Scene {
-  zividomelive parent;
+  ziviDomeLive parent;
   PGraphics pg;
   ArrayList<Float> mass = new ArrayList<>();
   ArrayList<Float> positionX = new ArrayList<>();
@@ -11,7 +11,7 @@ class Scene1 implements Scene {
   ArrayList<Float> velocityZ = new ArrayList<>();
   ArrayList<Long> birthTime = new ArrayList<>();
 
-  Scene1(zividomelive parent) {
+  Scene1(ziviDomeLive parent) {
     this.parent = parent;
   }
 

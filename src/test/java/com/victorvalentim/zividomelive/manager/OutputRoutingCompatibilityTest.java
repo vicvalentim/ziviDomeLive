@@ -1,6 +1,6 @@
 package com.victorvalentim.zividomelive.manager;
 
-import com.victorvalentim.zividomelive.zividomelive;
+import com.victorvalentim.zividomelive.ziviDomeLive;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
@@ -13,34 +13,34 @@ class OutputRoutingCompatibilityTest {
 
 	@BeforeEach
 	void createOutputManager() {
-		outputManager = new OutputManager(new zividomelive(new PApplet()));
+		outputManager = new OutputManager(new ziviDomeLive(new PApplet()));
 	}
 
 	@Test
 	void everyOutputDefaultsToFisheyeDomemaster() {
 		for (OutputManager.OutputType outputType : OutputManager.OutputType.values()) {
-			assertEquals(zividomelive.ViewType.FISHEYE_DOMEMASTER,
+			assertEquals(ziviDomeLive.ViewType.FISHEYE_DOMEMASTER,
 					outputManager.getViewForOutput(outputType));
 		}
 	}
 
 	@Test
 	void eachOutputCanSelectAViewIndependently() {
-		outputManager.setNdiView(zividomelive.ViewType.EQUIRECTANGULAR);
-		outputManager.setSpoutView(zividomelive.ViewType.CUBEMAP);
-		outputManager.setSyphonView(zividomelive.ViewType.STANDARD);
+		outputManager.setNdiView(ziviDomeLive.ViewType.EQUIRECTANGULAR);
+		outputManager.setSpoutView(ziviDomeLive.ViewType.CUBEMAP);
+		outputManager.setSyphonView(ziviDomeLive.ViewType.STANDARD);
 
-		assertEquals(zividomelive.ViewType.EQUIRECTANGULAR,
+		assertEquals(ziviDomeLive.ViewType.EQUIRECTANGULAR,
 				outputManager.getViewForOutput(OutputManager.OutputType.NDI));
-		assertEquals(zividomelive.ViewType.CUBEMAP,
+		assertEquals(ziviDomeLive.ViewType.CUBEMAP,
 				outputManager.getViewForOutput(OutputManager.OutputType.SPOUT));
-		assertEquals(zividomelive.ViewType.STANDARD,
+		assertEquals(ziviDomeLive.ViewType.STANDARD,
 				outputManager.getViewForOutput(OutputManager.OutputType.SYPHON));
 	}
 
 	@Test
 	void initializedButDisabledOutputsDoNotCreateRenderRequirements() {
-		for (zividomelive.ViewType viewType : zividomelive.ViewType.values()) {
+		for (ziviDomeLive.ViewType viewType : ziviDomeLive.ViewType.values()) {
 			assertFalse(outputManager.requiresView(viewType),
 					"Disabled outputs must not require rendering for " + viewType);
 		}
@@ -50,17 +50,17 @@ class OutputRoutingCompatibilityTest {
 	@Test
 	@SuppressWarnings("deprecation")
 	void legacySingleViewSetterDoesNotMutatePerOutputRouting() {
-		outputManager.setNdiView(zividomelive.ViewType.EQUIRECTANGULAR);
-		outputManager.setSpoutView(zividomelive.ViewType.CUBEMAP);
-		outputManager.setSyphonView(zividomelive.ViewType.STANDARD);
+		outputManager.setNdiView(ziviDomeLive.ViewType.EQUIRECTANGULAR);
+		outputManager.setSpoutView(ziviDomeLive.ViewType.CUBEMAP);
+		outputManager.setSyphonView(ziviDomeLive.ViewType.STANDARD);
 
-		outputManager.setView(zividomelive.ViewType.FISHEYE_DOMEMASTER);
+		outputManager.setView(ziviDomeLive.ViewType.FISHEYE_DOMEMASTER);
 
-		assertEquals(zividomelive.ViewType.EQUIRECTANGULAR,
+		assertEquals(ziviDomeLive.ViewType.EQUIRECTANGULAR,
 				outputManager.getViewForOutput(OutputManager.OutputType.NDI));
-		assertEquals(zividomelive.ViewType.CUBEMAP,
+		assertEquals(ziviDomeLive.ViewType.CUBEMAP,
 				outputManager.getViewForOutput(OutputManager.OutputType.SPOUT));
-		assertEquals(zividomelive.ViewType.STANDARD,
+		assertEquals(ziviDomeLive.ViewType.STANDARD,
 				outputManager.getViewForOutput(OutputManager.OutputType.SYPHON));
 	}
 }

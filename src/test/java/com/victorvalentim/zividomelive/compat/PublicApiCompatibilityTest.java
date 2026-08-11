@@ -17,7 +17,7 @@ import com.victorvalentim.zividomelive.render.modes.StandardRenderer;
 import com.victorvalentim.zividomelive.support.LibraryMetadata;
 import com.victorvalentim.zividomelive.support.LogManager;
 import com.victorvalentim.zividomelive.support.ThreadManager;
-import com.victorvalentim.zividomelive.zividomelive;
+import com.victorvalentim.zividomelive.ziviDomeLive;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
 import processing.event.KeyEvent;
@@ -34,19 +34,19 @@ class PublicApiCompatibilityTest {
 
 	@Test
 	void publicFacadeClassNameAndConstructorRemainStable() throws Exception {
-		assertEquals("com.victorvalentim.zividomelive.zividomelive", zividomelive.class.getName());
-		assertTrue(Modifier.isPublic(zividomelive.class.getModifiers()));
-		assertNotNull(zividomelive.class.getConstructor(PApplet.class));
+		assertEquals("com.victorvalentim.zividomelive.ziviDomeLive", ziviDomeLive.class.getName());
+		assertTrue(Modifier.isPublic(ziviDomeLive.class.getModifiers()));
+		assertNotNull(ziviDomeLive.class.getConstructor(PApplet.class));
 	}
 
 	@Test
 	void viewTypeOrderRemainsIndexCompatibleWithControlDropdowns() {
-		assertArrayEquals(new zividomelive.ViewType[]{
-				zividomelive.ViewType.FISHEYE_DOMEMASTER,
-				zividomelive.ViewType.EQUIRECTANGULAR,
-				zividomelive.ViewType.CUBEMAP,
-				zividomelive.ViewType.STANDARD
-		}, zividomelive.ViewType.values());
+		assertArrayEquals(new ziviDomeLive.ViewType[]{
+				ziviDomeLive.ViewType.FISHEYE_DOMEMASTER,
+				ziviDomeLive.ViewType.EQUIRECTANGULAR,
+				ziviDomeLive.ViewType.CUBEMAP,
+				ziviDomeLive.ViewType.STANDARD
+		}, ziviDomeLive.ViewType.values());
 	}
 
 	@Test
@@ -58,19 +58,19 @@ class PublicApiCompatibilityTest {
 				RenderMode.EQUIRECTANGULAR,
 				RenderMode.SKYBOX
 		}, RenderMode.values());
-		assertArrayEquals(new zividomelive.InitState[]{
-				zividomelive.InitState.NOT_INITIALIZED,
-				zividomelive.InitState.SETUP_COMPLETE,
-				zividomelive.InitState.MANAGERS_READY,
-				zividomelive.InitState.READY
-		}, zividomelive.InitState.values());
-		assertArrayEquals(new zividomelive.StandardOutputAspectMode[]{
-				zividomelive.StandardOutputAspectMode.AUTO,
-				zividomelive.StandardOutputAspectMode.ASPECT_16_9,
-				zividomelive.StandardOutputAspectMode.ASPECT_16_10,
-				zividomelive.StandardOutputAspectMode.ASPECT_4_3,
-				zividomelive.StandardOutputAspectMode.ASPECT_1_1
-		}, zividomelive.StandardOutputAspectMode.values());
+		assertArrayEquals(new ziviDomeLive.InitState[]{
+				ziviDomeLive.InitState.NOT_INITIALIZED,
+				ziviDomeLive.InitState.SETUP_COMPLETE,
+				ziviDomeLive.InitState.MANAGERS_READY,
+				ziviDomeLive.InitState.READY
+		}, ziviDomeLive.InitState.values());
+		assertArrayEquals(new ziviDomeLive.StandardOutputAspectMode[]{
+				ziviDomeLive.StandardOutputAspectMode.AUTO,
+				ziviDomeLive.StandardOutputAspectMode.ASPECT_16_9,
+				ziviDomeLive.StandardOutputAspectMode.ASPECT_16_10,
+				ziviDomeLive.StandardOutputAspectMode.ASPECT_4_3,
+				ziviDomeLive.StandardOutputAspectMode.ASPECT_1_1
+		}, ziviDomeLive.StandardOutputAspectMode.values());
 		assertArrayEquals(new OutputManager.OutputType[]{
 				OutputManager.OutputType.NDI,
 				OutputManager.OutputType.SPOUT,
@@ -168,7 +168,7 @@ class PublicApiCompatibilityTest {
 				"renderEquirectangular",
 				"renderCubemap",
 				"renderStandard")) {
-			Method method = zividomelive.class.getMethod(name);
+			Method method = ziviDomeLive.class.getMethod(name);
 			assertTrue(method.isAnnotationPresent(Deprecated.class), name + " must remain deprecated");
 		}
 	}
@@ -181,12 +181,12 @@ class PublicApiCompatibilityTest {
 	}
 
 	private static void assertMethod(String name, Class<?>... parameterTypes) throws Exception {
-		Method method = zividomelive.class.getMethod(name, parameterTypes);
+		Method method = ziviDomeLive.class.getMethod(name, parameterTypes);
 		assertTrue(Modifier.isPublic(method.getModifiers()), name + " must remain public");
 	}
 
 	private static void assertControlEventMethod() {
-		boolean found = Arrays.stream(zividomelive.class.getMethods())
+		boolean found = Arrays.stream(ziviDomeLive.class.getMethods())
 				.anyMatch(method -> method.getName().equals("controlEvent")
 						&& Modifier.isPublic(method.getModifiers())
 						&& method.getParameterCount() == 1

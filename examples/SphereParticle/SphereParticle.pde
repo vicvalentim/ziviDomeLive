@@ -8,7 +8,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.ArrayList;
 
 // Instâncias principais
-zividomelive ziviDome;      // Instância da biblioteca zividomelive
+ziviDomeLive ziviDome;      // Instância da biblioteca ziviDomeLive
 SceneManager sceneManager;  // Gerenciador de cenas
 
 // Gerenciamento de threads
@@ -21,15 +21,15 @@ void settings() {
 }
 
 void setup() {
-  // Inicializa a biblioteca zividomelive
-  ziviDome = new zividomelive(this);
+  // Inicializa a biblioteca ziviDomeLive
+  ziviDome = new ziviDomeLive(this);
   ziviDome.setup();
 
   // Criação e configuração do SceneManager
   sceneManager = new SceneManager();
   sceneManager.registerScene(new Scene1(ziviDome)); // Registra apenas Scene1
 
-  // Vincula o SceneManager à biblioteca zividomelive
+  // Vincula o SceneManager à biblioteca ziviDomeLive
   ziviDome.setSceneManager(sceneManager);
 
   // Inicializa o ExecutorService para processamento de partículas

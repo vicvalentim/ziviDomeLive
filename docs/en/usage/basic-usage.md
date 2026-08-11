@@ -8,12 +8,12 @@
 
 ```java
 dome.setRenderMode(RenderMode.FULL);
-dome.setCurrentView(zividomelive.ViewType.STANDARD);
+dome.setCurrentView(ziviDomeLive.ViewType.STANDARD);
 
 OutputManager outputs = dome.getOutputManager();
-outputs.setNdiView(zividomelive.ViewType.EQUIRECTANGULAR);
-outputs.setSyphonView(zividomelive.ViewType.FISHEYE_DOMEMASTER);
-outputs.setSpoutView(zividomelive.ViewType.CUBEMAP);
+outputs.setNdiView(ziviDomeLive.ViewType.EQUIRECTANGULAR);
+outputs.setSyphonView(ziviDomeLive.ViewType.FISHEYE_DOMEMASTER);
+outputs.setSpoutView(ziviDomeLive.ViewType.CUBEMAP);
 ```
 
 Only enabled outputs request frames. Merely configuring a route or preparing Syphon/Spout does not activate publication or add a render requirement.

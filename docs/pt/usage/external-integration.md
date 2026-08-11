@@ -10,9 +10,9 @@ runtime instalado separadamente no sistema. Conclua a configuração do
 
 ```java
 OutputManager output = dome.getOutputManager();
-output.setNdiView(zividomelive.ViewType.EQUIRECTANGULAR);
-output.setSyphonView(zividomelive.ViewType.FISHEYE_DOMEMASTER);
-output.setSpoutView(zividomelive.ViewType.STANDARD);
+output.setNdiView(ziviDomeLive.ViewType.EQUIRECTANGULAR);
+output.setSyphonView(ziviDomeLive.ViewType.FISHEYE_DOMEMASTER);
+output.setSpoutView(ziviDomeLive.ViewType.STANDARD);
 ```
 
 Somente o backend local válido para a plataforma fica disponível: Syphon no macOS ou Spout no Windows.

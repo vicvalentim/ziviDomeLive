@@ -86,7 +86,7 @@ import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;
 
-zividomelive ziviDome;
+ziviDomeLive ziviDome;
 
 void settings() {
   size(1280, 720, P3D);
@@ -94,7 +94,7 @@ void settings() {
 }
 
 void setup() {
-  ziviDome = new zividomelive(this);
+  ziviDome = new ziviDomeLive(this);
   ziviDome.setup();
   ziviDome.setScene(new Scene1());
 }
@@ -160,7 +160,7 @@ All external outputs are opt-in. Syphon and Spout remain GPU-native and receive 
 
 ```java
 OutputManager outputs = ziviDome.getOutputManager();
-outputs.setNdiView(zividomelive.ViewType.EQUIRECTANGULAR);
+outputs.setNdiView(ziviDomeLive.ViewType.EQUIRECTANGULAR);
 outputs.toggleOutput("ndi");
 
 println(outputs.getOutputState(OutputManager.OutputType.NDI));
@@ -197,11 +197,11 @@ The panel groups global status, spherical calibration, view selection, and outpu
 Release logging is the default. Enable diagnostics before creating the instance:
 
 ```java
-zividomelive.enableDebugLogging();
-// Equivalent: zividomelive.setLogMode(LogManager.Mode.DEBUG);
+ziviDomeLive.enableDebugLogging();
+// Equivalent: ziviDomeLive.setLogMode(LogManager.Mode.DEBUG);
 ```
 
-Return to release mode with `zividomelive.enableReleaseLogging()`.
+Return to release mode with `ziviDomeLive.enableReleaseLogging()`.
 
 ## Examples
 

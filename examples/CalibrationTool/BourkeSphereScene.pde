@@ -18,7 +18,7 @@ class BourkeSphereScene implements Scene {
   private final float ROTATION_PERIOD_SECONDS = 60f;
   private final int DEFAULT_PLAYBACK_FPS = 60;
 
-  private final zividomelive dome;
+  private final ziviDomeLive dome;
   private PImage pattern;
   private int loadedPatternIndex = -1;
   private float patternRotation;
@@ -28,7 +28,7 @@ class BourkeSphereScene implements Scene {
   private int playbackFrameRate = DEFAULT_PLAYBACK_FPS;
   private long rotationStartMillis;
 
-  BourkeSphereScene(zividomelive dome) {
+  BourkeSphereScene(ziviDomeLive dome) {
     this.dome = dome;
   }
 

@@ -1,6 +1,6 @@
 package com.victorvalentim.zividomelive.manager;
 
-import com.victorvalentim.zividomelive.zividomelive;
+import com.victorvalentim.zividomelive.ziviDomeLive;
 import me.walkerknapp.devolay.DevolayFrameFormatType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,7 +17,7 @@ class OutputManagerTest {
 
 	@BeforeEach
 	void createOutputManager() {
-		zividomelive lib = new zividomelive(new PApplet());
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		try {
 			outputManager = new OutputManager(lib);
 		} catch (Throwable t) {
@@ -92,20 +92,20 @@ class OutputManagerTest {
 	@Test
 	void outputViewsDefaultToFisheyeDomemaster() {
 		for (OutputManager.OutputType type : OutputManager.OutputType.values()) {
-			assertEquals(zividomelive.ViewType.FISHEYE_DOMEMASTER, outputManager.getViewForOutput(type));
+			assertEquals(ziviDomeLive.ViewType.FISHEYE_DOMEMASTER, outputManager.getViewForOutput(type));
 		}
 	}
 
 	@Test
 	void setViewForOutputUpdatesMapping() {
-		outputManager.setViewForOutput(OutputManager.OutputType.NDI, zividomelive.ViewType.EQUIRECTANGULAR);
-		assertEquals(zividomelive.ViewType.EQUIRECTANGULAR,
+		outputManager.setViewForOutput(OutputManager.OutputType.NDI, ziviDomeLive.ViewType.EQUIRECTANGULAR);
+		assertEquals(ziviDomeLive.ViewType.EQUIRECTANGULAR,
 				outputManager.getViewForOutput(OutputManager.OutputType.NDI));
 	}
 
 	@Test
 	void ndiMetadataDefaultsToFacadeFrameRateAndProgressiveFrames() throws Exception {
-		zividomelive lib = new zividomelive(new PApplet());
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		lib.setTargetFrameRate(30);
 		OutputManager manager = new OutputManager(lib);
 
@@ -126,7 +126,7 @@ class OutputManagerTest {
 
 	@Test
 	void facadeFrameRateChangesUpdateNdiMetadataAfterSetup() throws Exception {
-		zividomelive lib = new zividomelive(new HeadlessApplet());
+		ziviDomeLive lib = new ziviDomeLive(new HeadlessApplet());
 		lib.setup();
 
 		lib.setTargetFrameRate(24);

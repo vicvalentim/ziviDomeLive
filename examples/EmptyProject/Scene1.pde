@@ -1,8 +1,8 @@
 // Implementation of Scene1 that uses the Scene interface
 class Scene1 implements Scene {
-  private zividomelive parent;
+  private ziviDomeLive parent;
 
-  Scene1(zividomelive parent) {
+  Scene1(ziviDomeLive parent) {
     this.parent = parent;
   }
 

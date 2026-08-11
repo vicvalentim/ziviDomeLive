@@ -1,8 +1,8 @@
 // Scene2 implementation (Example for additional scene)
 class Scene2 implements Scene {
-  private zividomelive parent;
+  private ziviDomeLive parent;
 
-  Scene2(zividomelive parent) {
+  Scene2(ziviDomeLive parent) {
       this.parent = parent;
   }
 

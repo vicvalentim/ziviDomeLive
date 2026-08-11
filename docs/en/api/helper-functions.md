@@ -3,9 +3,9 @@
 ## Logging
 
 ```java
-zividomelive.enableDebugLogging();
-zividomelive.enableReleaseLogging();
-zividomelive.setLogMode(LogManager.Mode.DEBUG);
+ziviDomeLive.enableDebugLogging();
+ziviDomeLive.enableReleaseLogging();
+ziviDomeLive.setLogMode(LogManager.Mode.DEBUG);
 ```
 
 Configure logging before constructing the facade when startup diagnostics are needed.

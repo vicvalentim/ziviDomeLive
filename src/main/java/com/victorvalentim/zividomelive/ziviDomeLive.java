@@ -14,7 +14,7 @@ import java.util.Set;
 import java.util.logging.Logger;
 
 /**
- * The `zividomelive` class manages rendering and control of a live dome visualization.
+ * The `ziviDomeLive` class manages rendering and control of a live dome visualization.
  * It integrates with Processing and `OutputManager` for dome rendering.
  *
  * <p>This class handles setup, initialization, and rendering of fisheye domemaster,
@@ -24,7 +24,7 @@ import java.util.logging.Logger;
  * handle mouse and key events, and render different views. The class also supports toggling
  * output methods (NDI, Spout, Syphon) and managing the current scene and view type.</p>
  */
-public class zividomelive implements PConstants {
+public class ziviDomeLive implements PConstants {
 
 	/**
 	 * Enum representing the initialization state of the library.
@@ -132,12 +132,12 @@ public class zividomelive implements PConstants {
 
 
 	/**
-	 * Constructs a new `zividomelive` instance with the specified PApplet.
+	 * Constructs a new `ziviDomeLive` instance with the specified PApplet.
 	 *
 	 * @param p the PApplet instance used for rendering
 	 * @throws IllegalArgumentException if the PApplet instance is null
 	 */
-	public zividomelive(PApplet p) {
+	public ziviDomeLive(PApplet p) {
 		if (p == null) {
 			throw new IllegalArgumentException("PApplet instance cannot be null.");
 		}
@@ -150,7 +150,7 @@ public class zividomelive implements PConstants {
 
 	/**
 	 * Sets the global logging mode used by the library.
-	 * Call this before creating a zividomelive instance.
+	 * Call this before creating a ziviDomeLive instance.
 	 *
 	 * @param mode desired logging mode
 	 */

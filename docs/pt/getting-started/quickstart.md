@@ -11,7 +11,7 @@ import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;
 
-zividomelive ziviDome;
+ziviDomeLive ziviDome;
 
 void settings() {
   size(1280, 720, P3D);
@@ -19,7 +19,7 @@ void settings() {
 }
 
 void setup() {
-  ziviDome = new zividomelive(this);
+  ziviDome = new ziviDomeLive(this);
   ziviDome.setTargetFrameRate(60); // Configuração opcional de startup.
   ziviDome.setup();
   ziviDome.setScene(new MainScene());
@@ -77,7 +77,7 @@ ziviDome.setRenderMode(RenderMode.SKYBOX);
 Use `setCurrentView()` para a rota de preview no modo `FULL`:
 
 ```java
-ziviDome.setCurrentView(zividomelive.ViewType.FISHEYE_DOMEMASTER);
+ziviDome.setCurrentView(ziviDomeLive.ViewType.FISHEYE_DOMEMASTER);
 ```
 
 Modos dedicados preservam essa seleção configurada, mas forçam temporariamente sua própria representação efetiva. Consulte [Modos de Renderização](../usage/basic-usage.md) e o [Painel de Controle](../usage/control-panel.md) para a matriz completa de routing.
@@ -121,7 +121,7 @@ Outputs começam desabilitados:
 
 ```java
 OutputManager outputs = ziviDome.getOutputManager();
-outputs.setNdiView(zividomelive.ViewType.EQUIRECTANGULAR);
+outputs.setNdiView(ziviDomeLive.ViewType.EQUIRECTANGULAR);
 outputs.toggleOutput("ndi");
 ```
 

@@ -1,7 +1,7 @@
 package com.victorvalentim.zividomelive.manager;
 
 import com.victorvalentim.zividomelive.RenderMode;
-import com.victorvalentim.zividomelive.zividomelive;
+import com.victorvalentim.zividomelive.ziviDomeLive;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
 
@@ -13,9 +13,9 @@ class RenderModeOutputRoutingTest {
 
 	@Test
 	void everyDedicatedModeOverridesEffectiveRouteWithoutErasingConfiguration() {
-		zividomelive dome = new zividomelive(new PApplet());
+		ziviDomeLive dome = new ziviDomeLive(new PApplet());
 		OutputManager outputs = new OutputManager(dome);
-		outputs.setNdiView(zividomelive.ViewType.EQUIRECTANGULAR);
+		outputs.setNdiView(ziviDomeLive.ViewType.EQUIRECTANGULAR);
 
 		RenderMode[] modes = {
 				RenderMode.STANDARD,
@@ -23,11 +23,11 @@ class RenderModeOutputRoutingTest {
 				RenderMode.EQUIRECTANGULAR,
 				RenderMode.SKYBOX
 		};
-		zividomelive.ViewType[] expectedViews = {
-				zividomelive.ViewType.STANDARD,
-				zividomelive.ViewType.FISHEYE_DOMEMASTER,
-				zividomelive.ViewType.EQUIRECTANGULAR,
-				zividomelive.ViewType.CUBEMAP
+		ziviDomeLive.ViewType[] expectedViews = {
+				ziviDomeLive.ViewType.STANDARD,
+				ziviDomeLive.ViewType.FISHEYE_DOMEMASTER,
+				ziviDomeLive.ViewType.EQUIRECTANGULAR,
+				ziviDomeLive.ViewType.CUBEMAP
 		};
 
 		for (int index = 0; index < modes.length; index++) {
@@ -35,29 +35,29 @@ class RenderModeOutputRoutingTest {
 			assertEquals(expectedViews[index],
 					outputs.resolveOutputView(
 							outputs.getViewForOutput(OutputManager.OutputType.NDI)));
-			assertEquals(zividomelive.ViewType.EQUIRECTANGULAR,
+			assertEquals(ziviDomeLive.ViewType.EQUIRECTANGULAR,
 					outputs.getViewForOutput(OutputManager.OutputType.NDI));
 		}
 
 		dome.setRenderMode(RenderMode.FULL);
-		assertEquals(zividomelive.ViewType.EQUIRECTANGULAR,
+		assertEquals(ziviDomeLive.ViewType.EQUIRECTANGULAR,
 				outputs.resolveOutputView(outputs.getViewForOutput(OutputManager.OutputType.NDI)));
 	}
 
 	@Test
 	void renderRequirementsFollowEffectiveDedicatedRoute() {
-		zividomelive dome = new zividomelive(new PApplet());
+		ziviDomeLive dome = new ziviDomeLive(new PApplet());
 		EnabledNdiOutputManager outputs = new EnabledNdiOutputManager(dome);
-		outputs.setNdiView(zividomelive.ViewType.STANDARD);
+		outputs.setNdiView(ziviDomeLive.ViewType.STANDARD);
 
 		dome.setRenderMode(RenderMode.DOMEMASTER);
 
-		assertTrue(outputs.requiresView(zividomelive.ViewType.FISHEYE_DOMEMASTER));
-		assertFalse(outputs.requiresView(zividomelive.ViewType.STANDARD));
+		assertTrue(outputs.requiresView(ziviDomeLive.ViewType.FISHEYE_DOMEMASTER));
+		assertFalse(outputs.requiresView(ziviDomeLive.ViewType.STANDARD));
 	}
 
 	private static final class EnabledNdiOutputManager extends OutputManager {
-		private EnabledNdiOutputManager(zividomelive parent) {
+		private EnabledNdiOutputManager(ziviDomeLive parent) {
 			super(parent);
 		}
 
