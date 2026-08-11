@@ -1,109 +1,103 @@
+// Scene2 implementation (Example for additional scene)
 class Scene2 implements Scene {
-  private final zividomelive dome;
-  private float spin = 0f;
-  private int lastUpdateMillis;
+  private zividomelive parent;
 
-  Scene2(zividomelive dome) {
-    this.dome = dome;
+  Scene2(zividomelive parent) {
+      this.parent = parent;
   }
 
   public void setupScene() {
-    lastUpdateMillis = dome.getPApplet().millis();
+      println("Scene2 setup completed.");
   }
 
   public void update() {
-    int now = dome.getPApplet().millis();
-    float deltaSeconds = min((now - lastUpdateMillis) / 1000f, 0.1f);
-    spin += max(0f, deltaSeconds) * 0.35f;
-    lastUpdateMillis = now;
+      // Optional update logic
   }
 
   public void sceneRender(PGraphicsOpenGL pg) {
-    pg.background(7, 10, 28);
     pg.pushMatrix();
-    pg.rotateX(-0.28f);
-    pg.rotateY(spin);
-    drawLabeledBox(pg, 420f);
+    pg.background(25, 25, 112);
+    pg.pushMatrix();
+    pg.fill(255);
+    drawLabeledBox(pg, 200); // Draw the cube with labels and mesh
+    pg.popMatrix();
     pg.popMatrix();
   }
 
   public void keyEvent(processing.event.KeyEvent event) {
-    if (event.getAction() == processing.event.KeyEvent.PRESS
-        && (event.getKey() == 'r' || event.getKey() == 'R')) {
-      spin = 0f;
-    }
+      println("Key pressed in Scene2.");
+  }
+
+  public void mouseEvent(MouseEvent event) {
+      println("Mouse event in Scene2.");
+  }
+
+  public void controlEvent(controlP5.ControlEvent theEvent) {
+      println("Control event in Scene2: " + theEvent.getName());
   }
 
   public String getName() {
-    return "Labeled Cube";
+      return "Scene2";
   }
 
-  private void drawLabeledBox(PGraphicsOpenGL pg, float size) {
+  void drawLabeledBox(PGraphics pg, float size) {
     pg.pushMatrix();
-
+    // Front (+Z)
     pg.pushMatrix();
     pg.translate(0, 0, size / 2);
-    drawFaceWithGrid(pg, size, "+Z Front", pg.color(236, 74, 74));
+    drawFaceWithMesh(pg, size, "+Z Front", pg.color(255, 0, 0)); // Red (Primary) // Purple // Vibrant blue
     pg.popMatrix();
-
+    // Back (-Z)
     pg.pushMatrix();
     pg.translate(0, 0, -size / 2);
-    pg.rotateY(PI);
-    drawFaceWithGrid(pg, size, "-Z Back", pg.color(86, 194, 112));
+    pg.rotateY(PI); // Rotate so the text faces outward
+    drawFaceWithMesh(pg, size, "-Z Back", pg.color(0, 255, 0)); // Green (Secondary) // Orange // Vibrant green
     pg.popMatrix();
-
+    // Right (+X)
     pg.pushMatrix();
     pg.translate(size / 2, 0, 0);
-    pg.rotateY(HALF_PI);
-    drawFaceWithGrid(pg, size, "+X Right", pg.color(72, 139, 242));
+    pg.rotateY(-HALF_PI); // Rotate so the text faces outward
+    drawFaceWithMesh(pg, size, "+X Right", pg.color(0, 0, 255)); // Blue (Primary) // Teal // Vibrant red
     pg.popMatrix();
-
+    // Left (-X)
     pg.pushMatrix();
     pg.translate(-size / 2, 0, 0);
-    pg.rotateY(-HALF_PI);
-    drawFaceWithGrid(pg, size, "-X Left", pg.color(244, 205, 72));
+    pg.rotateY(HALF_PI); // Rotate so the text faces outward
+    drawFaceWithMesh(pg, size, "-X Left", pg.color(255, 255, 0)); // Yellow (Secondary) // Olive // Vibrant yellow
     pg.popMatrix();
-
+    // Top (+Y)
     pg.pushMatrix();
     pg.translate(0, -size / 2, 0);
-    pg.rotateX(HALF_PI);
-    drawFaceWithGrid(pg, size, "-Y Top", pg.color(203, 92, 220));
+    pg.rotateX(-HALF_PI); // Rotate so the text faces outward
+    drawFaceWithMesh(pg, size, "+Y Top", pg.color(255, 0, 255)); // Magenta (Secondary) // Indigo // Vibrant magenta
     pg.popMatrix();
-
+    // Bottom (-Y)
     pg.pushMatrix();
     pg.translate(0, size / 2, 0);
-    pg.rotateX(-HALF_PI);
-    drawFaceWithGrid(pg, size, "+Y Bottom", pg.color(67, 205, 205));
+    pg.rotateX(HALF_PI); // Rotate so the text faces outward
+    drawFaceWithMesh(pg, size, "-Y Bottom", pg.color(0, 255, 255)); // Cyan (Secondary) // Deep Pink // Vibrant cyan
     pg.popMatrix();
-
     pg.popMatrix();
   }
 
-  private void drawFaceWithGrid(PGraphicsOpenGL pg, float size, String label, int faceColor) {
-    pg.pushStyle();
-    pg.noStroke();
+  void drawFaceWithMesh(PGraphics pg, float size, String label, int faceColor) {
     pg.fill(faceColor);
-    pg.beginShape(QUADS);
+    pg.beginShape();
     pg.vertex(-size / 2, -size / 2, 0);
     pg.vertex(size / 2, -size / 2, 0);
     pg.vertex(size / 2, size / 2, 0);
     pg.vertex(-size / 2, size / 2, 0);
     pg.endShape(CLOSE);
-
-    pg.translate(0, 0, 0.8f);
-    pg.stroke(15, 18, 30, 150);
+    pg.stroke(0);
     pg.strokeWeight(1);
-    float step = size / 10f;
+    float step = size / 10.0;
     for (float i = -size / 2; i <= size / 2; i += step) {
-      pg.line(i, -size / 2, 0, i, size / 2, 0);
-      pg.line(-size / 2, i, 0, size / 2, i, 0);
+      pg.line(i, -size / 2, 0, i, size / 2, 0); // Vertical lines
+      pg.line(-size / 2, i, 0, size / 2, i, 0); // Horizontal lines
     }
-
-    pg.noStroke();
-    pg.fill(8, 10, 18);
+    pg.fill(0);
     pg.textAlign(CENTER, CENTER);
-    pg.textSize(size * 0.1f);
-    pg.text(label, 0, 0, 1.2f);
-    pg.popStyle();
+    pg.textSize(30); // Increase font size
+    pg.text(label, 0, 0, 0);
   }
 }
