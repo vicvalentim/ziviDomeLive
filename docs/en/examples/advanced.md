@@ -1,8 +1,8 @@
 # Advanced Examples
 
-## CompatibilityLock
+## CalibrationTool
 
-A static calibration chart rendered on all six cubemap directions. Its 12 x 12 grids, safe-area frames, circles, crosshairs, asymmetric orientation markers, GLSL 4.10 color bars, and nine-step grayscale ramps support repeatable checks of face identity, alignment, mirroring, color, luminance, 90-degree rotations, FOV, Size%, and output routing. Press `0` to restore the canonical state; accepted controls print their values to the console.
+A two-scene qualification tool. Scene 1 closes six face-local GLSL 4.10 targets around the observer with a 24 x 24 grid, geometric alignment references, 1/2/4/8-pixel focus lines, 1/2/3/4-pixel points and stars, continuous RGB/CMY gradients, solid swatches, grayscale, and clipping levels. Scene 2 maps Paul Bourke's original unmodified 8192 x 4096 v14 equirectangular pattern onto a complete 1800-unit sphere centered at `(0, 0, 0)`, whose north pole is `+X`; `Space` toggles the recommended 60-second rotation, `,`/`.` steps one degree, and `C` resets it. Use Left/Right arrows to switch scenes.
 
 ## FulldomePBR
 

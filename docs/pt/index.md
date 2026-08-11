@@ -39,6 +39,6 @@ A topologia esférica acima continua sendo um detalhe interno da geração 1.x. 
 
 ## Qualificação
 
-A suíte Java valida API, estado, lifecycle, routing, matemática, metadata e contratos de release sem exigir GPU. Paridade visual e interoperabilidade de outputs nativos exigem o exemplo [CompatibilityLock](examples/advanced.md) em hardware qualificado. O repositório não fabrica imagens golden.
+A suíte Java valida API, estado, lifecycle, routing, matemática, metadata e contratos de release sem exigir GPU. Paridade visual e interoperabilidade de outputs nativos exigem o exemplo [CalibrationTool](examples/advanced.md) em hardware qualificado. O repositório não fabrica imagens golden.
 
 Consulte os [problemas conhecidos](known-issues.md) antes de uma implantação de produção.
