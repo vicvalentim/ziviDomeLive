@@ -1,55 +1,44 @@
-# Installation Steps for ziviDomeLive
+# Installation
 
-This guide details the installation process for **ziviDomeLive**, covering both recommended and manual methods.
+## Processing Contribution Manager
 
----
+After the 1.5.0 package is published:
 
-## Method 1: Install via Processing Contribution Manager (Recommended)
+1. Open Processing.
+2. Select **Sketch > Import Library > Add Library...**.
+3. Search for **ziviDomeLive**.
+4. Install the library and its declared dependencies.
+5. Restart Processing.
 
-The Processing Contribution Manager offers the most straightforward method for installing **ziviDomeLive**. Follow these steps to install directly within the Processing environment:
+## Release Artifact
 
-1. **Open Processing**:
-    - Launch the Processing IDE on your computer.
+For manual installation, use the packaged artifact from the matching release rather than the repository source ZIP:
 
-2. **Access Contribution Manager**:
-    - Navigate to **Sketch > Import Library > Add Library...** from the main menu. This opens the Contribution Manager window, where you can search and install libraries, tools, and modes for Processing.
+1. Download `ziviDomeLive.zip` or `ziviDomeLive.pdex`.
+2. Extract the top-level `ziviDomeLive` folder.
+3. Move it into the sketchbook `libraries` directory shown in Processing Preferences.
+4. Install ControlP5 and the required platform output dependency.
+5. Restart Processing.
 
-3. **Search for ziviDomeLive**:
-    - In the Contribution Manager search bar, type "**ziviDomeLive**".
-    - Once located, click on the library name in the list of search results.
+The installed structure must contain:
 
-4. **Install**:
-    - Click the **Install** button next to **ziviDomeLive**. Processing will download and install the library into your `libraries` folder automatically.
+```text
+libraries/ziviDomeLive/
+  library.properties
+  library/
+  examples/
+  reference/
+```
 
-5. **Verify Installation**:
-    - After installation, you can verify by going to **Sketch > Import Library** again and checking that **ziviDomeLive** appears in the list. If it’s there, the installation was successful.
+## Source Checkout
 
----
+For development:
 
-## Method 2: Install via GitHub (Manual Installation)
+```bash
+git clone https://github.com/vicvalentim/ziviDomeLive.git
+cd ziviDomeLive
+./gradlew clean test build
+./gradlew buildReleaseArtifacts
+```
 
-If you prefer or need to install **ziviDomeLive** manually, you can download the library from GitHub and place it in your Processing `libraries` folder. Here’s how:
-
-1. **Download from GitHub**:
-    - Visit the official **ziviDomeLive** repository on GitHub: [https://github.com/vicvalentim/ziviDomeLive](https://github.com/vicvalentim/ziviDomeLive).
-    - Click on the **Code** button and select **Download ZIP**. This will download a zipped file of the repository to your computer.
-
-2. **Extract the Downloaded ZIP File**:
-    - Locate the downloaded ZIP file on your computer (usually in your **Downloads** folder).
-    - Extract the contents of the ZIP file to create a folder named `ziviDomeLive-main` or similar.
-
-3. **Move the Library Folder**:
-    - Rename the extracted folder to **ziviDomeLive** (optional but recommended for clarity).
-    - Move the renamed `ziviDomeLive` folder into your Processing `libraries` directory, located at:
-        - **Windows**: `Documents/Processing/libraries/`
-        - **macOS**: `Documents/Processing/libraries/`
-        - **Linux**: `Documents/Processing/libraries/`
-
-   If the `libraries` folder does not exist in your Processing directory, create it manually.
-
-4. **Verify Installation**:
-    - Open Processing and navigate to **Sketch > Import Library**. Confirm that **ziviDomeLive** appears in the list. If so, the manual installation was successful.
-
----
-
-Following either of these methods will install **ziviDomeLive** into your Processing environment, making it available for use in sketches. Choose the method that best suits your setup and preference.
+The installable output is generated under `release/`.

@@ -1,42 +1,44 @@
+# ziviDomeLive 1.5.0
 
-# ziviDomeLive
+![ziviDomeLive splash](../assets/images/splash.jpg){ width="520" }
 
-<img src="/ziviDomeLive/assets/images/splash.jpg" width="40%" alt="ziviDomeLive - SplashScreen" />
+ziviDomeLive is a Processing 4 library for real-time fulldome, monoscopic VR, and immersive installation graphics. It combines scene lifecycle management, independent Standard and spherical rendering, domemaster calibration, and optional NDI, Syphon, or Spout output routing.
 
-**ziviDomeLive** is a versatile Processing library designed to create immersive visual experiences for fulldome projections, monoscopic VR environments, and interactive installations. It provides a flexible framework to manage scenes, handle 3D rendering, and integrate external controllers or projection technologies like **Syphon** and **Spout**. With its real-time rendering capabilities, **ziviDomeLive** is ideal for planetarium displays, live audiovisual performances, and interactive installations. This documentation will guide you through installation, key features, API references, usage examples, and advanced configurations to maximize the library’s potential.
+Version 1.5.0 consolidates the mature 1.x architecture. It preserves the public `zividomelive` facade and legacy `ViewType` behavior while adding `RenderMode`, centralized render requirements, predictable lifecycle ownership, and observable output states.
 
----
+## Start Here
 
-## Key Features
+1. Review the [system requirements](installation/requirements.md) and [dependencies](installation/dependencies.md).
+2. Install the packaged library using the [installation guide](installation/installation-steps.md).
+3. Build a first scene with the [quickstart](getting-started/quickstart.md).
+4. Choose between independent routing and dedicated rendering in [basic usage](usage/basic-usage.md).
 
-- **Multiple Projection Modes**:  
-  Supports a wide range of projection formats, including **fisheye domemaster**, **equirectangular**, **cubemap**, and more. These projection modes allow you to create visuals that engage viewers by wrapping around or adapting dynamically to immersive displays, whether in VR setups or fulldome environments.
+## Stable 1.5 Contracts
 
-- **Resolution Switching for Domemaster**:  
-  Enables seamless switching between **1k, 2k, 3k,** and **4k** resolutions for domemaster projection, ensuring sharp visuals across various dome sizes or display systems. This feature allows you to optimize performance based on your hardware and project requirements.
+- `Scene.sceneRender(PGraphicsOpenGL)` receives an open render target; the library owns `beginDraw()` and `endDraw()`.
+- `RenderMode.FULL` is the default and preserves independent preview/output routes.
+- Standard rendering is independent from spherical cubemap capture.
+- Spherical pitch, yaw, and roll share one orientation source.
+- Domemaster FOV is `0..360` with default `210`.
+- Domemaster Size% is `0..100` with default `100`.
+- Output-resolution presets are `1024`, `2048`, `3072`, and `4096`.
+- External output publication is disabled by default.
 
-- **Scene Management**:  
-  Organize and dynamically switch between different visual scenes with the **Scene** interface, allowing for modular compositions. Each scene can have its own setup, rendering logic, and user interactions, making it versatile for both interactive installations and live performances.
+## Rendering Domains
 
-- **Real-time Rendering**:  
-  Engineered for live visuals, **ziviDomeLive** is optimized for smooth frame-by-frame rendering, even with complex 3D scenes and shader effects. This feature makes it a strong choice for VJ work, live coding, and interactive art installations.
+```text
+STANDARD
+Scene -> StandardRenderer -> Standard target
 
-- **External Integration**:  
-  Seamlessly integrates with other applications through **Syphon** (macOS) and **Spout** (Windows) to share rendered frames in real-time from Processing. This is valuable for multimedia performances, allowing visuals to be further processed or projected with other tools.
+SPHERICAL
+Scene -> six cubemap faces -> equirectangular -> domemaster
+                          \-> cubemap layout
+```
 
-- **Interactive UI**:  
-  Integrates with **ControlP5** for creating interactive controls directly in Processing, such as sliders, buttons, and toggle switches, which enable real-time manipulation of visual parameters.
+The spherical topology above remains an internal 1.x implementation detail. It is not a promise that future major versions must use `PGraphicsOpenGL[]` or derive domemaster from equirectangular output.
 
-- **Cross-Platform Compatibility**:  
-  Runs on **macOS, Windows,** and **Linux**, ensuring accessibility and versatility across operating systems, so your visual creations can easily deploy on various platforms without compatibility issues.
+## Qualification
 
-- **Customizable Rendering Pipelines**:  
-  Tailor rendering pipelines to your project’s specific needs, whether it’s fulldome projection or interactive environments. The library allows adjustments to rendering resolution, projection mode, and other parameters to optimize performance and visual quality.
+The Java suite validates API, state, lifecycle, routing, math, metadata, and release contracts without requiring a GPU. Visual parity and native output interoperability require the [CompatibilityLock example](examples/advanced.md) on qualified hardware. No golden image is manufactured by the repository.
 
----
-
-## Getting Started with ziviDomeLive
-
-To start exploring the capabilities of **ziviDomeLive**, refer to the **[Quickstart Guide](getting-started/quickstart.md)**, which introduces you to setup, installation, and essential functionality for creating dynamic, interactive visuals in Processing. For more detailed setup steps and a list of dependencies, please see the **[Installation Guide](installation/installation-steps.md)**.
-
-**ziviDomeLive** is a flexible toolset that encourages experimentation, providing everything needed to turn your Processing sketches into immersive, interactive experiences. Dive in, explore its features, and create real-time visual displays that captivate and engage your audience in new and innovative ways.
+See the [known issues](known-issues.md) before deploying to production.

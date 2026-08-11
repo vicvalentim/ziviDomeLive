@@ -54,6 +54,21 @@ class Scene1 implements Scene {
           println("Key pressed in Scene1: " + key);
 
           switch (key) {
+              case '1':
+                  parent.setRenderMode(RenderMode.FULL);
+                  break;
+              case '2':
+                  parent.setRenderMode(RenderMode.STANDARD);
+                  break;
+              case '3':
+                  parent.setRenderMode(RenderMode.DOMEMASTER);
+                  break;
+              case '4':
+                  parent.setRenderMode(RenderMode.EQUIRECTANGULAR);
+                  break;
+              case '5':
+                  parent.setRenderMode(RenderMode.SKYBOX);
+                  break;
               case '+':
                   rotationSpeed += 0.01f; // Increase speed
                   break;

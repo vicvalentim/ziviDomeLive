@@ -6,6 +6,8 @@ package com.victorvalentim.zividomelive;
  * <p>{@link #FULL} preserves the independent preview and external-output choices configured
  * through the legacy {@link zividomelive.ViewType} API. Dedicated modes temporarily override
  * those effective choices without erasing them.</p>
+ *
+ * @since 1.5.0
  */
 public enum RenderMode {
 	/** Preserve independent preview and external-output view selection. */

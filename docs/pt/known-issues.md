@@ -1,24 +1,32 @@
 # Problemas Conhecidos
 
-## Apple Silicon e Syphon
+## OpenGL Error 1282
 
-No macOS com Apple Silicon, a interoperabilidade completa com Syphon pode exigir a versão Intel do Processing rodando via Rosetta 2. A stack ARM nativa do Processing não oferece o mesmo nível de suporte ao Syphon.
-
-## Outputs externos no Linux
-
-Builds Linux têm suporte reduzido para saídas de vídeo externas em comparação com macOS e Windows, pois as dependências do ecossistema Processing usadas por esta biblioteca não fornecem as mesmas integrações nativas para NDI, Syphon e Spout.
-
-## OpenGL error 1282
-
-Algumas configurações emitem:
+Algumas combinações de Processing/JOGL, hardware e driver emitem:
 
 ```text
 OpenGL error 1282 at bot endDraw(): invalid operation
 ```
 
-Esse é um `GL_INVALID_OPERATION` emitido pelo driver OpenGL do JOGL/Processing, geralmente acionado por estado inválido do framebuffer durante renderização ou captura de output. O erro é endêmico em certas combinações de hardware e driver e **não foi completamente eliminado**. Em geral é não-fatal — a renderização continua — mas pode indicar instabilidade em configurações específicas (especialmente Apple Silicon, certos drivers de GPU, ou renderização multi-pass complexa). A investigação da causa raiz está em andamento.
+Esse `GL_INVALID_OPERATION` continua endêmico em algumas configurações de framebuffer, driver e múltiplos passes. A versão 1.4 removeu um lifecycle NDI aninhado que amplificava o erro, mas o problema mais amplo não é considerado resolvido. Ele costuma ser não fatal, porém sistemas de produção devem tratar mensagens repetidas como falha de qualificação até confirmar estabilidade de renderização e output.
 
-**Medidas que podem reduzir a frequência:**
-- Rode o Processing na versão Intel (Rosetta 2) em Apple Silicon.
-- Mantenha os outputs externos (NDI, Syphon, Spout) desabilitados quando não estiverem em uso.
-- Use os drivers de GPU mais recentes para sua plataforma.
+Possíveis medidas:
+
+- Mantenha outputs externos desabilitados quando não estiverem em uso.
+- Use uma combinação estável de driver e Processing na máquina de destino.
+- No Apple Silicon, compare Processing ARM nativo e Intel/Rosetta quando Syphon for necessário.
+- Reduza a resolução de output enquanto isola o pass que falha.
+
+## Apple Silicon e Syphon
+
+A interoperabilidade completa com Syphon pode exigir Processing Intel sob Rosetta 2. Renderização ARM nativa e Syphon são questões separadas de qualificação.
+
+## Outputs Externos no Linux
+
+A renderização principal deve funcionar no Linux, mas as integrações atuais do Processing não oferecem Syphon ou Spout nessa plataforma, e o suporte nativo a NDI permanece reduzido/não qualificado.
+
+## Qualificação de Outputs Nativos
+
+Testes automatizados validam routing e lifecycle sem abrir sessões reais de GPU ou receiver. Syphon, Spout, descoberta NDI, cor/orientação no receiver, resize, ciclos de enable/disable, pause/resume e shutdown devem ser verificados no hardware de destino.
+
+Se um envio nativo NDI não retornar durante o shutdown, a publicação para após uma espera limitada e o estado muda para `STOPPING`; a limpeza nativa termina depois da saída do worker.

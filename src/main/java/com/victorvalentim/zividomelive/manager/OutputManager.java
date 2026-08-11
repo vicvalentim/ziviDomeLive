@@ -57,6 +57,8 @@ public class OutputManager implements PConstants {
 	 *
 	 * <p>Availability, native initialization, publication, and render requirements are
 	 * deliberately separate concerns. {@link #STOPPING} is specific to bounded NDI shutdown.</p>
+	 *
+	 * @since 1.5.0
 	 */
 	public enum OutputState {
 		/** The backend is unsupported or its last initialization attempt failed. */
@@ -1147,6 +1149,7 @@ public class OutputManager implements PConstants {
 	 *
 	 * @param outputType output to inspect
 	 * @return current lifecycle state; {@link OutputState#UNAVAILABLE} for {@code null}
+	 * @since 1.5.0
 	 */
 	public OutputState getOutputState(OutputType outputType) {
 		if (outputType == null) {
@@ -1185,6 +1188,7 @@ public class OutputManager implements PConstants {
 	 *
 	 * @param outputType output to inspect
 	 * @return diagnostic text, or an empty string when no failure has been recorded
+	 * @since 1.5.0
 	 */
 	public String getOutputFailureReason(OutputType outputType) {
 		if (outputType == OutputType.NDI) {
@@ -1396,6 +1400,7 @@ public class OutputManager implements PConstants {
 	 * for bounded latest-frame backpressure.</p>
 	 *
 	 * @return total failed NDI frames
+	 * @since 1.5.0
 	 */
 	public long getNdiFailedFrames() {
 		return ndiFailedFrames.get();

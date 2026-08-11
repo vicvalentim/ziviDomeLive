@@ -3,7 +3,7 @@
 ## Scope and source priority
 - This repo is a Processing 4 Java library for fulldome/VR rendering (`README.md`, `src/main/java/com/victorvalentim/zividomelive/zividomelive.java`).
 - Prefer source-of-truth in this order: `src/main/java` -> `build.gradle.kts` + `.github/workflows` -> `README.md` -> `examples/`.
-- Canonical agent guidance is this `AGENTS.md`; no `CLAUDE.md` or Copilot-instruction files are present in the repository.
+- Canonical agent guidance is this `AGENTS.md`; `.github/copilot-instructions.md` provides supplementary architecture context, and no `CLAUDE.md` is present.
 
 ## Big-picture architecture
 - Entrypoint: `zividomelive` orchestrates setup, lifecycle hooks, rendering, controls, and outputs.
@@ -30,7 +30,7 @@
 - Resolution changes are deferred (`resetGraphics` sets `pendingReset`; actual renderer reallocation occurs inside draw loop).
 - Shader paths are loaded from packaged data paths (`data/shaders/*.vert|*.frag`), and `build.gradle.kts` copies `shaders/` into the JAR at `data/shaders`.
 - Use `LogManager.getLogger()` instead of ad-hoc loggers; logs also go to `/tmp/zividomelive/logs` on non-Windows.
-- Threaded tasks should use `ThreadManager` (shared fixed pool), not new executors per feature.
+- Threaded tasks should use `ThreadManager` (shared fixed pool), not new executors per feature. The dedicated bounded NDI sender worker in `OutputManager` is the intentional exception.
 
 ## Build, test, docs, and release workflows
 - Main CI mirrors local build: `./gradlew build` (`.github/workflows/gradle.yml`).
@@ -54,4 +54,3 @@
 - Linux has reduced external-output support per `README.md` known issues.
 - Keyboard conventions in runtime: `h` toggles control panel, `m` cycles view mode, Left/Right arrows switch scenes (`zividomelive.keyEvent`).
 - Metadata is not fully consistent across files (example: `README.md` says GPL-2.0, `mkdocs.yml` footer says MIT); verify before changing licensing/version fields.
-
