@@ -54,7 +54,7 @@ class BourkeSphereScene implements Scene {
     pg.hint(DISABLE_TEXTURE_MIPMAPS);
     pg.textureSampling(POINT);
     pg.pushMatrix();
-    pg.rotateX(patternRotation);
+    pg.rotateZ(patternRotation);
 
     for (int latitude = 0; latitude < LATITUDE_SEGMENTS; latitude++) {
       float v0 = latitude / (float) LATITUDE_SEGMENTS;
@@ -124,9 +124,9 @@ class BourkeSphereScene implements Scene {
       float u,
       float v) {
     float equatorialRadius = cos(latitude);
-    float x = SPHERE_CENTER_X + SPHERE_RADIUS * sin(latitude);
+    float x = SPHERE_CENTER_X + SPHERE_RADIUS * equatorialRadius * cos(longitude);
     float y = SPHERE_CENTER_Y + SPHERE_RADIUS * equatorialRadius * sin(longitude);
-    float z = SPHERE_CENTER_Z + SPHERE_RADIUS * equatorialRadius * cos(longitude);
+    float z = SPHERE_CENTER_Z + SPHERE_RADIUS * sin(latitude);
     pg.vertex(x, y, z, u, v);
   }
 

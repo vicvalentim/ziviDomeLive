@@ -95,8 +95,8 @@ class ExampleQualityTest {
 		assertTrue(sphereScene.contains("SPHERE_CENTER_Z = 0f"));
 		assertTrue(sphereScene.contains("SPHERE_DIAMETER = 1800f"));
 		assertTrue(sphereScene.contains("float latitude0 = HALF_PI - PI * v0"));
-		assertTrue(sphereScene.contains("SPHERE_CENTER_X + SPHERE_RADIUS * sin(latitude)"));
-		assertTrue(sphereScene.contains("pg.rotateX(patternRotation)"));
+		assertTrue(sphereScene.contains("SPHERE_CENTER_Z + SPHERE_RADIUS * sin(latitude)"));
+		assertTrue(sphereScene.contains("pg.rotateZ(patternRotation)"));
 		assertTrue(sphereScene.contains("pg.textureSampling(POINT)"));
 		assertTrue(sphereScene.contains("pg.hint(DISABLE_TEXTURE_MIPMAPS)"));
 
