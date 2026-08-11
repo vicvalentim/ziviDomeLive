@@ -25,7 +25,7 @@ FOV and Size% are operational calibration parameters, not visual decoration:
 | FOV | `0..360` degrees | `210` |
 | Size | `0..100` percent | `100` |
 
-Pitch, yaw, and roll affect every spherical mode from the same orientation.
+Pitch, yaw, and roll affect every spherical mode from the same unit quaternion. Their `-PI..PI` panel sliders wrap continuously under mouse-wheel input; each change is composed as a local-axis quaternion delta instead of rebuilding the attitude from Euler angles.
 
 ## Scene Lifecycle
 
@@ -44,4 +44,13 @@ The Standard preview follows the Processing window dimensions. Spherical preview
 
 ## Built-in Control Panel
 
-The ControlP5 panel groups global status, spherical parameters, preview selection, and output controls. Output toggles own publication changes, while each enabled output exposes its own view selector.
+The ControlP5 panel groups global status, spherical parameters, preview selection, and output controls. Its available controls follow the active rendering capability:
+
+| Mode | Orientation | FOV / Size | Floating domemaster | View selectors |
+|---|---|---|---|---|
+| `FULL` | Shown | Shown | Shown | Preview and enabled outputs |
+| `STANDARD` | When floating domemaster is enabled | When floating domemaster is enabled | Shown | Hidden |
+| `DOMEMASTER` | Shown | Shown | Hidden | Hidden |
+| `EQUIRECTANGULAR` / `SKYBOX` | Shown | Hidden | Hidden | Hidden |
+
+Output resolution and publication toggles remain visible in every mode. Per-output view selectors appear only in `FULL`, where routes are independently configurable.

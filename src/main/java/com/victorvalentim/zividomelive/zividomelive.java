@@ -46,7 +46,8 @@ public class zividomelive implements PConstants {
 	private boolean disposed;
 	private final Set<String> registeredEventHandlers = new LinkedHashSet<>();
 
-	private float pitch = 0.0f, yaw = 0.0f, roll = 0.0f, fov = 210.0f, fishSize = 100.0f;
+	private final SphericalOrientation sphericalOrientation = new SphericalOrientation();
+	private float fov = 210.0f, fishSize = 100.0f;
 	// Output resolution is dedicated to offscreen render targets used by external outputs.
 	private int outputResolution = 1024;
 	private boolean showControlPanel = true;
@@ -720,7 +721,7 @@ public class zividomelive implements PConstants {
 	private void capturePreviewCubemap() {
 		if (previewCubemapRenderer != null) {
 			previewCubemapRenderer.captureCubemap(
-					getPitch(), getYaw(), getRoll(), cameraManager, getCurrentScene());
+					sphericalOrientation.getQuaternion(), cameraManager, getCurrentScene());
 		}
 	}
 
@@ -1016,7 +1017,7 @@ public class zividomelive implements PConstants {
 	private void captureCubemap() {
 		if (cubemapRenderer != null) {
 			cubemapRenderer.captureCubemap(
-					getPitch(), getYaw(), getRoll(), cameraManager, getCurrentScene());
+					sphericalOrientation.getQuaternion(), cameraManager, getCurrentScene());
 		} else {
 			LOGGER.severe("Error: CubemapRenderer not initialized.");
 		}
@@ -1513,7 +1514,7 @@ public class zividomelive implements PConstants {
 	 * @return the current pitch
 	 */
 	public float getPitch() {
-		return pitch;
+		return sphericalOrientation.getPitch();
 	}
 
 	/**
@@ -1522,7 +1523,7 @@ public class zividomelive implements PConstants {
 	 * @param pitch the new pitch
 	 */
 	public void setPitch(float pitch) {
-		this.pitch = pitch;
+		sphericalOrientation.setPitch(pitch);
 	}
 
 	/**
@@ -1531,7 +1532,7 @@ public class zividomelive implements PConstants {
 	 * @return the current yaw
 	 */
 	public float getYaw() {
-		return yaw;
+		return sphericalOrientation.getYaw();
 	}
 
 	/**
@@ -1540,7 +1541,7 @@ public class zividomelive implements PConstants {
 	 * @param yaw the new yaw
 	 */
 	public void setYaw(float yaw) {
-		this.yaw = yaw;
+		sphericalOrientation.setYaw(yaw);
 	}
 
 	/**
@@ -1549,7 +1550,7 @@ public class zividomelive implements PConstants {
 	 * @return the current roll
 	 */
 	public float getRoll() {
-		return roll;
+		return sphericalOrientation.getRoll();
 	}
 
 	/**
@@ -1558,7 +1559,14 @@ public class zividomelive implements PConstants {
 	 * @param roll the new roll
 	 */
 	public void setRoll(float roll) {
-		this.roll = roll;
+		sphericalOrientation.setRoll(roll);
+	}
+
+	/**
+	 * Restores the spherical orientation to the identity quaternion.
+	 */
+	public void resetOrientation() {
+		sphericalOrientation.reset();
 	}
 
 	/**

@@ -10,6 +10,7 @@
 | `SceneManager` | Scene registration, active ownership, switching, and disposal |
 | `OutputManager` | NDI, Syphon, and Spout routing and lifecycle |
 | `OrbitCamera` | Optional scene-space camera shared by all rendered targets |
+| `SphericalOrientation` | Cyclic pitch/yaw/roll accumulation on a unit quaternion |
 
 ## Public Enums
 

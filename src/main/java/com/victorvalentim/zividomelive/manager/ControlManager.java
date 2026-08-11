@@ -52,6 +52,7 @@ public class ControlManager {
 
         // Reset controls to default state
         resetControls();
+        applyRenderModeVisibility();
 
         parentControlListener = parent::controlEvent;
         cp5.addListener(parentControlListener);
@@ -105,7 +106,10 @@ public class ControlManager {
                 .align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER)
                 .setPaddingX(5)
                 .setText("Preview Domemaster");
-        previewToggle.onChange(event -> parent.setShowPreview(previewToggle.getState()));
+        previewToggle.onChange(event -> {
+            parent.setShowPreview(previewToggle.getState());
+            applyRenderModeVisibility();
+        });
 
         addViewModeDropdown(ControlPanelLayout.yFor(ControlScope.VIEW, "View Mode"));
     }
@@ -237,13 +241,31 @@ public class ControlManager {
      * Toggles the visibility of the view mode dropdown lists for each output based on the state of the toggles.
      */
     private void toggleDropdownVisibility() {
-        ndiViewDropdown.setVisible(ndiToggle.getState());
+        ControlPanelLayout.ControlVisibility visibility = currentVisibility();
+        ndiViewDropdown.setVisible(visibility.outputViewVisible(ndiToggle.getState()));
         if (spoutViewDropdown != null) {
-            spoutViewDropdown.setVisible(spoutToggle.getState());
+            spoutViewDropdown.setVisible(visibility.outputViewVisible(spoutToggle.getState()));
         }
         if (syphonViewDropdown != null) {
-            syphonViewDropdown.setVisible(syphonToggle.getState());
+            syphonViewDropdown.setVisible(visibility.outputViewVisible(syphonToggle.getState()));
         }
+    }
+
+    private ControlPanelLayout.ControlVisibility currentVisibility() {
+        return ControlPanelLayout.visibilityFor(parent.getRenderMode(), parent.isShowPreview());
+    }
+
+    private void applyRenderModeVisibility() {
+        ControlPanelLayout.ControlVisibility visibility = currentVisibility();
+        for (ControlPanelLayout.SphericalControlSpec control : ControlPanelLayout.sphericalControls()) {
+            boolean visible = visibility.sphericalControlVisible(control.name());
+            cp5.getController(control.name()).setVisible(visible);
+            cp5.getController(control.name() + "Value").setVisible(visible);
+        }
+        cp5.getController("resetControls").setVisible(visibility.resetControls());
+        previewToggle.setVisible(visibility.floatingDomemasterPreview());
+        viewModeDropdown.setVisible(visibility.previewViewSelection());
+        toggleDropdownVisibility();
     }
 
     private void addNumberbox(String name, float y, float min, float max, float value) {
@@ -267,8 +289,16 @@ public class ControlManager {
     }
 
     private void addSlider(String name, float y, float min, float max, float value) {
-        cp5.addSlider(name)
-                .setPosition(70, y)
+        Slider slider;
+        if (ControlPanelLayout.isCyclicAngle(name)) {
+            slider = new CyclicAngleSlider(cp5, name)
+                    .setSliderMode(Slider.FLEXIBLE)
+                    .setHandleSize(10)
+                    .setScrollSensitivity(0.1f);
+        } else {
+            slider = cp5.addSlider(name);
+        }
+        slider.setPosition(70, y)
                 .setSize(140, ControlPanelLayout.CONTROL_HEIGHT)
                 .setRange(min, max)
                 .setValue(value)
@@ -329,6 +359,7 @@ public class ControlManager {
      * Resets all the controls to their default state.
      */
     public void resetControls() {
+        parent.resetOrientation();
         for (ControlPanelLayout.SphericalControlSpec control : ControlPanelLayout.sphericalControls()) {
             cp5.getController(control.name()).setValue(control.defaultValue());
         }
@@ -339,6 +370,7 @@ public class ControlManager {
      */
     public void show() {
         cp5.show();
+        applyRenderModeVisibility();
     }
 
     /**
@@ -519,6 +551,7 @@ public class ControlManager {
 
         if (theEvent.isFrom(previewToggle)) {
             parent.setShowPreview(previewToggle.getState());
+            applyRenderModeVisibility();
         } else if (theEvent.isFrom(ndiToggle)
                 || (spoutToggle != null && theEvent.isFrom(spoutToggle))
                 || (syphonToggle != null && theEvent.isFrom(syphonToggle))) {
@@ -541,5 +574,24 @@ public class ControlManager {
      */
     public void updateFpsLabel(float frameRate) {
         fpsLabel.setText("FPS: " + PApplet.nf(frameRate, 0, 1));
+    }
+
+    private static final class CyclicAngleSlider extends Slider {
+        private CyclicAngleSlider(ControlP5 cp5, String name) {
+            super(cp5, name);
+        }
+
+        @Override
+        public Slider scrolled(int steps) {
+            if (isVisible() && steps != 0) {
+                float span = getMax() - getMin();
+                float delta = span * -steps * scrollSensitivity * 0.1f;
+                setValue(ControlPanelLayout.wrapCyclic(
+                        getValue() + delta,
+                        getMin(),
+                        getMax()));
+            }
+            return this;
+        }
     }
 }
