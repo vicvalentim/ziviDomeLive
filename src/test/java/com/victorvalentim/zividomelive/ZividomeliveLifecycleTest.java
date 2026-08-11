@@ -85,6 +85,21 @@ class ZividomeliveLifecycleTest {
 	}
 
 	@Test
+	void targetFrameRateDoesNotRestartAppletWhenValueIsUnchanged() throws Exception {
+		FrameRateTrackingApplet applet = new FrameRateTrackingApplet();
+		zividomelive lib = new zividomelive(applet);
+		setInitState(lib, zividomelive.InitState.SETUP_COMPLETE);
+
+		lib.setTargetFrameRate(60);
+		assertEquals(0, applet.frameRateCalls);
+
+		lib.setTargetFrameRate(30);
+		lib.setTargetFrameRate(30);
+		assertEquals(1, applet.frameRateCalls);
+		assertEquals(30f, applet.lastFrameRate);
+	}
+
+	@Test
 	void setupStartsWithOutputsDisabled() {
 		zividomelive lib = new zividomelive(new PApplet());
 		lib.setup();
@@ -286,6 +301,17 @@ class ZividomeliveLifecycleTest {
 		@Override
 		public PShader loadShader(String fragFilename, String vertFilename) {
 			return null;
+		}
+	}
+
+	private static class FrameRateTrackingApplet extends StubApplet {
+		private int frameRateCalls;
+		private float lastFrameRate;
+
+		@Override
+		public void frameRate(float fps) {
+			frameRateCalls++;
+			lastFrameRate = fps;
 		}
 	}
 

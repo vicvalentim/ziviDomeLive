@@ -68,7 +68,7 @@ class ExampleQualityTest {
 		assertTrue(sketch.contains("setPitch(ziviDome.getPitch() + HALF_PI)"));
 		assertTrue(sketch.contains("setYaw(ziviDome.getYaw() + HALF_PI)"));
 		assertTrue(sketch.contains("setRoll(ziviDome.getRoll() + HALF_PI)"));
-		assertTrue(sketch.contains("setTargetFrameRate(60)"));
+		assertFalse(sketch.contains("setTargetFrameRate("));
 		assertFalse(sketch.contains("HALF_PI / 2"));
 	}
 
@@ -90,6 +90,7 @@ class ExampleQualityTest {
 		assertTrue(cubeScene.contains("ANNOTATION_TEXTURE_SIZE = 1024"));
 		assertTrue(cubeScene.contains("pg.texture(annotationMaps[index])"));
 		assertTrue(cubeScene.contains("ANNOTATION_BIAS = 2f"));
+		assertFalse(cubeScene.contains(" static "));
 		assertTrue(vertexShader.startsWith("#version 410 core"));
 		assertTrue(vertexShader.contains("in vec2 texCoord"));
 		assertTrue(vertexShader.contains("faceUv = texCoord"));
@@ -113,9 +114,12 @@ class ExampleQualityTest {
 		assertTrue(sphereScene.contains("dome.isEnableOutput()"));
 		assertTrue(sphereScene.contains("dome.getOutputResolution()"));
 		assertTrue(sphereScene.contains("min(dome.getPApplet().width, dome.getPApplet().height)"));
-		assertTrue(sphereScene.contains("dome.getTargetFrameRate()"));
+		assertTrue(sphereScene.contains("playbackFrameRate"));
+		assertTrue(sphereScene.contains("elapsedMillis * playbackFrameRate / 1000L"));
+		assertFalse(sphereScene.contains("setTargetFrameRate("));
 		assertTrue(sphereScene.contains("framesPerRevolution()"));
 		assertFalse(sphereScene.contains("deltaSeconds"));
+		assertFalse(sphereScene.contains(" static "));
 
 		for (BourkeImage expected : List.of(
 				new BourkeImage("spherical2400.png", 2400, 1200,

@@ -31,11 +31,11 @@ When an external output is enabled, the source follows its 1024, 2048, 3072, or 
 | 4096 (4k) | `data/img/spherical8192.png` (8192 x 4096) |
 
 - `Space`: toggle one revolution per 60 seconds
-- `T`: switch the playback target between 30 fps / 1800 frames and 60 fps / 3600 frames per revolution
+- `T`: switch the rotation profile between 30 fps / 1800 frames and 60 fps / 3600 frames per revolution
 - `,` / `.`: rotate backward / forward by one degree and pause
 - `C`: restore the source orientation and pause
 
-Paul Bourke recommends a slow 360-degree rotation to reveal aliasing and playback discontinuity. Rotation advances by one deterministic frame step around the `+Z`/`-Z` polar axis: 1800 steps at 30 fps or 3600 at 60 fps. It is useful for live display diagnosis, but, as the author notes, it is not equivalent to testing a movie encoded with rotating source frames. The original images use gamma 1.0 and a linear color profile.
+Paul Bourke recommends a slow 360-degree rotation to reveal aliasing and playback discontinuity. Rotation is quantized against elapsed time around the `+Z`/`-Z` polar axis: 1800 source positions at 30 fps or 3600 at 60 fps, always completing in 60 seconds. The profile does not change Processing's global frame rate or restart its JOGL animator. It is useful for live display diagnosis, but, as the author notes, it is not equivalent to testing a movie encoded with rotating source frames. The original images use gamma 1.0 and a linear color profile.
 
 See [THIRD_PARTY.md](THIRD_PARTY.md) for authorship, source, integrity hash, and redistribution conditions.
 
