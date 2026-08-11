@@ -12,6 +12,8 @@ All notable changes to this project are documented in this file.
 - NDI failed-frame telemetry alongside the existing captured, sent, and dropped counters.
 
 ### Changed
+- Made the built-in panel capability-aware: dedicated render modes hide inapplicable preview, projection, and per-output view selectors, while `FULL` retains independent routing controls.
+- Made pitch, yaw, and roll sliders cyclic and moved spherical attitude to normalized incremental quaternion composition, eliminating the former per-frame Euler reconstruction and its gimbal-lock singularity.
 - Hardened release packaging with project and third-party licenses, citation metadata, tag/version validation, least-privilege publication, and strict documentation builds.
 - Excluded local compile-only helper JARs from Processing packages and sketchbook deployment while retaining source and automated qualification evidence in the repository.
 - Centralized render-requirement resolution so preview, floating domemaster, and enabled outputs request only the passes they need.

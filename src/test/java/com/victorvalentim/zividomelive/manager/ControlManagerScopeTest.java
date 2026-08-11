@@ -1,5 +1,6 @@
 package com.victorvalentim.zividomelive.manager;
 
+import com.victorvalentim.zividomelive.RenderMode;
 import com.victorvalentim.zividomelive.zividomelive;
 import org.junit.jupiter.api.Test;
 import processing.awt.PGraphicsJava2D;
@@ -9,8 +10,10 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ControlManagerScopeTest {
 
@@ -60,6 +63,90 @@ class ControlManagerScopeTest {
 		}
 	}
 
+	@Test
+	void panelVisibilityTracksRenderModeCapabilities() throws Exception {
+		PApplet applet = configuredApplet();
+		zividomelive dome = new zividomelive(applet);
+		setOutputManager(dome, new OutputManager(dome));
+		ControlManager controls = new ControlManager(applet, dome, 1024);
+		try {
+			Object cp5 = readControlP5(controls);
+
+			dome.setRenderMode(RenderMode.EQUIRECTANGULAR);
+			controls.show();
+			assertTrue(isVisible(getController(cp5, "pitch")));
+			assertFalse(isVisible(getController(cp5, "fov")));
+			assertFalse(isVisible(getController(cp5, "sizeValue")));
+			assertTrue(isVisible(getController(cp5, "resetControls")));
+			assertFalse(isVisible(getController(cp5, "previewToggle")));
+			assertFalse(isVisible(getController(cp5, "View Mode")));
+
+			dome.setRenderMode(RenderMode.DOMEMASTER);
+			controls.show();
+			assertTrue(isVisible(getController(cp5, "pitchValue")));
+			assertTrue(isVisible(getController(cp5, "fov")));
+			assertTrue(isVisible(getController(cp5, "size")));
+			assertFalse(isVisible(getController(cp5, "View Mode")));
+
+			dome.setRenderMode(RenderMode.STANDARD);
+			dome.setShowPreview(false);
+			controls.show();
+			assertFalse(isVisible(getController(cp5, "pitch")));
+			assertFalse(isVisible(getController(cp5, "fov")));
+			assertFalse(isVisible(getController(cp5, "resetControls")));
+			assertTrue(isVisible(getController(cp5, "previewToggle")));
+
+			dome.setShowPreview(true);
+			controls.show();
+			assertTrue(isVisible(getController(cp5, "pitch")));
+			assertTrue(isVisible(getController(cp5, "fov")));
+			assertTrue(isVisible(getController(cp5, "resetControls")));
+
+			dome.setRenderMode(RenderMode.FULL);
+			controls.show();
+			assertTrue(isVisible(getController(cp5, "pitch")));
+			assertTrue(isVisible(getController(cp5, "fov")));
+			assertTrue(isVisible(getController(cp5, "previewToggle")));
+			assertTrue(isVisible(getController(cp5, "View Mode")));
+		} finally {
+			controls.dispose();
+			dome.dispose();
+		}
+	}
+
+	@Test
+	void pitchYawAndRollSlidersScrollCyclically() throws Exception {
+		PApplet applet = configuredApplet();
+		zividomelive dome = new zividomelive(applet);
+		setOutputManager(dome, new OutputManager(dome));
+		ControlManager controls = new ControlManager(applet, dome, 1024);
+		try {
+			Object cp5 = readControlP5(controls);
+			Class<?> sliderClass = Class.forName("controlP5.Slider");
+			int flexibleMode = sliderClass.getField("FLEXIBLE").getInt(null);
+			for (String controlName : List.of("pitch", "yaw", "roll")) {
+				Object slider = getController(cp5, controlName);
+				assertEquals(flexibleMode, sliderMode(sliderClass, slider), controlName);
+
+				setSliderValue(sliderClass, slider, (float) Math.PI - 0.01f);
+				scrollSlider(sliderClass, slider, -1);
+				assertTrue(getValue(slider) < 0.0f, controlName);
+				assertEquals(getValue(slider), parentAngle(dome, controlName), 1.0e-5f);
+
+				setSliderValue(sliderClass, slider, (float) -Math.PI + 0.01f);
+				scrollSlider(sliderClass, slider, 1);
+				assertTrue(getValue(slider) > 0.0f, controlName);
+				assertEquals(getValue(slider), parentAngle(dome, controlName), 1.0e-5f);
+			}
+			assertEquals(
+					sliderClass.getField("FIX").getInt(null),
+					sliderMode(sliderClass, getController(cp5, "fov")));
+		} finally {
+			controls.dispose();
+			dome.dispose();
+		}
+	}
+
 	private static void assertLocalOutputControls(Object cp5) throws Exception {
 		ControlPanelLayout.LocalOutput localOutput =
 				ControlPanelLayout.localOutputFor(System.getProperty("os.name"));
@@ -102,11 +189,53 @@ class ControlManagerScopeTest {
 	}
 
 	private static float[] getPosition(Object controller) throws Exception {
-		return (float[]) controller.getClass().getMethod("getPosition").invoke(controller);
+		return (float[]) Class.forName("controlP5.Controller")
+				.getMethod("getPosition")
+				.invoke(controller);
 	}
 
 	private static float getValue(Object controller) throws Exception {
-		return (float) controller.getClass().getMethod("getValue").invoke(controller);
+		return (float) Class.forName("controlP5.Controller")
+				.getMethod("getValue")
+				.invoke(controller);
+	}
+
+	private static boolean isVisible(Object controller) throws Exception {
+		return (boolean) Class.forName("controlP5.Controller")
+				.getMethod("isVisible")
+				.invoke(controller);
+	}
+
+	private static int sliderMode(Class<?> sliderClass, Object slider) throws Exception {
+		return (int) sliderClass.getMethod("getSliderMode").invoke(slider);
+	}
+
+	private static void setSliderValue(Class<?> sliderClass, Object slider, float value)
+			throws Exception {
+		sliderClass.getMethod("setValue", float.class).invoke(slider, value);
+	}
+
+	private static void scrollSlider(Class<?> sliderClass, Object slider, int steps)
+			throws Exception {
+		sliderClass.getMethod("scrolled", int.class).invoke(slider, steps);
+	}
+
+	private static PApplet configuredApplet() {
+		PApplet applet = new PApplet();
+		PGraphicsJava2D graphics = new PGraphicsJava2D();
+		graphics.setParent(applet);
+		graphics.setSize(640, 640);
+		applet.g = graphics;
+		return applet;
+	}
+
+	private static float parentAngle(zividomelive dome, String controlName) {
+		return switch (controlName) {
+			case "pitch" -> dome.getPitch();
+			case "yaw" -> dome.getYaw();
+			case "roll" -> dome.getRoll();
+			default -> throw new IllegalArgumentException("Unknown angle: " + controlName);
+		};
 	}
 
 	private static void setOutputManager(zividomelive dome, OutputManager outputManager) throws Exception {

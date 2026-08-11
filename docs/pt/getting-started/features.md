@@ -25,7 +25,7 @@ FOV e Size% são parâmetros operacionais de calibração:
 | FOV | `0..360` graus | `210` |
 | Size | `0..100` por cento | `100` |
 
-Pitch, yaw e roll afetam todos os modos esféricos a partir da mesma orientação.
+Pitch, yaw e roll afetam todos os modos esféricos a partir do mesmo quaternion unitário. Seus sliders `-PI..PI` fazem a volta continuamente com a roda do mouse; cada alteração é composta como delta quaternion no eixo local, sem reconstruir a atitude a partir de ângulos Euler.
 
 ## Lifecycle de Cenas
 
@@ -44,4 +44,13 @@ O preview Standard acompanha as dimensões da janela Processing. Targets esféri
 
 ## Painel de Controle
 
-O painel ControlP5 agrupa status global, parâmetros esféricos, seleção de preview e controles de output. Os toggles controlam publicação, e cada output habilitado expõe seu próprio seletor de view.
+O painel ControlP5 agrupa status global, parâmetros esféricos, seleção de preview e controles de output. Os controles disponíveis acompanham a capacidade do modo ativo:
+
+| Modo | Orientação | FOV / Size | Domemaster flutuante | Seletores de view |
+|---|---|---|---|---|
+| `FULL` | Visível | Visível | Visível | Preview e outputs habilitados |
+| `STANDARD` | Com domemaster flutuante ativo | Com domemaster flutuante ativo | Visível | Ocultos |
+| `DOMEMASTER` | Visível | Visível | Oculto | Ocultos |
+| `EQUIRECTANGULAR` / `SKYBOX` | Visível | Oculto | Oculto | Ocultos |
+
+A resolução e os toggles de publicação continuam visíveis em todos os modos. Seletores de view por output aparecem somente em `FULL`, onde as rotas são configuráveis de forma independente.

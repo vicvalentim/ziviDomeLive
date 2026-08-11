@@ -31,8 +31,7 @@ public class CubemapRenderer implements PConstants {
     private volatile float cachedFarPlane;
     private volatile float cachedFieldOfView;
 
-    // Orientation quaternion used for incremental rotations
-    private Quaternion currentOrientation = new Quaternion(0, 0, 0, 1);
+    private final SphericalOrientation legacyOrientation = new SphericalOrientation();
 
 
     /**
@@ -79,26 +78,19 @@ public class CubemapRenderer implements PConstants {
 
     /**
      * Configures the camera for each cubemap face using asynchronously calculated frustum parameters.
-     * @param pitch rotation around the X axis
-     * @param yaw   rotation around the Z axis
-     * @param roll  rotation around the Y axis
+     * @param sphericalOrientation unit quaternion describing the spherical orientation
      */
-    private void configureCameraForFace(PGraphicsOpenGL pg, CameraOrientation orientation, float pitch, float yaw, float roll) {
+    private void configureCameraForFace(
+            PGraphicsOpenGL pg,
+            CameraOrientation orientation,
+            Quaternion sphericalOrientation) {
         PVector eye = new PVector(0, 0, 0);
 
         pg.camera(eye.x, eye.y, eye.z, orientation.centerX, orientation.centerY, orientation.centerZ,
                   orientation.upX, orientation.upY, orientation.upZ);
         pg.perspective(cachedFieldOfView, 1, cachedNearPlane, cachedFarPlane);
 
-        // The following translations are redundant if they are (0,0,0); remove if not needed
-        pg.translate(0, 0, 0);
-        // Build rotation using axis-angle quaternions and SLERP for smoother updates
-        Quaternion qPitch = Quaternion.fromAxisAngle(1f, 0f, 0f, pitch);
-        Quaternion qYaw   = Quaternion.fromAxisAngle(0f, 0f, 1f, yaw);
-        Quaternion qRoll  = Quaternion.fromAxisAngle(0f, 1f, 0f, roll);
-        Quaternion target = qYaw.multiply(qRoll).multiply(qPitch);
-        currentOrientation = currentOrientation.slerp(target, 1f);
-        pg.applyMatrix(currentOrientation.toMatrix());
+        pg.applyMatrix(sphericalOrientation.toMatrix());
     }
 
     /**
@@ -111,13 +103,36 @@ public class CubemapRenderer implements PConstants {
      * @param currentScene the current scene to render
      */
     public void captureCubemap(float pitch, float yaw, float roll, CameraManager cameraManager, Scene currentScene) {
+        legacyOrientation.setPitch(pitch);
+        legacyOrientation.setYaw(yaw);
+        legacyOrientation.setRoll(roll);
+        captureCubemap(legacyOrientation.getQuaternion(), cameraManager, currentScene);
+    }
+
+    /**
+     * Captures the cubemap faces using a quaternion orientation shared by preview and output.
+     *
+     * @param sphericalOrientation unit quaternion describing the spherical orientation
+     * @param cameraManager manager for camera orientations
+     * @param currentScene the current scene to render
+     */
+    public void captureCubemap(
+            Quaternion sphericalOrientation,
+            CameraManager cameraManager,
+            Scene currentScene) {
         if (cubemapFaces == null) {
             initializeCubemapFaces();
         }
+        Quaternion effectiveOrientation = sphericalOrientation == null
+                ? new Quaternion(0.0f, 0.0f, 0.0f, 1.0f)
+                : sphericalOrientation;
         for (int i = 0; i < NUM_FACES; i++) {
             cubemapFaces[i].beginDraw();
             cubemapFaces[i].background(0, 0);
-            configureCameraForFace(cubemapFaces[i], cameraManager.getOrientation(i), pitch, yaw, roll);
+            configureCameraForFace(
+                    cubemapFaces[i],
+                    cameraManager.getOrientation(i),
+                    effectiveOrientation);
             if (currentScene != null) {
                 currentScene.sceneRender(cubemapFaces[i]);
             }

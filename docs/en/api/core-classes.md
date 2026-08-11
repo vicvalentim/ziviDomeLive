@@ -15,7 +15,7 @@ Key method groups:
 |---|---|
 | Scene | `setScene()`, `setSceneManager()`, `getSceneManager()` |
 | Render behavior | `setRenderMode()`, `getRenderMode()`, `setCurrentView()` |
-| Calibration | `setFov()`, `setFishSize()`, `setPitch()`, `setYaw()`, `setRoll()` |
+| Calibration | `setFov()`, `setFishSize()`, `setPitch()`, `setYaw()`, `setRoll()`, `resetOrientation()` |
 | Preview | `setShowPreview()`, `setStandardOutputAspectMode()` |
 | Output | `getOutputManager()`, `resetGraphics()`, `getOutputResolution()` |
 | Camera | `getSceneCamera()`, `setSceneCameraInputEnabled()` |
