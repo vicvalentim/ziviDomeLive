@@ -187,12 +187,14 @@ Return to release mode with `zividomelive.enableReleaseLogging()`.
 
 ## Examples
 
+See the [examples catalog](examples/README.md) for controls and lifecycle conventions.
+
 - `Basic`: scene switching and `RenderMode` keys `1..5`
-- `EmptyProject`: minimal multi-scene template
+- `EmptyProject`: smallest working single-scene template
 - `CompatibilityLock`: asymmetric GPU qualification harness
 - `FulldomePBR`: retained geometry, PBR shaders, and scene-space orbit camera
 - `SolarSystem`: larger multi-file application
-- `SphereParticle`: threaded scene simulation
+- `SphereParticle`: bounded particle simulation with update/render separation
 
 ## Build and Verification
 

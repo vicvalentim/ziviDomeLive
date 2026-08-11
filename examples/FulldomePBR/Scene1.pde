@@ -3,7 +3,7 @@
 //
 // The library owns beginDraw()/endDraw(); this scene only draws content.
 // Camera navigation uses the native ziviDomeLive OrbitCamera service.
-class Scene1 implements Scene {
+class FulldomePbrScene implements Scene {
   private final zividomelive parent;
   private final PApplet pApplet;
 
@@ -40,11 +40,10 @@ class Scene1 implements Scene {
   private final float envIntensity = 1.15f;
   private final PMatrix3D viewMatrix = new PMatrix3D();
 
-  Scene1(zividomelive parent) {
+  FulldomePbrScene(zividomelive parent) {
     this.parent = parent;
     this.pApplet = parent.getPApplet();
-    // Configure and enable the native scene camera.
-    parent.setSceneCameraInputEnabled(true);
+    // Configure the native scene camera.
     parent.getSceneCamera().setDistanceLimits(-1200f, 1200f);
     // Protect against the collapse point at distance 0 (keeps the sign, no crossing).
     parent.getSceneCamera().setCollapseGuard(0f);
@@ -52,6 +51,7 @@ class Scene1 implements Scene {
   }
 
   public void setupScene() {
+    parent.setSceneCameraInputEnabled(true);
     buildStarShell();
     buildPrimitives();
     loadPbrShader();
@@ -142,13 +142,8 @@ class Scene1 implements Scene {
     }
   }
 
-  public void mouseEvent(MouseEvent event) {
-    // Camera navigation is handled natively by the library
-    // (setSceneCameraInputEnabled(true) in the constructor).
-  }
-
-  public void controlEvent(controlP5.ControlEvent theEvent) {
-    println("Control event in FulldomePBR: " + theEvent.getName());
+  public void dispose() {
+    parent.setSceneCameraInputEnabled(false);
   }
 
   public String getName() {
@@ -577,4 +572,3 @@ class Scene1 implements Scene {
     }
   }
 }
-

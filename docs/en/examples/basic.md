@@ -10,13 +10,16 @@ Demonstrates two managed scenes and the `RenderMode` API. In `Scene1`, press:
 - `4`: `EQUIRECTANGULAR`
 - `5`: `SKYBOX`
 - `+` / `-`: adjust animation speed
+- Mouse wheel: change the pillar orbit radius
+
+Use Left/Right arrows to switch between the orbiting pillars and the labeled orientation cube. Press `R` in either scene to restore its animation defaults.
 
 ## EmptyProject
 
-A minimal multi-file template with one `Scene`, one `SceneManager`, automatic Processing hooks, and an intentionally empty sketch `draw()`.
+A minimal multi-file template with one scene registered through `setScene`, automatic Processing hooks, a visible reference cube, and an intentionally empty sketch `draw()`. Press `R` to reset the cube rotation.
 
 ## SphereParticle
 
-A larger scene example that uses a bounded executor for simulation work and keeps all graphics calls on the render thread. It demonstrates why state mutation belongs outside per-target draw ownership.
+A bounded particle-field example that advances simulation once in `update()` and performs graphics work only in `sceneRender()`. Click or drag to add bursts, press `Space` for a central burst, `C` to clear, and `R` to restore the initial field.
 
 All examples preserve `sceneRender(PGraphicsOpenGL)` and never call `ziviDome.draw()` manually.
