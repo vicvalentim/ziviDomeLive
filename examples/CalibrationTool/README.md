@@ -19,13 +19,13 @@ Pixel-sized features are exact when a cubemap face is sampled one to one. Their 
 
 ## Scene 2: Paul Bourke 360 Degree Sphere
 
-The original unmodified 8192 x 4096 Paul Bourke v14 equirectangular test pattern is mapped onto the inside of a complete sphere centered at `(0, 0, 0)`. Its diameter is 1800 units, matching the 900-unit cube-face distance in Scene 1. The north pole is `(900, 0, 0)`, the south pole is `(-900, 0, 0)`, and the equator lies on `X=0`, giving 360 degrees of longitude and 180 degrees of latitude. The 2-degree mesh follows the source grid exactly. Point sampling and disabled mipmaps avoid adding an extra filtering stage.
+The original unmodified 8192 x 4096 Paul Bourke v14 equirectangular test pattern is mapped onto the inside of a complete sphere centered at `(0, 0, 0)`. Its diameter is 1800 units, matching the 900-unit cube-face distance in Scene 1. The north pole is `(0, 0, 900)`, the south pole is `(0, 0, -900)`, and the equator lies on `Z=0`, giving 360 degrees of longitude and 180 degrees of latitude. The 2-degree mesh follows the source grid exactly. Point sampling and disabled mipmaps avoid adding an extra filtering stage.
 
 - `Space`: toggle one revolution per 60 seconds
 - `,` / `.`: rotate backward / forward by one degree and pause
 - `C`: restore the source orientation and pause
 
-Paul Bourke recommends a slow 360-degree rotation to reveal aliasing and playback discontinuity. The live rotation turns the complete sphere around its `+X`/`-X` polar axis. It is useful for display diagnosis, but it is not equivalent to testing a movie encoded with rotating source frames.
+Paul Bourke recommends a slow 360-degree rotation to reveal aliasing and playback discontinuity. The live rotation turns the complete sphere around its `+Z`/`-Z` polar axis. It is useful for display diagnosis, but it is not equivalent to testing a movie encoded with rotating source frames.
 
 See [THIRD_PARTY.md](THIRD_PARTY.md) for authorship, source, integrity hash, and redistribution conditions.
 
