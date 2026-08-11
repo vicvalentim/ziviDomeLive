@@ -119,6 +119,7 @@ public class zividomelive implements PConstants {
 	}
 
 	private ViewType currentView = ViewType.FISHEYE_DOMEMASTER;
+	private RenderMode renderMode = RenderMode.FULL;
 	private StandardOutputAspectMode standardOutputAspectMode = StandardOutputAspectMode.AUTO;
 
 	private boolean pendingOutputReset = false;
@@ -710,7 +711,7 @@ public class zividomelive implements PConstants {
 	 * @return cached requirements for the current preview state
 	 */
 	private RenderRequirementsPolicy.Requirements computePreviewRequirements() {
-		return RenderRequirementsPolicy.forPreview(getCurrentView(), showPreview);
+		return RenderRequirementsPolicy.forPreview(renderMode, getCurrentView(), showPreview);
 	}
 
 	/**
@@ -860,7 +861,8 @@ public class zividomelive implements PConstants {
 	 * here. Output FBOs are never drawn onto the main window by this method.</p>
 	 */
 	private void displayPreviewCurrentView() {
-		switch (getCurrentView()) {
+		ViewType effectiveView = RenderRequirementsPolicy.resolveView(renderMode, getCurrentView());
+		switch (effectiveView) {
 			case CUBEMAP:
 				displayView(previewCubemapViewRenderer.getCubemap());
 				break;
@@ -1482,21 +1484,57 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
-	 * Gets the current view type.
+	 * Gets the configured legacy preview view.
 	 *
-	 * @return the current view type
+	 * <p>In a dedicated {@link RenderMode}, the effective representation is controlled by that
+	 * mode while this value is preserved for a later return to {@link RenderMode#FULL}.</p>
+	 *
+	 * @return configured legacy preview view
 	 */
 	public ViewType getCurrentView() {
 		return currentView;
 	}
 
 	/**
-	 * Sets the current view type.
+	 * Sets the configured legacy preview view.
 	 *
-	 * @param currentView the new view type
+	 * <p>The selection takes effect immediately in {@link RenderMode#FULL}. Dedicated modes keep
+	 * it as the preview selection to restore when FULL is selected again.</p>
+	 *
+	 * @param currentView new legacy preview view
 	 */
 	public void setCurrentView(ViewType currentView) {
 		this.currentView = currentView;
+	}
+
+	/**
+	 * Returns the active global render mode.
+	 *
+	 * @return active mode, defaulting to {@link RenderMode#FULL}
+	 */
+	public RenderMode getRenderMode() {
+		return renderMode;
+	}
+
+	/**
+	 * Selects the global rendering behavior.
+	 *
+	 * <p>FULL preserves independent preview and external-output routing. A dedicated mode
+	 * overrides their effective representation without mutating the configured
+	 * {@link ViewType} values.</p>
+	 *
+	 * @param renderMode new global mode; {@code null} is ignored
+	 */
+	public void setRenderMode(RenderMode renderMode) {
+		if (renderMode == null) {
+			LOGGER.warning("Ignoring null render mode.");
+			return;
+		}
+		if (this.renderMode == renderMode) {
+			return;
+		}
+		this.renderMode = renderMode;
+		LOGGER.info("Render mode set to: " + renderMode);
 	}
 
 	/**
