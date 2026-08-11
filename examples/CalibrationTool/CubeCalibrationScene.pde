@@ -1,10 +1,13 @@
 class CubeCalibrationScene implements Scene {
   private static final float FACE_DISTANCE = 900f;
   private static final float TARGET_SIZE = 1800f;
+  private static final float ANNOTATION_BIAS = 2f;
+  private static final int ANNOTATION_TEXTURE_SIZE = 1024;
   private static final int GRID_DIVISIONS = 24;
 
   private final zividomelive dome;
   private PShader calibrationShader;
+  private PGraphicsOpenGL[] annotationMaps;
   private boolean shaderFailureReported;
 
   CubeCalibrationScene(zividomelive dome) {
@@ -17,9 +20,13 @@ class CubeCalibrationScene implements Scene {
       calibrationShader = dome.getPApplet().loadShader(
           "cube-calibration.frag",
           "cube-calibration.vert");
-      println("[CalibrationTool] Cube calibration shader loaded (GLSL 4.10).");
+      createAnnotationMaps();
+      println(
+          "[CalibrationTool] Cube calibration shader loaded (GLSL 4.10); "
+          + "annotations mapped at " + ANNOTATION_TEXTURE_SIZE + " px per face.");
     } catch (RuntimeException error) {
       calibrationShader = null;
+      disposeAnnotationMaps();
       reportShaderFailure(error);
     }
   }
@@ -31,17 +38,17 @@ class CubeCalibrationScene implements Scene {
     pg.colorMode(RGB, 255);
     pg.blendMode(BLEND);
 
-    drawFace(pg, 0, "+X", "RIGHT", pg.color(235, 55, 55),
+    drawFace(pg, 0, "+X", "RIGHT", faceAccent(0),
         FACE_DISTANCE, 0, 0, 0, HALF_PI, 0);
-    drawFace(pg, 1, "-X", "LEFT", pg.color(125, 20, 20),
+    drawFace(pg, 1, "-X", "LEFT", faceAccent(1),
         -FACE_DISTANCE, 0, 0, 0, -HALF_PI, 0);
-    drawFace(pg, 2, "+Y", "DOWN", pg.color(45, 210, 80),
+    drawFace(pg, 2, "+Y", "DOWN", faceAccent(2),
         0, FACE_DISTANCE, 0, -HALF_PI, 0, 0);
-    drawFace(pg, 3, "-Y", "UP", pg.color(20, 115, 45),
+    drawFace(pg, 3, "-Y", "UP", faceAccent(3),
         0, -FACE_DISTANCE, 0, HALF_PI, 0, 0);
-    drawFace(pg, 4, "+Z", "FRONT", pg.color(60, 125, 245),
+    drawFace(pg, 4, "+Z", "FRONT", faceAccent(4),
         0, 0, FACE_DISTANCE, 0, 0, 0);
-    drawFace(pg, 5, "-Z", "BACK", pg.color(35, 45, 145),
+    drawFace(pg, 5, "-Z", "BACK", faceAccent(5),
         0, 0, -FACE_DISTANCE, 0, PI, 0);
   }
 
@@ -83,26 +90,24 @@ class CubeCalibrationScene implements Scene {
     pg.rectMode(CENTER);
     pg.textAlign(CENTER, CENTER);
 
-    if (!drawShaderPattern(pg, index, accent)) {
+    if (!drawMappedFacePattern(pg, index, accent)) {
       drawFallbackPattern(pg, half, accent);
+      pg.translate(0, 0, -ANNOTATION_BIAS);
+      drawFaceAnnotations(pg, index, axis, direction, accent, half);
     }
-
-    // Annotations sit toward the observer and remain attached to the face.
-    pg.translate(0, 0, -2f);
-    drawFaceAnnotations(pg, index, axis, direction, accent, half);
     pg.popStyle();
   }
 
-  private boolean drawShaderPattern(PGraphicsOpenGL pg, int index, int accent) {
-    if (calibrationShader == null) {
+  private boolean drawMappedFacePattern(PGraphicsOpenGL pg, int index, int accent) {
+    if (calibrationShader == null || annotationMaps == null) {
       return false;
     }
 
     try {
-      calibrationShader.set("targetSize", TARGET_SIZE);
       calibrationShader.set("faceResolution", (float) pg.width, (float) pg.height);
       calibrationShader.set("gridDivisions", (float) GRID_DIVISIONS);
       calibrationShader.set("faceIndex", index);
+      calibrationShader.set("annotationMap", annotationMaps[index]);
       calibrationShader.set(
           "accentColor",
           pg.red(accent) / 255f,
@@ -112,7 +117,15 @@ class CubeCalibrationScene implements Scene {
       pg.shader(calibrationShader);
       pg.noStroke();
       pg.fill(255);
-      pg.rect(0, 0, TARGET_SIZE, TARGET_SIZE);
+      pg.textureMode(NORMAL);
+      float half = TARGET_SIZE / 2f;
+      pg.beginShape(QUADS);
+      pg.texture(annotationMaps[index]);
+      pg.vertex(-half, -half, 0f, 0f, 0f);
+      pg.vertex(half, -half, 0f, 1f, 0f);
+      pg.vertex(half, half, 0f, 1f, 1f);
+      pg.vertex(-half, half, 0f, 0f, 1f);
+      pg.endShape(CLOSE);
       pg.resetShader();
       return true;
     } catch (RuntimeException error) {
@@ -121,6 +134,70 @@ class CubeCalibrationScene implements Scene {
       reportShaderFailure(error);
       return false;
     }
+  }
+
+  private void createAnnotationMaps() {
+    disposeAnnotationMaps();
+    annotationMaps = new PGraphicsOpenGL[6];
+    for (int index = 0; index < annotationMaps.length; index++) {
+      PGraphicsOpenGL annotation = (PGraphicsOpenGL) dome.getPApplet().createGraphics(
+          ANNOTATION_TEXTURE_SIZE,
+          ANNOTATION_TEXTURE_SIZE,
+          P3D);
+      annotationMaps[index] = annotation;
+      annotation.beginDraw();
+      annotation.clear();
+      annotation.noLights();
+      annotation.colorMode(RGB, 255);
+      annotation.blendMode(BLEND);
+      annotation.pushMatrix();
+      annotation.translate(ANNOTATION_TEXTURE_SIZE / 2f, ANNOTATION_TEXTURE_SIZE / 2f);
+      annotation.scale(ANNOTATION_TEXTURE_SIZE / TARGET_SIZE);
+      annotation.rectMode(CENTER);
+      annotation.textAlign(CENTER, CENTER);
+      drawFaceAnnotations(
+          annotation,
+          index,
+          faceAxis(index),
+          faceDirection(index),
+          faceAccent(index),
+          TARGET_SIZE / 2f);
+      annotation.popMatrix();
+      annotation.endDraw();
+    }
+  }
+
+  private int faceAccent(int index) {
+    switch (index) {
+      case 0: return dome.getPApplet().color(235, 55, 55);
+      case 1: return dome.getPApplet().color(125, 20, 20);
+      case 2: return dome.getPApplet().color(45, 210, 80);
+      case 3: return dome.getPApplet().color(20, 115, 45);
+      case 4: return dome.getPApplet().color(60, 125, 245);
+      default: return dome.getPApplet().color(35, 45, 145);
+    }
+  }
+
+  private String faceAxis(int index) {
+    String[] axes = {"+X", "-X", "+Y", "-Y", "+Z", "-Z"};
+    return axes[index];
+  }
+
+  private String faceDirection(int index) {
+    String[] directions = {"RIGHT", "LEFT", "DOWN", "UP", "FRONT", "BACK"};
+    return directions[index];
+  }
+
+  private void disposeAnnotationMaps() {
+    if (annotationMaps == null) {
+      return;
+    }
+    for (PGraphicsOpenGL annotation : annotationMaps) {
+      if (annotation != null) {
+        annotation.dispose();
+      }
+    }
+    annotationMaps = null;
   }
 
   private void drawFallbackPattern(PGraphicsOpenGL pg, float half, int accent) {
@@ -205,6 +282,11 @@ class CubeCalibrationScene implements Scene {
           + error.getMessage());
       shaderFailureReported = true;
     }
+  }
+
+  @Override
+  public void dispose() {
+    disposeAnnotationMaps();
   }
 
   @Override

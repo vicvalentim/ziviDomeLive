@@ -83,8 +83,18 @@ class ExampleQualityTest {
 		assertTrue(cubeScene.contains("TARGET_SIZE = 1800f"));
 		assertTrue(cubeScene.contains("GRID_DIVISIONS = 24"));
 		assertTrue(cubeScene.contains("pg.noLights()"));
+		assertTrue(cubeScene.contains("drawMappedFacePattern"));
+		assertTrue(cubeScene.contains("pg.beginShape(QUADS)"));
+		assertFalse(cubeScene.contains("pg.hint(DISABLE_DEPTH_TEST)"));
+		assertTrue(cubeScene.contains("ANNOTATION_TEXTURE_SIZE = 1024"));
+		assertTrue(cubeScene.contains("pg.texture(annotationMaps[index])"));
+		assertTrue(cubeScene.contains("ANNOTATION_BIAS = 2f"));
 		assertTrue(vertexShader.startsWith("#version 410 core"));
+		assertTrue(vertexShader.contains("in vec2 texCoord"));
+		assertTrue(vertexShader.contains("faceUv = texCoord"));
 		assertTrue(fragmentShader.startsWith("#version 410 core"));
+		assertTrue(fragmentShader.contains("in vec2 faceUv"));
+		assertTrue(fragmentShader.contains("uniform sampler2D annotationMap"));
 		assertTrue(fragmentShader.contains("starBurst"));
 		assertTrue(fragmentShader.contains("blackColorWhiteRamp"));
 		assertTrue(fragmentShader.contains("clippingLevel"));
