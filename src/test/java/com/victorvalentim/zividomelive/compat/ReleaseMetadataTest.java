@@ -52,7 +52,7 @@ class ReleaseMetadataTest {
 	@Test
 	void releaseDocumentationExposesNewApiAndQualificationBoundary() throws IOException {
 		String readme = read("README.md");
-		String qualification = read("docs/qualification/1.5-release-readiness.md");
+		String qualification = read("docs/en/qualification/1.5-release-readiness.md");
 
 		assertTrue(readme.contains("setRenderMode(RenderMode.FULL)"));
 		assertTrue(readme.contains("OutputManager.OutputState"));

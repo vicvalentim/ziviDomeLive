@@ -943,9 +943,10 @@ public class zividomelive implements PConstants {
 	 *   <li>Clear the window background.</li>
 	 *   <li>Apply any pending output-resolution change (output FBOs only, preview unaffected).</li>
 	 *   <li>Ensure preview FBOs are valid for the current window size.</li>
-	 *   <li>Run the preview pipeline (0 or 1 cubemap capture, ≤3 projection passes).</li>
-	 *   <li>When at least one output is active, run the output pipeline (0 or 1 cubemap
-	 *       capture, minimal passes from {@code requiresView}) then submit to all backends.</li>
+	 *   <li>Resolve preview and output requirements, then capture at most one master cubemap.</li>
+	 *   <li>When at least one output is active, run its minimal projection passes and submit
+	 *       completed targets to the enabled backends.</li>
+	 *   <li>Run the preview passes, reusing completed output projections when available.</li>
 	 *   <li>Composite the preview FBO onto the window.</li>
 	 *   <li>Optionally draw the floating fisheye thumbnail (preview FBO only).</li>
 	 *   <li>Draw the control panel.</li>

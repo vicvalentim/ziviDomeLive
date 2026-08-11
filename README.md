@@ -4,7 +4,7 @@
 
 ziviDomeLive is a Processing 4 library for real-time fulldome, monoscopic VR, and immersive installation graphics. It provides scene lifecycle management, independent Standard and spherical rendering, fisheye domemaster calibration, equirectangular and cubemap views, and optional NDI, Syphon, or Spout output routing.
 
-Version 1.5.0 is the final consolidation of the 1.x architecture. It adds an operational `RenderMode` API and stronger lifecycle, routing, output, testing, and documentation contracts without introducing the experimental renderer planned for 2.0.
+Version 1.5.0 is the final consolidation of the 1.x architecture. It adds an operational `RenderMode` API and stronger lifecycle, routing, output, testing, and documentation contracts without introducing the experimental renderer planned for 2.0. See the [1.5.0 release notes](https://vicvalentim.github.io/ziviDomeLive/release-notes/1.5.0/) for the upgrade summary and compatibility notes.
 
 ## Requirements
 
@@ -14,7 +14,7 @@ Version 1.5.0 is the final consolidation of the 1.x architecture. It adds an ope
 - ControlP5
 - Syphon for Processing on macOS
 - Spout for Processing on Windows
-- A compatible OpenGL GPU and driver
+- An OpenGL 4.1-capable GPU and driver for the packaged GLSL 4.10 projection shaders
 
 The build targets Processing core `4.5.6` and Devolay `2.2.0-vic.1`. Source builds download pinned ControlP5, Syphon, and Spout JARs with SHA-256 verification when they are missing.
 
@@ -62,7 +62,7 @@ The built-in panel follows the active mode:
 | `DOMEMASTER` | Shown | Shown | Hidden | Hidden |
 | `EQUIRECTANGULAR` / `SKYBOX` | Shown | Hidden | Hidden | Hidden |
 
-Output resolution and publication toggles remain available in every mode. Pitch, yaw, and roll use cyclic `-PI..PI` sliders whose mouse-wheel motion wraps continuously. Their deltas are composed directly into one unit quaternion in event order, so spherical orientation never depends on an Euler reconstruction and does not acquire a gimbal-lock singularity.
+Output resolution and publication toggles remain available in every mode. Pitch, yaw, and roll use cyclic `-PI..PI` sliders whose mouse-wheel motion wraps continuously. Their shortest angular deltas are composed directly into one normalized quaternion in event order, so spherical orientation never depends on an Euler reconstruction and does not acquire a gimbal-lock singularity. The values returned by the facade remain control accumulators, not Euler angles extracted from the final attitude.
 
 ## Installation
 
@@ -79,7 +79,12 @@ Cloning the source repository is intended for development. Use `./gradlew buildR
 
 ```java
 import com.victorvalentim.zividomelive.*;
+import com.victorvalentim.zividomelive.manager.OutputManager;
 import processing.opengl.PGraphicsOpenGL;
+// Processing contributed-library runtime dependencies:
+import controlP5.*;
+import codeanticode.syphon.*;
+import spout.*;
 
 zividomelive ziviDome;
 
@@ -139,6 +144,8 @@ Never call `beginDraw()` or `endDraw()` inside `sceneRender()`.
 - Pitch, yaw, and roll are shared by every spherical representation
 - Output resolution presets: `1024`, `2048`, `3072`, `4096`
 
+The ranges above are the supported panel/calibration domain. Programmatic callers should keep FOV and Size% inside those ranges. Use `resetOrientation()` for only the quaternion attitude, or `resetControls()` after manager initialization to restore orientation, FOV, and Size% together.
+
 The Standard preview follows the Processing window. Spherical previews use an automatic square resolution:
 
 ```text
@@ -183,7 +190,7 @@ Automated tests do not replace GPU, receiver, or native-sharing qualification. S
 - `m`: cycle the configured legacy preview `ViewType`
 - Left/Right arrows: switch scenes
 
-The panel groups global status, spherical calibration, view selection, and output controls. Output publication and per-output view routing remain independent.
+The panel groups global status, spherical calibration, view selection, and output controls. Per-output routing is independently editable in `FULL`; dedicated modes preserve those stored routes while hiding selectors that cannot affect the active representation.
 
 ## Logging
 
@@ -201,7 +208,7 @@ Return to release mode with `zividomelive.enableReleaseLogging()`.
 See the [examples catalog](examples/README.md) for controls and lifecycle conventions.
 
 - `Basic`: scene switching and `RenderMode` keys `1..5`
-- `EmptyProject`: minimal multi-scene starter template
+- `EmptyProject`: intentionally empty one-scene starter template
 - `CalibrationTool`: two-scene GLSL focus/color chart and 360-degree spherical reference
 - `FulldomePBR`: retained geometry, PBR shaders, and scene-space orbit camera
 - `SolarSystem`: larger multi-file application

@@ -54,3 +54,8 @@ O painel ControlP5 agrupa status global, parâmetros esféricos, seleção de pr
 | `EQUIRECTANGULAR` / `SKYBOX` | Visível | Oculto | Oculto | Ocultos |
 
 A resolução e os toggles de publicação continuam visíveis em todos os modos. Seletores de view por output aparecem somente em `FULL`, onde as rotas são configuráveis de forma independente.
+
+Continue em [Modos de Renderização](../usage/basic-usage.md),
+[Painel de Controle](../usage/control-panel.md) e
+[Calibração Esférica](../usage/spherical-calibration.md) para os detalhes
+operacionais.

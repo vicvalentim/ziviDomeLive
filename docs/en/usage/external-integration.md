@@ -2,6 +2,10 @@
 
 External outputs are disabled by default and route independently in `RenderMode.FULL`.
 
+NDI is an experimental, unofficial video-only integration and requires a
+separately installed system runtime. Complete the [NDI Runtime](../installation/ndi.md)
+setup before enabling it.
+
 ## Configure Routes
 
 ```java

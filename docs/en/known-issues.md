@@ -29,4 +29,8 @@ Core rendering is intended to work on Linux, but the current Processing integrat
 
 Automated tests validate routing and lifecycle without opening real GPU or receiver sessions. Syphon, Spout, NDI discovery, receiver color/orientation, resize, repeated enable/disable, pause/resume, and shutdown must be checked on target hardware.
 
+NDI is an experimental, unofficial, video-only sender and requires the
+proprietary NDI Runtime to be [installed separately](installation/ndi.md). It is
+not supplied by Processing's Contribution Manager or bundled in the release.
+
 If an NDI native send does not return during shutdown, publication stops after a bounded wait and state becomes `STOPPING`; native cleanup completes after the worker exits.

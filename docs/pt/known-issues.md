@@ -29,4 +29,9 @@ A renderização principal deve funcionar no Linux, mas as integrações atuais 
 
 Testes automatizados validam routing e lifecycle sem abrir sessões reais de GPU ou receiver. Syphon, Spout, descoberta NDI, cor/orientação no receiver, resize, ciclos de enable/disable, pause/resume e shutdown devem ser verificados no hardware de destino.
 
+NDI é um sender experimental, não oficial e somente de vídeo. Ele exige que o
+NDI Runtime proprietário seja [instalado separadamente](installation/ndi.md),
+pois não é fornecido pelo Gerenciador de Contribuições do Processing nem
+incluído no pacote da biblioteca.
+
 Se um envio nativo NDI não retornar durante o shutdown, a publicação para após uma espera limitada e o estado muda para `STOPPING`; a limpeza nativa termina depois da saída do worker.
