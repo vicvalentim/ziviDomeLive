@@ -1,5 +1,13 @@
 class BourkeSphereScene implements Scene {
-  private static final String IMAGE_FILE = "spherical8192.png";
+  private static final int[] RESOLUTION_BUCKETS = {1024, 2048, 3072, 4096};
+  private static final String[] IMAGE_FILES = {
+    "img/spherical2400.png",
+    "img/spherical4096.png",
+    "img/spherical4800.png",
+    "img/spherical8192.png"
+  };
+  private static final int[] IMAGE_WIDTHS = {2400, 4096, 4800, 8192};
+  private static final int[] IMAGE_HEIGHTS = {1200, 2048, 2400, 4096};
   private static final float SPHERE_CENTER_X = 0f;
   private static final float SPHERE_CENTER_Y = 0f;
   private static final float SPHERE_CENTER_Z = 0f;
@@ -11,9 +19,12 @@ class BourkeSphereScene implements Scene {
 
   private final zividomelive dome;
   private PImage pattern;
+  private int loadedPatternIndex = -1;
   private float patternRotation;
+  private float rotationOrigin;
   private boolean rotating;
-  private int lastUpdateMillis;
+  private int rotationFrame;
+  private int activeRotationFrameCount;
 
   BourkeSphereScene(zividomelive dome) {
     this.dome = dome;
@@ -21,26 +32,26 @@ class BourkeSphereScene implements Scene {
 
   @Override
   public void setupScene() {
-    pattern = dome.getPApplet().loadImage(IMAGE_FILE);
-    if (pattern == null || pattern.width != 8192 || pattern.height != 4096) {
-      throw new IllegalStateException(
-          "Paul Bourke spherical test pattern must be the original 8192 x 4096 PNG.");
-    }
-    lastUpdateMillis = dome.getPApplet().millis();
+    loadPatternForCurrentResolution();
     println(
-        "[CalibrationTool] Paul Bourke v14 spherical pattern loaded: 8192 x 4096; "
-        + "center=(0, 0, 0); diameter=" + nf(SPHERE_DIAMETER, 0, 0) + ".");
+        "[CalibrationTool] Bourke sphere center=(0, 0, 0); diameter="
+        + nf(SPHERE_DIAMETER, 0, 0) + ".");
   }
 
   @Override
   public void update() {
-    int now = dome.getPApplet().millis();
-    float deltaSeconds = max(0, now - lastUpdateMillis) / 1000f;
-    lastUpdateMillis = now;
+    loadPatternForCurrentResolution();
 
     if (rotating) {
-      patternRotation = (patternRotation
-          + TWO_PI * deltaSeconds / ROTATION_PERIOD_SECONDS) % TWO_PI;
+      int frameCount = framesPerRevolution();
+      if (frameCount != activeRotationFrameCount) {
+        beginRotationSequence();
+        frameCount = activeRotationFrameCount;
+      }
+
+      rotationFrame = (rotationFrame + 1) % frameCount;
+      patternRotation = wrapAngle(
+          rotationOrigin + TWO_PI * rotationFrame / (float) frameCount);
     }
   }
 
@@ -87,24 +98,36 @@ class BourkeSphereScene implements Scene {
     char pressed = Character.toLowerCase(event.getKey());
     switch (pressed) {
       case ' ':
-        rotating = !rotating;
-        println("[CalibrationTool] Bourke rotation: " + (rotating ? "60 s/revolution" : "paused"));
+        if (rotating) {
+          pauseRotation();
+          println("[CalibrationTool] Bourke rotation: paused");
+        } else {
+          beginRotationSequence();
+          printRotationProtocol();
+        }
+        return;
+      case 't':
+        dome.setTargetFrameRate(dome.getTargetFrameRate() == 30 ? 60 : 30);
+        if (rotating) {
+          beginRotationSequence();
+        }
+        printRotationProtocol();
         return;
       case ',':
+        pauseRotation();
         patternRotation = wrapAngle(patternRotation - radians(1f));
-        rotating = false;
         break;
       case '.':
+        pauseRotation();
         patternRotation = wrapAngle(patternRotation + radians(1f));
-        rotating = false;
         break;
       case 'c':
+        pauseRotation();
         patternRotation = 0f;
-        rotating = false;
         break;
       case '0':
+        pauseRotation();
         patternRotation = 0f;
-        rotating = false;
         handleCalibrationKey(event);
         break;
       default:
@@ -115,6 +138,79 @@ class BourkeSphereScene implements Scene {
     println(
         "[CalibrationTool] Bourke rotation="
         + nf(degrees(patternRotation), 0, 1) + " degrees");
+  }
+
+  private void loadPatternForCurrentResolution() {
+    boolean outputEnabled = dome.isEnableOutput();
+    int referenceResolution = outputEnabled
+        ? dome.getOutputResolution()
+        : max(1, min(dome.getPApplet().width, dome.getPApplet().height));
+    int patternIndex = closestPatternIndex(referenceResolution);
+    if (pattern != null && patternIndex == loadedPatternIndex) {
+      return;
+    }
+
+    PImage candidate = dome.getPApplet().loadImage(IMAGE_FILES[patternIndex]);
+    if (candidate == null
+        || candidate.width != IMAGE_WIDTHS[patternIndex]
+        || candidate.height != IMAGE_HEIGHTS[patternIndex]) {
+      throw new IllegalStateException(
+          "Paul Bourke spherical test pattern must be the original "
+          + IMAGE_WIDTHS[patternIndex] + " x " + IMAGE_HEIGHTS[patternIndex]
+          + " PNG: " + IMAGE_FILES[patternIndex]);
+    }
+
+    pattern = candidate;
+    loadedPatternIndex = patternIndex;
+    String source = outputEnabled
+        ? "output " + referenceResolution + "px"
+        : "window " + dome.getPApplet().width + "x" + dome.getPApplet().height;
+    println(
+        "[CalibrationTool] Paul Bourke v14 pattern: "
+        + IMAGE_WIDTHS[patternIndex] + "x" + IMAGE_HEIGHTS[patternIndex]
+        + " for " + source + " (" + RESOLUTION_BUCKETS[patternIndex] + " bucket).");
+  }
+
+  private int closestPatternIndex(int referenceResolution) {
+    int closestIndex = 0;
+    int closestDistance = abs(referenceResolution - RESOLUTION_BUCKETS[0]);
+    for (int index = 1; index < RESOLUTION_BUCKETS.length; index++) {
+      int distance = abs(referenceResolution - RESOLUTION_BUCKETS[index]);
+      if (distance < closestDistance) {
+        closestIndex = index;
+        closestDistance = distance;
+      }
+    }
+    return closestIndex;
+  }
+
+  private int framesPerRevolution() {
+    return max(1, round(ROTATION_PERIOD_SECONDS * dome.getTargetFrameRate()));
+  }
+
+  private void beginRotationSequence() {
+    rotating = true;
+    rotationOrigin = patternRotation;
+    rotationFrame = 0;
+    activeRotationFrameCount = framesPerRevolution();
+  }
+
+  private void pauseRotation() {
+    rotating = false;
+    rotationFrame = 0;
+    activeRotationFrameCount = 0;
+  }
+
+  private void printRotationProtocol() {
+    println(
+        "[CalibrationTool] Bourke rotation: "
+        + (rotating ? "running, " : "paused, ")
+        + activePlaybackFps() + " fps, " + framesPerRevolution()
+        + " frames/revolution, 60 s/revolution.");
+  }
+
+  private int activePlaybackFps() {
+    return max(1, dome.getTargetFrameRate());
   }
 
   private void sphereVertex(
