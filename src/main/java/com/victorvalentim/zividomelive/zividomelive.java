@@ -121,31 +121,6 @@ public class zividomelive implements PConstants {
 	private ViewType currentView = ViewType.FISHEYE_DOMEMASTER;
 	private StandardOutputAspectMode standardOutputAspectMode = StandardOutputAspectMode.AUTO;
 
-	/**
-	 * Reusable per-frame view requirement scratch object.
-	 *
-	 * <p>The class is mutable only so the frame loop can avoid per-frame allocations while
-	 * still keeping the requirements grouped logically.</p>
-	 */
-	private static final class ViewRequirements {
-		private boolean needsFisheye;
-		private boolean needsEquirectangular;
-		private boolean needsCubemapLayout;
-		private boolean needsStandard;
-		private boolean needsCubemapSource;
-
-		void set(boolean needsFisheye, boolean needsEquirectangular, boolean needsCubemapLayout, boolean needsStandard) {
-			this.needsFisheye = needsFisheye;
-			this.needsEquirectangular = needsEquirectangular || needsFisheye;
-			this.needsCubemapLayout = needsCubemapLayout;
-			this.needsStandard = needsStandard;
-			this.needsCubemapSource = this.needsEquirectangular || needsCubemapLayout;
-		}
-	}
-
-	private final ViewRequirements previewRequirements = new ViewRequirements();
-	private final ViewRequirements outputRequirements = new ViewRequirements();
-
 	private boolean pendingOutputReset = false;
 	private int pendingOutputResolution = outputResolution;
 	private static final Logger LOGGER = LogManager.getLogger();
@@ -732,37 +707,26 @@ public class zividomelive implements PConstants {
 	 * <p>{@code showPreview=true} forces the fisheye chain so the floating thumbnail can be
 	 * composed even when the main preview view is Standard.</p>
 	 *
-	 * @return reusable requirements scratch object populated for the current frame
+	 * @return cached requirements for the current preview state
 	 */
-	private ViewRequirements computePreviewRequirements() {
-		ViewType previewView = getCurrentView();
-		previewRequirements.set(
-				previewView == ViewType.FISHEYE_DOMEMASTER || showPreview,
-				previewView == ViewType.EQUIRECTANGULAR,
-				previewView == ViewType.CUBEMAP,
-				previewView == ViewType.STANDARD
-		);
-		return previewRequirements;
+	private RenderRequirementsPolicy.Requirements computePreviewRequirements() {
+		return RenderRequirementsPolicy.forPreview(getCurrentView(), showPreview);
 	}
 
 	/**
 	 * Computes the external-output requirements for the current frame.
 	 *
-	 * @return reusable requirements scratch object populated for the current frame
+	 * @return cached requirements for all enabled external-output routes
 	 */
-	private ViewRequirements computeOutputRequirements() {
-		if (outputManager == null || !outputManager.isActive()) {
-			outputRequirements.set(false, false, false, false);
-			return outputRequirements;
-		}
-
-		outputRequirements.set(
-				outputManager.requiresView(ViewType.FISHEYE_DOMEMASTER),
-				outputManager.requiresView(ViewType.EQUIRECTANGULAR),
-				outputManager.requiresView(ViewType.CUBEMAP),
-				outputManager.requiresView(ViewType.STANDARD)
+	private RenderRequirementsPolicy.Requirements computeOutputRequirements() {
+		boolean outputsActive = outputManager != null && outputManager.isActive();
+		return RenderRequirementsPolicy.forOutputs(
+				outputsActive,
+				outputsActive && outputManager.requiresView(ViewType.FISHEYE_DOMEMASTER),
+				outputsActive && outputManager.requiresView(ViewType.EQUIRECTANGULAR),
+				outputsActive && outputManager.requiresView(ViewType.CUBEMAP),
+				outputsActive && outputManager.requiresView(ViewType.STANDARD)
 		);
-		return outputRequirements;
 	}
 
 	/**
@@ -776,13 +740,15 @@ public class zividomelive implements PConstants {
 	 * @param output output requirements for the current frame
 	 * @return master cubemap faces, or {@code null} when no cubemap is required
 	 */
-	private PGraphicsOpenGL[] captureMasterCubemap(ViewRequirements preview, ViewRequirements output) {
-		if (output.needsCubemapSource) {
+	private PGraphicsOpenGL[] captureMasterCubemap(
+			RenderRequirementsPolicy.Requirements preview,
+			RenderRequirementsPolicy.Requirements output) {
+		if (output.needsCubemapSource()) {
 			captureCubemap();
 			return cubemapRenderer != null ? cubemapRenderer.getCubemapFaces() : null;
 		}
 
-		if (preview.needsCubemapSource) {
+		if (preview.needsCubemapSource()) {
 			capturePreviewCubemap();
 			return previewCubemapRenderer != null ? previewCubemapRenderer.getCubemapFaces() : null;
 		}
@@ -808,29 +774,32 @@ public class zividomelive implements PConstants {
 	 *
 	 * <p>Must be called from the Processing draw thread after {@link #ensurePreviewRenderers()}.</p>
 	 */
-	private void renderPreviewPipeline(ViewRequirements preview, ViewRequirements output, PGraphicsOpenGL[] masterFaces) {
-		if (preview.needsStandard) {
+	private void renderPreviewPipeline(
+			RenderRequirementsPolicy.Requirements preview,
+			RenderRequirementsPolicy.Requirements output,
+			PGraphicsOpenGL[] masterFaces) {
+		if (preview.needsStandard()) {
 			standardRendererPreview.render();
 		}
 
-		if (preview.needsEquirectangular) {
-			if (output.needsEquirectangular && output.needsCubemapSource) {
+		if (preview.needsEquirectangular()) {
+			if (output.needsEquirectangular() && output.needsCubemapSource()) {
 				copyToPreview(equirectangularRenderer.getEquirectangular(), previewEquirectangularRenderer.getEquirectangular());
 			} else {
 				previewEquirectangularRenderer.render(masterFaces);
 			}
 		}
 
-		if (preview.needsFisheye) {
-			if (output.needsFisheye) {
+		if (preview.needsFisheye()) {
+			if (output.needsFisheye()) {
 				copyToPreview(fisheyeDomemaster.getDomemasterGraphics(), previewFisheyeDomemaster.getDomemasterGraphics());
 			} else {
 				previewFisheyeDomemaster.applyShader(previewEquirectangularRenderer.getEquirectangular(), getFov());
 			}
 		}
 
-		if (preview.needsCubemapLayout) {
-			if (output.needsCubemapLayout && output.needsCubemapSource) {
+		if (preview.needsCubemapLayout()) {
+			if (output.needsCubemapLayout() && output.needsCubemapSource()) {
 				copyToPreview(cubemapViewRenderer.getCubemap(), previewCubemapViewRenderer.getCubemap());
 			} else {
 				previewCubemapViewRenderer.drawCubemapToGraphics(masterFaces);
@@ -858,25 +827,27 @@ public class zividomelive implements PConstants {
 	 * <p>Returns immediately when {@code outputManager} is {@code null} or inactive.
 	 * Must be called from the Processing draw thread.</p>
 	 */
-	private void renderOutputPipeline(ViewRequirements output, PGraphicsOpenGL[] masterFaces) {
-		if (output.needsCubemapSource && masterFaces == null) {
+	private void renderOutputPipeline(
+			RenderRequirementsPolicy.Requirements output,
+			PGraphicsOpenGL[] masterFaces) {
+		if (output.needsCubemapSource() && masterFaces == null) {
 			return;
 		}
 
-		if (output.needsEquirectangular) {
+		if (output.needsEquirectangular()) {
 			equirectangularRenderer.render(masterFaces);
 		}
 
-		if (output.needsFisheye) {
+		if (output.needsFisheye()) {
 			fisheyeDomemaster.applyShader(
 					equirectangularRenderer.getEquirectangular(), getFov());
 		}
 
-		if (output.needsCubemapLayout) {
+		if (output.needsCubemapLayout()) {
 			cubemapViewRenderer.drawCubemapToGraphics(masterFaces);
 		}
 
-		if (output.needsStandard) {
+		if (output.needsStandard()) {
 			standardRenderer.render();
 		}
 	}
@@ -965,8 +936,8 @@ public class zividomelive implements PConstants {
 		handleGraphicsReset();
 		ensurePreviewRenderers();
 
-		ViewRequirements preview = computePreviewRequirements();
-		ViewRequirements output = computeOutputRequirements();
+		RenderRequirementsPolicy.Requirements preview = computePreviewRequirements();
+		RenderRequirementsPolicy.Requirements output = computeOutputRequirements();
 		PGraphicsOpenGL[] masterFaces = captureMasterCubemap(preview, output);
 
 		if (outputManager != null && outputManager.isActive()) {
