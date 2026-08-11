@@ -5,7 +5,8 @@
 Use Java 17 e execute:
 
 ```bash
-./gradlew clean test build
+./gradlew clean qualificationTests
+./gradlew build -x test
 ./gradlew buildReleaseArtifacts
 mkdocs build --strict
 ```
@@ -21,3 +22,15 @@ mkdocs build --strict
 - Não adicione backends experimentais da 2.0 à linha 1.x.
 
 Mudanças de GPU ou output exigem o protocolo visual CalibrationTool e evidência no hardware da plataforma, além dos testes unitários.
+
+`qualificationTests` é a execução automatizada canônica. O resumo, o relatório
+HTML e os resultados JUnit XML ficam em `build/reports/qualification/` e
+`build/test-results/qualification/`. Para investigar uma classe, use
+`./gradlew qualificationTests --tests '*CameraManagerTest'`, mas a aceitação de
+release exige a suíte completa sem filtros. Os fontes de teste permanecem no
+Git e são excluídos dos pacotes Processing e do deploy no sketchbook.
+
+O GitHub também executa essa tarefa no workflow independente
+`Automated Qualification` em todos os pushes, pull requests destinados à
+`main` e execuções manuais. O resumo do job mostra os totais e o artefato
+disponível para download preserva as evidências detalhadas por 30 dias.

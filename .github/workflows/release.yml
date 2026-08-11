@@ -26,9 +26,23 @@ jobs:
         with:
           gradle-version: 8.5
 
+      - name: Run automated qualification
+        run: ./gradlew qualificationTests
+
+      - name: Upload automated qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: automated-qualification-${{ github.ref_name }}
+          path: |
+            build/reports/qualification/
+            build/test-results/qualification/
+          if-no-files-found: warn
+          retention-days: 90
+
       - name: Build with Gradle
         id: build
-        run: gradle buildReleaseArtifacts
+        run: ./gradlew buildReleaseArtifacts
 
       - name: Release
         uses: softprops/action-gh-release@v2
