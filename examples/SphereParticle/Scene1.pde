@@ -1,184 +1,158 @@
-class ParticleFieldScene implements Scene {
-  private final zividomelive dome;
-  private final ArrayList<Particle> particles = new ArrayList<Particle>();
-  private final int maximumParticles = 240;
-  private float fieldRotation = 0f;
-  private int lastUpdateMillis;
-  private int lastBurstMillis;
+// Implementação da cena otimizando o cálculo e renderização de partículas
+class Scene1 implements Scene {
+  zividomelive parent;
+  PGraphics pg;
+  ArrayList<Float> mass = new ArrayList<>();
+  ArrayList<Float> positionX = new ArrayList<>();
+  ArrayList<Float> positionY = new ArrayList<>();
+  ArrayList<Float> positionZ = new ArrayList<>();
+  ArrayList<Float> velocityX = new ArrayList<>();
+  ArrayList<Float> velocityY = new ArrayList<>();
+  ArrayList<Float> velocityZ = new ArrayList<>();
+  ArrayList<Long> birthTime = new ArrayList<>();
 
-  ParticleFieldScene(zividomelive dome) {
-    this.dome = dome;
+  Scene1(zividomelive parent) {
+    this.parent = parent;
   }
 
   public void setupScene() {
-    if (particles.isEmpty()) {
-      resetField();
-    }
-    lastUpdateMillis = dome.getPApplet().millis();
-  }
-
-  public void update() {
-    int now = dome.getPApplet().millis();
-    float deltaSeconds = min((now - lastUpdateMillis) / 1000f, 0.05f);
-    lastUpdateMillis = now;
-    if (deltaSeconds <= 0f) {
-      return;
-    }
-
-    fieldRotation += deltaSeconds * 0.12f;
-    for (int i = particles.size() - 1; i >= 0; i--) {
-      Particle particle = particles.get(i);
-      if (now - particle.birthMillis > particle.lifetimeMillis) {
-        particles.remove(i);
-      } else {
-        particle.update(deltaSeconds, now);
-      }
-    }
-    while (particles.size() < 72) {
-      addAmbientParticle(now);
-    }
+    noStroke();
+    fill(64, 255, 255, 192);
   }
 
   public void sceneRender(PGraphicsOpenGL pg) {
-    pg.background(4, 8, 18);
-    pg.ambientLight(48, 52, 70);
-    pg.pointLight(255, 245, 220, 0, -160, 120);
-    pg.directionalLight(90, 150, 255, 0.4f, 0.2f, -1f);
+    pg.background(22);
     pg.noStroke();
-    pg.sphereDetail(10);
+    pg.fill(64, 255, 255, 192);
 
-    pg.pushMatrix();
-    pg.rotateY(fieldRotation);
+    pg.ambientLight(64, 64, 64);
+    pg.pointLight(255, 255, 255, 0, 0, 0);
 
-    pg.pushMatrix();
-    pg.fill(255, 205, 100);
-    pg.emissive(45, 28, 8);
-    pg.sphere(34);
-    pg.popMatrix();
-    pg.emissive(0);
+    pg.translate(0, 0, 250);
+    pg.rotateX(-PI / 2 * (frameCount * 0.01));
 
-    for (Particle particle : particles) {
-      pg.pushMatrix();
-      pg.translate(particle.position.x, particle.position.y, particle.position.z);
-      pg.fill(particle.displayColor);
-      pg.specular(150);
-      pg.shininess(12);
-      pg.sphere(particle.radius);
-      pg.popMatrix();
+    // Inicia tarefas para cada chunk
+    int chunkSize = mass.size() / Runtime.getRuntime().availableProcessors();
+    for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
+      int start = i * chunkSize;
+      int end = (i == Runtime.getRuntime().availableProcessors() - 1) ? mass.size() : (i + 1) * chunkSize;
+      particleProcessors.submit(new ParticleProcessor(start, end));
     }
 
-    pg.popMatrix();
+    // Renderiza partículas com posições atualizadas
+    lock.lock();
+    try {
+      for (int particle = 0; particle < mass.size(); particle++) {
+        pg.pushMatrix();
+        pg.translate(positionX.get(particle), positionY.get(particle), positionZ.get(particle));
+        pg.pushStyle();
+        pg.specular(160);
+        pg.shininess(10);
+        pg.sphereDetail(15);
+        pg.sphere(mass.get(particle) * 500);
+        pg.popStyle();
+        pg.popMatrix();
+      }
+    } finally {
+      lock.unlock();
+    }
   }
 
-  public void keyEvent(KeyEvent event) {
-    if (event.getAction() != KeyEvent.PRESS) {
-      return;
-    }
-
-    switch (event.getKey()) {
-      case 'c':
-      case 'C': particles.clear(); break;
-      case 'r':
-      case 'R': resetField(); break;
-      case ' ': addBurst(0f, 0f, 0f, 18); break;
-    }
+  public void keyEvent(processing.event.KeyEvent event) {
+      if (event.getAction() == processing.event.KeyEvent.PRESS) { // Only handle key press events
+          char key = event.getKey();
+          println("Key pressed in Scene1: " + key);
+          
+      }
   }
 
   public void mouseEvent(MouseEvent event) {
-    if (event.getAction() != MouseEvent.PRESS && event.getAction() != MouseEvent.DRAG) {
-      return;
+    if (event.getAction() == MouseEvent.PRESS || event.getAction() == MouseEvent.DRAG) {
+      addNewParticle((event.getX()) * 0.1, (event.getY()) * 0.1);
     }
-
-    int now = dome.getPApplet().millis();
-    if (event.getAction() == MouseEvent.DRAG && now - lastBurstMillis < 60) {
-      return;
-    }
-
-    float worldX = map(event.getX(), 0, width, -520f, 520f);
-    float worldY = map(event.getY(), 0, height, -320f, 320f);
-    addBurst(worldX, worldY, random(-180f, 180f), 8);
-    lastBurstMillis = now;
+  }
+  
+  public void controlEvent(controlP5.ControlEvent theEvent) {
+      println("Control event in Scene1: " + theEvent.getName());
   }
 
   public String getName() {
-    return "Particle Field";
+      return "Scene1";
   }
-
-  private void resetField() {
-    particles.clear();
-    fieldRotation = 0f;
-    int now = dome.getPApplet().millis();
-
-    for (int i = 0; i < 90; i++) {
-      addAmbientParticle(now);
+  
+  void addNewParticle(float x, float y) {
+    lock.lock();
+    try {
+      mass.add(random(0.003f, 0.03f));
+      positionX.add(x);
+      positionY.add(y);
+      positionZ.add(random(-200, 200));
+      velocityX.add(0f);
+      velocityY.add(0f);
+      velocityZ.add(0f);
+      birthTime.add(Long.valueOf(millis()));
+    } finally {
+      lock.unlock();
     }
   }
 
-  private void addAmbientParticle(int now) {
-    float angle = random(TWO_PI);
-    float ringRadius = random(240f, 680f);
-    PVector position = new PVector(
-        cos(angle) * ringRadius,
-        random(-260f, 260f),
-        sin(angle) * ringRadius);
-    PVector velocity = new PVector(-position.z, random(-80f, 80f), position.x);
-    velocity.normalize().mult(random(35f, 95f));
-    addParticle(position, velocity, now);
-  }
+  // Processador de partículas com cálculos consistentes
+  class ParticleProcessor implements Runnable {
+    int start, end;
 
-  private void addBurst(float x, float y, float z, int count) {
-    int now = dome.getPApplet().millis();
-    for (int i = 0; i < count && particles.size() < maximumParticles; i++) {
-      PVector position = new PVector(
-          x + random(-35f, 35f),
-          y + random(-35f, 35f),
-          z + random(-35f, 35f));
-      PVector velocity = PVector.random3D().mult(random(80f, 220f));
-      addParticle(position, velocity, now);
-    }
-  }
-
-  private void addParticle(PVector position, PVector velocity, int now) {
-    if (particles.size() >= maximumParticles) {
-      particles.remove(0);
-    }
-    particles.add(new Particle(position, velocity, now));
-  }
-
-  class Particle {
-    final PVector position;
-    final PVector velocity;
-    final float radius;
-    final float wavePhase;
-    final int displayColor;
-    final int birthMillis;
-    final int lifetimeMillis;
-
-    Particle(PVector position, PVector velocity, int birthMillis) {
-      this.position = position;
-      this.velocity = velocity;
-      this.birthMillis = birthMillis;
-      this.lifetimeMillis = int(random(9000f, 16000f));
-      this.radius = random(8f, 24f);
-      this.wavePhase = random(TWO_PI);
-      this.displayColor = lerpColor(
-          color(60, 205, 225),
-          color(232, 105, 190),
-          random(1f));
+    ParticleProcessor(int start, int end) {
+      this.start = start;
+      this.end = end;
     }
 
-    void update(float deltaSeconds, int now) {
-      PVector acceleration = PVector.mult(position, -0.32f);
-      PVector tangent = new PVector(-position.z, 0f, position.x);
-      if (tangent.magSq() > 0.001f) {
-        tangent.normalize().mult(22f);
-        acceleration.add(tangent);
+    public void run() {
+      long currentTime = millis();
+
+      lock.lock();
+      try {
+        for (int particleA = start; particleA < end; particleA++) {
+          if (particleA >= mass.size()) break;
+          if (currentTime - birthTime.get(particleA) > 10000) {
+            mass.remove(particleA);
+            positionX.remove(particleA);
+            positionY.remove(particleA);
+            positionZ.remove(particleA);
+            velocityX.remove(particleA);
+            velocityY.remove(particleA);
+            velocityZ.remove(particleA);
+            birthTime.remove(particleA);
+            continue;
+          }
+
+          float accelerationX = 0, accelerationY = 0, accelerationZ = 0;
+
+          for (int particleB = 0; particleB < mass.size(); particleB++) {
+            if (particleA != particleB) {
+              float distanceX = positionX.get(particleB) - positionX.get(particleA);
+              float distanceY = positionY.get(particleB) - positionY.get(particleA);
+              float distanceZ = positionZ.get(particleB) - positionZ.get(particleA);
+
+              float distance = PApplet.sqrt(distanceX * distanceX + distanceY * distanceY + distanceZ * distanceZ);
+              if (distance < 1) distance = 1;
+
+              float force = (distance - 320) * mass.get(particleB) / distance;
+              accelerationX += force * distanceX;
+              accelerationY += force * distanceY;
+              accelerationZ += force * distanceZ;
+            }
+          }
+
+          velocityX.set(particleA, velocityX.get(particleA) * 0.99f + accelerationX * mass.get(particleA));
+          velocityY.set(particleA, velocityY.get(particleA) * 0.99f + accelerationY * mass.get(particleA));
+          velocityZ.set(particleA, velocityZ.get(particleA) * 0.99f + accelerationZ * mass.get(particleA));
+
+          positionX.set(particleA, positionX.get(particleA) + velocityX.get(particleA));
+          positionY.set(particleA, positionY.get(particleA) + velocityY.get(particleA));
+          positionZ.set(particleA, positionZ.get(particleA) + velocityZ.get(particleA));
+        }
+      } finally {
+        lock.unlock();
       }
-      acceleration.y += sin(now * 0.0015f + wavePhase) * 24f;
-
-      velocity.add(PVector.mult(acceleration, deltaSeconds));
-      velocity.mult(pow(0.988f, deltaSeconds * 60f));
-      position.add(PVector.mult(velocity, deltaSeconds));
     }
   }
 }

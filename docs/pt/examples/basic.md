@@ -12,14 +12,14 @@ Demonstra duas cenas gerenciadas e a API `RenderMode`. Em `Scene1`, pressione:
 - `+` / `-`: ajusta a velocidade da animação
 - Roda do mouse: altera o raio da órbita dos pilares
 
-Use as setas Esquerda/Direita para alternar entre os pilares orbitais e o cubo de orientação identificado. Pressione `R` em qualquer cena para restaurar os padrões da animação.
+Use as setas Esquerda/Direita para alternar entre os pilares rotativos e a grade estática de alinhamento com seis faces.
 
 ## EmptyProject
 
-Template mínimo em múltiplos arquivos com uma cena registrada por `setScene`, hooks automáticos do Processing, um cubo de referência visível e `draw()` intencionalmente vazio. Pressione `R` para restaurar a rotação do cubo.
+Template inicial mínimo em múltiplos arquivos com uma `Scene`, um `SceneManager`, hooks automáticos do Processing, `sceneRender()` intencionalmente vazio e `draw()` também vazio.
 
 ## SphereParticle
 
-Campo de partículas limitado que avança a simulação uma vez em `update()` e executa apenas operações gráficas em `sceneRender()`. Clique ou arraste para adicionar rajadas, pressione `Espaço` para uma rajada central, `C` para limpar e `R` para restaurar o campo inicial.
+Exemplo de cena maior que utiliza um executor para a simulação de partículas e mantém as chamadas gráficas na render thread. Clique ou arraste para adicionar partículas.
 
 Todos os exemplos preservam `sceneRender(PGraphicsOpenGL)` e nunca chamam `ziviDome.draw()` manualmente.
