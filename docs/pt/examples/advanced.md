@@ -2,11 +2,11 @@
 
 ## CompatibilityLock
 
-Cena estática assimétrica que identifica as seis direções do cubemap. Use-a para qualificar identidade de faces, layout, espelhamento, rotações de 90 graus, FOV, Size%, independência Standard e domemaster flutuante.
+Cena estática assimétrica que identifica as seis direções do cubemap. Use-a para qualificar identidade de faces, layout, espelhamento, rotações de 90 graus, FOV, Size%, independência Standard e domemaster flutuante. Pressione `0` para restaurar a calibração canônica; controles aceitos imprimem seus valores no console.
 
 ## FulldomePBR
 
-Demonstra geometria `PShape` retida, shader GLSL 4.10 metallic-roughness, fallback fixed-function e `OrbitCamera` compartilhado em scene space. A câmera transforma o conteúdo sem alterar pitch/yaw/roll esféricos.
+Demonstra geometria `PShape` retida, shader GLSL 4.10 metallic-roughness, fallback fixed-function e `OrbitCamera` compartilhado em scene space. A câmera transforma o conteúdo sem alterar pitch/yaw/roll esféricos, e a cena libera o input de câmera ao ser descartada.
 
 ## SolarSystem
 

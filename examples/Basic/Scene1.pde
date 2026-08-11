@@ -1,101 +1,85 @@
-// Scene1 implementation
 class Scene1 implements Scene {
-  private zividomelive parent;
-  private float rotationSpeed = 0.01f; // Speed of rotation for the animation
-  private float radius = 700; // Distance of the pillars from the center
-  private float time = 0; // Tracks elapsed time for animation
-  private int numPillars = 8; // Number of pillars in the scene
-  private int[] colors = {
-      0xFFFF0000, // Red
-      0xFF00FF00, // Green
-      0xFF0000FF, // Blue
-      0xFFFFFF00, // Yellow
-      0xFFFF00FF, // Magenta
-      0xFF00FFFF, // Cyan
-      0xFFFFFFFF, // White
-      0xFFFF8000  // Orange
+  private final zividomelive dome;
+  private final int pillarCount = 8;
+  private final int[] colors = {
+      0xFFFF5252,
+      0xFF55D878,
+      0xFF4E8FF5,
+      0xFFF4CD48,
+      0xFFCB5CDC,
+      0xFF43CDCD,
+      0xFFF2F2F2,
+      0xFFFF963F
   };
+  private float angularSpeed = 0.6f;
+  private float radius = 700f;
+  private float phase = 0f;
+  private int lastUpdateMillis;
 
-  Scene1(zividomelive parent) {
-      this.parent = parent;
+  Scene1(zividomelive dome) {
+    this.dome = dome;
   }
 
   public void setupScene() {
-      println("Scene1 setup completed.");
+    lastUpdateMillis = dome.getPApplet().millis();
   }
 
   public void update() {
-      time += rotationSpeed; // Increment time for animation
+    int now = dome.getPApplet().millis();
+    float deltaSeconds = min((now - lastUpdateMillis) / 1000f, 0.1f);
+    phase += angularSpeed * max(0f, deltaSeconds);
+    lastUpdateMillis = now;
   }
 
   public void sceneRender(PGraphicsOpenGL pg) {
+    pg.background(5, 9, 24);
+    pg.ambientLight(55, 55, 70);
+    pg.directionalLight(255, 245, 220, -0.4f, 0.7f, -1f);
+    pg.noStroke();
+
+    float angleStep = TWO_PI / pillarCount;
+    for (int i = 0; i < pillarCount; i++) {
+      float angle = angleStep * i + phase;
+      float x = cos(angle) * radius;
+      float y = (i % 2 == 0) ? -120f : 120f;
+      float z = sin(angle) * radius;
+
       pg.pushMatrix();
-      pg.background(0, 0, 80, 0); // Clear the background
-      float angleStep = TWO_PI / numPillars;
-
-      for (int i = 0; i < numPillars; i++) {
-          float angle = angleStep * i + time; // Add rotation animation
-          float x = sin(angle) * radius;
-          float y = cos(angle) * radius;
-          pg.pushMatrix();
-          pg.translate(x, y, 0);
-          pg.rotateX(time); // Add rotation on the X axis
-          pg.fill(colors[i % colors.length]);
-          pg.box(200); // Render a box for each pillar
-          pg.popMatrix();
-      }
-
+      pg.translate(x, y, z);
+      pg.rotateX(phase * 0.7f + i * 0.18f);
+      pg.rotateY(-angle);
+      pg.fill(colors[i % colors.length]);
+      pg.box(170, 320, 170);
       pg.popMatrix();
+    }
   }
 
   public void keyEvent(processing.event.KeyEvent event) {
-      if (event.getAction() == processing.event.KeyEvent.PRESS) { // Only handle key press events
-          char key = event.getKey();
-          println("Key pressed in Scene1: " + key);
+    if (event.getAction() != processing.event.KeyEvent.PRESS) {
+      return;
+    }
 
-          switch (key) {
-              case '1':
-                  parent.setRenderMode(RenderMode.FULL);
-                  break;
-              case '2':
-                  parent.setRenderMode(RenderMode.STANDARD);
-                  break;
-              case '3':
-                  parent.setRenderMode(RenderMode.DOMEMASTER);
-                  break;
-              case '4':
-                  parent.setRenderMode(RenderMode.EQUIRECTANGULAR);
-                  break;
-              case '5':
-                  parent.setRenderMode(RenderMode.SKYBOX);
-                  break;
-              case '+':
-                  rotationSpeed += 0.01f; // Increase speed
-                  break;
-              case '-':
-                  rotationSpeed = max(0.01f, rotationSpeed - 0.01f); // Decrease speed
-                  break;
-              case 'r':
-                  rotationSpeed = 0.02f; // Reset to default speed
-                  break;
-              default:
-                  println("Unhandled key in Scene1.");
-          }
-      }
+    switch (event.getKey()) {
+      case '1': dome.setRenderMode(RenderMode.FULL); break;
+      case '2': dome.setRenderMode(RenderMode.STANDARD); break;
+      case '3': dome.setRenderMode(RenderMode.DOMEMASTER); break;
+      case '4': dome.setRenderMode(RenderMode.EQUIRECTANGULAR); break;
+      case '5': dome.setRenderMode(RenderMode.SKYBOX); break;
+      case '+':
+      case '=': angularSpeed = min(2.4f, angularSpeed + 0.15f); break;
+      case '-': angularSpeed = max(0f, angularSpeed - 0.15f); break;
+      case 'r':
+      case 'R': angularSpeed = 0.6f; radius = 700f; break;
+    }
   }
 
   public void mouseEvent(MouseEvent event) {
-      if (event.getAction() == MouseEvent.WHEEL) {
-          float e = event.getCount();
-          radius = max(100, radius + e * 10); // Zoom in or out by changing the radius
-      }
-  }
-
-  public void controlEvent(controlP5.ControlEvent theEvent) {
-      println("Control event in Scene1: " + theEvent.getName());
+    if (event.getAction() == MouseEvent.WHEEL) {
+      radius = constrain(radius + event.getCount() * 30f, 320f, 1200f);
+    }
   }
 
   public String getName() {
-      return "Scene1";
+    return "Orbiting Pillars";
   }
 }

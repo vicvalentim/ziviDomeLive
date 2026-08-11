@@ -1,13 +1,12 @@
 import com.victorvalentim.zividomelive.*;
-import com.victorvalentim.zividomelive.render.*;
-import com.victorvalentim.zividomelive.render.camera.*;
+import com.victorvalentim.zividomelive.render.Quaternion;
+// Processing adds contributed libraries to the runtime classpath through imports.
 import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;
+import processing.opengl.PGraphicsOpenGL;
 
-// Main instances
 zividomelive ziviDome;
-SceneManager sceneManager;
 
 void settings() {
   pixelDensity(1);
@@ -17,17 +16,12 @@ void settings() {
 void setup() {
   surface.setTitle("ziviDomeLive - Fulldome PBR Example");
 
-  // Optional: enable verbose library logs for debugging.
-  //zividomelive.enableDebugLogging();
+  // Uncomment while diagnosing a sketch: zividomelive.enableDebugLogging();
 
-  // Initialize the library and its render pipeline.
   ziviDome = new zividomelive(this);
   ziviDome.setup();
-
-  // Register the example scene.
-  sceneManager = new SceneManager();
-  sceneManager.registerScene(new Scene1(ziviDome));
-  ziviDome.setSceneManager(sceneManager);
+  ziviDome.setRenderMode(RenderMode.FULL);
+  ziviDome.setScene(new FulldomePbrScene(ziviDome));
 }
 
 void draw() {

@@ -1,6 +1,6 @@
 # FulldomePBR example
 
-A new fulldome-oriented Processing sketch that demonstrates:
+A fulldome-oriented Processing sketch that demonstrates:
 
 - Full **PBR lighting via GLSL shaders** (metallic-roughness, Cook-Torrance GGX)
 - **Retained-mode primitives** (`PShape` / VBO) built from `PVector` geometry for
@@ -49,6 +49,7 @@ so the library handles the mouse automatically:
 
 The scene simply calls `parent.getSceneCamera().apply(pg)` inside `sceneRender`.
 All target/orientation/distance changes are smoothly interpolated (SLERP/LERP).
+The scene disables camera input again from `dispose()`.
 
 ## Notes
 
