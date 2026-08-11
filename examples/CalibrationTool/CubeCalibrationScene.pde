@@ -1,9 +1,9 @@
 class CubeCalibrationScene implements Scene {
-  private static final float FACE_DISTANCE = 900f;
-  private static final float TARGET_SIZE = 1800f;
-  private static final float ANNOTATION_BIAS = 2f;
-  private static final int ANNOTATION_TEXTURE_SIZE = 1024;
-  private static final int GRID_DIVISIONS = 24;
+  private final float FACE_DISTANCE = 900f;
+  private final float TARGET_SIZE = 1800f;
+  private final float ANNOTATION_BIAS = 2f;
+  private final int ANNOTATION_TEXTURE_SIZE = 1024;
+  private final int GRID_DIVISIONS = 24;
 
   private final zividomelive dome;
   private PShader calibrationShader;

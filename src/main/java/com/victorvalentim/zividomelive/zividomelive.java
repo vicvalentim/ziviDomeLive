@@ -1620,7 +1620,8 @@ public class zividomelive implements PConstants {
 	/**
 	 * Sets the target frame rate applied during setup. Defaults to 60.
 	 * Call before setup() to take effect at startup; calling afterwards applies immediately and
-	 * updates the default NDI frame-rate metadata.
+	 * updates the default NDI frame-rate metadata. Reapplying the configured value does not
+	 * restart Processing's animator.
 	 *
 	 * @param fps desired frame rate, must be positive
 	 */
@@ -1629,11 +1630,12 @@ public class zividomelive implements PConstants {
 			LOGGER.warning("Ignoring invalid target frame rate: " + fps);
 			return;
 		}
+		boolean changed = this.targetFrameRate != fps;
 		this.targetFrameRate = fps;
 		if (outputManager != null) {
 			outputManager.setNdiFrameRate(fps, 1);
 		}
-		if (initState != InitState.NOT_INITIALIZED) {
+		if (changed && initState != InitState.NOT_INITIALIZED) {
 			p.frameRate(fps);
 		}
 	}

@@ -2,7 +2,7 @@
 
 ## CalibrationTool
 
-A two-scene qualification tool. Scene 1 maps six GLSL 4.10 targets onto explicit face-local `0..1` coordinates of a closed cube, so its 24 x 24 grid, geometric references, focus lines, points, stars, gradients, swatches, grayscale, clipping levels, and annotations follow the spherical pitch/yaw/roll transforms as one surface. Scene 2 selects one of four original unmodified Paul Bourke v14 equirectangular patterns for the active 1k/2k/3k/4k output bucket, or the bucket nearest the window when outputs are disabled, and maps it onto a complete 1800-unit sphere centered at `(0, 0, 0)`, whose north pole is `+Z`. `Space` toggles the recommended 60-second rotation; `T` selects 30 fps/1800 frames or 60 fps/3600 frames; `,`/`.` steps one degree; and `C` resets it. Use Left/Right arrows to switch scenes.
+A two-scene qualification tool. Scene 1 maps six GLSL 4.10 targets onto explicit face-local `0..1` coordinates of a closed cube, so its 24 x 24 grid, geometric references, focus lines, points, stars, gradients, swatches, grayscale, clipping levels, and annotations follow the spherical pitch/yaw/roll transforms as one surface. Scene 2 selects one of four original unmodified Paul Bourke v14 equirectangular patterns for the active 1k/2k/3k/4k output bucket, or the bucket nearest the window when outputs are disabled, and maps it onto a complete 1800-unit sphere centered at `(0, 0, 0)`, whose north pole is `+Z`. `Space` toggles the recommended 60-second rotation; `T` selects a time-quantized 30 fps/1800-frame or 60 fps/3600-frame rotation profile without changing Processing's global frame rate; `,`/`.` steps one degree; and `C` resets it. Use Left/Right arrows to switch scenes.
 
 ## FulldomePBR
 

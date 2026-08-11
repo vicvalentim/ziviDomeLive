@@ -21,6 +21,7 @@ All notable changes to this project are documented in this file.
 - Replaced `CompatibilityLock` with the two-scene `CalibrationTool`, combining a GLSL 4.10 cube-face focus/color chart with Paul Bourke's unmodified 8192 x 4096 equirectangular test pattern on a complete sphere; also refined `FulldomePBR`, expanded the example catalog, and documented Processing runtime dependency imports.
 
 ### Fixed
+- Prevented redundant target-frame-rate requests and CalibrationTool playback profiles from restarting Processing's JOGL animator.
 - Preserved domemaster Size% when render targets are recreated after an output-resolution change.
 - Removed duplicate rendering and duplicate event forwarding from examples and documentation.
 - Removed nested `beginDraw()` / `endDraw()` ownership from scene examples.
