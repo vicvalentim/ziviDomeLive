@@ -54,7 +54,7 @@ Os toggles de publicação são donos das mudanças de backend. O `controlEvent(
 | Tecla | Ação |
 |---|---|
 | `h` | Mostrar/ocultar o painel |
-| `m` | Alternar o `ViewType` legado configurado para preview |
+| `m` | Alternar o `ViewType` configurado para preview |
 | Esquerda / Direita | Cena anterior/próxima |
 
 O atalho `m` atualiza a rota armazenada mesmo enquanto um modo dedicado força outra view efetiva. A seleção volta a aparecer em `FULL`.

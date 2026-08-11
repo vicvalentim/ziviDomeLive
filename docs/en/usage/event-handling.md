@@ -15,7 +15,7 @@ Do not add main-sketch forwarding such as `ziviDome.keyEvent(event)`. That deliv
 ## Global Shortcuts
 
 - `h`: toggle the built-in panel
-- `m`: cycle the configured legacy preview view
+- `m`: cycle the configured preview view
 - Left/Right arrows: previous/next scene
 
 Global shortcuts run before the event reaches the scene.

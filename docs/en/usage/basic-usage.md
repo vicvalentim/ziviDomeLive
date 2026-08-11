@@ -1,6 +1,6 @@
 # Render Modes
 
-`RenderMode` controls the effective representation used by the Processing window and every enabled external output. It does not select an output backend and it does not replace the legacy `ViewType` routing API.
+`RenderMode` controls the effective representation used by the Processing window and every enabled external output. It does not select an output backend and it does not replace the `ViewType` routing API.
 
 ## FULL Compatibility Mode
 
@@ -8,12 +8,12 @@
 
 ```java
 dome.setRenderMode(RenderMode.FULL);
-dome.setCurrentView(ziviDomeLive.ViewType.STANDARD);
+dome.setCurrentView(ViewType.STANDARD);
 
 OutputManager outputs = dome.getOutputManager();
-outputs.setNdiView(ziviDomeLive.ViewType.EQUIRECTANGULAR);
-outputs.setSyphonView(ziviDomeLive.ViewType.FISHEYE_DOMEMASTER);
-outputs.setSpoutView(ziviDomeLive.ViewType.CUBEMAP);
+outputs.setNdiView(ViewType.EQUIRECTANGULAR);
+outputs.setSyphonView(ViewType.DOMEMASTER);
+outputs.setSpoutView(ViewType.SKYBOX);
 ```
 
 Only enabled outputs request frames. Merely configuring a route or preparing Syphon/Spout does not activate publication or add a render requirement.
@@ -25,9 +25,9 @@ Dedicated modes force one effective representation for the main preview and all 
 | `RenderMode` | Effective `ViewType` | Main pipeline |
 |---|---|---|
 | `STANDARD` | `STANDARD` | Direct perspective Standard renderer |
-| `DOMEMASTER` | `FISHEYE_DOMEMASTER` | Cubemap, equirectangular, fisheye |
+| `DOMEMASTER` | `DOMEMASTER` | Cubemap, equirectangular, fisheye |
 | `EQUIRECTANGULAR` | `EQUIRECTANGULAR` | Cubemap, equirectangular |
-| `SKYBOX` | `CUBEMAP` | Cubemap, skybox layout |
+| `SKYBOX` | `SKYBOX` | Cubemap, skybox layout |
 
 ```java
 dome.setRenderMode(RenderMode.DOMEMASTER);

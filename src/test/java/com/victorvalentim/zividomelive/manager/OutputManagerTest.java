@@ -1,5 +1,6 @@
 package com.victorvalentim.zividomelive.manager;
 
+import com.victorvalentim.zividomelive.ViewType;
 import com.victorvalentim.zividomelive.ziviDomeLive;
 import me.walkerknapp.devolay.DevolayFrameFormatType;
 import org.junit.jupiter.api.BeforeEach;
@@ -92,14 +93,14 @@ class OutputManagerTest {
 	@Test
 	void outputViewsDefaultToFisheyeDomemaster() {
 		for (OutputManager.OutputType type : OutputManager.OutputType.values()) {
-			assertEquals(ziviDomeLive.ViewType.FISHEYE_DOMEMASTER, outputManager.getViewForOutput(type));
+			assertEquals(ViewType.DOMEMASTER, outputManager.getViewForOutput(type));
 		}
 	}
 
 	@Test
 	void setViewForOutputUpdatesMapping() {
-		outputManager.setViewForOutput(OutputManager.OutputType.NDI, ziviDomeLive.ViewType.EQUIRECTANGULAR);
-		assertEquals(ziviDomeLive.ViewType.EQUIRECTANGULAR,
+		outputManager.setViewForOutput(OutputManager.OutputType.NDI, ViewType.EQUIRECTANGULAR);
+		assertEquals(ViewType.EQUIRECTANGULAR,
 				outputManager.getViewForOutput(OutputManager.OutputType.NDI));
 	}
 

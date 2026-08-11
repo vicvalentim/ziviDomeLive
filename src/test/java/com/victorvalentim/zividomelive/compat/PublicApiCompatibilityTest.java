@@ -3,6 +3,7 @@ package com.victorvalentim.zividomelive.compat;
 import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.SceneManager;
 import com.victorvalentim.zividomelive.RenderMode;
+import com.victorvalentim.zividomelive.ViewType;
 import com.victorvalentim.zividomelive.manager.OutputManager;
 import com.victorvalentim.zividomelive.render.CubemapRenderer;
 import com.victorvalentim.zividomelive.render.Quaternion;
@@ -40,13 +41,33 @@ class PublicApiCompatibilityTest {
 	}
 
 	@Test
-	void viewTypeOrderRemainsIndexCompatibleWithControlDropdowns() {
-		assertArrayEquals(new ziviDomeLive.ViewType[]{
-				ziviDomeLive.ViewType.FISHEYE_DOMEMASTER,
-				ziviDomeLive.ViewType.EQUIRECTANGULAR,
-				ziviDomeLive.ViewType.CUBEMAP,
-				ziviDomeLive.ViewType.STANDARD
-		}, ziviDomeLive.ViewType.values());
+	void viewTypeIsTopLevelWithFinalNamesAndOrder() {
+		assertEquals("com.victorvalentim.zividomelive.ViewType", ViewType.class.getName());
+		assertTrue(Modifier.isPublic(ViewType.class.getModifiers()));
+		assertArrayEquals(new ViewType[]{
+				ViewType.STANDARD,
+				ViewType.DOMEMASTER,
+				ViewType.EQUIRECTANGULAR,
+				ViewType.SKYBOX
+		}, ViewType.values());
+		assertFalse(Arrays.stream(ziviDomeLive.class.getDeclaredClasses())
+				.anyMatch(type -> type.getSimpleName().equals("ViewType")));
+	}
+
+	@Test
+	void viewRoutingMethodsUseTopLevelViewType() throws Exception {
+		assertEquals(ViewType.class, ziviDomeLive.class.getMethod("getCurrentView").getReturnType());
+		assertNotNull(ziviDomeLive.class.getMethod("setCurrentView", ViewType.class));
+		assertEquals(ViewType.class, OutputManager.class
+				.getMethod("getViewForOutput", OutputManager.OutputType.class)
+				.getReturnType());
+		assertNotNull(OutputManager.class.getMethod(
+				"setViewForOutput", OutputManager.OutputType.class, ViewType.class));
+		assertNotNull(OutputManager.class.getMethod("setNdiView", ViewType.class));
+		assertNotNull(OutputManager.class.getMethod("setSpoutView", ViewType.class));
+		assertNotNull(OutputManager.class.getMethod("setSyphonView", ViewType.class));
+		assertNotNull(OutputManager.class.getMethod("setLocalTextureView", ViewType.class));
+		assertNotNull(OutputManager.class.getMethod("requiresView", ViewType.class));
 	}
 
 	@Test
@@ -93,6 +114,7 @@ class PublicApiCompatibilityTest {
 	void primaryPublicTypesRemainAvailable() {
 		Class<?>[] publicTypes = {
 				RenderMode.class,
+				ViewType.class,
 				Scene.class,
 				SceneManager.class,
 				OutputManager.class,

@@ -1,6 +1,7 @@
 package com.victorvalentim.zividomelive.manager;
 
 import com.victorvalentim.zividomelive.RenderMode;
+import com.victorvalentim.zividomelive.ViewType;
 import com.victorvalentim.zividomelive.ziviDomeLive;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
@@ -15,7 +16,7 @@ class RenderModeOutputRoutingTest {
 	void everyDedicatedModeOverridesEffectiveRouteWithoutErasingConfiguration() {
 		ziviDomeLive dome = new ziviDomeLive(new PApplet());
 		OutputManager outputs = new OutputManager(dome);
-		outputs.setNdiView(ziviDomeLive.ViewType.EQUIRECTANGULAR);
+		outputs.setNdiView(ViewType.EQUIRECTANGULAR);
 
 		RenderMode[] modes = {
 				RenderMode.STANDARD,
@@ -23,11 +24,11 @@ class RenderModeOutputRoutingTest {
 				RenderMode.EQUIRECTANGULAR,
 				RenderMode.SKYBOX
 		};
-		ziviDomeLive.ViewType[] expectedViews = {
-				ziviDomeLive.ViewType.STANDARD,
-				ziviDomeLive.ViewType.FISHEYE_DOMEMASTER,
-				ziviDomeLive.ViewType.EQUIRECTANGULAR,
-				ziviDomeLive.ViewType.CUBEMAP
+		ViewType[] expectedViews = {
+				ViewType.STANDARD,
+				ViewType.DOMEMASTER,
+				ViewType.EQUIRECTANGULAR,
+				ViewType.SKYBOX
 		};
 
 		for (int index = 0; index < modes.length; index++) {
@@ -35,12 +36,12 @@ class RenderModeOutputRoutingTest {
 			assertEquals(expectedViews[index],
 					outputs.resolveOutputView(
 							outputs.getViewForOutput(OutputManager.OutputType.NDI)));
-			assertEquals(ziviDomeLive.ViewType.EQUIRECTANGULAR,
+			assertEquals(ViewType.EQUIRECTANGULAR,
 					outputs.getViewForOutput(OutputManager.OutputType.NDI));
 		}
 
 		dome.setRenderMode(RenderMode.FULL);
-		assertEquals(ziviDomeLive.ViewType.EQUIRECTANGULAR,
+		assertEquals(ViewType.EQUIRECTANGULAR,
 				outputs.resolveOutputView(outputs.getViewForOutput(OutputManager.OutputType.NDI)));
 	}
 
@@ -48,12 +49,12 @@ class RenderModeOutputRoutingTest {
 	void renderRequirementsFollowEffectiveDedicatedRoute() {
 		ziviDomeLive dome = new ziviDomeLive(new PApplet());
 		EnabledNdiOutputManager outputs = new EnabledNdiOutputManager(dome);
-		outputs.setNdiView(ziviDomeLive.ViewType.STANDARD);
+		outputs.setNdiView(ViewType.STANDARD);
 
 		dome.setRenderMode(RenderMode.DOMEMASTER);
 
-		assertTrue(outputs.requiresView(ziviDomeLive.ViewType.FISHEYE_DOMEMASTER));
-		assertFalse(outputs.requiresView(ziviDomeLive.ViewType.STANDARD));
+		assertTrue(outputs.requiresView(ViewType.DOMEMASTER));
+		assertFalse(outputs.requiresView(ViewType.STANDARD));
 	}
 
 	private static final class EnabledNdiOutputManager extends OutputManager {

@@ -77,7 +77,7 @@ ziviDome.setRenderMode(RenderMode.SKYBOX);
 Use `setCurrentView()` para a rota de preview no modo `FULL`:
 
 ```java
-ziviDome.setCurrentView(ziviDomeLive.ViewType.FISHEYE_DOMEMASTER);
+ziviDome.setCurrentView(ViewType.DOMEMASTER);
 ```
 
 Modos dedicados preservam essa seleção configurada, mas forçam temporariamente sua própria representação efetiva. Consulte [Modos de Renderização](../usage/basic-usage.md) e o [Painel de Controle](../usage/control-panel.md) para a matriz completa de routing.
@@ -121,7 +121,7 @@ Outputs começam desabilitados:
 
 ```java
 OutputManager outputs = ziviDome.getOutputManager();
-outputs.setNdiView(ziviDomeLive.ViewType.EQUIRECTANGULAR);
+outputs.setNdiView(ViewType.EQUIRECTANGULAR);
 outputs.toggleOutput("ndi");
 ```
 

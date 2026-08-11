@@ -2,6 +2,7 @@ package com.victorvalentim.zividomelive.manager;
 
 import codeanticode.syphon.SyphonServer;
 import com.victorvalentim.zividomelive.RenderMode;
+import com.victorvalentim.zividomelive.ViewType;
 import com.victorvalentim.zividomelive.support.LogManager;
 import com.victorvalentim.zividomelive.ziviDomeLive;
 import me.walkerknapp.devolay.DevolayFrameFormatType;
@@ -103,9 +104,9 @@ public class OutputManager implements PConstants {
 	private final long ndiShutdownTimeoutMillis;
 
 	/* Independent output routing. Preview/viewer state is intentionally not stored here. */
-	private volatile ziviDomeLive.ViewType ndiView = ziviDomeLive.ViewType.FISHEYE_DOMEMASTER;
-	private volatile ziviDomeLive.ViewType spoutView = ziviDomeLive.ViewType.FISHEYE_DOMEMASTER;
-	private volatile ziviDomeLive.ViewType syphonView = ziviDomeLive.ViewType.FISHEYE_DOMEMASTER;
+	private volatile ViewType ndiView = ViewType.DOMEMASTER;
+	private volatile ViewType spoutView = ViewType.DOMEMASTER;
+	private volatile ViewType syphonView = ViewType.DOMEMASTER;
 
 	/* Platform-local texture output. Only one backend can exist in a process. */
 	private Spout spoutSender;
@@ -187,12 +188,12 @@ public class OutputManager implements PConstants {
 	 * Returns the independently configured view for an output.
 	 *
 	 * @param outputType output whose configured view should be returned
-	 * @return configured view, or {@link ziviDomeLive.ViewType#FISHEYE_DOMEMASTER}
+	 * @return configured view, or {@link ViewType#DOMEMASTER}
 	 *         when {@code outputType} is {@code null}
 	 */
-	public ziviDomeLive.ViewType getViewForOutput(OutputType outputType) {
+	public ViewType getViewForOutput(OutputType outputType) {
 		if (outputType == null) {
-			return ziviDomeLive.ViewType.FISHEYE_DOMEMASTER;
+			return ViewType.DOMEMASTER;
 		}
 
 		switch (outputType) {
@@ -203,7 +204,7 @@ public class OutputManager implements PConstants {
 			case SYPHON:
 				return syphonView;
 			default:
-				return ziviDomeLive.ViewType.FISHEYE_DOMEMASTER;
+				return ViewType.DOMEMASTER;
 		}
 	}
 
@@ -215,7 +216,7 @@ public class OutputManager implements PConstants {
 	 * @param outputType output whose view should be changed
 	 * @param viewType view to route to the selected output
 	 */
-	public void setViewForOutput(OutputType outputType, ziviDomeLive.ViewType viewType) {
+	public void setViewForOutput(OutputType outputType, ViewType viewType) {
 		if (outputType == null || viewType == null) {
 			return;
 		}
@@ -252,15 +253,15 @@ public class OutputManager implements PConstants {
 	 * @param viewType view whose graphics target should be returned
 	 * @return current graphics target, or {@code null} when unavailable
 	 */
-	private PGraphicsOpenGL resolveGraphics(ziviDomeLive.ViewType viewType) {
-		ziviDomeLive.ViewType effectiveView = resolveOutputView(viewType);
+	private PGraphicsOpenGL resolveGraphics(ViewType viewType) {
+		ViewType effectiveView = resolveOutputView(viewType);
 		if (effectiveView == null) {
 			return null;
 		}
 
 		try {
 			switch (effectiveView) {
-				case FISHEYE_DOMEMASTER:
+				case DOMEMASTER:
 					return parent.getFisheyeDomemaster() != null
 							? parent.getFisheyeDomemaster().getDomemasterGraphics()
 							: null;
@@ -268,7 +269,7 @@ public class OutputManager implements PConstants {
 					return parent.getEquirectangularRenderer() != null
 							? parent.getEquirectangularRenderer().getEquirectangular()
 							: null;
-				case CUBEMAP:
+				case SKYBOX:
 					return parent.getCubemapViewRenderer() != null
 							? parent.getCubemapViewRenderer().getCubemap()
 							: null;
@@ -286,7 +287,7 @@ public class OutputManager implements PConstants {
 	}
 
 	/** Resolves a configured output route under the facade's global render mode. */
-	ziviDomeLive.ViewType resolveOutputView(ziviDomeLive.ViewType configuredView) {
+	ViewType resolveOutputView(ViewType configuredView) {
 		RenderMode renderMode = parent.getRenderMode();
 		if (renderMode == null || renderMode == RenderMode.FULL) {
 			return configuredView;
@@ -294,13 +295,13 @@ public class OutputManager implements PConstants {
 
 		switch (renderMode) {
 			case STANDARD:
-				return ziviDomeLive.ViewType.STANDARD;
+				return ViewType.STANDARD;
 			case DOMEMASTER:
-				return ziviDomeLive.ViewType.FISHEYE_DOMEMASTER;
+				return ViewType.DOMEMASTER;
 			case EQUIRECTANGULAR:
-				return ziviDomeLive.ViewType.EQUIRECTANGULAR;
+				return ViewType.EQUIRECTANGULAR;
 			case SKYBOX:
-				return ziviDomeLive.ViewType.CUBEMAP;
+				return ViewType.SKYBOX;
 			case FULL:
 			default:
 				return configuredView;
@@ -640,12 +641,12 @@ public class OutputManager implements PConstants {
 	 * Legacy method retained only for source compatibility.
 	 *
 	 * @param viewType ignored; configure each output with its dedicated setter
-	 * @deprecated use {@link #setNdiView(ziviDomeLive.ViewType)},
-	 *             {@link #setSpoutView(ziviDomeLive.ViewType)}, or
-	 *             {@link #setSyphonView(ziviDomeLive.ViewType)}
+	 * @deprecated use {@link #setNdiView(ViewType)},
+	 *             {@link #setSpoutView(ViewType)}, or
+	 *             {@link #setSyphonView(ViewType)}
 	 */
 	@Deprecated
-	public void setView(ziviDomeLive.ViewType viewType) {
+	public void setView(ViewType viewType) {
 		if (!legacySetViewWarningLogged) {
 			legacySetViewWarningLogged = true;
 			logger.warning(
@@ -1286,7 +1287,7 @@ public class OutputManager implements PConstants {
 	 *
 	 * @param view view to route to NDI
 	 */
-	public void setNdiView(ziviDomeLive.ViewType view) {
+	public void setNdiView(ViewType view) {
 		setViewForOutput(OutputType.NDI, view);
 	}
 
@@ -1295,7 +1296,7 @@ public class OutputManager implements PConstants {
 	 *
 	 * @param view view to route to Spout
 	 */
-	public void setSpoutView(ziviDomeLive.ViewType view) {
+	public void setSpoutView(ViewType view) {
 		setViewForOutput(OutputType.SPOUT, view);
 	}
 
@@ -1304,7 +1305,7 @@ public class OutputManager implements PConstants {
 	 *
 	 * @param view view to route to Syphon
 	 */
-	public void setSyphonView(ziviDomeLive.ViewType view) {
+	public void setSyphonView(ViewType view) {
 		setViewForOutput(OutputType.SYPHON, view);
 	}
 
@@ -1313,7 +1314,7 @@ public class OutputManager implements PConstants {
 	 *
 	 * @param view view to route to Syphon on macOS or Spout on Windows
 	 */
-	public void setLocalTextureView(ziviDomeLive.ViewType view) {
+	public void setLocalTextureView(ViewType view) {
 		if (view == null) {
 			return;
 		}
@@ -1337,7 +1338,7 @@ public class OutputManager implements PConstants {
 	 *
 	 * @return Spout view on Windows, Syphon view on macOS, or fisheye when unsupported
 	 */
-	public ziviDomeLive.ViewType getLocalTextureView() {
+	public ViewType getLocalTextureView() {
 		switch (localTextureBackend) {
 			case SPOUT:
 				return spoutView;
@@ -1345,7 +1346,7 @@ public class OutputManager implements PConstants {
 				return syphonView;
 			case NONE:
 			default:
-				return ziviDomeLive.ViewType.FISHEYE_DOMEMASTER;
+				return ViewType.DOMEMASTER;
 		}
 	}
 
@@ -1416,7 +1417,7 @@ public class OutputManager implements PConstants {
 	 * @param view view whose external-output requirement should be checked
 	 * @return {@code true} when an enabled output effectively resolves to {@code view}
 	 */
-	public boolean requiresView(ziviDomeLive.ViewType view) {
+	public boolean requiresView(ViewType view) {
 		if (view == null) {
 			return false;
 		}

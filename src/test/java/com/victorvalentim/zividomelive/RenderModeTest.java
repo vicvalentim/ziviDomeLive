@@ -13,33 +13,34 @@ class RenderModeTest {
 		ziviDomeLive dome = new ziviDomeLive(new PApplet());
 
 		assertEquals(RenderMode.FULL, dome.getRenderMode());
+		assertEquals(ViewType.DOMEMASTER, dome.getCurrentView());
 		dome.setRenderMode(null);
 		assertEquals(RenderMode.FULL, dome.getRenderMode());
 	}
 
 	@Test
-	void dedicatedModesMapToTheirLegacyRepresentations() {
+	void dedicatedModesMapToTheirViewTypes() {
 		assertEquals(
-				ziviDomeLive.ViewType.STANDARD,
+				ViewType.STANDARD,
 				RenderRequirementsPolicy.resolveView(
-						RenderMode.STANDARD, ziviDomeLive.ViewType.FISHEYE_DOMEMASTER));
+						RenderMode.STANDARD, ViewType.DOMEMASTER));
 		assertEquals(
-				ziviDomeLive.ViewType.FISHEYE_DOMEMASTER,
+				ViewType.DOMEMASTER,
 				RenderRequirementsPolicy.resolveView(
-						RenderMode.DOMEMASTER, ziviDomeLive.ViewType.STANDARD));
+						RenderMode.DOMEMASTER, ViewType.STANDARD));
 		assertEquals(
-				ziviDomeLive.ViewType.EQUIRECTANGULAR,
+				ViewType.EQUIRECTANGULAR,
 				RenderRequirementsPolicy.resolveView(
-						RenderMode.EQUIRECTANGULAR, ziviDomeLive.ViewType.CUBEMAP));
+						RenderMode.EQUIRECTANGULAR, ViewType.SKYBOX));
 		assertEquals(
-				ziviDomeLive.ViewType.CUBEMAP,
+				ViewType.SKYBOX,
 				RenderRequirementsPolicy.resolveView(
-						RenderMode.SKYBOX, ziviDomeLive.ViewType.STANDARD));
+						RenderMode.SKYBOX, ViewType.STANDARD));
 	}
 
 	@Test
-	void fullPreservesIndependentLegacySelection() {
-		for (ziviDomeLive.ViewType view : ziviDomeLive.ViewType.values()) {
+	void fullPreservesIndependentViewSelection() {
+		for (ViewType view : ViewType.values()) {
 			assertEquals(view, RenderRequirementsPolicy.resolveView(RenderMode.FULL, view));
 		}
 	}
@@ -47,19 +48,19 @@ class RenderModeTest {
 	@Test
 	void returningToFullRestoresConfiguredPreviewView() {
 		ziviDomeLive dome = new ziviDomeLive(new PApplet());
-		dome.setCurrentView(ziviDomeLive.ViewType.CUBEMAP);
+		dome.setCurrentView(ViewType.SKYBOX);
 
 		dome.setRenderMode(RenderMode.STANDARD);
-		assertEquals(ziviDomeLive.ViewType.CUBEMAP, dome.getCurrentView());
+		assertEquals(ViewType.SKYBOX, dome.getCurrentView());
 
 		dome.setRenderMode(RenderMode.FULL);
-		assertEquals(ziviDomeLive.ViewType.CUBEMAP, dome.getCurrentView());
+		assertEquals(ViewType.SKYBOX, dome.getCurrentView());
 	}
 
 	@Test
 	void floatingDomemasterRemainsAvailableInDedicatedStandardMode() {
 		RenderRequirementsPolicy.Requirements requirements = RenderRequirementsPolicy.forPreview(
-				RenderMode.STANDARD, ziviDomeLive.ViewType.CUBEMAP, true);
+				RenderMode.STANDARD, ViewType.SKYBOX, true);
 
 		assertTrue(requirements.needsStandard());
 		assertTrue(requirements.needsFisheye());

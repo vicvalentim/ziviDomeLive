@@ -8,33 +8,33 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class RenderRequirementsPolicyTest {
 
 	@Test
-	void previewRequirementsPreserveEveryLegacyView() {
+	void previewRequirementsPreserveEveryView() {
 		assertRequirements(
 				RenderRequirementsPolicy.forPreview(
-						RenderMode.FULL, ziviDomeLive.ViewType.FISHEYE_DOMEMASTER, false),
+						RenderMode.FULL, ViewType.DOMEMASTER, false),
 				true, true, false, false, true);
 		assertRequirements(
 				RenderRequirementsPolicy.forPreview(
-						RenderMode.FULL, ziviDomeLive.ViewType.EQUIRECTANGULAR, false),
+						RenderMode.FULL, ViewType.EQUIRECTANGULAR, false),
 				false, true, false, false, true);
 		assertRequirements(
 				RenderRequirementsPolicy.forPreview(
-						RenderMode.FULL, ziviDomeLive.ViewType.CUBEMAP, false),
+						RenderMode.FULL, ViewType.SKYBOX, false),
 				false, false, true, false, true);
 		assertRequirements(
 				RenderRequirementsPolicy.forPreview(
-						RenderMode.FULL, ziviDomeLive.ViewType.STANDARD, false),
+						RenderMode.FULL, ViewType.STANDARD, false),
 				false, false, false, true, false);
 	}
 
 	@Test
 	void floatingPreviewAddsFisheyeChainWithoutDroppingSelectedView() {
 		RenderRequirementsPolicy.Requirements standard = RenderRequirementsPolicy.forPreview(
-				RenderMode.FULL, ziviDomeLive.ViewType.STANDARD, true);
+				RenderMode.FULL, ViewType.STANDARD, true);
 		assertRequirements(standard, true, true, false, true, true);
 
 		RenderRequirementsPolicy.Requirements cubemap = RenderRequirementsPolicy.forPreview(
-				RenderMode.FULL, ziviDomeLive.ViewType.CUBEMAP, true);
+				RenderMode.FULL, ViewType.SKYBOX, true);
 		assertRequirements(cubemap, true, true, true, false, true);
 	}
 
