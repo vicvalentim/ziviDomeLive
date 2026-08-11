@@ -71,13 +71,9 @@ public class SceneManager {
 			return;
 		}
 
-		Scene leaving = (currentSceneIndex >= 0 && currentSceneIndex < scenes.size())
-				? scenes.get(currentSceneIndex)
-				: null;
+		int previousIndex = currentSceneIndex;
 		currentSceneIndex = index;
-		if (leaving != null) {
-			leaving.dispose();
-		}
+		disposeScene(previousIndex);
 		Scene activeScene = scenes.get(currentSceneIndex);
 		activeScene.setupScene();
 		LOGGER.info("Scene activated: " + activeScene.getName());
@@ -151,7 +147,6 @@ public class SceneManager {
 	 */
 	public Scene getCurrentScene() {
 		if (scenes.isEmpty() || currentSceneIndex == -1) {
-			LOGGER.severe("No current scene is set.");
 			return null;
 		}
 		return scenes.get(currentSceneIndex);
@@ -199,11 +194,20 @@ public class SceneManager {
 	}
 
 	/**
-	 * Clears all registered scenes and resets the manager.
+	 * Disposes the active scene, clears all registrations, and resets the manager.
+	 *
+	 * <p>Inactive scenes have already been disposed when they were deactivated. Scenes that were
+	 * only registered and never activated have not entered their setup/dispose lifecycle.</p>
 	 */
 	public void clearScenes() {
+		disposeScene(currentSceneIndex);
+		detachScenes();
+		LOGGER.info("All scenes cleared. SceneManager reset.");
+	}
+
+	/** Resets registrations without disposing a scene transferred to another manager. */
+	void detachScenes() {
 		scenes.clear();
 		currentSceneIndex = -1;
-		LOGGER.info("All scenes cleared. SceneManager reset.");
 	}
 }

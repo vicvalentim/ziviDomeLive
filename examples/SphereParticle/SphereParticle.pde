@@ -32,9 +32,6 @@ void setup() {
   // Vincula o SceneManager à biblioteca zividomelive
   ziviDome.setSceneManager(sceneManager);
 
-  // Define a cena inicial na biblioteca
-  ziviDome.setScene(sceneManager.getCurrentScene());
-
   // Inicializa o ExecutorService para processamento de partículas
   int numThreads = Runtime.getRuntime().availableProcessors();
   println("Usando " + numThreads + " threads para processamento de partículas.");

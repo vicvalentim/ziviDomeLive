@@ -15,7 +15,10 @@ public interface Scene {
 	Logger LOGGER = LogManager.getLogger();
 
 	/**
-	 * Sets up the scene. This method is called once when the scene is initialized.
+	 * Sets up the scene when it becomes active.
+	 *
+	 * <p>A scene may be activated more than once. Each activation after a switch follows a
+	 * corresponding {@link #dispose()} call.</p>
 	 */
 	default void setupScene() {
 
@@ -62,8 +65,8 @@ public interface Scene {
     }
 
 	/**
-	 * Disposes resources used by the scene. This method is called when a scene is
-	 * switched or no longer needed. By default, it ensures common cleanup actions.
+	 * Disposes resources used by the scene. This method is called when an active scene is
+	 * switched, cleared, replaced, or released by the facade. By default, it logs the transition.
 	 * Override this method if a scene requires custom resource management.
 	 */
 	default void dispose() {
