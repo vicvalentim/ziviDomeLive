@@ -1,34 +1,45 @@
-// Implementation of Scene1 that uses the Scene interface
 class Scene1 implements Scene {
-  private zividomelive parent;
+  private final zividomelive dome;
+  private float rotation = 0f;
+  private int lastUpdateMillis;
 
-  Scene1(zividomelive parent) {
-    this.parent = parent;
+  Scene1(zividomelive dome) {
+    this.dome = dome;
   }
-
 
   public void setupScene() {
-    // Specific scene setup, if necessary
+    lastUpdateMillis = dome.getPApplet().millis();
   }
 
- 
+  public void update() {
+    int now = dome.getPApplet().millis();
+    float deltaSeconds = min((now - lastUpdateMillis) / 1000f, 0.1f);
+    rotation += max(0f, deltaSeconds) * 0.45f;
+    lastUpdateMillis = now;
+  }
+
   public void sceneRender(PGraphicsOpenGL pg) {
-    // Scene rendering logic
+    pg.background(8, 12, 24);
+    pg.ambientLight(70, 70, 80);
+    pg.directionalLight(255, 245, 220, -0.4f, 0.6f, -1f);
+    pg.noStroke();
+
+    pg.pushMatrix();
+    pg.rotateX(-0.35f);
+    pg.rotateY(rotation);
+    pg.fill(80, 190, 220);
+    pg.box(260);
+    pg.popMatrix();
   }
 
-  public void keyEvent(processing.event.KeyEvent event) {
-      if (event.getAction() == processing.event.KeyEvent.PRESS) { // Only handle key press events
-          char key = event.getKey();
-          println("Key pressed in Scene1: " + key);
-      }
+  public void keyEvent(KeyEvent event) {
+    if (event.getAction() == KeyEvent.PRESS
+        && (event.getKey() == 'r' || event.getKey() == 'R')) {
+      rotation = 0f;
+    }
   }
 
-  public void mouseEvent(MouseEvent event) {
-    
+  public String getName() {
+    return "Starter Scene";
   }
-
-  public void controlEvent(controlP5.ControlEvent theEvent) {
-      println("Control event in Scene1: " + theEvent.getName());
-  }
-  
 }

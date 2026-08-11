@@ -18,6 +18,7 @@ All notable changes to this project are documented in this file.
 - Hardened NDI around three bounded frame slots, latest-frame-wins backpressure, a dedicated non-OpenGL worker, packed RGBA progressive frames, and bounded shutdown.
 - Made Syphon and Spout initialization, publication, resize, failure reporting, shutdown, and explicit retry states observable without moving them off the GPU-native `PGraphicsOpenGL` path.
 - Pinned Processing-side dependency downloads to immutable assets with SHA-256 verification.
+- Reworked the bundled examples around frame-independent updates, direct single-scene registration, bounded particle state, explicit controls, and Processing runtime dependency imports.
 
 ### Fixed
 - Preserved domemaster Size% when render targets are recreated after an output-resolution change.

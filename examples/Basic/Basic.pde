@@ -1,32 +1,30 @@
 import com.victorvalentim.zividomelive.*;
+// Processing adds contributed libraries to the runtime classpath through imports.
 import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;
+import processing.event.MouseEvent;
+import processing.opengl.PGraphicsOpenGL;
 
-// Main instances
-zividomelive ziviDome;      // Instance of the zividomelive library
-SceneManager sceneManager;  // SceneManager to manage multiple scenes
+zividomelive ziviDome;
+SceneManager sceneManager;
 
 void settings() {
-  pixelDensity(1);  // Library default policy
-  size(1280, 720, P3D);  // Set the window size and P3D mode
+  size(1280, 720, P3D);
+  pixelDensity(1);
 }
 
 void setup() {
-  // Optional: enable verbose library logs for debugging.
-  zividomelive.enableDebugLogging();
+  surface.setTitle("ziviDomeLive - Basic");
+  // Uncomment while diagnosing a sketch: zividomelive.enableDebugLogging();
 
-  // Initialize the zividomelive library
   ziviDome = new zividomelive(this);
-  ziviDome.setup();  // Initial setup of the library
-  ziviDome.setRenderMode(RenderMode.FULL);  // Compatibility default; outputs may route independently
+  ziviDome.setup();
+  ziviDome.setRenderMode(RenderMode.FULL);
 
-  // Create and configure the SceneManager
   sceneManager = new SceneManager();
-  sceneManager.registerScene(new Scene1(ziviDome)); // Register Scene1
-  sceneManager.registerScene(new Scene2(ziviDome)); // Register Scene2
-
-  // Link the SceneManager to the library
+  sceneManager.registerScene(new Scene1(ziviDome));
+  sceneManager.registerScene(new Scene2(ziviDome));
   ziviDome.setSceneManager(sceneManager);
 }
 

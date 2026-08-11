@@ -1,5 +1,5 @@
 class ReferenceScene implements Scene {
-  final zividomelive dome;
+  private final zividomelive dome;
 
   ReferenceScene(zividomelive dome) {
     this.dome = dome;
@@ -30,7 +30,45 @@ class ReferenceScene implements Scene {
     pg.popMatrix();
   }
 
-  void drawAxes(PGraphicsOpenGL pg) {
+  public void keyEvent(KeyEvent event) {
+    if (event.getAction() != KeyEvent.PRESS) {
+      return;
+    }
+
+    char pressed = Character.toLowerCase(event.getKey());
+    switch (pressed) {
+      case '1': dome.setCurrentView(zividomelive.ViewType.FISHEYE_DOMEMASTER); break;
+      case '2': dome.setCurrentView(zividomelive.ViewType.EQUIRECTANGULAR); break;
+      case '3': dome.setCurrentView(zividomelive.ViewType.CUBEMAP); break;
+      case '4': dome.setCurrentView(zividomelive.ViewType.STANDARD); break;
+      case '[': dome.setFishSize(max(0f, dome.getFishSize() - 10f)); break;
+      case ']': dome.setFishSize(min(100f, dome.getFishSize() + 10f)); break;
+      case '-': dome.setFov(max(0f, dome.getFov() - 10f)); break;
+      case '=':
+      case '+': dome.setFov(min(360f, dome.getFov() + 10f)); break;
+      case 'p': dome.setPitch(dome.getPitch() + HALF_PI); break;
+      case 'y': dome.setYaw(dome.getYaw() + HALF_PI); break;
+      case 'r': dome.setRoll(dome.getRoll() + HALF_PI); break;
+      case 'f': dome.setShowPreview(!dome.isShowPreview()); break;
+      case '0': resetQualificationState(); break;
+      default: return;
+    }
+
+    printQualificationState();
+  }
+
+  private void printQualificationState() {
+    println(
+        "[CompatibilityLock] view=" + dome.getCurrentView()
+        + " fov=" + nf(dome.getFov(), 0, 1)
+        + " size=" + nf(dome.getFishSize(), 0, 1)
+        + " pitch=" + nf(degrees(dome.getPitch()), 0, 1)
+        + " yaw=" + nf(degrees(dome.getYaw()), 0, 1)
+        + " roll=" + nf(degrees(dome.getRoll()), 0, 1)
+        + " floatingPreview=" + dome.isShowPreview());
+  }
+
+  private void drawAxes(PGraphicsOpenGL pg) {
     pg.stroke(240, 60, 60);
     pg.line(-700, 0, 0, 700, 0, 0);
     pg.stroke(60, 220, 80);
@@ -39,7 +77,7 @@ class ReferenceScene implements Scene {
     pg.line(0, 0, -700, 0, 0, 700);
   }
 
-  void drawFaceMarker(PGraphicsOpenGL pg, String label, float x, float y, float z, int c, float size) {
+  private void drawFaceMarker(PGraphicsOpenGL pg, String label, float x, float y, float z, int c, float size) {
     pg.pushMatrix();
     pg.translate(x, y, z);
     pg.fill(c);
@@ -55,6 +93,6 @@ class ReferenceScene implements Scene {
 
   @Override
   public String getName() {
-    return "CompatibilityLockReferenceScene";
+    return "Compatibility Lock Reference";
   }
 }
