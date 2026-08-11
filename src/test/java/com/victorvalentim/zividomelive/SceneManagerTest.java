@@ -127,6 +127,8 @@ class SceneManagerTest {
 
         assertEquals(firstSetupBefore, first.setupCount,
                 "The previously active scene must not have setupScene() called on switch");
+        assertEquals(1, first.disposeCount,
+                "The previously active scene must be disposed exactly once on switch");
     }
 
     @Test
@@ -278,10 +280,13 @@ class SceneManagerTest {
 
     @Test
     void clearScenes_getCurrentSceneReturnsNull() {
-        manager.registerScene(new FakeScene("A"));
+        FakeScene scene = new FakeScene("A");
+        manager.registerScene(scene);
         manager.clearScenes();
 
         assertNull(manager.getCurrentScene());
+        assertEquals(1, scene.disposeCount,
+                "clearScenes() must dispose the active scene");
     }
 
     @Test
@@ -294,6 +299,21 @@ class SceneManagerTest {
 
         assertSame(fresh, manager.getCurrentScene());
         assertEquals(1, manager.getSceneCount());
+    }
+
+    @Test
+    void clearScenes_isIdempotentAndDoesNotRedisposeInactiveScenes() {
+        FakeScene first = new FakeScene("A");
+        FakeScene second = new FakeScene("B");
+        manager.registerScene(first);
+        manager.registerScene(second);
+        manager.nextScene();
+
+        manager.clearScenes();
+        manager.clearScenes();
+
+        assertEquals(1, first.disposeCount);
+        assertEquals(1, second.disposeCount);
     }
 
     // -----------------------------------------------------------------------
@@ -309,6 +329,7 @@ class SceneManagerTest {
 
         final String name;
         int setupCount = 0;
+        int disposeCount = 0;
 
         FakeScene(String name) {
             this.name = name;
@@ -322,6 +343,11 @@ class SceneManagerTest {
         @Override
         public void setupScene() {
             setupCount++;
+        }
+
+        @Override
+        public void dispose() {
+            disposeCount++;
         }
 
         @Override

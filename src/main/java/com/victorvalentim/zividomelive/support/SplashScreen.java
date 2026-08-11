@@ -4,11 +4,14 @@ import processing.core.PApplet;
 import processing.core.PConstants;
 import processing.opengl.PGraphicsOpenGL;
 
+import java.util.logging.Logger;
+
 /**
  * The SplashScreen class is responsible for rendering an animated splash screen with
  * a central rotating sphere, orbiting cubes, and a library title.
  */
 public class SplashScreen {
+    private static final Logger LOGGER = LogManager.getLogger();
 
     /**
      * A boolean flag to determine whether the splash screen should be shown.
@@ -40,8 +43,13 @@ public class SplashScreen {
         for (int i = 0; i < numCubes; i++) {
             speeds[i] = 0.0008f + p.random(-0.0002f, 0.0002f);
         }
-        backgroundLayer = (PGraphicsOpenGL) p.createGraphics(p.width, p.height, PConstants.P3D);
-        animationLayer = (PGraphicsOpenGL) p.createGraphics(p.width, p.height, PConstants.P3D);
+        try {
+            backgroundLayer = (PGraphicsOpenGL) p.createGraphics(p.width, p.height, PConstants.P3D);
+            animationLayer = (PGraphicsOpenGL) p.createGraphics(p.width, p.height, PConstants.P3D);
+        } catch (RuntimeException | LinkageError error) {
+            dispose();
+            throw error;
+        }
     }
 
     /**
@@ -199,5 +207,23 @@ public class SplashScreen {
         if (!fading) {
             fading = true;
         }
+    }
+
+    /** Releases the off-screen layers owned by the splash screen. */
+    public void dispose() {
+        backgroundLayer = disposeLayer("background", backgroundLayer);
+        animationLayer = disposeLayer("animation", animationLayer);
+        showSplash = false;
+    }
+
+    private PGraphicsOpenGL disposeLayer(String name, PGraphicsOpenGL layer) {
+        if (layer != null) {
+            try {
+                layer.dispose();
+            } catch (RuntimeException | LinkageError error) {
+                LOGGER.warning("Failed to dispose splash " + name + " layer: " + error.getMessage());
+            }
+        }
+        return null;
     }
 }

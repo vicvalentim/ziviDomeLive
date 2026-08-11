@@ -28,7 +28,6 @@ void setup() {
   sceneManager = new SceneManager();
   sceneManager.registerScene(new Scene1(ziviDome));
   ziviDome.setSceneManager(sceneManager);
-  ziviDome.setScene(sceneManager.getCurrentScene());
 }
 
 void draw() {

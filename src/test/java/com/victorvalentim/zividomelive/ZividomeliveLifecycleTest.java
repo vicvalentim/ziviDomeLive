@@ -2,12 +2,16 @@ package com.victorvalentim.zividomelive;
 
 import com.victorvalentim.zividomelive.manager.OutputManager;
 import com.victorvalentim.zividomelive.render.modes.FisheyeDomemaster;
+import com.victorvalentim.zividomelive.render.modes.StandardRenderer;
 import com.victorvalentim.zividomelive.support.ThreadManager;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
 import processing.opengl.PShader;
+import processing.opengl.PGraphicsOpenGL;
 
 import java.lang.reflect.Field;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -37,6 +41,32 @@ class ZividomeliveLifecycleTest {
 		zividomelive lib = new zividomelive(new PApplet());
 		lib.setup();
 		assertEquals(zividomelive.InitState.SETUP_COMPLETE, lib.getInitState());
+	}
+
+	@Test
+	void setupIsIdempotent() {
+		zividomelive lib = new zividomelive(new PApplet());
+		lib.setup();
+		OutputManager firstOutputManager = lib.getOutputManager();
+		Scene firstScene = lib.getSceneManager().getCurrentScene();
+
+		lib.setup();
+
+		assertSame(firstOutputManager, lib.getOutputManager());
+		assertSame(firstScene, lib.getSceneManager().getCurrentScene());
+		assertEquals(zividomelive.InitState.SETUP_COMPLETE, lib.getInitState());
+	}
+
+	@Test
+	void explicitSceneReplacesDefaultFallbackRegistration() {
+		zividomelive lib = new zividomelive(new PApplet());
+		lib.setup();
+		TrackingScene explicitScene = new TrackingScene("Explicit");
+
+		lib.setScene(explicitScene);
+
+		assertEquals(1, lib.getSceneManager().getSceneCount());
+		assertSame(explicitScene, lib.getSceneManager().getCurrentScene());
 	}
 
 	@Test
@@ -130,6 +160,8 @@ class ZividomeliveLifecycleTest {
 
 		assertFalse(ThreadManager.isShutdown(),
 				"The shared ThreadManager executor must stay alive across library instances");
+		assertFalse(lib.isInitialized());
+		assertEquals(zividomelive.InitState.NOT_INITIALIZED, lib.getInitState());
 	}
 
 	@Test
@@ -143,12 +175,105 @@ class ZividomeliveLifecycleTest {
 				"The shared ThreadManager executor must stay alive after disposing one library instance");
 	}
 
+	@Test
+	void sceneManagerIsTheAuthorityForSceneUpdates() throws Exception {
+		PApplet applet = new PApplet();
+		zividomelive lib = new zividomelive(applet);
+		SceneManager scenes = new SceneManager();
+		TrackingScene first = new TrackingScene("A");
+		TrackingScene second = new TrackingScene("B");
+		scenes.registerScene(first);
+		scenes.registerScene(second);
+		lib.setSceneManager(scenes);
+		StandardRenderer outputRenderer = new StandardRenderer(applet, 0, 0, first);
+		StandardRenderer previewRenderer = new StandardRenderer(applet, 0, 0, first);
+		setField(lib, "standardRenderer", outputRenderer);
+		setField(lib, "standardRendererPreview", previewRenderer);
+		setInitState(lib, zividomelive.InitState.MANAGERS_READY);
+
+		scenes.nextScene();
+		lib.pre();
+
+		assertEquals(0, first.updateCount);
+		assertEquals(1, second.updateCount,
+				"Facade must query SceneManager instead of a cached scene reference");
+		assertSame(second, readRendererScene(outputRenderer));
+		assertSame(second, readRendererScene(previewRenderer));
+	}
+
+	@Test
+	void replacingSceneManagerDisposesPreviouslyOwnedActiveScene() {
+		zividomelive lib = new zividomelive(new PApplet());
+		TrackingScene previous = new TrackingScene("Previous");
+		lib.setScene(previous);
+
+		SceneManager replacement = new SceneManager();
+		replacement.registerScene(new TrackingScene("Replacement"));
+		lib.setSceneManager(replacement);
+
+		assertEquals(1, previous.disposeCount);
+		assertSame(replacement, lib.getSceneManager());
+	}
+
+	@Test
+	void pauseBlocksSceneUpdatesUntilResume() throws Exception {
+		zividomelive lib = new zividomelive(new PApplet());
+		TrackingScene scene = new TrackingScene("Paused");
+		lib.setScene(scene);
+		setInitState(lib, zividomelive.InitState.MANAGERS_READY);
+
+		lib.pause();
+		lib.pre();
+		assertEquals(0, scene.updateCount);
+
+		lib.resume();
+		lib.pre();
+		assertEquals(1, scene.updateCount);
+	}
+
+	@Test
+	void disposeIsTerminalIdempotentAndDisposesActiveSceneOnce() {
+		TrackingApplet applet = new TrackingApplet();
+		zividomelive lib = new zividomelive(applet);
+		TrackingScene scene = new TrackingScene("Owned");
+		lib.setScene(scene);
+
+		lib.dispose();
+		lib.dispose();
+		lib.setup();
+
+		assertEquals(1, scene.disposeCount);
+		assertEquals(0, lib.getSceneManager().getSceneCount());
+		assertEquals(zividomelive.InitState.NOT_INITIALIZED, lib.getInitState());
+		assertFalse(lib.isInitialized());
+		assertFalse(applet.registeredMethods.isEmpty());
+		assertEquals(applet.registeredMethods, applet.unregisteredMethods);
+	}
+
 	private record OutputManagerState(boolean anyEnabled) {}
 
 	private static void setOutputManager(zividomelive lib, OutputManager outputManager) throws Exception {
 		Field field = zividomelive.class.getDeclaredField("outputManager");
 		field.setAccessible(true);
 		field.set(lib, outputManager);
+	}
+
+	private static void setInitState(zividomelive lib, zividomelive.InitState state) throws Exception {
+		Field field = zividomelive.class.getDeclaredField("initState");
+		field.setAccessible(true);
+		field.set(lib, state);
+	}
+
+	private static void setField(zividomelive lib, String fieldName, Object value) throws Exception {
+		Field field = zividomelive.class.getDeclaredField(fieldName);
+		field.setAccessible(true);
+		field.set(lib, value);
+	}
+
+	private static Scene readRendererScene(StandardRenderer renderer) throws Exception {
+		Field field = StandardRenderer.class.getDeclaredField("currentScene");
+		field.setAccessible(true);
+		return (Scene) field.get(renderer);
 	}
 
 	private OutputManagerState readOutputState(zividomelive lib) {
@@ -166,12 +291,49 @@ class ZividomeliveLifecycleTest {
 
 	private static class TrackingApplet extends StubApplet {
 		private boolean postUnregistered;
+		private final Set<String> registeredMethods = new LinkedHashSet<>();
+		private final Set<String> unregisteredMethods = new LinkedHashSet<>();
+
+		@Override
+		public void registerMethod(String methodName, Object target) {
+			registeredMethods.add(methodName);
+		}
 
 		@Override
 		public void unregisterMethod(String methodName, Object target) {
+			unregisteredMethods.add(methodName);
 			if ("post".equals(methodName)) {
 				postUnregistered = true;
 			}
+		}
+	}
+
+	private static class TrackingScene implements Scene {
+		private final String name;
+		private int updateCount;
+		private int disposeCount;
+
+		private TrackingScene(String name) {
+			this.name = name;
+		}
+
+		@Override
+		public void sceneRender(PGraphicsOpenGL graphics) {
+		}
+
+		@Override
+		public void update() {
+			updateCount++;
+		}
+
+		@Override
+		public void dispose() {
+			disposeCount++;
+		}
+
+		@Override
+		public String getName() {
+			return name;
 		}
 	}
 

@@ -4,6 +4,8 @@ import com.victorvalentim.zividomelive.zividomelive;
 import controlP5.*;
 import processing.core.*;
 import processing.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 import java.util.function.Consumer;
 
@@ -30,6 +32,7 @@ public class ControlManager {
     private DropdownList syphonViewDropdown;
     private Textlabel fpsLabel;
     private PApplet p;
+    private final List<NumberboxInput> numberboxInputs = new ArrayList<>();
 
     // Layout configuration
     // Layout configuration
@@ -374,6 +377,7 @@ public class ControlManager {
 
     void makeEditable(Numberbox n) {
         final NumberboxInput nin = new NumberboxInput(n, p);
+        numberboxInputs.add(nin);
         n.onClick(theEvent -> {
             nin.setActive(true);
             numberboxActive = true;
@@ -408,6 +412,14 @@ public class ControlManager {
      * Disposes of the ControlManager by releasing all resources and clearing the ControlP5 instance.
      */
     public void dispose() {
+        for (NumberboxInput input : numberboxInputs) {
+            try {
+                p.unregisterMethod("keyEvent", input);
+            } catch (RuntimeException ignored) {
+                // Continue releasing the remaining controls.
+            }
+        }
+        numberboxInputs.clear();
         cp5.removeListener(parentControlListener);
         cp5.dispose();
     }
