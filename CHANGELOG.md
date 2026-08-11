@@ -18,7 +18,7 @@ All notable changes to this project are documented in this file.
 - Hardened NDI around three bounded frame slots, latest-frame-wins backpressure, a dedicated non-OpenGL worker, packed RGBA progressive frames, and bounded shutdown.
 - Made Syphon and Spout initialization, publication, resize, failure reporting, shutdown, and explicit retry states observable without moving them off the GPU-native `PGraphicsOpenGL` path.
 - Pinned Processing-side dependency downloads to immutable assets with SHA-256 verification.
-- Turned `CompatibilityLock` into a GLSL 4.10 alignment/color calibration chart, refined `FulldomePBR`, expanded the example catalog, and documented Processing runtime dependency imports.
+- Replaced `CompatibilityLock` with the two-scene `CalibrationTool`, combining a GLSL 4.10 cube-face focus/color chart with Paul Bourke's unmodified 8192 x 4096 equirectangular test pattern on a complete sphere; also refined `FulldomePBR`, expanded the example catalog, and documented Processing runtime dependency imports.
 
 ### Fixed
 - Preserved domemaster Size% when render targets are recreated after an output-resolution change.

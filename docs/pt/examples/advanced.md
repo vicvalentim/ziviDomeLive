@@ -1,8 +1,8 @@
 # Exemplos Avançados
 
-## CompatibilityLock
+## CalibrationTool
 
-Chart de calibração estático renderizado nas seis direções do cubemap. Grades 12 x 12, molduras de safe area, círculos, miras, marcadores assimétricos de orientação, barras de cor em GLSL 4.10 e escalas de cinza com nove níveis permitem verificar identidade das faces, alinhamento, espelhamento, cor, luminância, rotações de 90 graus, FOV, Size% e roteamento de saída. Pressione `0` para restaurar o estado canônico; os controles aceitos imprimem seus valores no console.
+Ferramenta de qualificação com duas cenas. A Cena 1 fecha seis padrões GLSL 4.10, em coordenadas locais de cada face, ao redor do observador: grade 24 x 24, referências geométricas, linhas de foco com 1/2/4/8 pixels, pontos e estrelas com 1/2/3/4 pixels, degradês RGB/CMY, amostras sólidas, escala de cinza e níveis de clipping. A Cena 2 mapeia o padrão equiretangular v14 original e não modificado de Paul Bourke, com 8192 x 4096 pixels, numa esfera completa de 1800 unidades centrada em `(0, 0, 0)`, cujo polo norte é `+X`; `Espaço` alterna a rotação recomendada de 60 segundos, `,`/`.` avança um grau e `C` restaura a orientação. Use as setas Esquerda/Direita para trocar de cena.
 
 ## FulldomePBR
 

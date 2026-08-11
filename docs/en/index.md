@@ -39,6 +39,6 @@ The spherical topology above remains an internal 1.x implementation detail. It i
 
 ## Qualification
 
-The Java suite validates API, state, lifecycle, routing, math, metadata, and release contracts without requiring a GPU. Visual parity and native output interoperability require the [CompatibilityLock example](examples/advanced.md) on qualified hardware. No golden image is manufactured by the repository.
+The Java suite validates API, state, lifecycle, routing, math, metadata, and release contracts without requiring a GPU. Visual parity and native output interoperability require the [CalibrationTool example](examples/advanced.md) on qualified hardware. No golden image is manufactured by the repository.
 
 See the [known issues](known-issues.md) before deploying to production.
