@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## [1.5.0] - 2026-08-10
+## [1.5.0] - 2026-08-11
 
 ### Added
 - Public `RenderMode` API with `FULL`, `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR`, and `SKYBOX`; `FULL` remains the compatibility default.
@@ -12,6 +12,8 @@ All notable changes to this project are documented in this file.
 - NDI failed-frame telemetry alongside the existing captured, sent, and dropped counters.
 
 ### Changed
+- Hardened release packaging with project and third-party licenses, citation metadata, tag/version validation, least-privilege publication, and strict documentation builds.
+- Excluded local compile-only helper JARs from Processing packages and sketchbook deployment while retaining source and automated qualification evidence in the repository.
 - Centralized render-requirement resolution so preview, floating domemaster, and enabled outputs request only the passes they need.
 - Consolidated active-scene ownership in `SceneManager`, including deterministic setup, switching, disposal, pause/resume, and terminal shutdown behavior.
 - Organized ControlP5 controls into global, spherical, view, and output scopes while preserving widget order and callback ownership.

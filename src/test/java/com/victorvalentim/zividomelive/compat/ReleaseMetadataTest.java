@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ReleaseMetadataTest {
@@ -58,6 +59,39 @@ class ReleaseMetadataTest {
 		assertTrue(readme.contains("Platform Matrix"));
 		assertTrue(qualification.contains("GPU visual compatibility"));
 		assertTrue(qualification.contains("No golden images"));
+	}
+
+	@Test
+	void releasePackageAndWorkflowsKeepPublicationGates() throws IOException {
+		String build = read("build.gradle.kts");
+		String releaseWorkflow = read(".github/workflows/release.yml");
+		String websiteWorkflow = read(".github/workflows/deploy_website.yml");
+		String previewWorkflow = read(".github/workflows/pr_preview.yml");
+		String copilotInstructions = read(".github/copilot-instructions.md");
+		String documentationRequirements = read("requirements-docs.txt");
+
+		for (String requiredFile : new String[]{
+				"LICENSE", "CHANGELOG.md", "CITATION.cff", ".zenodo.json",
+				"THIRD_PARTY.md", "licenses/Apache-2.0.txt"}) {
+			assertTrue(build.contains("\"" + requiredFile + "\""), requiredFile);
+		}
+		assertTrue(build.contains("verifyReleaseTag"));
+		assertTrue(build.contains("src/main/libs/**"));
+		assertTrue(releaseWorkflow.contains("contents: write"));
+		assertFalse(releaseWorkflow.contains("write-all"));
+		assertTrue(releaseWorkflow.contains("verifyReleaseTag"));
+		assertTrue(releaseWorkflow.contains("RELEASE_TAG: ${{ github.ref_name }}"));
+		assertTrue(releaseWorkflow.contains("-PreleaseTag=\"$RELEASE_TAG\""));
+		assertTrue(releaseWorkflow.contains("github.ref_name"));
+		assertTrue(releaseWorkflow.contains("fail_on_unmatched_files: true"));
+		assertTrue(websiteWorkflow.contains("pip install -r requirements-docs.txt"));
+		assertTrue(websiteWorkflow.contains("mkdocs build --strict"));
+		assertTrue(previewWorkflow.contains("pip install -r requirements-docs.txt"));
+		assertTrue(previewWorkflow.contains("mkdocs build --strict"));
+		assertTrue(documentationRequirements.contains("mkdocs>=1.6.1,<2.0"));
+		assertTrue(documentationRequirements.contains("mkdocs-material>=9.7.7,<10.0"));
+		assertTrue(copilotInstructions.contains("examples/CalibrationTool/"));
+		assertFalse(copilotInstructions.contains("examples/CompatibilityLock/"));
 	}
 
 	private static Properties loadProperties(String relativePath) throws IOException {

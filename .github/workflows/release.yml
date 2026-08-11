@@ -7,10 +7,9 @@ on:
 
 jobs:
   release:
-    permissions: write-all
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
-    env:
-      TAG_NAME: ${{ github.event.inputs.tag }}
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -22,9 +21,12 @@ jobs:
           java-version: 17
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: 8.5
+        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+
+      - name: Verify release tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: ./gradlew verifyReleaseTag -PreleaseTag="$RELEASE_TAG"
 
       - name: Run automated qualification
         run: ./gradlew qualificationTests
@@ -47,6 +49,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
+          fail_on_unmatched_files: true
+          generate_release_notes: true
           files: |
             release/*.txt
             release/*.zip

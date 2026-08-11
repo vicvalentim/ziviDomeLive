@@ -50,6 +50,21 @@ group = "com.victorvalentim.zividomelive"
 // You can update these numbers as you release new versions of your library.
 version = "1.5.0"
 
+tasks.register("verifyReleaseTag") {
+    group = "verification"
+    description = "Checks that the requested Git tag matches the project version"
+
+    doLast {
+        val expectedTag = "v${project.version}"
+        val actualTag = providers.gradleProperty("releaseTag").orNull
+            ?: throw GradleException("Missing -PreleaseTag=<tag>; expected $expectedTag")
+        check(actualTag == expectedTag) {
+            "Release tag $actualTag does not match project version $expectedTag"
+        }
+        logger.lifecycle("Release tag verified: $actualTag")
+    }
+}
+
 // Centralized dependency versions for easier Maven sync/updates.
 val processingCoreVersion = "4.5.6"
 val devolayVersion = "2.2.0-vic.1"
@@ -355,10 +370,22 @@ tasks.register("buildReleaseArtifacts") {
         println("Copy additional artifacts...")
         copy {
             from(rootDir)
-            include("README.md", "readme/**", "library.properties", "examples/**", "src/**")
+            include(
+                "README.md",
+                "LICENSE",
+                "CHANGELOG.md",
+                "CITATION.cff",
+                ".zenodo.json",
+                "THIRD_PARTY.md",
+                "licenses/**",
+                "readme/**",
+                "library.properties",
+                "examples/**",
+                "src/**"
+            )
 
             into(releaseDirectory)
-            exclude("*.DS_Store", "**/networks/**", "src/test/**")
+            exclude("**/*.DS_Store", "**/networks/**", "src/test/**", "src/main/libs/**")
         }
 
         println("Copy repository library.txt...")
@@ -400,31 +427,80 @@ val verifyProcessingPackage = tasks.register("verifyProcessingPackage") {
     description = "Verifies release archives and prevents development tests from shipping"
 
     doLast {
+        val requiredPackageFiles = listOf(
+            "README.md",
+            "LICENSE",
+            "CHANGELOG.md",
+            "CITATION.cff",
+            ".zenodo.json",
+            "THIRD_PARTY.md",
+            "licenses/Apache-2.0.txt",
+            "library.properties",
+            "library/${libName}.jar",
+            "library/devolay-${devolayVersion}.jar"
+        )
+        val missingPackageFiles = requiredPackageFiles.filterNot {
+            file("$releaseDirectory/$it").isFile
+        }
+        check(missingPackageFiles.isEmpty()) {
+            "Processing release is missing required files: ${missingPackageFiles.joinToString()}"
+        }
+
         val forbiddenReleaseFiles = fileTree(releaseDirectory) {
-            include("src/test/**")
+            include("src/test/**", "src/main/libs/**", "**/.DS_Store")
         }.files
         check(forbiddenReleaseFiles.isEmpty()) {
-            "Processing release contains test sources: ${forbiddenReleaseFiles.joinToString()}"
+            "Processing release contains development-only files: ${forbiddenReleaseFiles.joinToString()}"
         }
 
         val zipFile = file("$releaseRoot/$libName.zip")
         val pdexFile = file("$releaseRoot/$libName.pdex")
+        val metadataFile = file("$releaseDirectory/library.properties")
+        val contributionMetadataFile = file("$releaseRoot/$libName.txt")
         check(zipFile.isFile) { "Missing release archive: $zipFile" }
         check(pdexFile.isFile) { "Missing Processing package: $pdexFile" }
+        check(contributionMetadataFile.isFile) {
+            "Missing Processing contribution metadata: $contributionMetadataFile"
+        }
+        check(Files.mismatch(metadataFile.toPath(), contributionMetadataFile.toPath()) == -1L) {
+            "$libName.txt must match the packaged library.properties"
+        }
+
+        val packagedMetadata = Properties().apply {
+            metadataFile.inputStream().use { load(it) }
+        }
+        check(packagedMetadata.getProperty("prettyVersion") == project.version.toString()) {
+            "Packaged prettyVersion does not match project version ${project.version}"
+        }
+        check(packagedMetadata.getProperty("version") == libraryProperties.getProperty("version")) {
+            "Packaged Processing release counter does not match release.properties"
+        }
 
         listOf(zipFile, pdexFile).forEach { archive ->
-            val forbiddenEntries = mutableListOf<String>()
+            val archiveEntries = mutableSetOf<String>()
             ZipFile(archive).use { zip ->
                 val entries = zip.entries()
                 while (entries.hasMoreElements()) {
-                    val name = entries.nextElement().name
-                    if (name == "$releaseName/src/test" || name.startsWith("$releaseName/src/test/")) {
-                        forbiddenEntries.add(name)
-                    }
+                    archiveEntries.add(entries.nextElement().name)
                 }
             }
+
+            val requiredEntries = requiredPackageFiles.map { "$releaseName/$it" }
+            val missingEntries = requiredEntries.filterNot(archiveEntries::contains)
+            check(missingEntries.isEmpty()) {
+                "${archive.name} is missing required entries: ${missingEntries.joinToString()}"
+            }
+
+            val forbiddenEntries = archiveEntries.filter { name ->
+                name == "$releaseName/src/test"
+                    || name.startsWith("$releaseName/src/test/")
+                    || name == "$releaseName/src/main/libs"
+                    || name.startsWith("$releaseName/src/main/libs/")
+                    || name.endsWith("/.DS_Store")
+                    || (name.endsWith(".jar") && !name.startsWith("$releaseName/library/"))
+            }
             check(forbiddenEntries.isEmpty()) {
-                "${archive.name} contains test sources: ${forbiddenEntries.joinToString()}"
+                "${archive.name} contains development-only entries: ${forbiddenEntries.joinToString()}"
             }
         }
 
@@ -432,7 +508,10 @@ val verifyProcessingPackage = tasks.register("verifyProcessingPackage") {
             "$libName.zip and $libName.pdex must be byte-identical"
         }
 
-        logger.lifecycle("Processing package verified: no test sources; ZIP and PDEX are byte-identical.")
+        logger.lifecycle(
+            "Processing package verified: metadata and legal files present; "
+                + "development-only files absent; ZIP and PDEX are byte-identical."
+        )
     }
 }
 
@@ -450,13 +529,21 @@ tasks.register("deployToProcessingSketchbook") {
         project.delete(file("$installDirectory/src/test"))
         copy {
             from(releaseDirectory)
-            include("library.properties",
+            include(
+                "README.md",
+                "LICENSE",
+                "CHANGELOG.md",
+                "CITATION.cff",
+                ".zenodo.json",
+                "THIRD_PARTY.md",
+                "licenses/**",
+                "library.properties",
                 "examples/**",
                 "library/**",
                 "reference/**",
                 "src/**"
             )
-            exclude("src/test/**")
+            exclude("src/test/**", "src/main/libs/**")
             into(installDirectory)
         }
     }
