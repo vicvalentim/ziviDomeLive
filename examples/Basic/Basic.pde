@@ -27,9 +27,6 @@ void setup() {
 
   // Link the SceneManager to the library
   ziviDome.setSceneManager(sceneManager);
-
-  // Set the initial scene in the zividomelive library
-  ziviDome.setScene(sceneManager.getCurrentScene());
 }
 
 void draw() {

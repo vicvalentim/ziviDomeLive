@@ -9,6 +9,8 @@ import processing.core.*;
 import processing.event.*;
 import processing.opengl.*;
 import controlP5.*;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.logging.Logger;
 
 /**
@@ -40,8 +42,9 @@ public class zividomelive implements PConstants {
 
 	private final PApplet p;
 	private InitState initState = InitState.NOT_INITIALIZED;
-	private boolean initialized = false;
-	private Scene currentScene;
+	private boolean paused;
+	private boolean disposed;
+	private final Set<String> registeredEventHandlers = new LinkedHashSet<>();
 
 	private float pitch = 0.0f, yaw = 0.0f, roll = 0.0f, fov = 210.0f, fishSize = 100.0f;
 	// Output resolution is dedicated to offscreen render targets used by external outputs.
@@ -81,12 +84,12 @@ public class zividomelive implements PConstants {
 	private final OrbitCamera sceneCamera = new OrbitCamera();
 	private boolean sceneCameraInputEnabled = false;
 	private OutputManager outputManager;
-	private boolean outputsPaused;
 	private boolean resumeNdiOutput;
 	private boolean resumeSpoutOutput;
 	private boolean resumeSyphonOutput;
 	private SplashScreen splash;
 	private SceneManager sceneManager;
+	private Scene fallbackScene;
 
 	/**
 	 * Enum representing the different types of views available.
@@ -138,10 +141,10 @@ public class zividomelive implements PConstants {
 			throw new IllegalArgumentException("PApplet instance cannot be null.");
 		}
 		this.p = p;
+		this.sceneManager = new SceneManager();
 
 		welcome();
 		registerEventHandlers();
-		this.sceneManager = new SceneManager();
 	}
 
 	/**
@@ -192,18 +195,22 @@ public class zividomelive implements PConstants {
 	 * @param scene the Scene instance to be set
 	 */
 	public void setScene(Scene scene) {
+		if (disposed) {
+			LOGGER.warning("Cannot set a scene after disposal.");
+			return;
+		}
 		if (scene == null) {
 			LOGGER.warning("Cannot set a null scene.");
 			return;
 		}
+		if (fallbackScene != null
+				&& scene != fallbackScene
+				&& sceneManager.containsScene(fallbackScene)) {
+			sceneManager.clearScenes();
+			fallbackScene = null;
+		}
 		sceneManager.activateScene(scene);
-		currentScene = sceneManager.getCurrentScene();
-		if (standardRenderer != null && currentScene != null) {
-			standardRenderer.setCurrentScene(currentScene);
-		}
-		if (standardRendererPreview != null && currentScene != null) {
-			standardRendererPreview.setCurrentScene(currentScene);
-		}
+		syncCurrentSceneToRenderers();
 	}
 
 	/**
@@ -213,6 +220,14 @@ public class zividomelive implements PConstants {
 	 * @throws IllegalStateException if the PApplet instance is not properly configured
 	 */
 	public void setup() {
+		if (disposed) {
+			LOGGER.warning("Setup ignored: this ziviDomeLive instance has been disposed.");
+			return;
+		}
+		if (initState != InitState.NOT_INITIALIZED) {
+			LOGGER.info("Setup already completed; duplicate call ignored.");
+			return;
+		}
 		if (p == null) {
 			throw new IllegalStateException("PApplet instance is not properly configured.");
 		}
@@ -253,11 +268,11 @@ public class zividomelive implements PConstants {
 			LOGGER.severe("Error initializing or starting SplashScreen: " + e.getMessage());
 		}
 
-		// Load DefaultScene if no scene is set
-		if (currentScene == null) {
+		// Load DefaultScene through SceneManager when no user scene was selected before setup.
+		if (getCurrentScene() == null) {
 			try {
-				currentScene = new com.victorvalentim.zividomelive.scene.DefaultScene(p);
-				currentScene.setupScene();
+				fallbackScene = new com.victorvalentim.zividomelive.scene.DefaultScene(p);
+				sceneManager.registerScene(fallbackScene);
 				LOGGER.info("DefaultScene loaded successfully as the initial scene.");
 			} catch (Exception e) {
 				LOGGER.severe("Error initializing DefaultScene: " + e.getMessage());
@@ -308,6 +323,14 @@ public class zividomelive implements PConstants {
 	 * enable frame publication; the corresponding UI toggle controls only the enabled state.</p>
 	 */
 	public void initializeManagers() {
+		if (disposed) {
+			LOGGER.warning("Manager initialization ignored after disposal.");
+			return;
+		}
+		if (paused) {
+			LOGGER.info("Manager initialization deferred while paused.");
+			return;
+		}
 		if (initState != InitState.SETUP_COMPLETE) {
 			LOGGER.severe(
 					"Cannot initialize managers: Setup not complete. Current state: "
@@ -367,7 +390,6 @@ public class zividomelive implements PConstants {
 			LOGGER.info("ControlManager initialized.");
 
 			initState = InitState.MANAGERS_READY;
-			initialized = true;
 			LOGGER.info("Managers initialized successfully.");
 
 		} catch (Exception | LinkageError error) {
@@ -384,7 +406,6 @@ public class zividomelive implements PConstants {
 				LOGGER.warning("Manager initialization rollback failed: " + cleanupError.getMessage());
 			} finally {
 				initState = InitState.SETUP_COMPLETE;
-				initialized = false;
 			}
 		}
 	}
@@ -459,7 +480,7 @@ public class zividomelive implements PConstants {
 				p,
 				standardOutputDimensions[0],
 				standardOutputDimensions[1],
-				currentScene
+				getCurrentScene()
 		);
 		LOGGER.info("StandardRenderer (output) initialized at "
 				+ standardOutputDimensions[0] + "×" + standardOutputDimensions[1] + "px.");
@@ -669,7 +690,7 @@ public class zividomelive implements PConstants {
 
 		// Dynamic dimensions (0, 0) → renderer uses parent.width/parent.height each frame,
 		// preserving the window aspect ratio and handling window resize automatically.
-		standardRendererPreview = new StandardRenderer(p, 0, 0, currentScene);
+		standardRendererPreview = new StandardRenderer(p, 0, 0, getCurrentScene());
 
 		// Share camera so preview and output Standard views are always framing the same scene.
 		if (standardRenderer != null) {
@@ -698,7 +719,8 @@ public class zividomelive implements PConstants {
 
 	private void capturePreviewCubemap() {
 		if (previewCubemapRenderer != null) {
-			previewCubemapRenderer.captureCubemap(getPitch(), getYaw(), getRoll(), cameraManager, currentScene);
+			previewCubemapRenderer.captureCubemap(
+					getPitch(), getYaw(), getRoll(), cameraManager, getCurrentScene());
 		}
 	}
 
@@ -882,7 +904,7 @@ public class zividomelive implements PConstants {
 	 * Main draw method that handles rendering and updating the view.
 	 */
 	public void draw() {
-		if (initState != InitState.MANAGERS_READY) {
+		if (disposed || paused || initState != InitState.MANAGERS_READY) {
 			p.background(0, 0);
 			return;
 		}
@@ -898,7 +920,7 @@ public class zividomelive implements PConstants {
 			showControlPanel = false; // Oculta o painel enquanto a splash está ativa
 			controlPanelShownOnce = false; // Reseta a flag durante a splash
 		} else if (splash != null) {
-			splash = null; // Libera a splash após o fade-out
+			releaseSplash();
 
 			// Exibe o painel de controle apenas uma vez
 			if (!controlPanelShownOnce) {
@@ -929,7 +951,7 @@ public class zividomelive implements PConstants {
 	 * </ol>
 	 */
 	void renderContent() {
-		if (standardRendererPreview == null || standardRenderer == null || currentScene == null) {
+		if (standardRendererPreview == null || standardRenderer == null || getCurrentScene() == null) {
 			LOGGER.severe("Cannot render content: renderer or scene not initialized.");
 			return;
 		}
@@ -937,6 +959,7 @@ public class zividomelive implements PConstants {
 		clearBackground();
 		handleGraphicsReset();
 		ensurePreviewRenderers();
+		syncCurrentSceneToRenderers();
 
 		RenderRequirementsPolicy.Requirements preview = computePreviewRequirements();
 		RenderRequirementsPolicy.Requirements output = computeOutputRequirements();
@@ -992,7 +1015,8 @@ public class zividomelive implements PConstants {
 	 */
 	private void captureCubemap() {
 		if (cubemapRenderer != null) {
-			cubemapRenderer.captureCubemap(getPitch(), getYaw(), getRoll(), cameraManager, currentScene);
+			cubemapRenderer.captureCubemap(
+					getPitch(), getYaw(), getRoll(), cameraManager, getCurrentScene());
 		} else {
 			LOGGER.severe("Error: CubemapRenderer not initialized.");
 		}
@@ -1186,6 +1210,20 @@ public class zividomelive implements PConstants {
 		releasePreviewGraphicsResources();
 	}
 
+	/** Releases the splash-screen graphics layers, if they still exist. */
+	private void releaseSplash() {
+		if (splash == null) {
+			return;
+		}
+		try {
+			splash.dispose();
+		} catch (RuntimeException | LinkageError error) {
+			LOGGER.warning("SplashScreen disposal failed: " + error.getMessage());
+		} finally {
+			splash = null;
+		}
+	}
+
 	/**
 	 * Resets output graphics with a new output resolution.
 	 * Preview stays constrained to the Processing window size.
@@ -1213,13 +1251,22 @@ public class zividomelive implements PConstants {
 	 * @param newScene the new scene to be set as the current scene
 	 */
 	public void setCurrentScene(Scene newScene) {
-		this.currentScene = newScene;
-		this.setScene(newScene);
+		setScene(newScene);
+	}
+
+	/** Returns the scene selected by the authoritative SceneManager. */
+	private Scene getCurrentScene() {
+		return sceneManager != null ? sceneManager.getCurrentScene() : null;
+	}
+
+	/** Keeps stateful Standard renderers aligned with the authoritative SceneManager. */
+	private void syncCurrentSceneToRenderers() {
+		Scene activeScene = getCurrentScene();
 		if (standardRenderer != null) {
-			standardRenderer.setCurrentScene(newScene);
+			standardRenderer.setCurrentScene(activeScene);
 		}
 		if (standardRendererPreview != null) {
-			standardRendererPreview.setCurrentScene(newScene);
+			standardRendererPreview.setCurrentScene(activeScene);
 		}
 	}
 
@@ -1227,17 +1274,16 @@ public class zividomelive implements PConstants {
 	 * Registers event handlers with the Processing sketch and verifies success for each method.
 	 */
 	private void registerEventHandlers() {
+		String[] methodNames = {
+				"pre", "draw", "post", "mouseEvent", "keyEvent",
+				"stop", "resume", "pause", "dispose"
+		};
 		boolean allSuccess = true;
-
-		if (!registerMethod("pre")) allSuccess = false;
-		if (!registerMethod("draw")) allSuccess = false;
-		if (!registerMethod("post")) allSuccess = false;
-		if (!registerMethod("mouseEvent")) allSuccess = false;
-		if (!registerMethod("keyEvent")) allSuccess = false;
-		if (!registerMethod("stop")) allSuccess = false;
-		if (!registerMethod("resume")) allSuccess = false;
-		if (!registerMethod("pause")) allSuccess = false;
-		if (!registerMethod("dispose")) allSuccess = false;
+		for (String methodName : methodNames) {
+			if (!registerMethod(methodName)) {
+				allSuccess = false;
+			}
+		}
 
 		if (allSuccess) {
 			LOGGER.info("All event handlers registered successfully.");
@@ -1255,11 +1301,32 @@ public class zividomelive implements PConstants {
 	private boolean registerMethod(String methodName) {
 		try {
 			p.registerMethod(methodName, this);
+			registeredEventHandlers.add(methodName);
 			LOGGER.info("Successfully registered method: " + methodName);
 			return true;
 		} catch (Exception e) {
 			LOGGER.severe("Failed to register method: " + methodName + ". Error: " + e.getMessage());
 			return false;
+		}
+	}
+
+	/** Removes a registered Processing hook and forgets its ownership. */
+	private void unregisterMethod(String methodName) {
+		if (!registeredEventHandlers.contains(methodName)) {
+			return;
+		}
+		try {
+			p.unregisterMethod(methodName, this);
+			registeredEventHandlers.remove(methodName);
+		} catch (RuntimeException | LinkageError error) {
+			LOGGER.warning("Failed to unregister method " + methodName + ": " + error.getMessage());
+		}
+	}
+
+	/** Removes every Processing callback still owned by this instance. */
+	private void unregisterEventHandlers() {
+		for (String methodName : registeredEventHandlers.toArray(new String[0])) {
+			unregisterMethod(methodName);
 		}
 	}
 
@@ -1270,9 +1337,13 @@ public class zividomelive implements PConstants {
 	 * @param event the KeyEvent object containing details of the key event
 	 */
 	public void keyEvent(processing.event.KeyEvent event) {
+		if (disposed || paused) {
+			return;
+		}
 		if (controlManager == null) {
-			if (currentScene != null) {
-				currentScene.keyEvent(event);
+			Scene activeScene = getCurrentScene();
+			if (activeScene != null) {
+				activeScene.keyEvent(event);
 			}
 			return;
 		}
@@ -1298,11 +1369,10 @@ public class zividomelive implements PConstants {
 					case PConstants.LEFT:
 						if (sceneManager != null) {
 							sceneManager.previousScene();
-							currentScene = sceneManager.getCurrentScene();
-							if (currentScene != null) {
-								if (standardRenderer != null) standardRenderer.setCurrentScene(currentScene);
-								if (standardRendererPreview != null) standardRendererPreview.setCurrentScene(currentScene);
-								LOGGER.info("Switched to the previous scene: " + currentScene.getName());
+							syncCurrentSceneToRenderers();
+							Scene activeScene = getCurrentScene();
+							if (activeScene != null) {
+								LOGGER.info("Switched to the previous scene: " + activeScene.getName());
 							} else {
 								LOGGER.warning("No previous scene available.");
 							}
@@ -1312,11 +1382,10 @@ public class zividomelive implements PConstants {
 					case PConstants.RIGHT:
 						if (sceneManager != null) {
 							sceneManager.nextScene();
-							currentScene = sceneManager.getCurrentScene();
-							if (currentScene != null) {
-								if (standardRenderer != null) standardRenderer.setCurrentScene(currentScene);
-								if (standardRendererPreview != null) standardRendererPreview.setCurrentScene(currentScene);
-								LOGGER.info("Switched to the next scene: " + currentScene.getName());
+							syncCurrentSceneToRenderers();
+							Scene activeScene = getCurrentScene();
+							if (activeScene != null) {
+								LOGGER.info("Switched to the next scene: " + activeScene.getName());
 							} else {
 								LOGGER.warning("No next scene available.");
 							}
@@ -1330,8 +1399,9 @@ public class zividomelive implements PConstants {
 		}
 
 		// Encaminha o evento para a cena atual
-		if (currentScene != null) {
-			currentScene.keyEvent(event);
+		Scene activeScene = getCurrentScene();
+		if (activeScene != null) {
+			activeScene.keyEvent(event);
 		}
 	}
 
@@ -1343,12 +1413,16 @@ public class zividomelive implements PConstants {
 	 * @param event the MouseEvent object containing details of the mouse event
 	 */
 	public void mouseEvent(MouseEvent event) {
+		if (disposed || paused) {
+			return;
+		}
 		if (splash != null && event.getAction() == MouseEvent.PRESS) {
 			splash.mousePressed();
 		}
 
-		if (currentScene != null) {
-			currentScene.mouseEvent(event);
+		Scene activeScene = getCurrentScene();
+		if (activeScene != null) {
+			activeScene.mouseEvent(event);
 		}
 
 		// Forward to the native scene-space orbit camera when enabled.
@@ -1368,13 +1442,17 @@ public class zividomelive implements PConstants {
 	 * @param theEvent the ControlEvent object containing details of the control event
 	 */
 	public void controlEvent(ControlEvent theEvent) {
+		if (disposed || paused) {
+			return;
+		}
 		if (controlManager != null) {
 			controlManager.handleEvent(theEvent);
 		}
 
 		// Forward the event to the current scene, if one exists
-		if (currentScene != null) {
-			currentScene.controlEvent(theEvent);
+		Scene activeScene = getCurrentScene();
+		if (activeScene != null) {
+			activeScene.controlEvent(theEvent);
 		}
 	}
 
@@ -1573,7 +1651,10 @@ public class zividomelive implements PConstants {
 	 * @return true if output is enabled, false otherwise
 	 */
 	public boolean isEnableOutput() {
-		return outputManager.isNdiEnabled() || outputManager.isSpoutEnabled() || outputManager.isSyphonEnabled();
+		return outputManager != null
+				&& (outputManager.isNdiEnabled()
+				|| outputManager.isSpoutEnabled()
+				|| outputManager.isSyphonEnabled());
 	}
 
 	/**
@@ -1728,20 +1809,40 @@ public class zividomelive implements PConstants {
 
 	/**
 	 * Sets the SceneManager instance for managing multiple scenes.
-	 * Initializes the first scene as the current scene.
+	 *
+	 * <p>The incoming manager is already responsible for activating its first registered scene.
+	 * This facade adopts lifecycle ownership: replacing the manager or disposing the facade clears
+	 * its registrations and disposes its active scene. Configured Standard renderers are synchronized
+	 * immediately; all other render paths query the manager directly.</p>
 	 *
 	 * @param sceneManager the SceneManager instance to manage scenes
 	 */
 	public void setSceneManager(SceneManager sceneManager) {
+		if (disposed) {
+			LOGGER.warning("Cannot replace SceneManager after disposal.");
+			return;
+		}
 		if (sceneManager == null || sceneManager.getSceneCount() == 0) {
 			LOGGER.severe("SceneManager is null or contains no scenes.");
 			return;
 		}
-		this.sceneManager = sceneManager;
-		currentScene = sceneManager.getCurrentScene();
-		if (standardRenderer != null && currentScene != null) {
-			standardRenderer.setCurrentScene(currentScene);
+		if (this.sceneManager == sceneManager) {
+			syncCurrentSceneToRenderers();
+			return;
 		}
+
+		Scene previousScene = getCurrentScene();
+		Scene nextScene = sceneManager.getCurrentScene();
+		if (this.sceneManager != null) {
+			if (previousScene == nextScene) {
+				this.sceneManager.detachScenes();
+			} else {
+				this.sceneManager.clearScenes();
+			}
+		}
+		this.sceneManager = sceneManager;
+		fallbackScene = null;
+		syncCurrentSceneToRenderers();
 	}
 
 	/**
@@ -1757,15 +1858,18 @@ public class zividomelive implements PConstants {
 	 * Method called before each draw call.
 	 */
 	public void pre() {
-		// Garantir que os managers estejam inicializados antes de renderizar
+		if (disposed || paused) {
+			return;
+		}
 		if (initState != InitState.MANAGERS_READY) {
 			LOGGER.warning("Render skipped: System not ready. State: " + initState);
 			return;
 		}
 
-		// Atualizar qualquer estado global ou cenas antes do desenho
-		if (currentScene != null) {
-			currentScene.update(); // Atualiza o estado da cena atual
+		syncCurrentSceneToRenderers();
+		Scene activeScene = getCurrentScene();
+		if (activeScene != null) {
+			activeScene.update();
 		}
 
 		// Advance the native scene camera smoothing once per frame.
@@ -1776,11 +1880,11 @@ public class zividomelive implements PConstants {
 	 * Post-initialization method to set up managers after the initial setup.
 	 */
 	public void post() {
-		if (initState == InitState.SETUP_COMPLETE) {
+		if (!disposed && !paused && initState == InitState.SETUP_COMPLETE) {
 			try {
 				initializeManagers();
 				if (initState == InitState.MANAGERS_READY) {
-					p.unregisterMethod("post", this);
+					unregisterMethod("post");
 					LOGGER.info("Post-initialization completed successfully.");
 				} else {
 					LOGGER.warning("Post-initialization did not complete; the next post hook will retry.");
@@ -1792,23 +1896,23 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
-	 * Stops all processes and releases resources.
+	 * Stops the instance permanently and releases all owned resources.
+	 *
+	 * <p>This terminal operation delegates to {@link #dispose()} and is idempotent.</p>
 	 */
 	public void stop() {
-		LOGGER.info("Stopping all processes...");
-		clearPausedOutputState();
-		if (outputManager != null) {
-			outputManager.shutdownOutputs();
-		}
-		LOGGER.info("All processes stopped.");
+		dispose();
 	}
 
 	/**
 	 * Resumes processes after a pause.
 	 */
 	public void resume() {
+		if (disposed || !paused) {
+			return;
+		}
 		LOGGER.info("Resuming processes...");
-		if (outputManager != null && outputsPaused) {
+		if (outputManager != null) {
 			if (resumeNdiOutput && !outputManager.isNdiEnabled()) {
 				outputManager.toggleOutput("ndi");
 			}
@@ -1818,8 +1922,8 @@ public class zividomelive implements PConstants {
 			if (resumeSyphonOutput && !outputManager.isSyphonEnabled()) {
 				outputManager.toggleOutput("syphon");
 			}
-			clearPausedOutputState();
 		}
+		clearPausedOutputState();
 		LOGGER.info("Processes resumed.");
 	}
 
@@ -1827,19 +1931,22 @@ public class zividomelive implements PConstants {
 	 * Pauses all processes.
 	 */
 	public void pause() {
+		if (disposed || paused) {
+			return;
+		}
 		LOGGER.info("Pausing processes...");
-		if (outputManager != null && !outputsPaused) {
+		paused = true;
+		if (outputManager != null) {
 			resumeNdiOutput = outputManager.isNdiEnabled();
 			resumeSpoutOutput = outputManager.isSpoutEnabled();
 			resumeSyphonOutput = outputManager.isSyphonEnabled();
-			outputsPaused = true;
 			outputManager.stopOutput();
 		}
 		LOGGER.info("Processes paused.");
 	}
 
 	private void clearPausedOutputState() {
-		outputsPaused = false;
+		paused = false;
 		resumeNdiOutput = false;
 		resumeSpoutOutput = false;
 		resumeSyphonOutput = false;
@@ -1849,24 +1956,54 @@ public class zividomelive implements PConstants {
 	 * Releases resources and cleans up before the application exits.
 	 */
 	public void dispose() {
+		if (disposed) {
+			unregisterEventHandlers();
+			return;
+		}
+		disposed = true;
 		LOGGER.info("Disposing resources...");
 		clearPausedOutputState();
 
-		releaseGraphicsResources();
-
-		// Libera managers
 		if (outputManager != null) {
-			outputManager.shutdownOutputs();
+			try {
+				outputManager.shutdownOutputs();
+			} catch (Exception | LinkageError error) {
+				LOGGER.warning("OutputManager disposal failed: " + error.getMessage());
+			}
 			outputManager = null;
 		}
 		if (controlManager != null) {
-			controlManager.dispose();
+			try {
+				controlManager.dispose();
+			} catch (RuntimeException | LinkageError error) {
+				LOGGER.warning("ControlManager disposal failed: " + error.getMessage());
+			}
 			controlManager = null;
 		}
+		if (sceneManager != null) {
+			try {
+				sceneManager.clearScenes();
+			} catch (RuntimeException | LinkageError error) {
+				LOGGER.warning("SceneManager disposal failed: " + error.getMessage());
+			}
+		}
+		fallbackScene = null;
+		try {
+			releaseGraphicsResources();
+		} catch (RuntimeException | LinkageError error) {
+			LOGGER.warning("Renderer disposal failed: " + error.getMessage());
+		}
 		if (cameraManager != null) {
-			cameraManager.dispose();
+			try {
+				cameraManager.dispose();
+			} catch (RuntimeException | LinkageError error) {
+				LOGGER.warning("CameraManager disposal failed: " + error.getMessage());
+			}
 			cameraManager = null;
 		}
+		releaseSplash();
+		initState = InitState.NOT_INITIALIZED;
+		unregisterEventHandlers();
 		LOGGER.info("Resources disposed successfully.");
 	}
 }

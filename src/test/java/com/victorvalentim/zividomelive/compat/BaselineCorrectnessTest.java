@@ -26,6 +26,17 @@ class BaselineCorrectnessTest {
 	}
 
 	@Test
+	void examplesDoNotReselectTheSceneManagerCurrentScene() throws IOException {
+		try (Stream<Path> files = Files.walk(PROJECT_ROOT.resolve("examples"))) {
+			for (Path file : files.filter(path -> path.toString().endsWith(".pde")).toList()) {
+				String source = Files.readString(file);
+				assertFalse(source.contains("setScene(sceneManager.getCurrentScene())"),
+						() -> "SceneManager is already authoritative: " + PROJECT_ROOT.relativize(file));
+			}
+		}
+	}
+
+	@Test
 	void scenesDoNotOwnGraphicsBeginEndLifecycle() throws IOException {
 		try (Stream<Path> files = Files.walk(PROJECT_ROOT.resolve("examples"))) {
 			for (Path file : files.filter(path -> path.getFileName().toString().startsWith("Scene"))
@@ -62,5 +73,27 @@ class BaselineCorrectnessTest {
 		assertTrue(methodStart >= 0 && methodEnd > methodStart);
 		assertFalse(source.substring(methodStart, methodEnd).contains("toggleOutput("),
 				"Output toggles must be owned only by their onChange callbacks");
+	}
+
+	@Test
+	void controlManagerDisposalUnregistersNumberboxKeyHooks() throws IOException {
+		String source = Files.readString(PROJECT_ROOT.resolve(
+				"src/main/java/com/victorvalentim/zividomelive/manager/ControlManager.java"));
+		int methodStart = source.indexOf("public void dispose()");
+		int methodEnd = source.indexOf("public class NumberboxInput", methodStart);
+
+		assertTrue(methodStart >= 0 && methodEnd > methodStart);
+		assertTrue(source.substring(methodStart, methodEnd)
+				.contains("p.unregisterMethod(\"keyEvent\", input)"),
+				"ControlManager must release NumberboxInput Processing hooks");
+	}
+
+	@Test
+	void splashScreenDisposesOwnedGraphicsLayers() throws IOException {
+		String source = Files.readString(PROJECT_ROOT.resolve(
+				"src/main/java/com/victorvalentim/zividomelive/support/SplashScreen.java"));
+
+		assertTrue(source.contains("backgroundLayer = disposeLayer(\"background\", backgroundLayer)"));
+		assertTrue(source.contains("animationLayer = disposeLayer(\"animation\", animationLayer)"));
 	}
 }
