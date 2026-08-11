@@ -4,7 +4,14 @@
 
 
 import java.util.Properties
+import java.time.Instant
+import java.nio.file.Files
+import java.util.zip.ZipFile
+import groovy.json.JsonOutput
 import org.gradle.internal.os.OperatingSystem
+import org.gradle.api.tasks.testing.TestDescriptor
+import org.gradle.api.tasks.testing.TestListener
+import org.gradle.api.tasks.testing.TestResult
 
 plugins {
     id("java")
@@ -103,6 +110,7 @@ dependencies {
 
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     // Processing core is needed at test runtime for PApplet static math helpers
     // (sin, cos, sqrt, constrain) used by Quaternion and related classes.
     testImplementation(group = "org.processing", name = "core", version = processingCoreVersion)
@@ -115,6 +123,106 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+val qualificationResultsDirectory = layout.buildDirectory.dir("test-results/qualification")
+val qualificationReportDirectory = layout.buildDirectory.dir("reports/qualification")
+
+tasks.register<Test>("qualificationTests") {
+    group = "verification"
+    description = "Runs the complete automated qualification suite and writes auditable reports"
+
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    dependsOn(tasks.named("testClasses"))
+    mustRunAfter("clean")
+    useJUnitPlatform()
+
+    // Qualification runs are explicit evidence, so they must not reuse an old
+    // up-to-date result and should collect every failure in one pass.
+    outputs.upToDateWhen { false }
+    failFast = false
+    maxParallelForks = 1
+    systemProperty("java.awt.headless", "true")
+
+    reports {
+        junitXml.required.set(true)
+        junitXml.outputLocation.set(qualificationResultsDirectory)
+        html.required.set(true)
+        html.outputLocation.set(qualificationReportDirectory.map { it.dir("tests") })
+    }
+
+    testLogging {
+        events("failed", "skipped")
+        showStandardStreams = false
+    }
+
+    addTestListener(object : TestListener {
+        override fun beforeSuite(suite: TestDescriptor) = Unit
+        override fun beforeTest(testDescriptor: TestDescriptor) = Unit
+        override fun afterTest(testDescriptor: TestDescriptor, result: TestResult) = Unit
+
+        override fun afterSuite(suite: TestDescriptor, result: TestResult) {
+            if (suite.parent != null) {
+                return
+            }
+
+            val reportDirectory = qualificationReportDirectory.get().asFile
+            reportDirectory.mkdirs()
+
+            val status = if (result.failedTestCount == 0L) "passed" else "failed"
+            val summary = linkedMapOf(
+                "schemaVersion" to 1,
+                "project" to project.name,
+                "version" to project.version.toString(),
+                "status" to status,
+                "startedAt" to Instant.ofEpochMilli(result.startTime).toString(),
+                "completedAt" to Instant.ofEpochMilli(result.endTime).toString(),
+                "durationMs" to result.endTime - result.startTime,
+                "tests" to linkedMapOf(
+                    "total" to result.testCount,
+                    "passed" to result.successfulTestCount,
+                    "failed" to result.failedTestCount,
+                    "skipped" to result.skippedTestCount
+                ),
+                "environment" to linkedMapOf(
+                    "javaVersion" to System.getProperty("java.version"),
+                    "osName" to System.getProperty("os.name"),
+                    "osVersion" to System.getProperty("os.version"),
+                    "architecture" to System.getProperty("os.arch"),
+                    "ciRevision" to (System.getenv("GITHUB_SHA") ?: "local-worktree")
+                )
+            )
+
+            reportDirectory.resolve("summary.json").writeText(
+                JsonOutput.prettyPrint(JsonOutput.toJson(summary)) + System.lineSeparator()
+            )
+            reportDirectory.resolve("summary.md").writeText(
+                """# ziviDomeLive Automated Qualification
+
+- Status: ${status.uppercase()}
+- Version: ${project.version}
+- Tests: ${result.testCount} total, ${result.successfulTestCount} passed, ${result.failedTestCount} failed, ${result.skippedTestCount} skipped
+- Duration: ${result.endTime - result.startTime} ms
+- Completed: ${Instant.ofEpochMilli(result.endTime)}
+- Environment: ${System.getProperty("os.name")} ${System.getProperty("os.version")} (${System.getProperty("os.arch")}), Java ${System.getProperty("java.version")}
+- Revision: ${System.getenv("GITHUB_SHA") ?: "local-worktree"}
+
+Detailed HTML results: `tests/index.html`
+JUnit XML results: `../../test-results/qualification/`
+"""
+            )
+
+            logger.lifecycle(
+                "Qualification tests: {} total, {} passed, {} failed, {} skipped. Report: {}",
+                result.testCount,
+                result.successfulTestCount,
+                result.failedTestCount,
+                result.skippedTestCount,
+                reportDirectory.resolve("summary.md")
+            )
+        }
+    })
 }
 
 // Downloads pinned legacy libraries that are not available on Maven.
@@ -198,11 +306,12 @@ tasks.register<WriteProperties>("writeLibraryProperties") {
 
 // define the order of running, to ensure clean is run first
 tasks.build.get().mustRunAfter("clean")
-tasks.javadoc.get().mustRunAfter("build")
+tasks.assemble.get().mustRunAfter("clean")
+tasks.javadoc.get().mustRunAfter("assemble")
 
 tasks.register("buildReleaseArtifacts") {
     group = "processing"
-    dependsOn("clean","build","javadoc", "writeLibraryProperties")
+    dependsOn("clean", "assemble", "javadoc", "writeLibraryProperties")
     finalizedBy("packageRelease", "duplicateZipToPdex")
 
     doFirst {
@@ -249,7 +358,7 @@ tasks.register("buildReleaseArtifacts") {
             include("README.md", "readme/**", "library.properties", "examples/**", "src/**")
 
             into(releaseDirectory)
-            exclude("*.DS_Store", "**/networks/**")
+            exclude("*.DS_Store", "**/networks/**", "src/test/**")
         }
 
         println("Copy repository library.txt...")
@@ -286,22 +395,69 @@ tasks.register<Copy>("duplicateZipToPdex") {
 }
 tasks["duplicateZipToPdex"].mustRunAfter("packageRelease")
 
+val verifyProcessingPackage = tasks.register("verifyProcessingPackage") {
+    group = "verification"
+    description = "Verifies release archives and prevents development tests from shipping"
+
+    doLast {
+        val forbiddenReleaseFiles = fileTree(releaseDirectory) {
+            include("src/test/**")
+        }.files
+        check(forbiddenReleaseFiles.isEmpty()) {
+            "Processing release contains test sources: ${forbiddenReleaseFiles.joinToString()}"
+        }
+
+        val zipFile = file("$releaseRoot/$libName.zip")
+        val pdexFile = file("$releaseRoot/$libName.pdex")
+        check(zipFile.isFile) { "Missing release archive: $zipFile" }
+        check(pdexFile.isFile) { "Missing Processing package: $pdexFile" }
+
+        listOf(zipFile, pdexFile).forEach { archive ->
+            val forbiddenEntries = mutableListOf<String>()
+            ZipFile(archive).use { zip ->
+                val entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    val name = entries.nextElement().name
+                    if (name == "$releaseName/src/test" || name.startsWith("$releaseName/src/test/")) {
+                        forbiddenEntries.add(name)
+                    }
+                }
+            }
+            check(forbiddenEntries.isEmpty()) {
+                "${archive.name} contains test sources: ${forbiddenEntries.joinToString()}"
+            }
+        }
+
+        check(Files.mismatch(zipFile.toPath(), pdexFile.toPath()) == -1L) {
+            "$libName.zip and $libName.pdex must be byte-identical"
+        }
+
+        logger.lifecycle("Processing package verified: no test sources; ZIP and PDEX are byte-identical.")
+    }
+}
+
+tasks["duplicateZipToPdex"].finalizedBy(verifyProcessingPackage)
+
 tasks.register("deployToProcessingSketchbook") {
     group = "processing"
+    description = "Installs the release package in the local Processing sketchbook"
     dependsOn("buildReleaseArtifacts")
 
-    doFirst {
-        println("Copy to sketchbook  $sketchbookLocation ...")
-    }
     val installDirectory = "$sketchbookLocation/libraries/$libName"
-    copy {
-        from(releaseDirectory)
-        include("library.properties",
-            "examples/**",
-            "library/**",
-            "reference/**",
-            "src/**"
-        )
-        into(installDirectory)
+
+    doLast {
+        println("Copy to sketchbook  $sketchbookLocation ...")
+        project.delete(file("$installDirectory/src/test"))
+        copy {
+            from(releaseDirectory)
+            include("library.properties",
+                "examples/**",
+                "library/**",
+                "reference/**",
+                "src/**"
+            )
+            exclude("src/test/**")
+            into(installDirectory)
+        }
     }
 }

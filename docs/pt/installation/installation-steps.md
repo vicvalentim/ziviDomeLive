@@ -37,8 +37,8 @@ Para desenvolvimento:
 ```bash
 git clone https://github.com/vicvalentim/ziviDomeLive.git
 cd ziviDomeLive
-./gradlew clean test build
 ./gradlew buildReleaseArtifacts
+./gradlew qualificationTests
 ```
 
 O pacote instalável é gerado em `release/`.

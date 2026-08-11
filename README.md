@@ -199,12 +199,12 @@ See the [examples catalog](examples/README.md) for controls and lifecycle conven
 ## Build and Verification
 
 ```bash
-./gradlew clean test build
 ./gradlew buildReleaseArtifacts
+./gradlew qualificationTests
 mkdocs build
 ```
 
-Release output is written to `release/ziviDomeLive.zip`, `release/ziviDomeLive.pdex`, and `release/ziviDomeLive.txt`. GPU and native-output checks remain manual and must use real hardware; no golden images are fabricated by the automated suite.
+Release output is written to `release/ziviDomeLive.zip`, `release/ziviDomeLive.pdex`, and `release/ziviDomeLive.txt`. Automated qualification results are written under `build/reports/qualification/` and `build/test-results/qualification/`; test sources are never copied into the Processing package or sketchbook deployment. GPU and native-output checks remain manual and must use real hardware; no golden images are fabricated by the automated suite.
 
 ## Known Issues
 

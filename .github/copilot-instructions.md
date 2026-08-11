@@ -107,7 +107,8 @@ Do not reintroduce nested scene draw ownership, texture-bound `glReadPixels`, PB
 ## Validation
 
 ```bash
-./gradlew clean test build
+./gradlew clean qualificationTests
+./gradlew build -x test
 ./gradlew buildReleaseArtifacts
 mkdocs build --strict
 ```
