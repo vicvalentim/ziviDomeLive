@@ -1,13 +1,13 @@
 #version 410 core
-#define PROCESSING_COLOR_SHADER
+#define PROCESSING_TEXTURE_SHADER
 
-uniform float targetSize;
 uniform vec2 faceResolution;
 uniform float gridDivisions;
 uniform int faceIndex;
 uniform vec3 accentColor;
+uniform sampler2D annotationMap;
 
-in vec2 localPosition;
+in vec2 faceUv;
 
 out vec4 fragColor;
 
@@ -105,7 +105,7 @@ float clippingLevel(int index) {
 }
 
 void main() {
-  vec2 uv = localPosition / targetSize + 0.5;
+  vec2 uv = clamp(faceUv, 0.0, 1.0);
   float resolution = max(1.0, min(faceResolution.x, faceResolution.y));
   vec2 pixel = uv * resolution;
   float onePixel = 1.0 / resolution;
@@ -262,6 +262,9 @@ void main() {
   float edgeDistance = min(min(uv.x, uv.y), min(1.0 - uv.x, 1.0 - uv.y));
   float outerBorder = 1.0 - step(2.0 * onePixel, edgeDistance);
   result = mix(result, accentColor, outerBorder);
+
+  vec4 annotation = texture(annotationMap, uv);
+  result = mix(result, annotation.rgb, annotation.a);
 
   fragColor = vec4(result, 1.0);
 }
