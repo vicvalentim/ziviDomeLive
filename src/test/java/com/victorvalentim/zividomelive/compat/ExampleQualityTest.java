@@ -68,11 +68,12 @@ class ExampleQualityTest {
 		assertTrue(sketch.contains("setPitch(ziviDome.getPitch() + HALF_PI)"));
 		assertTrue(sketch.contains("setYaw(ziviDome.getYaw() + HALF_PI)"));
 		assertTrue(sketch.contains("setRoll(ziviDome.getRoll() + HALF_PI)"));
+		assertTrue(sketch.contains("setTargetFrameRate(60)"));
 		assertFalse(sketch.contains("HALF_PI / 2"));
 	}
 
 	@Test
-	void calibrationToolProvidesPrecisionGlslAndOriginalBourkeReference()
+	void calibrationToolProvidesPrecisionGlslAndOriginalBourkeReferences()
 			throws IOException, NoSuchAlgorithmException {
 		String cubeScene = read("CalibrationTool/CubeCalibrationScene.pde");
 		String sphereScene = read("CalibrationTool/BourkeSphereScene.pde");
@@ -109,19 +110,40 @@ class ExampleQualityTest {
 		assertTrue(sphereScene.contains("pg.rotateZ(patternRotation)"));
 		assertTrue(sphereScene.contains("pg.textureSampling(POINT)"));
 		assertTrue(sphereScene.contains("pg.hint(DISABLE_TEXTURE_MIPMAPS)"));
+		assertTrue(sphereScene.contains("dome.isEnableOutput()"));
+		assertTrue(sphereScene.contains("dome.getOutputResolution()"));
+		assertTrue(sphereScene.contains("min(dome.getPApplet().width, dome.getPApplet().height)"));
+		assertTrue(sphereScene.contains("dome.getTargetFrameRate()"));
+		assertTrue(sphereScene.contains("framesPerRevolution()"));
+		assertFalse(sphereScene.contains("deltaSeconds"));
 
-		Path imagePath = EXAMPLES.resolve(
-				"CalibrationTool/data/spherical8192.png");
-		BufferedImage image = ImageIO.read(imagePath.toFile());
-		assertEquals(8192, image.getWidth());
-		assertEquals(4096, image.getHeight());
-		String digest = HexFormat.of().formatHex(
-				MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(imagePath)));
-		assertEquals("e54f3eecf6de84218bd8e7b061e428c5d3c4ec70ed981b632b0d48e4f54d952f", digest);
+		for (BourkeImage expected : List.of(
+				new BourkeImage("spherical2400.png", 2400, 1200,
+						"96ab696ee684b851efbe274e78415b5bd50a2ba57330ed68fd2debb8ef7847af"),
+				new BourkeImage("spherical4096.png", 4096, 2048,
+						"eff4da1fac68089208b32cd72d736a44997290be467b6260546877e138098ca8"),
+				new BourkeImage("spherical4800.png", 4800, 2400,
+						"2f636316d4499a203baacb26c74b90f99553a21cf4036d368cd0e3ea87df20d9"),
+				new BourkeImage("spherical8192.png", 8192, 4096,
+						"e54f3eecf6de84218bd8e7b061e428c5d3c4ec70ed981b632b0d48e4f54d952f"))) {
+			Path imagePath = EXAMPLES.resolve("CalibrationTool/data/img").resolve(expected.name());
+			BufferedImage image = ImageIO.read(imagePath.toFile());
+			assertEquals(expected.width(), image.getWidth(), expected.name());
+			assertEquals(expected.height(), image.getHeight(), expected.name());
+			String digest = HexFormat.of().formatHex(
+					MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(imagePath)));
+			assertEquals(expected.sha256(), digest, expected.name());
+			assertTrue(thirdPartyNotice.contains(expected.name()));
+			assertTrue(thirdPartyNotice.contains(expected.sha256()));
+		}
+		assertFalse(Files.exists(EXAMPLES.resolve("CalibrationTool/data/spherical8192.png")));
 		assertTrue(thirdPartyNotice.contains("Fulldome test pattern by Paul Bourke."));
 		assertTrue(thirdPartyNotice.contains("not modified"));
 		assertTrue(thirdPartyNotice.contains("license notice remains included"));
 		assertFalse(Files.exists(EXAMPLES.resolve("CompatibilityLock")));
+	}
+
+	private record BourkeImage(String name, int width, int height, String sha256) {
 	}
 
 	private static String read(String relativePath) throws IOException {

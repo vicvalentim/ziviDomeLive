@@ -71,6 +71,7 @@ void resetCalibrationState() {
   ziviDome.setYaw(0f);
   ziviDome.setRoll(0f);
   ziviDome.setShowPreview(true);
+  ziviDome.setTargetFrameRate(60);
 }
 
 void printCalibrationState() {
@@ -83,5 +84,8 @@ void printCalibrationState() {
       + " pitch=" + nf(degrees(ziviDome.getPitch()), 0, 1)
       + " yaw=" + nf(degrees(ziviDome.getYaw()), 0, 1)
       + " roll=" + nf(degrees(ziviDome.getRoll()), 0, 1)
-      + " floatingPreview=" + ziviDome.isShowPreview());
+      + " floatingPreview=" + ziviDome.isShowPreview()
+      + " targetFps=" + ziviDome.getTargetFrameRate()
+      + " outputEnabled=" + ziviDome.isEnableOutput()
+      + " outputResolution=" + ziviDome.getOutputResolution());
 }
