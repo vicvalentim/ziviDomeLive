@@ -13,7 +13,7 @@ dome.setup();
 |---|---|
 | Cena | `setScene()`, `setSceneManager()`, `getSceneManager()` |
 | Renderização | `setRenderMode()`, `getRenderMode()`, `setCurrentView()` |
-| Calibração | `setFov()`, `setFishSize()`, `setPitch()`, `setYaw()`, `setRoll()` |
+| Calibração | `setFov()`, `setFishSize()`, `setPitch()`, `setYaw()`, `setRoll()`, `resetOrientation()` |
 | Preview | `setShowPreview()`, `setStandardOutputAspectMode()` |
 | Output | `getOutputManager()`, `resetGraphics()`, `getOutputResolution()` |
 | Câmera | `getSceneCamera()`, `setSceneCameraInputEnabled()` |

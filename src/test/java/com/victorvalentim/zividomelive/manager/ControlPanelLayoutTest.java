@@ -1,5 +1,6 @@
 package com.victorvalentim.zividomelive.manager;
 
+import com.victorvalentim.zividomelive.RenderMode;
 import com.victorvalentim.zividomelive.zividomelive;
 import org.junit.jupiter.api.Test;
 
@@ -7,7 +8,9 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ControlPanelLayoutTest {
 
@@ -74,6 +77,70 @@ class ControlPanelLayoutTest {
 				() -> assertEquals(0.0, controls.get(4).minimum()),
 				() -> assertEquals(100.0, controls.get(4).maximum()),
 				() -> assertEquals(100.0f, controls.get(4).defaultValue()));
+	}
+
+	@Test
+	void angularControlsAndOnlyAngularControlsAreCyclic() {
+		assertAll(
+				() -> assertTrue(ControlPanelLayout.isCyclicAngle("pitch")),
+				() -> assertTrue(ControlPanelLayout.isCyclicAngle("yaw")),
+				() -> assertTrue(ControlPanelLayout.isCyclicAngle("roll")),
+				() -> assertFalse(ControlPanelLayout.isCyclicAngle("fov")),
+				() -> assertFalse(ControlPanelLayout.isCyclicAngle("size")),
+				() -> assertEquals(-Math.PI + 0.1,
+						ControlPanelLayout.wrapCyclic(
+								(float) Math.PI + 0.1f,
+								(float) -Math.PI,
+								(float) Math.PI),
+						1.0e-5));
+	}
+
+	@Test
+	void renderModesExposeOnlyApplicableControls() {
+		ControlPanelLayout.ControlVisibility full =
+				ControlPanelLayout.visibilityFor(RenderMode.FULL, false);
+		assertAll(
+				() -> assertTrue(full.sphericalOrientation()),
+				() -> assertTrue(full.domemasterCalibration()),
+				() -> assertTrue(full.floatingDomemasterPreview()),
+				() -> assertTrue(full.previewViewSelection()),
+				() -> assertTrue(full.outputViewVisible(true)),
+				() -> assertFalse(full.outputViewVisible(false)));
+
+		ControlPanelLayout.ControlVisibility domemaster =
+				ControlPanelLayout.visibilityFor(RenderMode.DOMEMASTER, false);
+		assertAll(
+				() -> assertTrue(domemaster.sphericalOrientation()),
+				() -> assertTrue(domemaster.domemasterCalibration()),
+				() -> assertFalse(domemaster.floatingDomemasterPreview()),
+				() -> assertFalse(domemaster.previewViewSelection()),
+				() -> assertFalse(domemaster.outputViewVisible(true)));
+
+		for (RenderMode mode : List.of(RenderMode.EQUIRECTANGULAR, RenderMode.SKYBOX)) {
+			ControlPanelLayout.ControlVisibility visibility =
+					ControlPanelLayout.visibilityFor(mode, false);
+			assertTrue(visibility.sphericalOrientation(), mode.name());
+			assertFalse(visibility.domemasterCalibration(), mode.name());
+			assertTrue(visibility.resetControls(), mode.name());
+			assertFalse(visibility.previewViewSelection(), mode.name());
+			assertFalse(visibility.outputViewVisible(true), mode.name());
+		}
+
+		ControlPanelLayout.ControlVisibility standard =
+				ControlPanelLayout.visibilityFor(RenderMode.STANDARD, false);
+		ControlPanelLayout.ControlVisibility standardWithDomemaster =
+				ControlPanelLayout.visibilityFor(RenderMode.STANDARD, true);
+		assertAll(
+				() -> assertFalse(standard.sphericalOrientation()),
+				() -> assertFalse(standard.domemasterCalibration()),
+				() -> assertFalse(standard.resetControls()),
+				() -> assertTrue(standard.floatingDomemasterPreview()),
+				() -> assertTrue(standardWithDomemaster.sphericalOrientation()),
+				() -> assertTrue(standardWithDomemaster.domemasterCalibration()),
+				() -> assertTrue(standardWithDomemaster.resetControls()),
+				() -> assertFalse(standardWithDomemaster.previewViewSelection()));
+
+		assertEquals(full, ControlPanelLayout.visibilityFor(null, false));
 	}
 
 	@Test

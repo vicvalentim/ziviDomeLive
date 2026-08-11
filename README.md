@@ -53,6 +53,17 @@ ziviDome.setRenderMode(RenderMode.SKYBOX);
 
 The floating domemaster preview is an auxiliary service. It can request the spherical pipeline while the main mode is `STANDARD`.
 
+The built-in panel follows the active mode:
+
+| Mode | Pitch / Yaw / Roll | FOV / Size | Floating domemaster | View selectors |
+|---|---|---|---|---|
+| `FULL` | Shown | Shown | Shown | Preview and enabled outputs |
+| `STANDARD` | With floating domemaster | With floating domemaster | Shown | Hidden |
+| `DOMEMASTER` | Shown | Shown | Hidden | Hidden |
+| `EQUIRECTANGULAR` / `SKYBOX` | Shown | Hidden | Hidden | Hidden |
+
+Output resolution and publication toggles remain available in every mode. Pitch, yaw, and roll use cyclic `-PI..PI` sliders whose mouse-wheel motion wraps continuously. Their deltas are composed directly into one unit quaternion in event order, so spherical orientation never depends on an Euler reconstruction and does not acquire a gimbal-lock singularity.
+
 ## Installation
 
 Install the published package through Processing's Contribution Manager when available, or install a release artifact manually:

@@ -1,5 +1,6 @@
 package com.victorvalentim.zividomelive.manager;
 
+import com.victorvalentim.zividomelive.RenderMode;
 import com.victorvalentim.zividomelive.zividomelive;
 
 import java.util.List;
@@ -81,6 +82,41 @@ final class ControlPanelLayout {
         return SPHERICAL_CONTROLS;
     }
 
+    static boolean isCyclicAngle(String controlName) {
+        return "pitch".equals(controlName)
+                || "yaw".equals(controlName)
+                || "roll".equals(controlName);
+    }
+
+    static float wrapCyclic(float value, float minimum, float maximum) {
+        float span = maximum - minimum;
+        if (!Float.isFinite(value) || !Float.isFinite(span) || span <= 0.0f) {
+            return value;
+        }
+        float wrapped = (value - minimum) % span;
+        if (wrapped < 0.0f) {
+            wrapped += span;
+        }
+        return minimum + wrapped;
+    }
+
+    static ControlVisibility visibilityFor(RenderMode renderMode, boolean floatingDomemaster) {
+        RenderMode effectiveMode = renderMode == null ? RenderMode.FULL : renderMode;
+        return switch (effectiveMode) {
+            case FULL -> new ControlVisibility(true, true, true, true, true, true);
+            case STANDARD -> new ControlVisibility(
+                    floatingDomemaster,
+                    floatingDomemaster,
+                    floatingDomemaster,
+                    true,
+                    false,
+                    false);
+            case DOMEMASTER -> new ControlVisibility(true, true, true, false, false, false);
+            case EQUIRECTANGULAR, SKYBOX ->
+                    new ControlVisibility(true, false, true, false, false, false);
+        };
+    }
+
     static List<String> viewLabels() {
         return VIEW_LABELS;
     }
@@ -127,6 +163,30 @@ final class ControlPanelLayout {
     }
 
     record SphericalControlSpec(String name, double minimum, double maximum, float defaultValue) {
+    }
+
+    record ControlVisibility(
+            boolean sphericalOrientation,
+            boolean domemasterCalibration,
+            boolean resetControls,
+            boolean floatingDomemasterPreview,
+            boolean previewViewSelection,
+            boolean outputViewSelection) {
+
+        boolean sphericalControlVisible(String controlName) {
+            if (isCyclicAngle(controlName)) {
+                return sphericalOrientation;
+            }
+            return switch (controlName) {
+                case "fov", "size" -> domemasterCalibration;
+                default -> throw new IllegalArgumentException(
+                        "Unknown spherical control: " + controlName);
+            };
+        }
+
+        boolean outputViewVisible(boolean outputEnabled) {
+            return outputViewSelection && outputEnabled;
+        }
     }
 
     enum LocalOutput {

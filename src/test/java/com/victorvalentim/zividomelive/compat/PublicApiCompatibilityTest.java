@@ -6,6 +6,7 @@ import com.victorvalentim.zividomelive.RenderMode;
 import com.victorvalentim.zividomelive.manager.OutputManager;
 import com.victorvalentim.zividomelive.render.CubemapRenderer;
 import com.victorvalentim.zividomelive.render.Quaternion;
+import com.victorvalentim.zividomelive.render.SphericalOrientation;
 import com.victorvalentim.zividomelive.render.camera.CameraManager;
 import com.victorvalentim.zividomelive.render.camera.MouseControlledCamera;
 import com.victorvalentim.zividomelive.render.camera.OrbitCamera;
@@ -97,6 +98,7 @@ class PublicApiCompatibilityTest {
 				OutputManager.class,
 				CubemapRenderer.class,
 				Quaternion.class,
+				SphericalOrientation.class,
 				CameraManager.class,
 				MouseControlledCamera.class,
 				OrbitCamera.class,
@@ -129,6 +131,7 @@ class PublicApiCompatibilityTest {
 		assertMethod("setSceneManager", SceneManager.class);
 		assertMethod("getRenderMode");
 		assertMethod("setRenderMode", RenderMode.class);
+		assertMethod("resetOrientation");
 		assertMethod("keyEvent", KeyEvent.class);
 		assertMethod("mouseEvent", MouseEvent.class);
 		assertControlEventMethod();

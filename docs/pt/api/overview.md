@@ -10,6 +10,7 @@
 | `SceneManager` | Registro, ownership ativo, troca e descarte de cenas |
 | `OutputManager` | Roteamento e lifecycle de NDI, Syphon e Spout |
 | `OrbitCamera` | Câmera opcional em scene space compartilhada pelos targets |
+| `SphericalOrientation` | Acumulação cíclica de pitch/yaw/roll em um quaternion unitário |
 
 ## Enums Públicos
 
