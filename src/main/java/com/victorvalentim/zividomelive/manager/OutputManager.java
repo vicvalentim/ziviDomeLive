@@ -3,7 +3,7 @@ package com.victorvalentim.zividomelive.manager;
 import codeanticode.syphon.SyphonServer;
 import com.victorvalentim.zividomelive.RenderMode;
 import com.victorvalentim.zividomelive.support.LogManager;
-import com.victorvalentim.zividomelive.zividomelive;
+import com.victorvalentim.zividomelive.ziviDomeLive;
 import me.walkerknapp.devolay.DevolayFrameFormatType;
 import me.walkerknapp.devolay.DevolayFrameFourCCType;
 import me.walkerknapp.devolay.DevolaySender;
@@ -96,16 +96,16 @@ public class OutputManager implements PConstants {
 	static final DevolayFrameFormatType NDI_FRAME_FORMAT_TYPE = DevolayFrameFormatType.PROGRESSIVE;
 
 	private final Logger logger = LogManager.getLogger();
-	private final zividomelive parent;
+	private final ziviDomeLive parent;
 	private final boolean isMacOS;
 	private final boolean isWindows;
 	private final LocalTextureBackend localTextureBackend;
 	private final long ndiShutdownTimeoutMillis;
 
 	/* Independent output routing. Preview/viewer state is intentionally not stored here. */
-	private volatile zividomelive.ViewType ndiView = zividomelive.ViewType.FISHEYE_DOMEMASTER;
-	private volatile zividomelive.ViewType spoutView = zividomelive.ViewType.FISHEYE_DOMEMASTER;
-	private volatile zividomelive.ViewType syphonView = zividomelive.ViewType.FISHEYE_DOMEMASTER;
+	private volatile ziviDomeLive.ViewType ndiView = ziviDomeLive.ViewType.FISHEYE_DOMEMASTER;
+	private volatile ziviDomeLive.ViewType spoutView = ziviDomeLive.ViewType.FISHEYE_DOMEMASTER;
+	private volatile ziviDomeLive.ViewType syphonView = ziviDomeLive.ViewType.FISHEYE_DOMEMASTER;
 
 	/* Platform-local texture output. Only one backend can exist in a process. */
 	private Spout spoutSender;
@@ -152,12 +152,12 @@ public class OutputManager implements PConstants {
 	 * @param parent main ziviDomeLive application; must not be {@code null}
 	 * @throws IllegalArgumentException if {@code parent} is {@code null}
 	 */
-	public OutputManager(zividomelive parent) {
+	public OutputManager(ziviDomeLive parent) {
 		this(parent, DEFAULT_NDI_SHUTDOWN_TIMEOUT_MILLIS);
 	}
 
 	/** Package-private constructor for deterministic worker-shutdown tests. */
-	OutputManager(zividomelive parent, long ndiShutdownTimeoutMillis) {
+	OutputManager(ziviDomeLive parent, long ndiShutdownTimeoutMillis) {
 		if (parent == null) {
 			throw new IllegalArgumentException("parent cannot be null");
 		}
@@ -187,12 +187,12 @@ public class OutputManager implements PConstants {
 	 * Returns the independently configured view for an output.
 	 *
 	 * @param outputType output whose configured view should be returned
-	 * @return configured view, or {@link zividomelive.ViewType#FISHEYE_DOMEMASTER}
+	 * @return configured view, or {@link ziviDomeLive.ViewType#FISHEYE_DOMEMASTER}
 	 *         when {@code outputType} is {@code null}
 	 */
-	public zividomelive.ViewType getViewForOutput(OutputType outputType) {
+	public ziviDomeLive.ViewType getViewForOutput(OutputType outputType) {
 		if (outputType == null) {
-			return zividomelive.ViewType.FISHEYE_DOMEMASTER;
+			return ziviDomeLive.ViewType.FISHEYE_DOMEMASTER;
 		}
 
 		switch (outputType) {
@@ -203,7 +203,7 @@ public class OutputManager implements PConstants {
 			case SYPHON:
 				return syphonView;
 			default:
-				return zividomelive.ViewType.FISHEYE_DOMEMASTER;
+				return ziviDomeLive.ViewType.FISHEYE_DOMEMASTER;
 		}
 	}
 
@@ -215,7 +215,7 @@ public class OutputManager implements PConstants {
 	 * @param outputType output whose view should be changed
 	 * @param viewType view to route to the selected output
 	 */
-	public void setViewForOutput(OutputType outputType, zividomelive.ViewType viewType) {
+	public void setViewForOutput(OutputType outputType, ziviDomeLive.ViewType viewType) {
 		if (outputType == null || viewType == null) {
 			return;
 		}
@@ -252,8 +252,8 @@ public class OutputManager implements PConstants {
 	 * @param viewType view whose graphics target should be returned
 	 * @return current graphics target, or {@code null} when unavailable
 	 */
-	private PGraphicsOpenGL resolveGraphics(zividomelive.ViewType viewType) {
-		zividomelive.ViewType effectiveView = resolveOutputView(viewType);
+	private PGraphicsOpenGL resolveGraphics(ziviDomeLive.ViewType viewType) {
+		ziviDomeLive.ViewType effectiveView = resolveOutputView(viewType);
 		if (effectiveView == null) {
 			return null;
 		}
@@ -286,7 +286,7 @@ public class OutputManager implements PConstants {
 	}
 
 	/** Resolves a configured output route under the facade's global render mode. */
-	zividomelive.ViewType resolveOutputView(zividomelive.ViewType configuredView) {
+	ziviDomeLive.ViewType resolveOutputView(ziviDomeLive.ViewType configuredView) {
 		RenderMode renderMode = parent.getRenderMode();
 		if (renderMode == null || renderMode == RenderMode.FULL) {
 			return configuredView;
@@ -294,13 +294,13 @@ public class OutputManager implements PConstants {
 
 		switch (renderMode) {
 			case STANDARD:
-				return zividomelive.ViewType.STANDARD;
+				return ziviDomeLive.ViewType.STANDARD;
 			case DOMEMASTER:
-				return zividomelive.ViewType.FISHEYE_DOMEMASTER;
+				return ziviDomeLive.ViewType.FISHEYE_DOMEMASTER;
 			case EQUIRECTANGULAR:
-				return zividomelive.ViewType.EQUIRECTANGULAR;
+				return ziviDomeLive.ViewType.EQUIRECTANGULAR;
 			case SKYBOX:
-				return zividomelive.ViewType.CUBEMAP;
+				return ziviDomeLive.ViewType.CUBEMAP;
 			case FULL:
 			default:
 				return configuredView;
@@ -640,12 +640,12 @@ public class OutputManager implements PConstants {
 	 * Legacy method retained only for source compatibility.
 	 *
 	 * @param viewType ignored; configure each output with its dedicated setter
-	 * @deprecated use {@link #setNdiView(zividomelive.ViewType)},
-	 *             {@link #setSpoutView(zividomelive.ViewType)}, or
-	 *             {@link #setSyphonView(zividomelive.ViewType)}
+	 * @deprecated use {@link #setNdiView(ziviDomeLive.ViewType)},
+	 *             {@link #setSpoutView(ziviDomeLive.ViewType)}, or
+	 *             {@link #setSyphonView(ziviDomeLive.ViewType)}
 	 */
 	@Deprecated
-	public void setView(zividomelive.ViewType viewType) {
+	public void setView(ziviDomeLive.ViewType viewType) {
 		if (!legacySetViewWarningLogged) {
 			legacySetViewWarningLogged = true;
 			logger.warning(
@@ -1286,7 +1286,7 @@ public class OutputManager implements PConstants {
 	 *
 	 * @param view view to route to NDI
 	 */
-	public void setNdiView(zividomelive.ViewType view) {
+	public void setNdiView(ziviDomeLive.ViewType view) {
 		setViewForOutput(OutputType.NDI, view);
 	}
 
@@ -1295,7 +1295,7 @@ public class OutputManager implements PConstants {
 	 *
 	 * @param view view to route to Spout
 	 */
-	public void setSpoutView(zividomelive.ViewType view) {
+	public void setSpoutView(ziviDomeLive.ViewType view) {
 		setViewForOutput(OutputType.SPOUT, view);
 	}
 
@@ -1304,7 +1304,7 @@ public class OutputManager implements PConstants {
 	 *
 	 * @param view view to route to Syphon
 	 */
-	public void setSyphonView(zividomelive.ViewType view) {
+	public void setSyphonView(ziviDomeLive.ViewType view) {
 		setViewForOutput(OutputType.SYPHON, view);
 	}
 
@@ -1313,7 +1313,7 @@ public class OutputManager implements PConstants {
 	 *
 	 * @param view view to route to Syphon on macOS or Spout on Windows
 	 */
-	public void setLocalTextureView(zividomelive.ViewType view) {
+	public void setLocalTextureView(ziviDomeLive.ViewType view) {
 		if (view == null) {
 			return;
 		}
@@ -1337,7 +1337,7 @@ public class OutputManager implements PConstants {
 	 *
 	 * @return Spout view on Windows, Syphon view on macOS, or fisheye when unsupported
 	 */
-	public zividomelive.ViewType getLocalTextureView() {
+	public ziviDomeLive.ViewType getLocalTextureView() {
 		switch (localTextureBackend) {
 			case SPOUT:
 				return spoutView;
@@ -1345,7 +1345,7 @@ public class OutputManager implements PConstants {
 				return syphonView;
 			case NONE:
 			default:
-				return zividomelive.ViewType.FISHEYE_DOMEMASTER;
+				return ziviDomeLive.ViewType.FISHEYE_DOMEMASTER;
 		}
 	}
 
@@ -1416,7 +1416,7 @@ public class OutputManager implements PConstants {
 	 * @param view view whose external-output requirement should be checked
 	 * @return {@code true} when an enabled output effectively resolves to {@code view}
 	 */
-	public boolean requiresView(zividomelive.ViewType view) {
+	public boolean requiresView(ziviDomeLive.ViewType view) {
 		if (view == null) {
 			return false;
 		}

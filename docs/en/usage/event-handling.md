@@ -1,6 +1,6 @@
 # Event Handling
 
-The `zividomelive` constructor registers `keyEvent` and `mouseEvent` Processing hooks. The built-in ControlP5 panel registers one listener that forwards relevant events to the active scene.
+The `ziviDomeLive` constructor registers `keyEvent` and `mouseEvent` Processing hooks. The built-in ControlP5 panel registers one listener that forwards relevant events to the active scene.
 
 Implement callbacks on the scene:
 

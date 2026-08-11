@@ -1,6 +1,6 @@
 # Lifecycle de Runtime
 
-A fachada `zividomelive` controla registro de hooks Processing, inicialização de managers, update de cenas, renderização, encaminhamento de entrada, pause/resume e descarte terminal.
+A fachada `ziviDomeLive` controla registro de hooks Processing, inicialização de managers, update de cenas, renderização, encaminhamento de entrada, pause/resume e descarte terminal.
 
 ## Estados de Inicialização
 

@@ -1,11 +1,11 @@
 # Core Classes
 
-## zividomelive
+## ziviDomeLive
 
 Create one instance with the active `PApplet`, then call `setup()` once:
 
 ```java
-zividomelive dome = new zividomelive(this);
+ziviDomeLive dome = new ziviDomeLive(this);
 dome.setup();
 ```
 
@@ -59,7 +59,7 @@ The manager separates configured route, backend availability, native initializat
 OutputManager output = dome.getOutputManager();
 output.setViewForOutput(
     OutputManager.OutputType.NDI,
-    zividomelive.ViewType.EQUIRECTANGULAR);
+    ziviDomeLive.ViewType.EQUIRECTANGULAR);
 output.toggleOutput("ndi");
 ```
 

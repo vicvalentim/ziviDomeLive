@@ -3,7 +3,7 @@ import controlP5.*;
 import codeanticode.syphon.*;
 
 // Main instances
-zividomelive ziviDome;      // Instance of the zividomelive library
+ziviDomeLive ziviDome;      // Instance of the ziviDomeLive library
 SceneManager sceneManager;  // SceneManager to manage multiple scenes
 
 void settings() {
@@ -12,8 +12,8 @@ void settings() {
 }
 
 void setup() {
-  // Initialize the zividomelive library
-  ziviDome = new zividomelive(this);
+  // Initialize the ziviDomeLive library
+  ziviDome = new ziviDomeLive(this);
   ziviDome.setup();  // Initial setup of the library
 
   // Create and configure the SceneManager

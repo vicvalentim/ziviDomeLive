@@ -1,6 +1,6 @@
 // Scene1 implementation
 class Scene1 implements Scene {
-  private zividomelive parent;
+  private ziviDomeLive parent;
   private float rotationSpeed = 0.01f; // Speed of rotation for the animation
   private float radius = 700; // Distance of the pillars from the center
   private float time = 0; // Tracks elapsed time for animation
@@ -16,7 +16,7 @@ class Scene1 implements Scene {
       0xFFFF8000  // Orange
   };
 
-  Scene1(zividomelive parent) {
+  Scene1(ziviDomeLive parent) {
       this.parent = parent;
   }
 

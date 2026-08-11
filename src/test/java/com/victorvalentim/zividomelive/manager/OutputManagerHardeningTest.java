@@ -1,6 +1,6 @@
 package com.victorvalentim.zividomelive.manager;
 
-import com.victorvalentim.zividomelive.zividomelive;
+import com.victorvalentim.zividomelive.ziviDomeLive;
 import me.walkerknapp.devolay.DevolayFrameFormatType;
 import me.walkerknapp.devolay.DevolayFrameFourCCType;
 import org.junit.jupiter.api.Test;
@@ -41,7 +41,7 @@ class OutputManagerHardeningTest {
 
 	@Test
 	void defaultStatesReflectPlatformWithoutEnablingPublication() {
-		OutputManager manager = new OutputManager(new zividomelive(new PApplet()));
+		OutputManager manager = new OutputManager(new ziviDomeLive(new PApplet()));
 
 		assertEquals(OutputManager.OutputState.AVAILABLE,
 				manager.getOutputState(OutputManager.OutputType.NDI));
@@ -70,7 +70,7 @@ class OutputManagerHardeningTest {
 		}
 
 		assertFalse(manager.isActive());
-		assertFalse(manager.requiresView(zividomelive.ViewType.FISHEYE_DOMEMASTER));
+		assertFalse(manager.requiresView(ziviDomeLive.ViewType.FISHEYE_DOMEMASTER));
 	}
 
 	@Test
@@ -108,7 +108,7 @@ class OutputManagerHardeningTest {
 
 	@Test
 	void ndiPipelineKeepsThreeBoundedFrameSlots() throws Exception {
-		OutputManager manager = new OutputManager(new zividomelive(new PApplet()));
+		OutputManager manager = new OutputManager(new ziviDomeLive(new PApplet()));
 		Object[] slots = (Object[]) readField(manager, "ndiSlots");
 		BlockingQueue<?> freeSlots = (BlockingQueue<?>) readField(manager, "ndiFreeSlots");
 		BlockingQueue<?> readySlots = (BlockingQueue<?>) readField(manager, "ndiReadySlots");
@@ -121,7 +121,7 @@ class OutputManagerHardeningTest {
 
 	@Test
 	void ndiShutdownIsBoundedAndDefersCleanupUntilWorkerStops() throws Exception {
-		OutputManager manager = new OutputManager(new zividomelive(new PApplet()), 25);
+		OutputManager manager = new OutputManager(new ziviDomeLive(new PApplet()), 25);
 		CountDownLatch started = new CountDownLatch(1);
 		CountDownLatch release = new CountDownLatch(1);
 		Thread worker = new Thread(() -> {
@@ -169,7 +169,7 @@ class OutputManagerHardeningTest {
 
 	@Test
 	void constructorRejectsInvalidShutdownTimeout() {
-		zividomelive dome = new zividomelive(new PApplet());
+		ziviDomeLive dome = new ziviDomeLive(new PApplet());
 		assertThrows(IllegalArgumentException.class, () -> new OutputManager(dome, 0));
 	}
 

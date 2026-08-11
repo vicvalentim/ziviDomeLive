@@ -11,7 +11,7 @@ import java.time.temporal.ChronoField;
  * Scene1 — integra ConfigLoader → PhysicsEngine → Renderer com SimulatedClock.
  */
 class Scene1 implements Scene {
-  private zividomelive parent;
+  private ziviDomeLive parent;
   private PApplet pApplet;
   private List<Planet> planets;
   private Sun sun;
@@ -46,7 +46,7 @@ class Scene1 implements Scene {
   // ————————————————————————————————
   // Construtor de Scene1
   // ————————————————————————————————
-  Scene1(zividomelive parent, PApplet pApplet) {
+  Scene1(ziviDomeLive parent, PApplet pApplet) {
     this.parent  = parent;
     this.pApplet = pApplet;
 

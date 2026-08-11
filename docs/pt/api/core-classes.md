@@ -1,11 +1,11 @@
 # Classes Principais
 
-## zividomelive
+## ziviDomeLive
 
 Crie uma instância com o `PApplet` ativo e chame `setup()` uma vez:
 
 ```java
-zividomelive dome = new zividomelive(this);
+ziviDomeLive dome = new ziviDomeLive(this);
 dome.setup();
 ```
 
@@ -57,7 +57,7 @@ O manager separa rota configurada, disponibilidade, inicialização nativa, publ
 OutputManager output = dome.getOutputManager();
 output.setViewForOutput(
     OutputManager.OutputType.NDI,
-    zividomelive.ViewType.EQUIRECTANGULAR);
+    ziviDomeLive.ViewType.EQUIRECTANGULAR);
 output.toggleOutput("ndi");
 ```
 

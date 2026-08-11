@@ -4,7 +4,7 @@
 
 | Tipo | Responsabilidade |
 |---|---|
-| `zividomelive` | Integração Processing, lifecycle, renderização, calibração e acesso aos serviços |
+| `ziviDomeLive` | Integração Processing, lifecycle, renderização, calibração e acesso aos serviços |
 | `RenderMode` | Comportamento global de renderização |
 | `Scene` | Contrato de desenho e eventos do usuário |
 | `SceneManager` | Registro, ownership ativo, troca e descarte de cenas |
@@ -22,7 +22,7 @@ RenderMode.EQUIRECTANGULAR
 RenderMode.SKYBOX
 ```
 
-`zividomelive.ViewType` continua disponível para rotas de preview e output. Sua ordem é sensível à compatibilidade e não deve ser alterada.
+`ziviDomeLive.ViewType` continua disponível para rotas de preview e output. Sua ordem é sensível à compatibilidade e não deve ser alterada.
 
 | Índice de `ViewType` | Valor | Representação |
 |---:|---|---|
@@ -45,7 +45,7 @@ redimensiona a janela de preview do Processing.
 
 ## Compatibilidade
 
-- O nome público em minúsculas `zividomelive` permanece inalterado.
+- A fachada pública é `ziviDomeLive`; a classe em minúsculas da 1.x não é mantida na 2.0.
 - `RenderMode.FULL` preserva o modelo legado de roteamento.
 - `renderFisheyeDomemaster()`, `renderEquirectangular()`, `renderCubemap()` e `renderStandard()` continuam como shims de compatibilidade depreciados.
 - Getters de renderers permanecem públicos na 1.x, mas a topologia interna não é um contrato permanente.

@@ -29,7 +29,7 @@ final class RenderRequirementsPolicy {
 	 */
 	static Requirements forPreview(
 			RenderMode renderMode,
-			zividomelive.ViewType selectedView,
+			ziviDomeLive.ViewType selectedView,
 			boolean floatingFisheye) {
 		int requestedViews = maskFor(resolveView(renderMode, selectedView));
 		if (floatingFisheye) {
@@ -45,22 +45,22 @@ final class RenderRequirementsPolicy {
 	 * @param configuredView independently configured legacy view
 	 * @return configured view in FULL, otherwise the dedicated mode's representation
 	 */
-	static zividomelive.ViewType resolveView(
+	static ziviDomeLive.ViewType resolveView(
 			RenderMode renderMode,
-			zividomelive.ViewType configuredView) {
+			ziviDomeLive.ViewType configuredView) {
 		if (renderMode == null || renderMode == RenderMode.FULL) {
 			return configuredView;
 		}
 
 		switch (renderMode) {
 			case STANDARD:
-				return zividomelive.ViewType.STANDARD;
+				return ziviDomeLive.ViewType.STANDARD;
 			case DOMEMASTER:
-				return zividomelive.ViewType.FISHEYE_DOMEMASTER;
+				return ziviDomeLive.ViewType.FISHEYE_DOMEMASTER;
 			case EQUIRECTANGULAR:
-				return zividomelive.ViewType.EQUIRECTANGULAR;
+				return ziviDomeLive.ViewType.EQUIRECTANGULAR;
 			case SKYBOX:
-				return zividomelive.ViewType.CUBEMAP;
+				return ziviDomeLive.ViewType.CUBEMAP;
 			case FULL:
 			default:
 				return configuredView;
@@ -103,7 +103,7 @@ final class RenderRequirementsPolicy {
 		return REQUIREMENTS[requestedViews];
 	}
 
-	private static int maskFor(zividomelive.ViewType view) {
+	private static int maskFor(ziviDomeLive.ViewType view) {
 		if (view == null) {
 			return 0;
 		}

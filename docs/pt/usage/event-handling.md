@@ -1,6 +1,6 @@
 # Manipulação de Eventos
 
-O construtor de `zividomelive` registra hooks `keyEvent` e `mouseEvent` no Processing. O painel ControlP5 interno registra um listener que encaminha eventos relevantes à cena ativa.
+O construtor de `ziviDomeLive` registra hooks `keyEvent` e `mouseEvent` no Processing. O painel ControlP5 interno registra um listener que encaminha eventos relevantes à cena ativa.
 
 Implemente os callbacks na cena:
 

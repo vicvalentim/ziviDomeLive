@@ -1,6 +1,6 @@
 package com.victorvalentim.zividomelive.compat;
 
-import com.victorvalentim.zividomelive.zividomelive;
+import com.victorvalentim.zividomelive.ziviDomeLive;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
 
@@ -33,8 +33,8 @@ class PreviewResolutionPolicyTest {
 		applet.width = width;
 		applet.height = height;
 
-		zividomelive dome = new zividomelive(applet);
-		Method method = zividomelive.class.getDeclaredMethod("computePreviewResolution");
+		ziviDomeLive dome = new ziviDomeLive(applet);
+		Method method = ziviDomeLive.class.getDeclaredMethod("computePreviewResolution");
 		method.setAccessible(true);
 		return (int) method.invoke(dome);
 	}

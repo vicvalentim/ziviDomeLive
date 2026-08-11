@@ -1,7 +1,7 @@
 package com.victorvalentim.zividomelive.manager;
 
 import com.victorvalentim.zividomelive.RenderMode;
-import com.victorvalentim.zividomelive.zividomelive;
+import com.victorvalentim.zividomelive.ziviDomeLive;
 
 import java.util.List;
 import java.util.Locale;
@@ -121,11 +121,11 @@ final class ControlPanelLayout {
         return VIEW_LABELS;
     }
 
-    static zividomelive.ViewType viewForIndex(int index) {
-        return zividomelive.ViewType.values()[index];
+    static ziviDomeLive.ViewType viewForIndex(int index) {
+        return ziviDomeLive.ViewType.values()[index];
     }
 
-    static int indexForView(zividomelive.ViewType view) {
+    static int indexForView(ziviDomeLive.ViewType view) {
         return view == null ? 0 : view.ordinal();
     }
 

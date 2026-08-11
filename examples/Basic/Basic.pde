@@ -4,7 +4,7 @@ import codeanticode.syphon.*;
 import spout.*;
 
 // Main instances
-zividomelive ziviDome;      // Instance of the zividomelive library
+ziviDomeLive ziviDome;      // Instance of the ziviDomeLive library
 SceneManager sceneManager;  // SceneManager to manage multiple scenes
 
 void settings() {
@@ -14,10 +14,10 @@ void settings() {
 
 void setup() {
   // Optional: enable verbose library logs for debugging.
-  zividomelive.enableDebugLogging();
+  ziviDomeLive.enableDebugLogging();
 
-  // Initialize the zividomelive library
-  ziviDome = new zividomelive(this);
+  // Initialize the ziviDomeLive library
+  ziviDome = new ziviDomeLive(this);
   ziviDome.setup();  // Initial setup of the library
   ziviDome.setRenderMode(RenderMode.FULL);  // Compatibility default; outputs may route independently
 

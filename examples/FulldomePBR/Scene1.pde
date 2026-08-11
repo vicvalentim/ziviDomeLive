@@ -4,7 +4,7 @@
 // The library owns beginDraw()/endDraw(); this scene only draws content.
 // Camera navigation uses the native ziviDomeLive OrbitCamera service.
 class FulldomePbrScene implements Scene {
-  private final zividomelive parent;
+  private final ziviDomeLive parent;
   private final PApplet pApplet;
 
   private float time = 0f;
@@ -40,7 +40,7 @@ class FulldomePbrScene implements Scene {
   private final float envIntensity = 1.15f;
   private final PMatrix3D viewMatrix = new PMatrix3D();
 
-  FulldomePbrScene(zividomelive parent) {
+  FulldomePbrScene(ziviDomeLive parent) {
     this.parent = parent;
     this.pApplet = parent.getPApplet();
     // Configure the native scene camera.

@@ -1,6 +1,6 @@
 # Runtime Lifecycle
 
-The `zividomelive` facade owns Processing hook registration, manager initialization, scene updates, rendering, input forwarding, pause/resume, and terminal disposal.
+The `ziviDomeLive` facade owns Processing hook registration, manager initialization, scene updates, rendering, input forwarding, pause/resume, and terminal disposal.
 
 ## Initialization States
 

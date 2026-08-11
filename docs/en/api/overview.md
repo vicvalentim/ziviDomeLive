@@ -4,7 +4,7 @@
 
 | Type | Responsibility |
 |---|---|
-| `zividomelive` | Processing integration, lifecycle, rendering, calibration, and service access |
+| `ziviDomeLive` | Processing integration, lifecycle, rendering, calibration, and service access |
 | `RenderMode` | Global rendering behavior |
 | `Scene` | User drawing and event contract |
 | `SceneManager` | Scene registration, active ownership, switching, and disposal |
@@ -22,7 +22,7 @@ RenderMode.EQUIRECTANGULAR
 RenderMode.SKYBOX
 ```
 
-`zividomelive.ViewType` remains available for preview and per-output routes. Its order is compatibility-sensitive and must not be changed.
+`ziviDomeLive.ViewType` remains available for preview and per-output routes. Its order is compatibility-sensitive and must not be changed.
 
 | `ViewType` index | Value | Representation |
 |---:|---|---|
@@ -45,7 +45,7 @@ not resize the Processing preview window.
 
 ## Compatibility Notes
 
-- The lowercase public facade name `zividomelive` remains unchanged.
+- The public facade is `ziviDomeLive`; the lowercase 1.x class is not retained in 2.0.
 - `RenderMode.FULL` preserves the legacy routing model.
 - `renderFisheyeDomemaster()`, `renderEquirectangular()`, `renderCubemap()`, and `renderStandard()` remain deprecated compatibility shims.
 - Renderer getters remain public for 1.x compatibility, but renderer topology is not a permanent backend contract.

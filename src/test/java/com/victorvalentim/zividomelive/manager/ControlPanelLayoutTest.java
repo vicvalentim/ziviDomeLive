@@ -1,7 +1,7 @@
 package com.victorvalentim.zividomelive.manager;
 
 import com.victorvalentim.zividomelive.RenderMode;
-import com.victorvalentim.zividomelive.zividomelive;
+import com.victorvalentim.zividomelive.ziviDomeLive;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -148,9 +148,9 @@ class ControlPanelLayoutTest {
 		assertEquals(
 				List.of("Fisheye Domemaster", "Equirectangular", "Cubemap Skybox", "Standard"),
 				ControlPanelLayout.viewLabels());
-		for (int index = 0; index < zividomelive.ViewType.values().length; index++) {
-			assertEquals(zividomelive.ViewType.values()[index], ControlPanelLayout.viewForIndex(index));
-			assertEquals(index, ControlPanelLayout.indexForView(zividomelive.ViewType.values()[index]));
+		for (int index = 0; index < ziviDomeLive.ViewType.values().length; index++) {
+			assertEquals(ziviDomeLive.ViewType.values()[index], ControlPanelLayout.viewForIndex(index));
+			assertEquals(index, ControlPanelLayout.indexForView(ziviDomeLive.ViewType.values()[index]));
 		}
 		assertEquals(0, ControlPanelLayout.indexForView(null));
 	}
