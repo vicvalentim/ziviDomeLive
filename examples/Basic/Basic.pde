@@ -33,6 +33,5 @@ void setup() {
 }
 
 void draw() {
-  // Call the draw method of the library
-  ziviDome.draw();
+  // ziviDomeLive renders through its registered Processing draw hook.
 }

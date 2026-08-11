@@ -82,6 +82,7 @@ Make sure you have the latest versions of these libraries and place them in your
 > 
 ```java
 import com.victorvalentim.zividomelive.*;
+import processing.opengl.PGraphicsOpenGL;
 import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;
@@ -96,8 +97,8 @@ zividomelive ziviDome;  // Instance of the ziviDomeLive library
 Scene currentScene;     // The current scene implementing the Scene interface
 
 void settings() {
-  pixelDensity(1);          // Recommended default for stable cross-display behavior
   size(1280, 720, P3D);  // Set window size and 3D rendering mode
+  pixelDensity(1);       // Recommended default for stable cross-display behavior
 }
 
 void setup() {
@@ -113,7 +114,7 @@ void setup() {
 }
 
 void draw() {
-  ziviDome.draw();  // Handle rendering
+  // ziviDomeLive renders through its registered Processing draw hook.
 }
 ```
 
@@ -152,7 +153,7 @@ class Scene1 implements Scene {
   }
 
   @Override
-  public void sceneRender(PGraphics pg) {
+  public void sceneRender(PGraphicsOpenGL pg) {
     pg.background(0, 0, 80);  // Set the background color
     pg.pushMatrix();
     // Custom 3D rendering logic
@@ -160,29 +161,34 @@ class Scene1 implements Scene {
   }
 
   @Override
-  public void keyPressed(char key) {
-    println("Key pressed in Scene1: " + key);
+  public void keyEvent(processing.event.KeyEvent event) {
+    if (event.getAction() == processing.event.KeyEvent.PRESS) {
+      println("Key pressed in Scene1: " + event.getKey());
+    }
   }
 }
 ```
 ## Event Handling
 > [!NOTE]
-> **ziviDomeLive** allows you to forward Processing events, such as key presses and mouse events, to your scene or the library itself:
+> **ziviDomeLive** registers its Processing hooks automatically. Keyboard and mouse events are forwarded once to the active scene, and the built-in ControlP5 panel forwards its control events. Implement the matching `Scene` methods when needed; do not forward the same event again from the sketch:
 >
 ```java
-void keyPressed() {
-  ziviDome.keyPressed();
-  if (currentScene != null) {
-    currentScene.keyPressed(key);
+class Scene1 implements Scene {
+  public void sceneRender(PGraphicsOpenGL pg) {
+    // Draw scene content. The library owns beginDraw() and endDraw().
   }
-}
 
-void mouseEvent(processing.event.MouseEvent event) {
-  ziviDome.mouseEvent(event);
-}
+  public void keyEvent(processing.event.KeyEvent event) {
+    // Handle keyboard input.
+  }
 
-void controlEvent(controlP5.ControlEvent theEvent) {
-  ziviDome.controlEvent(theEvent);
+  public void mouseEvent(processing.event.MouseEvent event) {
+    // Handle mouse input.
+  }
+
+  public void controlEvent(controlP5.ControlEvent event) {
+    // Handle events from the built-in control panel.
+  }
 }
 ```
 ## Contributing Development
