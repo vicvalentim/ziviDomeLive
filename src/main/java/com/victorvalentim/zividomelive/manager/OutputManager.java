@@ -52,6 +52,25 @@ public class OutputManager implements PConstants {
 		SYPHON
 	}
 
+	/**
+	 * Observable lifecycle state of one output backend.
+	 *
+	 * <p>Availability, native initialization, publication, and render requirements are
+	 * deliberately separate concerns. {@link #STOPPING} is specific to bounded NDI shutdown.</p>
+	 */
+	public enum OutputState {
+		/** The backend is unsupported or its last initialization attempt failed. */
+		UNAVAILABLE,
+		/** The backend is eligible for initialization but owns no native resources. */
+		AVAILABLE,
+		/** Native resources exist while frame publication is disabled. */
+		INITIALIZED,
+		/** Native resources exist and frame publication is enabled. */
+		ENABLED,
+		/** NDI publication is disabled while its worker completes deferred cleanup. */
+		STOPPING
+	}
+
 	/** The single platform-local texture-sharing implementation available in this process. */
 	private enum LocalTextureBackend {
 		SYPHON,
@@ -65,10 +84,13 @@ public class OutputManager implements PConstants {
 
 	/** One slot may be sent while the remaining slots are free or queued. */
 	private static final int NDI_SLOT_COUNT = 3;
+	private static final long DEFAULT_NDI_SHUTDOWN_TIMEOUT_MILLIS = 1_000L;
+	private static final int NDI_BYTES_PER_PIXEL = 4;
 
 	/** Default metadata follows the facade's default Processing frame rate. */
 	static final int DEFAULT_NDI_FRAME_RATE_NUMERATOR = 60;
 	static final int DEFAULT_NDI_FRAME_RATE_DENOMINATOR = 1;
+	static final DevolayFrameFourCCType NDI_FRAME_FOUR_CC_TYPE = DevolayFrameFourCCType.RGBA;
 	static final DevolayFrameFormatType NDI_FRAME_FORMAT_TYPE = DevolayFrameFormatType.PROGRESSIVE;
 
 	private final Logger logger = LogManager.getLogger();
@@ -76,6 +98,7 @@ public class OutputManager implements PConstants {
 	private final boolean isMacOS;
 	private final boolean isWindows;
 	private final LocalTextureBackend localTextureBackend;
+	private final long ndiShutdownTimeoutMillis;
 
 	/* Independent output routing. Preview/viewer state is intentionally not stored here. */
 	private volatile zividomelive.ViewType ndiView = zividomelive.ViewType.FISHEYE_DOMEMASTER;
@@ -89,7 +112,7 @@ public class OutputManager implements PConstants {
 	private volatile boolean syphonEnabled;
 	private volatile boolean localTextureInitialized;
 	private volatile boolean localTextureUnavailable;
-	private volatile String localTextureUnavailableReason = "";
+	private volatile String localTextureFailureReason = "";
 	private int spoutWidth = -1;
 	private int spoutHeight = -1;
 
@@ -98,9 +121,11 @@ public class OutputManager implements PConstants {
 	private volatile DevolaySender ndiSender;
 	private volatile boolean ndiEnabled;
 	private volatile boolean ndiUnavailable;
-	private volatile String ndiUnavailableReason = "";
+	private volatile String ndiFailureReason = "";
 	private volatile boolean ndiWorkerRunning;
-	private Thread ndiWorkerThread;
+	private volatile boolean ndiShutdownPending;
+	private boolean ndiRestartRequested;
+	private volatile Thread ndiWorkerThread;
 
 	private final ArrayBlockingQueue<NdiFrameSlot> ndiFreeSlots =
 			new ArrayBlockingQueue<>(NDI_SLOT_COUNT);
@@ -114,6 +139,7 @@ public class OutputManager implements PConstants {
 	private final AtomicLong ndiCapturedFrames = new AtomicLong();
 	private final AtomicLong ndiSentFrames = new AtomicLong();
 	private final AtomicLong ndiDroppedFrames = new AtomicLong();
+	private final AtomicLong ndiFailedFrames = new AtomicLong();
 
 	/** Prevents repeated warnings from the deprecated single-view setter. */
 	private boolean legacySetViewWarningLogged;
@@ -125,11 +151,20 @@ public class OutputManager implements PConstants {
 	 * @throws IllegalArgumentException if {@code parent} is {@code null}
 	 */
 	public OutputManager(zividomelive parent) {
+		this(parent, DEFAULT_NDI_SHUTDOWN_TIMEOUT_MILLIS);
+	}
+
+	/** Package-private constructor for deterministic worker-shutdown tests. */
+	OutputManager(zividomelive parent, long ndiShutdownTimeoutMillis) {
 		if (parent == null) {
 			throw new IllegalArgumentException("parent cannot be null");
 		}
+		if (ndiShutdownTimeoutMillis <= 0) {
+			throw new IllegalArgumentException("NDI shutdown timeout must be positive");
+		}
 
 		this.parent = parent;
+		this.ndiShutdownTimeoutMillis = ndiShutdownTimeoutMillis;
 		this.ndiFrameRateNumerator = parent.getTargetFrameRate();
 		this.ndiFrameRateDenominator = DEFAULT_NDI_FRAME_RATE_DENOMINATOR;
 
@@ -317,6 +352,8 @@ public class OutputManager implements PConstants {
 
 			syphonServer = server;
 			localTextureInitialized = true;
+			localTextureUnavailable = false;
+			localTextureFailureReason = "";
 			logger.info("Syphon backend initialized and ready; frame publication remains disabled.");
 		} catch (Exception | LinkageError error) {
 			if (server != null) {
@@ -376,6 +413,8 @@ public class OutputManager implements PConstants {
 			spoutWidth = width;
 			spoutHeight = height;
 			localTextureInitialized = true;
+			localTextureUnavailable = false;
+			localTextureFailureReason = "";
 
 			logger.info(
 					"Spout backend initialized at " + width + "x" + height
@@ -410,10 +449,20 @@ public class OutputManager implements PConstants {
 	private void markLocalTextureUnavailable(String backendName, Throwable error) {
 		localTextureInitialized = false;
 		localTextureUnavailable = true;
-		localTextureUnavailableReason = rootCauseMessage(error);
+		localTextureFailureReason = rootCauseMessage(error);
 		logger.warning(
-				backendName + " backend initialization failed: " + localTextureUnavailableReason
+				backendName + " backend initialization failed: " + localTextureFailureReason
 		);
+	}
+
+	/** Clears a failed local initialization only in response to an explicit publication toggle. */
+	private void prepareLocalTextureRetry() {
+		if (!localTextureUnavailable) {
+			return;
+		}
+		logger.info("Retrying " + getLocalTextureBackendName() + " backend initialization.");
+		localTextureUnavailable = false;
+		localTextureFailureReason = "";
 	}
 
 	/**
@@ -421,48 +470,64 @@ public class OutputManager implements PConstants {
 	 */
 	private void initNDI() {
 		synchronized (ndiLifecycleLock) {
-			if (ndiEnabled) {
+			if (isNdiEnabled()) {
 				return;
 			}
 
-			if (ndiUnavailable) {
-				logger.warning("NDI initialization ignored: " + ndiUnavailableReason);
+			Thread worker = ndiWorkerThread;
+			if (worker != null && worker.isAlive()) {
+				ndiRestartRequested = true;
+				ndiUnavailable = false;
+				ndiFailureReason = "";
+				logger.info("NDI restart scheduled after the current worker finishes stopping.");
 				return;
 			}
 
-			if (ndiSender != null || ndiWorkerThread != null) {
-				shutdownNDILocked();
+			if (worker != null || ndiSender != null) {
+				ndiWorkerThread = null;
+				releaseNdiResourcesLocked();
 			}
 
-			try {
-				ndiSender = new DevolaySender(NDI_SENDER_NAME);
-				initializeNdiSlots();
+			initializeNdiLocked();
+		}
+	}
 
-				ndiWorkerRunning = true;
-				ndiEnabled = true;
-				ndiWorkerThread = new Thread(this::ndiWorkerLoop, "ziviDomeLive-NDI-Sender");
-				ndiWorkerThread.setDaemon(true);
-				ndiWorkerThread.start();
+	/** Creates one NDI activation cycle. Must be called while holding the lifecycle lock. */
+	private void initializeNdiLocked() {
+		ndiUnavailable = false;
+		ndiFailureReason = "";
+		ndiShutdownPending = false;
+		ndiRestartRequested = false;
 
-				logger.info("NDI output initialized with a dedicated sender worker.");
-			} catch (LinkageError | RuntimeException error) {
-				ndiEnabled = false;
-				ndiWorkerRunning = false;
-				closeNdiSlots();
-				closeNdiSender();
+		try {
+			ndiSender = new DevolaySender(NDI_SENDER_NAME);
+			initializeNdiSlots();
 
-				ndiUnavailable = true;
-				ndiUnavailableReason = rootCauseMessage(error);
+			Thread worker = new Thread(this::ndiWorkerLoop, "ziviDomeLive-NDI-Sender");
+			worker.setDaemon(true);
+			ndiWorkerThread = worker;
+			ndiWorkerRunning = true;
+			ndiEnabled = true;
+			worker.start();
 
-				logger.warning(
-						"NDI unavailable on "
-								+ System.getProperty("os.name", "unknown")
-								+ "/"
-								+ System.getProperty("os.arch", "unknown")
-								+ ": "
-								+ ndiUnavailableReason
-				);
-			}
+			logger.info("NDI output initialized with a dedicated sender worker.");
+		} catch (LinkageError | RuntimeException error) {
+			ndiEnabled = false;
+			ndiWorkerRunning = false;
+			ndiWorkerThread = null;
+			releaseNdiResourcesLocked();
+
+			ndiUnavailable = true;
+			ndiFailureReason = rootCauseMessage(error);
+
+			logger.warning(
+					"NDI unavailable on "
+							+ System.getProperty("os.name", "unknown")
+							+ "/"
+							+ System.getProperty("os.arch", "unknown")
+							+ ": "
+							+ ndiFailureReason
+			);
 		}
 	}
 
@@ -498,7 +563,7 @@ public class OutputManager implements PConstants {
 
 		switch (normalizedMethod) {
 			case "ndi":
-				if (ndiEnabled) {
+				if (isNdiEnabled()) {
 					shutdownNDI();
 				} else {
 					initNDI();
@@ -530,15 +595,16 @@ public class OutputManager implements PConstants {
 	/** Toggles Windows Spout publication without destroying or recreating its native sender. */
 	private void toggleSpoutPublication() {
 		if (!localTextureInitialized) {
+			prepareLocalTextureRetry();
 			initializeLocalTextureOutput();
 		}
 
 		if (spoutSender == null) {
 			logger.warning(
 					"Spout cannot be enabled: "
-							+ (localTextureUnavailableReason.isEmpty()
+							+ (localTextureFailureReason.isEmpty()
 							? "backend is not initialized"
-							: localTextureUnavailableReason)
+							: localTextureFailureReason)
 			);
 			return;
 		}
@@ -550,15 +616,16 @@ public class OutputManager implements PConstants {
 	/** Toggles macOS Syphon publication without destroying or recreating its native server. */
 	private void toggleSyphonPublication() {
 		if (!localTextureInitialized) {
+			prepareLocalTextureRetry();
 			initializeLocalTextureOutput();
 		}
 
 		if (syphonServer == null) {
 			logger.warning(
 					"Syphon cannot be enabled: "
-							+ (localTextureUnavailableReason.isEmpty()
+							+ (localTextureFailureReason.isEmpty()
 							? "backend is not initialized"
-							: localTextureUnavailableReason)
+							: localTextureFailureReason)
 			);
 			return;
 		}
@@ -634,11 +701,13 @@ public class OutputManager implements PConstants {
 			}
 
 			spoutSender.sendTexture(graphics);
+			localTextureFailureReason = "";
 		} catch (Exception | LinkageError error) {
 			spoutEnabled = false;
+			localTextureFailureReason = rootCauseMessage(error);
 			logger.warning(
 					"Spout frame publication failed and was disabled without destroying the backend: "
-							+ rootCauseMessage(error)
+							+ localTextureFailureReason
 			);
 		}
 	}
@@ -657,12 +726,14 @@ public class OutputManager implements PConstants {
 			PGraphicsOpenGL graphics = resolveGraphics(syphonView);
 			if (graphics != null) {
 				syphonServer.sendImage(graphics);
+				localTextureFailureReason = "";
 			}
 		} catch (Exception | LinkageError error) {
 			syphonEnabled = false;
+			localTextureFailureReason = rootCauseMessage(error);
 			logger.warning(
 					"Syphon frame publication failed and was disabled without destroying the backend: "
-							+ rootCauseMessage(error)
+							+ localTextureFailureReason
 			);
 		}
 	}
@@ -688,12 +759,14 @@ public class OutputManager implements PConstants {
 					spoutSender.updateSender(graphics.width, graphics.height);
 					spoutWidth = graphics.width;
 					spoutHeight = graphics.height;
+					localTextureFailureReason = "";
 				} catch (Exception | LinkageError error) {
 					spoutEnabled = false;
+					localTextureFailureReason = rootCauseMessage(error);
 					logger.warning(
 							"Spout resolution update failed; publication was disabled without "
 									+ "destroying the sender: "
-									+ rootCauseMessage(error)
+									+ localTextureFailureReason
 					);
 				}
 			}
@@ -731,6 +804,7 @@ public class OutputManager implements PConstants {
 			int pixelCount = Math.multiplyExact(width, height);
 
 			if (graphics.pixels == null || graphics.pixels.length < pixelCount) {
+				ndiFailedFrames.incrementAndGet();
 				logger.warning("NDI frame skipped: Processing pixel buffer is unavailable or incomplete.");
 				return;
 			}
@@ -746,8 +820,11 @@ public class OutputManager implements PConstants {
 			queued = offerLatestNdiFrame(slot);
 			if (queued) {
 				ndiCapturedFrames.incrementAndGet();
+			} else {
+				ndiDroppedFrames.incrementAndGet();
 			}
 		} catch (RuntimeException error) {
+			ndiFailedFrames.incrementAndGet();
 			logger.warning("NDI frame capture failed: " + rootCauseMessage(error));
 		} finally {
 			if (!queued) {
@@ -799,36 +876,80 @@ public class OutputManager implements PConstants {
 
 	/** Dedicated NDI conversion and sender loop. No OpenGL calls are made here. */
 	private void ndiWorkerLoop() {
-		while (ndiWorkerRunning || !ndiReadySlots.isEmpty()) {
-			NdiFrameSlot slot = null;
+		Thread worker = Thread.currentThread();
+		try {
+			while (ndiWorkerRunning || !ndiReadySlots.isEmpty()) {
+				NdiFrameSlot slot = null;
 
-			try {
-				slot = ndiReadySlots.poll(100, TimeUnit.MILLISECONDS);
-				if (slot == null) {
-					continue;
-				}
+				try {
+					slot = ndiReadySlots.poll(100, TimeUnit.MILLISECONDS);
+					if (slot == null) {
+						continue;
+					}
 
-				DevolaySender sender = ndiSender;
-				if (!ndiEnabled || sender == null) {
-					continue;
-				}
+					DevolaySender sender = ndiSender;
+					if (!ndiEnabled || sender == null) {
+						if (ndiUnavailable) {
+							ndiFailedFrames.incrementAndGet();
+						}
+						continue;
+					}
 
-				slot.prepareDevolayFrame();
-				sender.sendVideoFrame(slot.frame);
-				ndiSentFrames.incrementAndGet();
-			} catch (InterruptedException interrupted) {
-				if (!ndiWorkerRunning) {
-					Thread.currentThread().interrupt();
-					break;
+					slot.prepareDevolayFrame();
+					sender.sendVideoFrame(slot.frame);
+					ndiSentFrames.incrementAndGet();
+				} catch (InterruptedException interrupted) {
+					if (!ndiWorkerRunning) {
+						Thread.currentThread().interrupt();
+						break;
+					}
+				} catch (Exception | LinkageError error) {
+					ndiFailedFrames.incrementAndGet();
+					markNdiWorkerUnavailable(worker, error);
+				} finally {
+					if (slot != null) {
+						ndiFreeSlots.offer(slot);
+					}
 				}
-			} catch (Exception | LinkageError error) {
-				ndiEnabled = false;
-				ndiWorkerRunning = false;
-				logger.warning("NDI sender worker failed and was disabled: " + rootCauseMessage(error));
-			} finally {
-				if (slot != null) {
-					ndiFreeSlots.offer(slot);
-				}
+			}
+		} finally {
+			finishNdiWorker(worker);
+		}
+	}
+
+	/** Records a worker failure without closing native objects still owned by that worker. */
+	private void markNdiWorkerUnavailable(Thread worker, Throwable error) {
+		String failureReason = rootCauseMessage(error);
+		synchronized (ndiLifecycleLock) {
+			if (ndiWorkerThread != worker) {
+				return;
+			}
+			ndiEnabled = false;
+			ndiWorkerRunning = false;
+			ndiUnavailable = true;
+			ndiFailureReason = failureReason;
+		}
+		logger.warning("NDI sender worker failed and was disabled: " + failureReason);
+	}
+
+	/** Completes deferred cleanup after the worker can no longer touch native NDI resources. */
+	private void finishNdiWorker(Thread worker) {
+		synchronized (ndiLifecycleLock) {
+			if (ndiWorkerThread != worker) {
+				return;
+			}
+
+			ndiWorkerThread = null;
+			ndiEnabled = false;
+			ndiWorkerRunning = false;
+			ndiShutdownPending = false;
+
+			boolean restart = ndiRestartRequested;
+			ndiRestartRequested = false;
+			releaseNdiResourcesLocked();
+
+			if (restart) {
+				initializeNdiLocked();
 			}
 		}
 	}
@@ -864,35 +985,78 @@ public class OutputManager implements PConstants {
 
 	/** Stops the NDI worker before releasing its native sender and frame resources. */
 	private void shutdownNDI() {
+		Thread worker;
 		synchronized (ndiLifecycleLock) {
-			shutdownNDILocked();
-		}
-	}
+			ndiEnabled = false;
+			ndiWorkerRunning = false;
+			ndiRestartRequested = false;
 
-	/** Must be called while holding {@link #ndiLifecycleLock}. */
-	private void shutdownNDILocked() {
-		ndiEnabled = false;
-		ndiWorkerRunning = false;
+			worker = ndiWorkerThread;
+			if (worker == null) {
+				ndiShutdownPending = false;
+				releaseNdiResourcesLocked();
+				return;
+			}
 
-		Thread worker = ndiWorkerThread;
-		ndiWorkerThread = null;
+			if (!worker.isAlive()) {
+				ndiWorkerThread = null;
+				ndiShutdownPending = false;
+				releaseNdiResourcesLocked();
+				return;
+			}
 
-		if (worker != null && worker != Thread.currentThread()) {
 			worker.interrupt();
-			try {
-				worker.join();
-			} catch (InterruptedException interrupted) {
-				Thread.currentThread().interrupt();
-				logger.warning("Interrupted while waiting for the NDI sender worker to stop.");
+			if (worker == Thread.currentThread() || ndiShutdownPending) {
+				ndiShutdownPending = true;
+				return;
+			}
+			ndiShutdownPending = true;
+		}
+
+		boolean stopped = waitForWorker(worker, ndiShutdownTimeoutMillis);
+		if (!stopped) {
+			String reason = "NDI sender worker did not stop within "
+					+ ndiShutdownTimeoutMillis
+					+ " ms; native cleanup was deferred.";
+			synchronized (ndiLifecycleLock) {
+				if (ndiWorkerThread == worker && worker.isAlive()) {
+					ndiFailureReason = reason;
+				}
+			}
+			logger.warning(reason);
+			return;
+		}
+
+		synchronized (ndiLifecycleLock) {
+			if (ndiWorkerThread == worker) {
+				ndiWorkerThread = null;
+				ndiShutdownPending = false;
+				releaseNdiResourcesLocked();
 			}
 		}
+		logger.info("NDI output shut down.");
+	}
 
+	/** Waits a bounded interval for a worker without clearing an interrupt from the caller. */
+	static boolean waitForWorker(Thread worker, long timeoutMillis) {
+		if (worker == null || !worker.isAlive()) {
+			return true;
+		}
+		try {
+			worker.join(timeoutMillis);
+		} catch (InterruptedException interrupted) {
+			Thread.currentThread().interrupt();
+			return false;
+		}
+		return !worker.isAlive();
+	}
+
+	/** Releases NDI resources only after no worker can still use them. Lifecycle lock required. */
+	private void releaseNdiResourcesLocked() {
 		ndiReadySlots.clear();
 		ndiFreeSlots.clear();
 		closeNdiSlots();
 		closeNdiSender();
-
-		logger.info("NDI output shut down.");
 	}
 
 	/** Releases the platform-local backend during final application shutdown. */
@@ -918,7 +1082,8 @@ public class OutputManager implements PConstants {
 				sender.dispose();
 				logger.info("Spout backend released.");
 			} catch (Exception | LinkageError error) {
-				logger.warning("Failed to dispose the Spout sender: " + rootCauseMessage(error));
+				localTextureFailureReason = rootCauseMessage(error);
+				logger.warning("Failed to dispose the Spout sender: " + localTextureFailureReason);
 			}
 		}
 	}
@@ -933,7 +1098,8 @@ public class OutputManager implements PConstants {
 				server.stop();
 				logger.info("Syphon backend released.");
 			} catch (Exception | LinkageError error) {
-				logger.warning("Failed to stop the Syphon server: " + rootCauseMessage(error));
+				localTextureFailureReason = rootCauseMessage(error);
+				logger.warning("Failed to stop the Syphon server: " + localTextureFailureReason);
 			}
 		}
 	}
@@ -948,7 +1114,11 @@ public class OutputManager implements PConstants {
 				try {
 					slot.close();
 				} catch (RuntimeException | LinkageError error) {
-					logger.warning("Failed to close an NDI frame slot: " + rootCauseMessage(error));
+					String failureReason = rootCauseMessage(error);
+					if (ndiFailureReason.isEmpty()) {
+						ndiFailureReason = failureReason;
+					}
+					logger.warning("Failed to close an NDI frame slot: " + failureReason);
 				}
 			}
 		}
@@ -963,9 +1133,89 @@ public class OutputManager implements PConstants {
 			try {
 				sender.close();
 			} catch (RuntimeException | LinkageError error) {
-				logger.warning("Failed to close the NDI sender: " + rootCauseMessage(error));
+				String failureReason = rootCauseMessage(error);
+				if (ndiFailureReason.isEmpty()) {
+					ndiFailureReason = failureReason;
+				}
+				logger.warning("Failed to close the NDI sender: " + failureReason);
 			}
 		}
+	}
+
+	/**
+	 * Returns the lifecycle state of one output without treating it as a render requirement.
+	 *
+	 * @param outputType output to inspect
+	 * @return current lifecycle state; {@link OutputState#UNAVAILABLE} for {@code null}
+	 */
+	public OutputState getOutputState(OutputType outputType) {
+		if (outputType == null) {
+			return OutputState.UNAVAILABLE;
+		}
+
+		switch (outputType) {
+			case NDI:
+				return resolveOutputState(
+						true,
+						ndiUnavailable,
+						ndiSender != null || ndiWorkerThread != null,
+						isNdiEnabled(),
+						ndiShutdownPending && ndiWorkerThread != null);
+			case SPOUT:
+				return resolveOutputState(
+						isWindows,
+						localTextureUnavailable,
+						spoutSender != null,
+						isSpoutEnabled(),
+						false);
+			case SYPHON:
+				return resolveOutputState(
+						isMacOS,
+						localTextureUnavailable,
+						syphonServer != null,
+						isSyphonEnabled(),
+						false);
+			default:
+				return OutputState.UNAVAILABLE;
+		}
+	}
+
+	/**
+	 * Returns the latest backend failure reason without changing lifecycle state.
+	 *
+	 * @param outputType output to inspect
+	 * @return diagnostic text, or an empty string when no failure has been recorded
+	 */
+	public String getOutputFailureReason(OutputType outputType) {
+		if (outputType == OutputType.NDI) {
+			return ndiFailureReason;
+		}
+		if (outputType != null && outputType == localOutputType()) {
+			return localTextureFailureReason;
+		}
+		return "";
+	}
+
+	/** Pure state reducer shared by all backend implementations. */
+	static OutputState resolveOutputState(
+			boolean supported,
+			boolean unavailable,
+			boolean initialized,
+			boolean enabled,
+			boolean stopping) {
+		if (!supported || unavailable) {
+			return OutputState.UNAVAILABLE;
+		}
+		if (stopping) {
+			return OutputState.STOPPING;
+		}
+		if (enabled) {
+			return OutputState.ENABLED;
+		}
+		if (initialized) {
+			return OutputState.INITIALIZED;
+		}
+		return OutputState.AVAILABLE;
 	}
 
 	/**
@@ -1001,7 +1251,8 @@ public class OutputManager implements PConstants {
 	 * @return {@code true} when Syphon or Spout initialization completed successfully
 	 */
 	public boolean isLocalTextureInitialized() {
-		return localTextureBackend != LocalTextureBackend.NONE && localTextureInitialized;
+		OutputState state = getOutputState(localOutputType());
+		return state == OutputState.INITIALIZED || state == OutputState.ENABLED;
 	}
 
 	/**
@@ -1010,7 +1261,20 @@ public class OutputManager implements PConstants {
 	 * @return {@code true} when a supported backend exists and has not failed initialization
 	 */
 	public boolean isLocalTextureAvailable() {
-		return localTextureBackend != LocalTextureBackend.NONE && !localTextureUnavailable;
+		return getOutputState(localOutputType()) != OutputState.UNAVAILABLE;
+	}
+
+	/** Returns the public output identifier for the selected local backend. */
+	private OutputType localOutputType() {
+		switch (localTextureBackend) {
+			case SPOUT:
+				return OutputType.SPOUT;
+			case SYPHON:
+				return OutputType.SYPHON;
+			case NONE:
+			default:
+				return null;
+		}
 	}
 
 	/**
@@ -1126,6 +1390,18 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
+	 * Returns the number of NDI frames rejected by capture or sender failures.
+	 *
+	 * <p>This counter is separate from {@link #getNdiDroppedFrames()}, which remains reserved
+	 * for bounded latest-frame backpressure.</p>
+	 *
+	 * @return total failed NDI frames
+	 */
+	public long getNdiFailedFrames() {
+		return ndiFailedFrames.get();
+	}
+
+	/**
 	 * Reports whether an enabled external output effectively requires a view.
 	 *
 	 * <p>A backend that is merely initialized does not request rendering. Only an enabled output
@@ -1182,6 +1458,33 @@ public class OutputManager implements PConstants {
 		return root.getClass().getSimpleName() + ": " + message;
 	}
 
+	/** Computes the packed RGBA line stride used by Devolay. */
+	static int ndiLineStride(int width) {
+		if (width <= 0) {
+			throw new IllegalArgumentException("NDI frame width must be positive");
+		}
+		return Math.multiplyExact(width, NDI_BYTES_PER_PIXEL);
+	}
+
+	/** Writes Processing ARGB pixels as packed RGBA while preserving source row order. */
+	static void writeArgbAsRgba(int[] argbPixels, int pixelCount, ByteBuffer rgbaBuffer) {
+		if (argbPixels == null || rgbaBuffer == null || pixelCount < 0
+				|| pixelCount > argbPixels.length
+				|| rgbaBuffer.capacity() < Math.multiplyExact(pixelCount, NDI_BYTES_PER_PIXEL)) {
+			throw new IllegalArgumentException("Invalid NDI pixel conversion buffers");
+		}
+
+		rgbaBuffer.clear();
+		for (int index = 0; index < pixelCount; index++) {
+			int pixel = argbPixels[index];
+			rgbaBuffer.put((byte) ((pixel >>> 16) & 0xFF));
+			rgbaBuffer.put((byte) ((pixel >>> 8) & 0xFF));
+			rgbaBuffer.put((byte) (pixel & 0xFF));
+			rgbaBuffer.put((byte) ((pixel >>> 24) & 0xFF));
+		}
+		rgbaBuffer.flip();
+	}
+
 	/**
 	 * Reusable NDI frame slot.
 	 *
@@ -1202,7 +1505,7 @@ public class OutputManager implements PConstants {
 		/** Ensures the slot buffers exactly match the requested frame dimensions. */
 		private void ensureCapacity(int requiredWidth, int requiredHeight) {
 			int requiredPixels = Math.multiplyExact(requiredWidth, requiredHeight);
-			int requiredBytes = Math.multiplyExact(requiredPixels, 4);
+			int requiredBytes = Math.multiplyExact(requiredPixels, NDI_BYTES_PER_PIXEL);
 
 			if (argbPixels == null || argbPixels.length != requiredPixels) {
 				argbPixels = new int[requiredPixels];
@@ -1217,22 +1520,12 @@ public class OutputManager implements PConstants {
 
 		/** Converts the stored ARGB frame to RGBA and configures the reusable Devolay frame. */
 		private void prepareDevolayFrame() {
-			rgbaBuffer.clear();
-
-			for (int index = 0; index < pixelCount; index++) {
-				int pixel = argbPixels[index];
-				rgbaBuffer.put((byte) ((pixel >>> 16) & 0xFF));
-				rgbaBuffer.put((byte) ((pixel >>> 8) & 0xFF));
-				rgbaBuffer.put((byte) (pixel & 0xFF));
-				rgbaBuffer.put((byte) ((pixel >>> 24) & 0xFF));
-			}
-
-			rgbaBuffer.flip();
+			writeArgbAsRgba(argbPixels, pixelCount, rgbaBuffer);
 
 			frame.setResolution(width, height);
 			frame.setData(rgbaBuffer);
-			frame.setFourCCType(DevolayFrameFourCCType.RGBA);
-			frame.setLineStride(width * 4);
+			frame.setFourCCType(NDI_FRAME_FOUR_CC_TYPE);
+			frame.setLineStride(ndiLineStride(width));
 			frame.setFormatType(NDI_FRAME_FORMAT_TYPE);
 			frame.setFrameRate(frameRateNumerator, frameRateDenominator);
 		}
