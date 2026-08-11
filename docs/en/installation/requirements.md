@@ -5,20 +5,20 @@
 - Processing 4; release 1.5.0 is built and tested against Processing core `4.5.6`
 - `P3D` renderer
 - `pixelDensity(1)` recommended for stable cross-display behavior
-- A working Processing/JOGL OpenGL context
+- A GPU and driver exposing an OpenGL 4.1 context; packaged shaders use GLSL 4.10
 
 Java 17 is required when building the library from source. Processing supplies its own Java runtime for installed sketches.
 
 ## Hardware
 
-The practical requirement depends on scene complexity, output resolution, and simultaneous outputs. A dedicated GPU is recommended for 3K/4K spherical rendering and shader-heavy scenes. Qualify the exact GPU, driver, projector, lens, and receiver chain before production use.
+The practical requirement depends on scene complexity, output resolution, and simultaneous outputs. A dedicated GPU is recommended for 3K/4K spherical rendering and shader-heavy scenes. Integrated or legacy GPUs that cannot create an OpenGL 4.1 core context cannot compile the packaged projection shaders. Qualify the exact GPU, driver, projector, lens, and receiver chain before production use.
 
 ## Platform Capabilities
 
 | Capability | macOS | Windows | Linux |
 |---|---|---|---|
 | Standard and spherical rendering | Supported | Supported | Supported |
-| NDI | Native/receiver qualification required | Native/receiver qualification required | Reduced and unqualified |
+| NDI video sender | Experimental; separate NDI Runtime and receiver qualification required | Experimental; separate NDI Runtime and receiver qualification required | Experimental, reduced, and unqualified |
 | Syphon | Platform backend | Not available | Not available |
 | Spout | Not available | Platform backend | Not available |
 
@@ -28,4 +28,7 @@ The practical requirement depends on scene complexity, output resolution, and si
 
 The Processing/Syphon stack used by this project may require the Intel Processing build under Rosetta 2 for complete Syphon interoperability. Native ARM rendering without Syphon can still be used, but must be qualified with the target sketch and driver.
 
-See [Known Issues](../known-issues.md) and the release qualification protocol before deployment.
+Before deployment, review [Known Issues](../known-issues.md),
+[NDI Runtime](ndi.md), the
+[Calibration Tool Protocol](../qualification/1.5-calibration-tool.md), and
+[Release Readiness](../qualification/1.5-release-readiness.md).

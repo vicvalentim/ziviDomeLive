@@ -4,7 +4,12 @@
 
 ```java
 import com.victorvalentim.zividomelive.*;
+import com.victorvalentim.zividomelive.manager.OutputManager;
 import processing.opengl.PGraphicsOpenGL;
+// Processing uses these imports to assemble contributed-library dependencies.
+import controlP5.*;
+import codeanticode.syphon.*;
+import spout.*;
 
 zividomelive ziviDome;
 
@@ -15,6 +20,7 @@ void settings() {
 
 void setup() {
   ziviDome = new zividomelive(this);
+  ziviDome.setTargetFrameRate(60); // Optional startup configuration.
   ziviDome.setup();
   ziviDome.setScene(new MainScene());
 }
@@ -24,7 +30,7 @@ void draw() {
 }
 ```
 
-Call `setup()` once after construction. Do not call `ziviDome.draw()` from the sketch: the constructor already registered the library's draw hook.
+Call `setup()` once after construction. Do not call `ziviDome.draw()` from the sketch: the constructor already registered the library's Processing hooks. ControlP5, Syphon, and Spout imports are required in contributed-library examples so Processing assembles their runtime classpath; only the platform-valid local backend is used.
 
 ## Implement a Scene
 
@@ -73,6 +79,8 @@ Use `setCurrentView()` for the preview route in `FULL` mode:
 ```java
 ziviDome.setCurrentView(zividomelive.ViewType.FISHEYE_DOMEMASTER);
 ```
+
+Dedicated modes preserve that configured selection but temporarily force their own effective representation. See [Render Modes](../usage/basic-usage.md) and the [Control Panel](../usage/control-panel.md) for the complete routing matrix.
 
 ## Receive Events
 
@@ -125,3 +133,5 @@ println(outputs.getOutputFailureReason(OutputManager.OutputType.NDI));
 ```
 
 Native output interoperability still requires platform hardware qualification.
+
+Continue with [Scene Management](../usage/scene-management.md), [Spherical Calibration](../usage/spherical-calibration.md), and [External Integration](../usage/external-integration.md).

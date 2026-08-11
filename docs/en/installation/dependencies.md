@@ -12,7 +12,14 @@ Install dependencies through Processing's Contribution Manager where available. 
 
 ## Bundled Java Dependency
 
-The release package includes Devolay `2.2.0-vic.1` for NDI integration. NDI still depends on compatible native libraries and a receiver environment at runtime.
+The release package includes the public, runtime-separated Devolay
+`2.2.0-vic.1` artifact for experimental NDI video output. Devolay is a bundled
+Java/JNI dependency and is intentionally not listed as a Processing Contribution
+Manager dependency. Its proprietary NDI Runtime is not bundled and must be
+installed separately. Processing does not supply an official native NDI library.
+
+Follow the operating-system-specific [NDI Runtime](ndi.md) instructions before
+enabling this output.
 
 ## Source Build Bootstrap
 

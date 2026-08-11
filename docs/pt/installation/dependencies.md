@@ -12,7 +12,15 @@ Instale dependências pelo Gerenciador de Contribuições quando disponíveis. U
 
 ## Dependência Java Incluída
 
-O pacote de release inclui Devolay `2.2.0-vic.1` para integração NDI. NDI ainda depende de bibliotecas nativas compatíveis e de um ambiente receiver em runtime.
+O pacote de release inclui o artefato público do Devolay, separado do runtime,
+`2.2.0-vic.1` para output de vídeo NDI experimental. Devolay é uma dependência
+Java/JNI embutida e, intencionalmente, não aparece como dependência do
+Gerenciador de Contribuições do Processing. Seu NDI Runtime proprietário não é
+incluído e deve ser instalado separadamente. O Processing não fornece uma
+biblioteca NDI nativa oficial.
+
+Siga as instruções de [Runtime NDI](ndi.md) específicas para o sistema antes de
+habilitar esse output.
 
 ## Bootstrap do Código-Fonte
 

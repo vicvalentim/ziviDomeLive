@@ -1,51 +1,87 @@
-# Basic Usage
+# Render Modes
 
-## FULL Mode
+`RenderMode` controls the effective representation used by the Processing window and every enabled external output. It does not select an output backend and it does not replace the legacy `ViewType` routing API.
 
-`FULL` is the compatibility mode and default:
+## FULL Compatibility Mode
+
+`FULL` is the default. Existing sketches that never call `setRenderMode()` keep independent preview and output routes:
 
 ```java
 dome.setRenderMode(RenderMode.FULL);
 dome.setCurrentView(zividomelive.ViewType.STANDARD);
-dome.getOutputManager().setNdiView(
-    zividomelive.ViewType.EQUIRECTANGULAR);
+
+OutputManager outputs = dome.getOutputManager();
+outputs.setNdiView(zividomelive.ViewType.EQUIRECTANGULAR);
+outputs.setSyphonView(zividomelive.ViewType.FISHEYE_DOMEMASTER);
+outputs.setSpoutView(zividomelive.ViewType.CUBEMAP);
 ```
 
-The window may show Standard while NDI publishes equirectangular and the local texture backend publishes domemaster.
+Only enabled outputs request frames. Merely configuring a route or preparing Syphon/Spout does not activate publication or add a render requirement.
 
-## Dedicated Mode
+## Dedicated Modes
+
+Dedicated modes force one effective representation for the main preview and all enabled outputs:
+
+| `RenderMode` | Effective `ViewType` | Main pipeline |
+|---|---|---|
+| `STANDARD` | `STANDARD` | Direct perspective Standard renderer |
+| `DOMEMASTER` | `FISHEYE_DOMEMASTER` | Cubemap, equirectangular, fisheye |
+| `EQUIRECTANGULAR` | `EQUIRECTANGULAR` | Cubemap, equirectangular |
+| `SKYBOX` | `CUBEMAP` | Cubemap, skybox layout |
 
 ```java
 dome.setRenderMode(RenderMode.DOMEMASTER);
 ```
 
-A dedicated mode overrides the effective preview and output representation. Configured `ViewType` routes remain stored and return when `FULL` is selected again.
+The configured preview and per-output `ViewType` values are retained while a dedicated mode is active. Returning to `FULL` restores those independent routes:
+
+```java
+dome.setRenderMode(RenderMode.FULL);
+```
 
 ## Floating Domemaster
+
+The floating fisheye thumbnail is an auxiliary preview service:
 
 ```java
 dome.setRenderMode(RenderMode.STANDARD);
 dome.setShowPreview(true);
 ```
 
-This intentionally renders Standard plus the spherical chain needed by the auxiliary fisheye preview.
+This combination intentionally renders the Standard path plus the spherical passes needed by the thumbnail. In other dedicated modes the service can still be enabled programmatically, but the built-in panel hides its redundant toggle.
 
-## Output Resolution
+## Render Requirements
+
+The library computes a dependency closure for each frame:
+
+```text
+Standard                 -> Standard only
+Cubemap layout           -> cubemap capture + layout
+Equirectangular          -> cubemap capture + equirectangular
+Fisheye domemaster       -> cubemap capture + equirectangular + fisheye
+```
+
+When multiple enabled outputs request different views in `FULL`, their requirements are merged. At most one master cubemap is captured for the frame. See [Rendering Pipeline](../architecture/rendering-pipeline.md) for the complete frame order.
+
+## Resolution Domains
+
+Standard preview uses the current Processing window dimensions. Spherical preview targets use:
+
+```text
+min(1024, max(256, min(windowWidth, windowHeight)))
+```
+
+External output targets use the independent output resolution:
 
 ```java
 dome.resetGraphics(2048);
 ```
 
-Valid UI presets are 1024, 2048, 3072, and 4096. Reallocation is deferred to the draw loop and affects output targets only.
+The supported panel presets are `1024`, `2048`, `3072`, and `4096`. Reallocation is deferred to the draw loop, affects output targets only, and preserves domemaster Size%.
 
-## Spherical Parameters
+## Related Guides
 
-```java
-dome.setFov(210);
-dome.setFishSize(100);
-dome.setPitch(0);
-dome.setYaw(0);
-dome.setRoll(0);
-```
-
-These parameters are shared by domemaster, equirectangular, and cubemap rendering. Do not use them as a substitute for a scene-space camera.
+- [Control Panel](control-panel.md)
+- [Spherical Calibration](spherical-calibration.md)
+- [External Integration](external-integration.md)
+- [Runtime Lifecycle](../architecture/runtime-lifecycle.md)
