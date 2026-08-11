@@ -93,20 +93,6 @@ public class ziviDomeLive implements PConstants {
 	private Scene fallbackScene;
 
 	/**
-	 * Enum representing the different types of views available.
-	 */
-	public enum ViewType {
-		/** Fisheye domemaster view. */
-		FISHEYE_DOMEMASTER,
-		/** Equirectangular view. */
-		EQUIRECTANGULAR,
-		/** Cubemap view. */
-		CUBEMAP,
-		/** Standard view. */
-		STANDARD
-	}
-
-	/**
 	 * Aspect policy used to compute Standard output dimensions.
 	 */
 	public enum StandardOutputAspectMode {
@@ -122,7 +108,7 @@ public class ziviDomeLive implements PConstants {
 		ASPECT_1_1
 	}
 
-	private ViewType currentView = ViewType.FISHEYE_DOMEMASTER;
+	private ViewType currentView = ViewType.DOMEMASTER;
 	private RenderMode renderMode = RenderMode.FULL;
 	private StandardOutputAspectMode standardOutputAspectMode = StandardOutputAspectMode.AUTO;
 
@@ -746,9 +732,9 @@ public class ziviDomeLive implements PConstants {
 		boolean outputsActive = outputManager != null && outputManager.isActive();
 		return RenderRequirementsPolicy.forOutputs(
 				outputsActive,
-				outputsActive && outputManager.requiresView(ViewType.FISHEYE_DOMEMASTER),
+				outputsActive && outputManager.requiresView(ViewType.DOMEMASTER),
 				outputsActive && outputManager.requiresView(ViewType.EQUIRECTANGULAR),
-				outputsActive && outputManager.requiresView(ViewType.CUBEMAP),
+				outputsActive && outputManager.requiresView(ViewType.SKYBOX),
 				outputsActive && outputManager.requiresView(ViewType.STANDARD)
 		);
 	}
@@ -886,13 +872,13 @@ public class ziviDomeLive implements PConstants {
 	private void displayPreviewCurrentView() {
 		ViewType effectiveView = RenderRequirementsPolicy.resolveView(renderMode, getCurrentView());
 		switch (effectiveView) {
-			case CUBEMAP:
+			case SKYBOX:
 				displayView(previewCubemapViewRenderer.getCubemap());
 				break;
 			case EQUIRECTANGULAR:
 				displayView(previewEquirectangularRenderer.getEquirectangular());
 				break;
-			case FISHEYE_DOMEMASTER:
+			case DOMEMASTER:
 				displayView(previewFisheyeDomemaster.getDomemasterGraphics());
 				break;
 			case STANDARD:
@@ -1044,7 +1030,7 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Sets the current view to {@link ViewType#FISHEYE_DOMEMASTER}.
+	 * Sets the current view to {@link ViewType#DOMEMASTER}.
 	 *
 	 * @deprecated The library's internal draw loop ({@code draw()} → {@code renderContent()})
 	 *             renders every frame automatically. Call {@link #setCurrentView(ViewType)}
@@ -1053,7 +1039,7 @@ public class ziviDomeLive implements PConstants {
 	 */
 	@Deprecated
 	public void renderFisheyeDomemaster() {
-		setCurrentView(ViewType.FISHEYE_DOMEMASTER);
+		setCurrentView(ViewType.DOMEMASTER);
 	}
 
 	/**
@@ -1067,13 +1053,13 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Sets the current view to {@link ViewType#CUBEMAP}.
+	 * Sets the current view to {@link ViewType#SKYBOX}.
 	 *
 	 * @deprecated See {@link #renderFisheyeDomemaster()} for migration guidance.
 	 */
 	@Deprecated
 	public void renderCubemap() {
-		setCurrentView(ViewType.CUBEMAP);
+		setCurrentView(ViewType.SKYBOX);
 	}
 
 	/**
@@ -1571,24 +1557,24 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Gets the configured legacy preview view.
+	 * Gets the configured preview view.
 	 *
 	 * <p>In a dedicated {@link RenderMode}, the effective representation is controlled by that
 	 * mode while this value is preserved for a later return to {@link RenderMode#FULL}.</p>
 	 *
-	 * @return configured legacy preview view
+	 * @return configured preview view
 	 */
 	public ViewType getCurrentView() {
 		return currentView;
 	}
 
 	/**
-	 * Sets the configured legacy preview view.
+	 * Sets the configured preview view.
 	 *
 	 * <p>The selection takes effect immediately in {@link RenderMode#FULL}. Dedicated modes keep
 	 * it as the preview selection to restore when FULL is selected again.</p>
 	 *
-	 * @param currentView new legacy preview view
+	 * @param currentView new preview view
 	 */
 	public void setCurrentView(ViewType currentView) {
 		this.currentView = currentView;

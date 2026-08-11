@@ -29,7 +29,7 @@ final class RenderRequirementsPolicy {
 	 */
 	static Requirements forPreview(
 			RenderMode renderMode,
-			ziviDomeLive.ViewType selectedView,
+			ViewType selectedView,
 			boolean floatingFisheye) {
 		int requestedViews = maskFor(resolveView(renderMode, selectedView));
 		if (floatingFisheye) {
@@ -39,28 +39,28 @@ final class RenderRequirementsPolicy {
 	}
 
 	/**
-	 * Resolves a configured legacy view under the active global render mode.
+	 * Resolves a configured view under the active global render mode.
 	 *
 	 * @param renderMode active global mode
-	 * @param configuredView independently configured legacy view
+	 * @param configuredView independently configured view
 	 * @return configured view in FULL, otherwise the dedicated mode's representation
 	 */
-	static ziviDomeLive.ViewType resolveView(
+	static ViewType resolveView(
 			RenderMode renderMode,
-			ziviDomeLive.ViewType configuredView) {
+			ViewType configuredView) {
 		if (renderMode == null || renderMode == RenderMode.FULL) {
 			return configuredView;
 		}
 
 		switch (renderMode) {
 			case STANDARD:
-				return ziviDomeLive.ViewType.STANDARD;
+				return ViewType.STANDARD;
 			case DOMEMASTER:
-				return ziviDomeLive.ViewType.FISHEYE_DOMEMASTER;
+				return ViewType.DOMEMASTER;
 			case EQUIRECTANGULAR:
-				return ziviDomeLive.ViewType.EQUIRECTANGULAR;
+				return ViewType.EQUIRECTANGULAR;
 			case SKYBOX:
-				return ziviDomeLive.ViewType.CUBEMAP;
+				return ViewType.SKYBOX;
 			case FULL:
 			default:
 				return configuredView;
@@ -103,17 +103,17 @@ final class RenderRequirementsPolicy {
 		return REQUIREMENTS[requestedViews];
 	}
 
-	private static int maskFor(ziviDomeLive.ViewType view) {
+	private static int maskFor(ViewType view) {
 		if (view == null) {
 			return 0;
 		}
 
 		switch (view) {
-			case FISHEYE_DOMEMASTER:
+			case DOMEMASTER:
 				return FISHEYE;
 			case EQUIRECTANGULAR:
 				return EQUIRECTANGULAR;
-			case CUBEMAP:
+			case SKYBOX:
 				return CUBEMAP_LAYOUT;
 			case STANDARD:
 				return STANDARD;

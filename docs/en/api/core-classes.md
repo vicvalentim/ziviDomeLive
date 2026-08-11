@@ -59,7 +59,7 @@ The manager separates configured route, backend availability, native initializat
 OutputManager output = dome.getOutputManager();
 output.setViewForOutput(
     OutputManager.OutputType.NDI,
-    ziviDomeLive.ViewType.EQUIRECTANGULAR);
+    ViewType.EQUIRECTANGULAR);
 output.toggleOutput("ndi");
 ```
 

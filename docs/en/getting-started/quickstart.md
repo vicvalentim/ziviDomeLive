@@ -77,7 +77,7 @@ ziviDome.setRenderMode(RenderMode.SKYBOX);
 Use `setCurrentView()` for the preview route in `FULL` mode:
 
 ```java
-ziviDome.setCurrentView(ziviDomeLive.ViewType.FISHEYE_DOMEMASTER);
+ziviDome.setCurrentView(ViewType.DOMEMASTER);
 ```
 
 Dedicated modes preserve that configured selection but temporarily force their own effective representation. See [Render Modes](../usage/basic-usage.md) and the [Control Panel](../usage/control-panel.md) for the complete routing matrix.
@@ -121,7 +121,7 @@ Outputs are disabled by default:
 
 ```java
 OutputManager outputs = ziviDome.getOutputManager();
-outputs.setNdiView(ziviDomeLive.ViewType.EQUIRECTANGULAR);
+outputs.setNdiView(ViewType.EQUIRECTANGULAR);
 outputs.toggleOutput("ndi");
 ```
 

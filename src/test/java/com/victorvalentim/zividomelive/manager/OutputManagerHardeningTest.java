@@ -1,5 +1,6 @@
 package com.victorvalentim.zividomelive.manager;
 
+import com.victorvalentim.zividomelive.ViewType;
 import com.victorvalentim.zividomelive.ziviDomeLive;
 import me.walkerknapp.devolay.DevolayFrameFormatType;
 import me.walkerknapp.devolay.DevolayFrameFourCCType;
@@ -70,7 +71,7 @@ class OutputManagerHardeningTest {
 		}
 
 		assertFalse(manager.isActive());
-		assertFalse(manager.requiresView(ziviDomeLive.ViewType.FISHEYE_DOMEMASTER));
+		assertFalse(manager.requiresView(ViewType.DOMEMASTER));
 	}
 
 	@Test

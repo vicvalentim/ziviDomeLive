@@ -160,7 +160,7 @@ All external outputs are opt-in. Syphon and Spout remain GPU-native and receive 
 
 ```java
 OutputManager outputs = ziviDome.getOutputManager();
-outputs.setNdiView(ziviDomeLive.ViewType.EQUIRECTANGULAR);
+outputs.setNdiView(ViewType.EQUIRECTANGULAR);
 outputs.toggleOutput("ndi");
 
 println(outputs.getOutputState(OutputManager.OutputType.NDI));
@@ -187,7 +187,7 @@ Automated tests do not replace GPU, receiver, or native-sharing qualification. S
 ## Built-in Controls
 
 - `h`: show or hide the ControlP5 panel
-- `m`: cycle the configured legacy preview `ViewType`
+- `m`: cycle the configured preview `ViewType`
 - Left/Right arrows: switch scenes
 
 The panel groups global status, spherical calibration, view selection, and output controls. Per-output routing is independently editable in `FULL`; dedicated modes preserve those stored routes while hiding selectors that cannot affect the active representation.

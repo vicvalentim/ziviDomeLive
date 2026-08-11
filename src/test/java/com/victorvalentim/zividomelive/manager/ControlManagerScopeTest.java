@@ -1,6 +1,7 @@
 package com.victorvalentim.zividomelive.manager;
 
 import com.victorvalentim.zividomelive.RenderMode;
+import com.victorvalentim.zividomelive.ViewType;
 import com.victorvalentim.zividomelive.ziviDomeLive;
 import org.junit.jupiter.api.Test;
 import processing.awt.PGraphicsJava2D;
@@ -26,11 +27,11 @@ class ControlManagerScopeTest {
 		applet.g = graphics;
 		ziviDomeLive dome = new ziviDomeLive(applet);
 		OutputManager outputs = new OutputManager(dome);
-		outputs.setNdiView(ziviDomeLive.ViewType.EQUIRECTANGULAR);
-		outputs.setSpoutView(ziviDomeLive.ViewType.STANDARD);
-		outputs.setSyphonView(ziviDomeLive.ViewType.CUBEMAP);
+		outputs.setNdiView(ViewType.EQUIRECTANGULAR);
+		outputs.setSpoutView(ViewType.STANDARD);
+		outputs.setSyphonView(ViewType.SKYBOX);
 		setOutputManager(dome, outputs);
-		dome.setCurrentView(ziviDomeLive.ViewType.CUBEMAP);
+		dome.setCurrentView(ViewType.SKYBOX);
 
 		ControlManager controls = new ControlManager(applet, dome, 3072);
 		try {
@@ -51,10 +52,10 @@ class ControlManagerScopeTest {
 				assertEquals(ControlPanelLayout.yFor(controlName), getPosition(controller)[1], controlName);
 			}
 
-			assertEquals(ziviDomeLive.ViewType.CUBEMAP.ordinal(),
+			assertEquals(ViewType.SKYBOX.ordinal(),
 					getValue(getController(cp5, "View Mode")));
 			assertEquals(2, getValue(getController(cp5, "Output Resolution")));
-			assertEquals(ziviDomeLive.ViewType.EQUIRECTANGULAR.ordinal(),
+			assertEquals(ViewType.EQUIRECTANGULAR.ordinal(),
 					getValue(getController(cp5, "NDI View")));
 			assertLocalOutputControls(cp5);
 		} finally {
@@ -157,7 +158,7 @@ class ControlManagerScopeTest {
 			assertNotNull(dropdown);
 			assertEquals(ControlPanelLayout.yFor("spoutToggle"), getPosition(toggle)[1]);
 			assertEquals(ControlPanelLayout.yFor("Spout View"), getPosition(dropdown)[1]);
-			assertEquals(ziviDomeLive.ViewType.STANDARD.ordinal(), getValue(dropdown));
+			assertEquals(ViewType.STANDARD.ordinal(), getValue(dropdown));
 			assertNull(getController(cp5, "syphonToggle"));
 			assertNull(getController(cp5, "Syphon View"));
 		} else if (localOutput == ControlPanelLayout.LocalOutput.SYPHON) {
@@ -167,7 +168,7 @@ class ControlManagerScopeTest {
 			assertNotNull(dropdown);
 			assertEquals(ControlPanelLayout.yFor("syphonToggle"), getPosition(toggle)[1]);
 			assertEquals(ControlPanelLayout.yFor("Syphon View"), getPosition(dropdown)[1]);
-			assertEquals(ziviDomeLive.ViewType.CUBEMAP.ordinal(), getValue(dropdown));
+			assertEquals(ViewType.SKYBOX.ordinal(), getValue(dropdown));
 			assertNull(getController(cp5, "spoutToggle"));
 			assertNull(getController(cp5, "Spout View"));
 		} else {

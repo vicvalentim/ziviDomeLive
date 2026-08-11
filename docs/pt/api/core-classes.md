@@ -57,7 +57,7 @@ O manager separa rota configurada, disponibilidade, inicialização nativa, publ
 OutputManager output = dome.getOutputManager();
 output.setViewForOutput(
     OutputManager.OutputType.NDI,
-    ziviDomeLive.ViewType.EQUIRECTANGULAR);
+    ViewType.EQUIRECTANGULAR);
 output.toggleOutput("ndi");
 ```
 

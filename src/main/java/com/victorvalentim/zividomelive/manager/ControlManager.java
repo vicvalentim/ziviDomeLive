@@ -1,5 +1,6 @@
 package com.victorvalentim.zividomelive.manager;
 
+import com.victorvalentim.zividomelive.ViewType;
 import com.victorvalentim.zividomelive.ziviDomeLive;
 import controlP5.*;
 import processing.core.*;
@@ -214,8 +215,8 @@ public class ControlManager {
      */
     private DropdownList createViewDropdown(
             String label,
-            ziviDomeLive.ViewType initialView,
-            Consumer<ziviDomeLive.ViewType> setView) {
+            ViewType initialView,
+            Consumer<ViewType> setView) {
         DropdownList dropdown = cp5.addDropdownList(label)
                 .setPosition(
                         ControlPanelLayout.CONTROL_X,
