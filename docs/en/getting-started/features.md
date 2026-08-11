@@ -54,3 +54,8 @@ The ControlP5 panel groups global status, spherical parameters, preview selectio
 | `EQUIRECTANGULAR` / `SKYBOX` | Shown | Hidden | Hidden | Hidden |
 
 Output resolution and publication toggles remain visible in every mode. Per-output view selectors appear only in `FULL`, where routes are independently configurable.
+
+Continue with [Render Modes](../usage/basic-usage.md), the
+[Control Panel](../usage/control-panel.md), and
+[Spherical Calibration](../usage/spherical-calibration.md) for operational
+details.

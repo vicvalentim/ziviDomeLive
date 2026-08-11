@@ -14,6 +14,7 @@ mkdocs build --strict
 ## Project Contracts
 
 - Keep `ViewType` order unchanged.
+- Keep English and Portuguese pages paired and update `mkdocs.yml` navigation together.
 - Do not call `beginDraw()` or `endDraw()` inside a `Scene`.
 - Preserve deferred output-resolution reset.
 - Use `LogManager` for library logging.
@@ -34,3 +35,13 @@ GitHub also runs this task in the independent `Automated Qualification`
 workflow for every push, pull requests targeting `main`, and manual executions.
 Its job summary shows the totals and its downloadable artifact retains the
 detailed evidence for 30 days.
+
+## Change Scope
+
+Public behavior changes require Javadocs, focused unit tests, bilingual user
+documentation, and a changelog entry. Keep pure routing, orientation, sizing,
+and lifecycle policy isolated from OpenGL where possible so it can be tested in
+the headless qualification fork.
+
+Do not commit generated `build/`, `site/`, or `release/` contents. Release
+artifacts are produced by Gradle and published from version tags.

@@ -4,25 +4,33 @@ All notable changes to this project are documented in this file.
 
 ## [1.5.0] - 2026-08-11
 
+Version 1.5.0 is the final consolidation release for the 1.x renderer. It keeps the
+lowercase `zividomelive` facade and the established Standard/spherical split while
+making rendering intent, scene ownership, output lifecycle, calibration, testing,
+and release evidence explicit.
+
 ### Added
-- Public `RenderMode` API with `FULL`, `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR`, and `SKYBOX`; `FULL` remains the compatibility default.
-- Compatibility-lock tests for the public API, preview sizing, Standard aspect policy, scene contract, output routing, spherical orientation, and render requirements.
-- Static asymmetric GPU qualification scene and a documented visual/hardware qualification protocol.
+- Public `RenderMode` API with `FULL`, `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR`, and `SKYBOX`; `FULL` is the compatibility default.
+- Public `SphericalOrientation` state and `resetOrientation()` support for cyclic, unit-quaternion pitch/yaw/roll composition.
 - Public output lifecycle states and diagnostics through `OutputState`, `getOutputState()`, and `getOutputFailureReason()`.
 - NDI failed-frame telemetry alongside the existing captured, sent, and dropped counters.
+- Two-scene `CalibrationTool`: a GLSL 4.10 cube-face focus/color target and four original, resolution-selected Paul Bourke v14 equirectangular patterns mapped to a complete 360-degree sphere.
+- Compatibility and regression coverage for the public API, preview sizing, Standard aspect policy, scene contract, output routing, spherical orientation, render requirements, lifecycle, packaging metadata, and example integrity.
+- Dedicated `qualificationTests` Gradle evidence task and independent GitHub workflow, plus a documented GPU/native-output qualification protocol.
 
 ### Changed
-- Made the built-in panel capability-aware: dedicated render modes hide inapplicable preview, projection, and per-output view selectors, while `FULL` retains independent routing controls.
-- Made pitch, yaw, and roll sliders cyclic and moved spherical attitude to normalized incremental quaternion composition, eliminating the former per-frame Euler reconstruction and its gimbal-lock singularity.
-- Hardened release packaging with project and third-party licenses, citation metadata, tag/version validation, least-privilege publication, and strict documentation builds.
-- Excluded local compile-only helper JARs from Processing packages and sketchbook deployment while retaining source and automated qualification evidence in the repository.
 - Centralized render-requirement resolution so preview, floating domemaster, and enabled outputs request only the passes they need.
+- Made dedicated `RenderMode` values override effective preview/output representation without erasing the independent `ViewType` routes restored by `FULL`.
 - Consolidated active-scene ownership in `SceneManager`, including deterministic setup, switching, disposal, pause/resume, and terminal shutdown behavior.
-- Organized ControlP5 controls into global, spherical, view, and output scopes while preserving widget order and callback ownership.
+- Made the ControlP5 panel capability-aware: dedicated modes hide inapplicable projection and routing selectors, while `FULL` exposes independent preview and enabled-output routes.
+- Made pitch, yaw, and roll panel sliders cyclic and replaced per-frame Euler reconstruction with shortest-delta local-axis composition on a normalized quaternion. Getter/setter values remain source-compatible control accumulators.
 - Hardened NDI around three bounded frame slots, latest-frame-wins backpressure, a dedicated non-OpenGL worker, packed RGBA progressive frames, and bounded shutdown.
+- Documented NDI as an experimental, unofficial, video-only output and added Windows, macOS, and Linux installation guidance for the runtime-separated Devolay dependency.
 - Made Syphon and Spout initialization, publication, resize, failure reporting, shutdown, and explicit retry states observable without moving them off the GPU-native `PGraphicsOpenGL` path.
+- Kept Standard preview dimensions tied to the Processing window, spherical preview resolution automatic, and output resolution independently deferred to the draw loop.
 - Pinned Processing-side dependency downloads to immutable assets with SHA-256 verification.
-- Replaced `CompatibilityLock` with the two-scene `CalibrationTool`, combining a GLSL 4.10 cube-face focus/color chart with Paul Bourke's unmodified 8192 x 4096 equirectangular test pattern on a complete sphere; also refined `FulldomePBR`, expanded the example catalog, and documented Processing runtime dependency imports.
+- Hardened release packaging with project and third-party licenses, citation metadata, tag/version validation, least-privilege publication, strict bilingual documentation builds, and exclusion of tests and local compile-only helper JARs from installable artifacts.
+- Restored the intended teaching roles of `Basic`, `EmptyProject`, and `SphereParticle`, refined `FulldomePBR`, preserved `SolarSystem`, and documented the Processing runtime dependency imports required by contributed-library sketches.
 
 ### Fixed
 - Prevented redundant target-frame-rate requests and CalibrationTool playback profiles from restarting Processing's JOGL animator.
@@ -37,12 +45,17 @@ All notable changes to this project are documented in this file.
 
 ### Compatibility
 - The public `zividomelive` facade and `ViewType` order remain unchanged.
+- A sketch that never calls `setRenderMode()` continues in `RenderMode.FULL`.
+- Configured preview and per-output `ViewType` values survive temporary dedicated modes.
+- Pitch/yaw/roll method signatures and returned accumulator values remain compatible; orientation is now composed incrementally in event order rather than reconstructed as an Euler triple.
 - Legacy render convenience methods remain available as deprecated compatibility shims.
 - The current 1.x cubemap-to-equirectangular-to-domemaster backend remains internal and is not promoted to a permanent API contract.
 - No experimental 2.0 renderer, native cube-map backend, PBO, or OpenGL fence pipeline is included.
 
-### Docs
-- Reworked the README, bilingual documentation, examples, Javadocs, release metadata, platform matrix, and qualification checklist for the 1.5.0 release.
+### Release Evidence
+- Java 17 build, Javadocs, metadata checks, Processing ZIP/PDEX/TXT generation, package-content verification, and byte-identical ZIP/PDEX checks are automated.
+- MkDocs builds English and Portuguese documentation in strict mode.
+- Automated tests remain intentionally headless; GPU image quality and NDI/Syphon/Spout interoperability still require the documented CalibrationTool protocol on target hardware.
 
 ## [1.4.0] - 2026-08-02
 

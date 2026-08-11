@@ -10,6 +10,14 @@ After the 1.5.0 package is published:
 4. Install the library and its declared dependencies.
 5. Restart Processing.
 
+Open **File > Examples > Contributed Libraries > ziviDomeLive > EmptyProject**.
+The empty black scene should start without shader or dependency errors; press
+`h` to confirm that the control panel can be shown and hidden.
+
+NDI is optional and cannot be installed through Processing's Contribution
+Manager. Install the system [NDI Runtime](ndi.md) separately before enabling the
+experimental NDI video output.
+
 ## Release Artifact
 
 For manual installation, use the packaged artifact from the matching release rather than the repository source ZIP:
@@ -19,6 +27,10 @@ For manual installation, use the packaged artifact from the matching release rat
 3. Move it into the sketchbook `libraries` directory shown in Processing Preferences.
 4. Install ControlP5 and the required platform output dependency.
 5. Restart Processing.
+
+The archive includes Devolay but not the proprietary NDI Runtime. NDI users must
+complete the separate [NDI Runtime](ndi.md) installation for their operating
+system.
 
 The installed structure must contain:
 
@@ -42,3 +54,13 @@ cd ziviDomeLive
 ```
 
 The installable output is generated under `release/`.
+
+For a local sketchbook deployment instead of a release package:
+
+```bash
+./gradlew deployToProcessingSketchbook
+```
+
+This task deploys the library and examples, but deliberately excludes
+`src/test` and does not execute qualification. Run `qualificationTests`
+separately before treating the checkout as release-ready.

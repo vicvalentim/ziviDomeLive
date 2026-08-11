@@ -2,6 +2,10 @@
 
 Outputs externos começam desabilitados e possuem rotas independentes em `RenderMode.FULL`.
 
+NDI é uma integração experimental, não oficial e somente de vídeo, que exige um
+runtime instalado separadamente no sistema. Conclua a configuração do
+[Runtime NDI](../installation/ndi.md) antes de habilitá-lo.
+
 ## Configure Rotas
 
 ```java
