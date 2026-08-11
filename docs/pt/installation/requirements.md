@@ -1,44 +1,31 @@
-# Requisitos do Sistema para ziviDomeLive
+# Requisitos do Sistema
 
-A biblioteca **ziviDomeLive** foi projetada para suportar ambientes visuais imersivos de alto desempenho, incluindo projeções fulldome, instalações de realidade virtual e displays de mídia interativa. Dada sua capacidade de renderização 3D em tempo real, o **ziviDomeLive** exige algumas especificações de sistema e dependências para garantir desempenho ideal. Abaixo estão os requisitos detalhados de sistema, hardware e software.
+## Runtime
 
----
+- Processing 4; a versão 1.5.0 é compilada e testada contra Processing core `4.5.6`
+- Renderizador `P3D`
+- `pixelDensity(1)` recomendado para estabilidade entre displays
+- Contexto OpenGL Processing/JOGL funcional
 
-## Ambiente Processing
+Java 17 é necessário para compilar a biblioteca a partir do código-fonte. O Processing fornece seu próprio runtime Java para sketches instalados.
 
-Para aproveitar ao máximo as capacidades do **ziviDomeLive**, use uma versão compatível do Processing com as configurações apropriadas de ambiente. Essas configurações permitem maximizar o desempenho gráfico e a compatibilidade com o sistema:
+## Hardware
 
-- **Versão do Processing**: Processing 4.x ou superior. A biblioteca é otimizada para as versões mais recentes do Processing, que incorporam atualizações avançadas de renderização 3D e melhor compatibilidade com hardware atual. Versões mais antigas podem não suportar totalmente algumas funcionalidades.
+O requisito prático depende da complexidade da cena, resolução de output e quantidade de outputs simultâneos. Uma GPU dedicada é recomendada para renderização esférica 3K/4K e cenas com shaders intensivos. Qualifique a combinação exata de GPU, driver, projetor, lente e receiver antes do uso em produção.
 
-- **Renderizador Gráfico**: Defina seus sketches do Processing para usar o `P3D` para renderização 3D. O renderizador `P3D` é essencial para lidar com cenas complexas em 3D, especialmente aquelas envolvendo projeções imersivas fisheye ou equiretangulares necessárias em ambientes de cúpula. Sem o `P3D`, funcionalidades 3D podem ser limitadas ou indisponíveis.
+## Capacidades por Plataforma
 
-- **Sistemas Operacionais Suportados**:
-    - **macOS** (10.14 Mojave ou posterior)
-    - **Windows** (Windows 10 ou posterior)
-    - **Linux** (Ubuntu 18.04 LTS ou posterior, Debian-based recomendado)
+| Capacidade | macOS | Windows | Linux |
+|---|---|---|---|
+| Renderização Standard e esférica | Suportada | Suportada | Suportada |
+| NDI | Exige qualificação nativa/receiver | Exige qualificação nativa/receiver | Reduzido e não qualificado |
+| Syphon | Backend da plataforma | Indisponível | Indisponível |
+| Spout | Indisponível | Backend da plataforma | Indisponível |
 
-  Manter o sistema operacional atualizado pode melhorar significativamente o desempenho e a compatibilidade com integrações externas, particularmente o **Syphon** no macOS e o **Spout** no Windows.
+"Suportada" para renderização principal descreve o limite pretendido da plataforma, não afirma que toda combinação de GPU e driver passou pelo protocolo visual manual.
 
----
+## Apple Silicon
 
-## Recomendação de Hardware
+A stack Processing/Syphon usada pelo projeto pode exigir a versão Intel do Processing sob Rosetta 2 para interoperabilidade completa. Renderização ARM nativa sem Syphon continua possível, mas deve ser qualificada com o sketch e driver de destino.
 
-Para renderização em tempo real ideal, especialmente em alta resolução (até 4K) para cúpula completa ou VR, o **ziviDomeLive** exige um hardware robusto para garantir uma experiência fluida e responsiva. Abaixo estão as recomendações de hardware:
-
-- **GPU Dedicada**: Use uma placa gráfica moderna dedicada (por exemplo, NVIDIA GeForce RTX ou AMD Radeon RX). Gráficos integrados podem ter dificuldade com projeções em alta resolução e cenas com muitos shaders.
-- **Memória (RAM)**: 8GB é o mínimo, mas 16GB ou mais são recomendados para lidar com cenas maiores ou integrações simultâneas.
-- **Processador Multi-core**: Um processador com múltiplos núcleos aprimora o desempenho em renderização em tempo real, especialmente ao lidar com cálculos visuais complexos e múltiplas bibliotecas.
-
----
-
-## Notas para Usuários de Apple Silicon (M1, M2 e Posteriores)
-
-Se estiver usando um sistema **macOS com Apple Silicon (série M)**, considere o seguinte:
-
-- **Compatibilidade com Syphon**: O Syphon atualmente não suporta a versão ARM nativa do Processing no Apple Silicon. Portanto, se você precisar do Syphon, execute a **versão Intel do Processing** usando **Rosetta 2**. Isso permite reter a funcionalidade completa do Syphon.
-
-- **Limitações da Versão ARM**: Embora a versão ARM (nativa para Apple Silicon) do Processing funcione para a maioria das funcionalidades padrão, ela pode não oferecer suporte total para certas integrações em tempo real. Se o Syphon não for essencial, a versão ARM é aceitável.
-
----
-
-Seguindo esses requisitos e recomendações, você garantirá que o **ziviDomeLive** ofereça o melhor desempenho, entregando visuais de alta qualidade e interatividade contínua para seus projetos de mídia imersiva.
+Consulte [Problemas Conhecidos](../known-issues.md) e o protocolo de qualificação antes da implantação.

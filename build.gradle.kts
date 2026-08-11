@@ -41,7 +41,7 @@ group = "com.victorvalentim.zividomelive"
 // - MINOR: Increases when you add new features that are backward-compatible.
 // - PATCH: Increases when you make backward-compatible bug fixes.
 // You can update these numbers as you release new versions of your library.
-version = "1.4.0"
+version = "1.5.0"
 
 // Centralized dependency versions for easier Maven sync/updates.
 val processingCoreVersion = "4.5.6"
@@ -189,6 +189,11 @@ tasks.register<WriteProperties>("writeLibraryProperties") {
     property("paragraph", libraryProperties.getProperty("paragraph"))
     property("minRevision", libraryProperties.getProperty("minRevision"))
     property("maxRevision", libraryProperties.getProperty("maxRevision"))
+    property("tested.platform", libraryProperties.getProperty("tested.platform"))
+    property("tested.processingVersion", libraryProperties.getProperty("tested.processingVersion"))
+    property("library.copyright", libraryProperties.getProperty("library.copyright"))
+    property("library.dependencies", libraryProperties.getProperty("library.dependencies"))
+    property("library.keywords", libraryProperties.getProperty("library.keywords"))
 }
 
 // define the order of running, to ensure clean is run first

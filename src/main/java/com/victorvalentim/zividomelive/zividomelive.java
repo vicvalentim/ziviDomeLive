@@ -1589,6 +1589,7 @@ public class zividomelive implements PConstants {
 	 * Returns the active global render mode.
 	 *
 	 * @return active mode, defaulting to {@link RenderMode#FULL}
+	 * @since 1.5.0
 	 */
 	public RenderMode getRenderMode() {
 		return renderMode;
@@ -1602,6 +1603,7 @@ public class zividomelive implements PConstants {
 	 * {@link ViewType} values.</p>
 	 *
 	 * @param renderMode new global mode; {@code null} is ignored
+	 * @since 1.5.0
 	 */
 	public void setRenderMode(RenderMode renderMode) {
 		if (renderMode == null) {

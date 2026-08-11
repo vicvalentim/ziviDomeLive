@@ -1,5 +1,6 @@
 .gradle
 build/
+site/
 src/main/libs/
 release/
 !gradle/wrapper/gradle-wrapper.jar

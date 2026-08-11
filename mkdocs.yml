@@ -122,13 +122,6 @@ markdown_extensions:
 
 extra:
   generator: false
-  alternate:
-    - name: English
-      link: /ziviDomeLive/en/
-      lang: en
-    - name: Português (Brasil)
-      link: /ziviDomeLive/pt/
-      lang: pt
 
 extra_css:
   - assets/css/extra.css
