@@ -1,0 +1,56 @@
+name: Automated Qualification
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+concurrency:
+  group: automated-qualification-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualification:
+    name: JUnit qualification evidence
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+
+    - name: Run automated qualification
+      run: ./gradlew qualificationTests
+
+    - name: Add qualification result to job summary
+      if: always()
+      shell: bash
+      run: |
+        if [[ -f build/reports/qualification/summary.md ]]; then
+          cat build/reports/qualification/summary.md >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "Automated qualification did not produce a summary." >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+    - name: Upload automated qualification evidence
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: automated-qualification-${{ runner.os }}-java17
+        path: |
+          build/reports/qualification/
+          build/test-results/qualification/
+        if-no-files-found: warn
+        retention-days: 30
