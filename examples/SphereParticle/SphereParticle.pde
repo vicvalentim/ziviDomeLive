@@ -1,28 +1,43 @@
 import com.victorvalentim.zividomelive.*;
-// Processing adds contributed libraries to the runtime classpath through imports.
 import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;
-import processing.event.KeyEvent;
-import processing.event.MouseEvent;
-import processing.opengl.PGraphicsOpenGL;
+
+import java.util.concurrent.*;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.ArrayList;
 
-zividomelive ziviDome;
+// Instâncias principais
+zividomelive ziviDome;      // Instância da biblioteca zividomelive
+SceneManager sceneManager;  // Gerenciador de cenas
+
+// Gerenciamento de threads
+ExecutorService particleProcessors;  // ExecutorService para processamento paralelo
+ReentrantLock lock = new ReentrantLock();  // Lock para controle de acesso concorrente
 
 void settings() {
-  size(1280, 720, P3D);
-  pixelDensity(1);
+  pixelDensity(1);  // Library default policy
+  size(1280, 720, P3D);  // Define o tamanho da janela e o modo P3D
 }
 
 void setup() {
-  surface.setTitle("ziviDomeLive - Sphere Particle");
-
+  // Inicializa a biblioteca zividomelive
   ziviDome = new zividomelive(this);
   ziviDome.setup();
-  ziviDome.setScene(new ParticleFieldScene(ziviDome));
+
+  // Criação e configuração do SceneManager
+  sceneManager = new SceneManager();
+  sceneManager.registerScene(new Scene1(ziviDome)); // Registra apenas Scene1
+
+  // Vincula o SceneManager à biblioteca zividomelive
+  ziviDome.setSceneManager(sceneManager);
+
+  // Inicializa o ExecutorService para processamento de partículas
+  int numThreads = Runtime.getRuntime().availableProcessors();
+  println("Usando " + numThreads + " threads para processamento de partículas.");
+  particleProcessors = Executors.newFixedThreadPool(numThreads);
 }
 
 void draw() {
-  // ziviDomeLive renders through its registered Processing draw hook.
+  // ziviDomeLive renderiza pelo hook draw registrado no Processing.
 }

@@ -2,7 +2,7 @@
 
 ## CompatibilityLock
 
-A static asymmetric scene that labels all six cubemap directions. Use it for GPU qualification of face identity, layout, mirroring, 90-degree rotations, FOV, Size%, Standard independence, and floating domemaster behavior. Press `0` to restore the canonical calibration state; accepted controls print their values to the console.
+A static calibration chart rendered on all six cubemap directions. Its 12 x 12 grids, safe-area frames, circles, crosshairs, asymmetric orientation markers, GLSL 4.10 color bars, and nine-step grayscale ramps support repeatable checks of face identity, alignment, mirroring, color, luminance, 90-degree rotations, FOV, Size%, and output routing. Press `0` to restore the canonical state; accepted controls print their values to the console.
 
 ## FulldomePBR
 

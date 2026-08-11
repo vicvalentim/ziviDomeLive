@@ -2,7 +2,7 @@
 
 ## CompatibilityLock
 
-Cena estática assimétrica que identifica as seis direções do cubemap. Use-a para qualificar identidade de faces, layout, espelhamento, rotações de 90 graus, FOV, Size%, independência Standard e domemaster flutuante. Pressione `0` para restaurar a calibração canônica; controles aceitos imprimem seus valores no console.
+Chart de calibração estático renderizado nas seis direções do cubemap. Grades 12 x 12, molduras de safe area, círculos, miras, marcadores assimétricos de orientação, barras de cor em GLSL 4.10 e escalas de cinza com nove níveis permitem verificar identidade das faces, alinhamento, espelhamento, cor, luminância, rotações de 90 graus, FOV, Size% e roteamento de saída. Pressione `0` para restaurar o estado canônico; os controles aceitos imprimem seus valores no console.
 
 ## FulldomePBR
 

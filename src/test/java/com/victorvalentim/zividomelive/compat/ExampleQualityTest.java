@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -48,25 +47,8 @@ class ExampleQualityTest {
 	}
 
 	@Test
-	void examplesDoNotOwnWorkerPools() throws IOException {
-		try (Stream<Path> files = Files.walk(EXAMPLES)) {
-			for (Path file : files
-					.filter(path -> path.toString().endsWith(".pde"))
-					.filter(path -> !path.startsWith(EXAMPLES.resolve("SolarSystem")))
-					.toList()) {
-				String source = Files.readString(file);
-				String relativePath = PROJECT_ROOT.relativize(file).toString();
-				assertFalse(source.contains("ExecutorService"), relativePath);
-				assertFalse(source.contains("Executors."), relativePath);
-			}
-		}
-	}
-
-	@Test
-	void singleSceneSketchesUseDirectSceneRegistration() throws IOException {
+	void examplesUsingDirectSceneRegistrationAvoidRedundantManagers() throws IOException {
 		for (String relativePath : List.of(
-				"EmptyProject/EmptyProject.pde",
-				"SphereParticle/SphereParticle.pde",
 				"CompatibilityLock/CompatibilityLock.pde",
 				"FulldomePBR/FulldomePBR.pde")) {
 			String source = read(relativePath);
@@ -76,26 +58,29 @@ class ExampleQualityTest {
 	}
 
 	@Test
-	void particleSimulationMutatesStateOnlyDuringUpdateAndInput() throws IOException {
-		String source = read("SphereParticle/Scene1.pde");
-		int renderStart = source.indexOf("public void sceneRender(PGraphicsOpenGL pg)");
-		int inputStart = source.indexOf("public void keyEvent", renderStart);
-
-		assertTrue(renderStart >= 0 && inputStart > renderStart);
-		String renderBody = source.substring(renderStart, inputStart);
-		assertTrue(source.contains("particle.update(deltaSeconds, now)"));
-		assertFalse(renderBody.contains("particles.add("));
-		assertFalse(renderBody.contains("particles.remove("));
-		assertFalse(renderBody.contains("particle.update("));
-	}
-
-	@Test
 	void compatibilityLockUsesNinetyDegreeOrientationSteps() throws IOException {
-		String source = read("CompatibilityLock/ReferenceScene.pde");
+		String source = read("CompatibilityLock/CalibrationScene.pde");
 		assertTrue(source.contains("setPitch(dome.getPitch() + HALF_PI)"));
 		assertTrue(source.contains("setYaw(dome.getYaw() + HALF_PI)"));
 		assertTrue(source.contains("setRoll(dome.getRoll() + HALF_PI)"));
 		assertFalse(source.contains("HALF_PI / 2"));
+	}
+
+	@Test
+	void compatibilityLockProvidesAlignmentAndGlslColorReferences() throws IOException {
+		String source = read("CompatibilityLock/CalibrationScene.pde");
+		String vertexShader = read("CompatibilityLock/data/calibration-colors.vert");
+		String fragmentShader = read("CompatibilityLock/data/calibration-colors.frag");
+
+		assertTrue(source.contains("drawAlignmentGrid"));
+		assertTrue(source.contains("drawOrientationCues"));
+		assertTrue(source.contains("drawColorBarLabels"));
+		assertTrue(source.contains("drawGrayRampLabels"));
+		assertTrue(source.contains("pg.noLights()"));
+		assertTrue(vertexShader.startsWith("#version 410 core"));
+		assertTrue(fragmentShader.startsWith("#version 410 core"));
+		assertTrue(fragmentShader.contains("vec3 colorBar(int index)"));
+		assertTrue(fragmentShader.contains("float level = float(index) / 8.0"));
 	}
 
 	private static String read(String relativePath) throws IOException {

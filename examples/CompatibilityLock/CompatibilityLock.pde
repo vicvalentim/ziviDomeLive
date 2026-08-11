@@ -5,6 +5,7 @@ import codeanticode.syphon.*;
 import spout.*;
 import processing.event.KeyEvent;
 import processing.opengl.PGraphicsOpenGL;
+import processing.opengl.PShader;
 
 zividomelive ziviDome;
 
@@ -14,14 +15,14 @@ void settings() {
 }
 
 void setup() {
-  surface.setTitle("ziviDomeLive - Compatibility Lock");
+  surface.setTitle("ziviDomeLive - Calibration Test");
 
   ziviDome = new zividomelive(this);
   ziviDome.setup();
   ziviDome.setRenderMode(RenderMode.FULL);
-  ziviDome.setScene(new ReferenceScene(ziviDome));
+  ziviDome.setScene(new CalibrationScene(ziviDome));
 
-  resetQualificationState();
+  resetCalibrationState();
 }
 
 void draw() {
@@ -29,7 +30,7 @@ void draw() {
   // not call ziviDome.draw(), so it can catch duplicate-render regressions.
 }
 
-void resetQualificationState() {
+void resetCalibrationState() {
   ziviDome.setCurrentView(zividomelive.ViewType.FISHEYE_DOMEMASTER);
   ziviDome.setFishSize(100f);
   ziviDome.setFov(210f);
