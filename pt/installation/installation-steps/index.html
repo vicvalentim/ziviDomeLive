@@ -86,7 +86,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#passos-de-instalacao-do-zividomelive" class="md-skip">
+        <a href="#instalacao" class="md-skip">
           Ir para o conteúdo
         </a>
       
@@ -349,6 +349,26 @@
     
     
       <li class="md-tabs__item">
+        <a href="../../architecture/rendering-pipeline/" class="md-tabs__link">
+          
+  
+  
+  Arquitetura
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="../../api/overview/" class="md-tabs__link">
           
   
@@ -374,6 +394,46 @@
   
   
   Exemplos
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../qualification/1.5-calibration-tool/" class="md-tabs__link">
+          
+  
+  
+  Qualificação
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../release-notes/1.5.0/" class="md-tabs__link">
+          
+  
+  
+  Notas de Versão
 
         </a>
       </li>
@@ -684,10 +744,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#metodo-1-instalacao-pelo-gerenciador-de-contribuicoes-do-processing-recomendado" class="md-nav__link">
+  <a href="#gerenciador-de-contribuicoes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Método 1: Instalação pelo Gerenciador de Contribuições do Processing (Recomendado)
+        Gerenciador de Contribuições
       
     </span>
   </a>
@@ -695,10 +755,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#metodo-2-instalacao-pelo-github-instalacao-manual" class="md-nav__link">
+  <a href="#artefato-de-release" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Método 2: Instalação pelo GitHub (Instalação Manual)
+        Artefato de Release
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#checkout-do-codigo-fonte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checkout do Código-Fonte
       
     </span>
   </a>
@@ -729,6 +800,34 @@
     
   
     Dependências
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ndi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Runtime NDI
   
 
     
@@ -882,6 +981,59 @@
   
   
   
+    <a href="../../architecture/rendering-pipeline/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitetura
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
     <a href="../../api/overview/" class="md-nav__link">
       
   
@@ -943,6 +1095,112 @@
     
   
     Exemplos
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../qualification/1.5-calibration-tool/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Qualificação
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../release-notes/1.5.0/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notas de Versão
   
 
     
@@ -1089,84 +1347,55 @@
   
 
 
-<h1 id="passos-de-instalacao-do-zividomelive">Passos de Instalação do ziviDomeLive<a class="headerlink" href="#passos-de-instalacao-do-zividomelive" title="Permanent link">&para;</a></h1>
-<p>Este guia descreve o processo de instalação do <strong>ziviDomeLive</strong>, cobrindo métodos recomendados e manuais.</p>
-<hr />
-<h2 id="metodo-1-instalacao-pelo-gerenciador-de-contribuicoes-do-processing-recomendado">Método 1: Instalação pelo Gerenciador de Contribuições do Processing (Recomendado)<a class="headerlink" href="#metodo-1-instalacao-pelo-gerenciador-de-contribuicoes-do-processing-recomendado" title="Permanent link">&para;</a></h2>
-<p>O Gerenciador de Contribuições do Processing oferece o método mais simples para instalar o <strong>ziviDomeLive</strong>. Siga estes passos para instalar diretamente no ambiente do Processing:</p>
+<h1 id="instalacao">Instalação<a class="headerlink" href="#instalacao" title="Permanent link">&para;</a></h1>
+<h2 id="gerenciador-de-contribuicoes">Gerenciador de Contribuições<a class="headerlink" href="#gerenciador-de-contribuicoes" title="Permanent link">&para;</a></h2>
+<p>Depois da publicação do pacote 1.5.0:</p>
 <ol>
-<li>
-<p><strong>Abra o Processing</strong>:</p>
-<ul>
-<li>Inicie a IDE do Processing no seu computador.</li>
-</ul>
-</li>
-<li>
-<p><strong>Acesse o Gerenciador de Contribuições</strong>:</p>
-<ul>
-<li>No menu principal, vá para <strong>Sketch &gt; Import Library &gt; Add Library...</strong>. Isso abrirá o Gerenciador de Contribuições, onde você pode procurar e instalar bibliotecas, ferramentas e modos para o Processing.</li>
-</ul>
-</li>
-<li>
-<p><strong>Pesquise por ziviDomeLive</strong>:</p>
-<ul>
-<li>Na barra de pesquisa do Gerenciador de Contribuições, digite "<strong>ziviDomeLive</strong>".</li>
-<li>Assim que localizado, clique no nome da biblioteca na lista de resultados de pesquisa.</li>
-</ul>
-</li>
-<li>
-<p><strong>Instale</strong>:</p>
-<ul>
-<li>Clique no botão <strong>Install</strong> ao lado de <strong>ziviDomeLive</strong>. O Processing fará o download e instalará a biblioteca automaticamente na sua pasta <code>libraries</code>.</li>
-</ul>
-</li>
-<li>
-<p><strong>Verifique a Instalação</strong>:</p>
-<ul>
-<li>Após a instalação, você pode verificar indo novamente em <strong>Sketch &gt; Import Library</strong> e verificando se <strong>ziviDomeLive</strong> aparece na lista. Se estiver lá, a instalação foi concluída com sucesso.</li>
-</ul>
-</li>
+<li>Abra o Processing.</li>
+<li>Selecione <strong>Sketch &gt; Import Library &gt; Add Library...</strong>.</li>
+<li>Pesquise por <strong>ziviDomeLive</strong>.</li>
+<li>Instale a biblioteca e suas dependências declaradas.</li>
+<li>Reinicie o Processing.</li>
 </ol>
-<hr />
-<h2 id="metodo-2-instalacao-pelo-github-instalacao-manual">Método 2: Instalação pelo GitHub (Instalação Manual)<a class="headerlink" href="#metodo-2-instalacao-pelo-github-instalacao-manual" title="Permanent link">&para;</a></h2>
-<p>Se você preferir ou precisar instalar o <strong>ziviDomeLive</strong> manualmente, pode baixar a biblioteca do GitHub e colocá-la na pasta <code>libraries</code> do Processing. Veja como:</p>
+<p>Abra <strong>File &gt; Examples &gt; Contributed Libraries &gt; ziviDomeLive &gt; EmptyProject</strong>.
+A cena preta vazia deve iniciar sem erros de shader ou dependência; pressione
+<code>h</code> para confirmar que o painel de controle pode ser exibido e ocultado.</p>
+<p>NDI é opcional e não pode ser instalado pelo Gerenciador de Contribuições do
+Processing. Instale separadamente o <a href="../ndi/">Runtime NDI</a> do sistema antes de
+habilitar o output de vídeo NDI experimental.</p>
+<h2 id="artefato-de-release">Artefato de Release<a class="headerlink" href="#artefato-de-release" title="Permanent link">&para;</a></h2>
+<p>Para instalação manual, use o artefato empacotado do release correspondente, não o ZIP do código-fonte:</p>
 <ol>
-<li>
-<p><strong>Baixe do GitHub</strong>:</p>
-<ul>
-<li>Acesse o repositório oficial do <strong>ziviDomeLive</strong> no GitHub: <a href="https://github.com/vicvalentim/ziviDomeLive">https://github.com/vicvalentim/ziviDomeLive</a>.</li>
-<li>Clique no botão <strong>Code</strong> e selecione <strong>Download ZIP</strong>. Isso baixará um arquivo ZIP do repositório para o seu computador.</li>
-</ul>
-</li>
-<li>
-<p><strong>Extraia o Arquivo ZIP Baixado</strong>:</p>
-<ul>
-<li>Localize o arquivo ZIP baixado no seu computador (geralmente na pasta <strong>Downloads</strong>).</li>
-<li>Extraia o conteúdo do arquivo ZIP para criar uma pasta chamada <code>ziviDomeLive-main</code> ou similar.</li>
-</ul>
-</li>
-<li>
-<p><strong>Mova a Pasta da Biblioteca</strong>:</p>
-<ul>
-<li>Renomeie a pasta extraída para <strong>ziviDomeLive</strong> (opcional, mas recomendado para organização).</li>
-<li>Mova a pasta <code>ziviDomeLive</code> para o diretório <code>libraries</code> do Processing, localizado em:<ul>
-<li><strong>Windows</strong>: <code>Documentos/Processing/libraries/</code></li>
-<li><strong>macOS</strong>: <code>Documentos/Processing/libraries/</code></li>
-<li><strong>Linux</strong>: <code>Documentos/Processing/libraries/</code></li>
-</ul>
-</li>
-</ul>
-</li>
+<li>Baixe <code>ziviDomeLive.zip</code> ou <code>ziviDomeLive.pdex</code>.</li>
+<li>Extraia a pasta superior <code>ziviDomeLive</code>.</li>
+<li>Mova-a para o diretório <code>libraries</code> do sketchbook indicado nas preferências do Processing.</li>
+<li>Instale ControlP5 e a dependência de output da plataforma.</li>
+<li>Reinicie o Processing.</li>
 </ol>
-<p>Se a pasta <code>libraries</code> não existir no seu diretório do Processing, crie-a manualmente.</p>
-<ol>
-<li><strong>Verifique a Instalação</strong>:<ul>
-<li>Abra o Processing e vá para <strong>Sketch &gt; Import Library</strong>. Confirme que <strong>ziviDomeLive</strong> aparece na lista. Se sim, a instalação manual foi concluída com sucesso.</li>
-</ul>
-</li>
-</ol>
-<hr />
-<p>Seguindo qualquer um desses métodos, você instalará o <strong>ziviDomeLive</strong> no seu ambiente Processing, tornando-o disponível para uso nos sketches. Escolha o método que melhor se adapta à sua configuração e preferência.</p>
+<p>O pacote inclui Devolay, mas não o NDI Runtime proprietário. Usuários NDI devem
+concluir a instalação separada do <a href="../ndi/">Runtime NDI</a> correspondente ao
+sistema operacional.</p>
+<p>A estrutura instalada deve conter:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>libraries/ziviDomeLive/
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  library.properties
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  library/
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  examples/
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  reference/
+</span></code></pre></div>
+<h2 id="checkout-do-codigo-fonte">Checkout do Código-Fonte<a class="headerlink" href="#checkout-do-codigo-fonte" title="Permanent link">&para;</a></h2>
+<p>Para desenvolvimento:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/vicvalentim/ziviDomeLive.git
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">cd</span><span class="w"> </span>ziviDomeLive
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>./gradlew<span class="w"> </span>buildReleaseArtifacts
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>./gradlew<span class="w"> </span>qualificationTests
+</span></code></pre></div>
+<p>O pacote instalável é gerado em <code>release/</code>.</p>
+<p>Para um deploy local no sketchbook em vez de gerar o pacote:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>./gradlew<span class="w"> </span>deployToProcessingSketchbook
+</span></code></pre></div>
+<p>Essa tarefa instala a biblioteca e os exemplos, mas exclui intencionalmente
+<code>src/test</code> e não executa a qualificação. Rode <code>qualificationTests</code> separadamente
+antes de considerar o checkout pronto para release.</p>
 
 
 

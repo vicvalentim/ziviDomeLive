@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://vicvalentim.github.io/ziviDomeLive/pt/usage/scene-management/">
       
       
-        <link rel="prev" href="../basic-usage/">
+        <link rel="prev" href="../spherical-calibration/">
       
       
         <link rel="next" href="../event-handling/">
@@ -349,6 +349,26 @@
     
     
       <li class="md-tabs__item">
+        <a href="../../architecture/rendering-pipeline/" class="md-tabs__link">
+          
+  
+  
+  Arquitetura
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="../../api/overview/" class="md-tabs__link">
           
   
@@ -374,6 +394,46 @@
   
   
   Exemplos
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../qualification/1.5-calibration-tool/" class="md-tabs__link">
+          
+  
+  
+  Qualificação
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../release-notes/1.5.0/" class="md-tabs__link">
+          
+  
+  
+  Notas de Versão
 
         </a>
       </li>
@@ -709,7 +769,63 @@
   <span class="md-ellipsis">
     
   
-    Uso Básico
+    Modos de Renderização
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../control-panel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Painel de Controle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../spherical-calibration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calibração Esférica
   
 
     
@@ -739,6 +855,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gerenciamento de Cenas
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -755,6 +889,69 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#registre-cenas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Registre Cenas
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troque-de-cena" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troque de Cena
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#substitua-o-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Substitua o Manager
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libere-recursos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Libere Recursos
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -851,6 +1048,59 @@
   
   
   
+    <a href="../../architecture/rendering-pipeline/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitetura
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
     <a href="../../api/overview/" class="md-nav__link">
       
   
@@ -912,6 +1162,112 @@
     
   
     Exemplos
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../qualification/1.5-calibration-tool/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Qualificação
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../release-notes/1.5.0/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notas de Versão
   
 
     
@@ -1059,7 +1415,31 @@
 
 
 <h1 id="gerenciamento-de-cenas">Gerenciamento de Cenas<a class="headerlink" href="#gerenciamento-de-cenas" title="Permanent link">&para;</a></h1>
-<p>Manipulação e gerenciamento de cenas.</p>
+<h2 id="registre-cenas">Registre Cenas<a class="headerlink" href="#registre-cenas" title="Permanent link">&para;</a></h2>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">SceneManager</span><span class="w"> </span><span class="n">manager</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">SceneManager</span><span class="p">();</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">manager</span><span class="p">.</span><span class="na">registerScene</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">OpeningScene</span><span class="p">());</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">manager</span><span class="p">.</span><span class="na">registerScene</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">PerformanceScene</span><span class="p">());</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">dome</span><span class="p">.</span><span class="na">setSceneManager</span><span class="p">(</span><span class="n">manager</span><span class="p">);</span>
+</span></code></pre></div>
+<p>A primeira cena torna-se ativa durante o registro. As demais permanecem registradas e inativas até serem selecionadas.</p>
+<h2 id="troque-de-cena">Troque de Cena<a class="headerlink" href="#troque-de-cena" title="Permanent link">&para;</a></h2>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">manager</span><span class="p">.</span><span class="na">nextScene</span><span class="p">();</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">manager</span><span class="p">.</span><span class="na">previousScene</span><span class="p">();</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">manager</span><span class="p">.</span><span class="na">setCurrentSceneIndex</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">manager</span><span class="p">.</span><span class="na">activateScene</span><span class="p">(</span><span class="n">sceneInstance</span><span class="p">);</span>
+</span></code></pre></div>
+<p>A mudança segue esta ordem:</p>
+<ol>
+<li>Atualiza o ownership ativo no <code>SceneManager</code>.</li>
+<li>Chama <code>dispose()</code> na cena que sai.</li>
+<li>Chama <code>setupScene()</code> na cena que entra.</li>
+<li>Sincroniza os renderers Standard com a nova cena ativa.</li>
+</ol>
+<p>Selecionar a cena já ativa não produz reinicialização.</p>
+<h2 id="substitua-o-manager">Substitua o Manager<a class="headerlink" href="#substitua-o-manager" title="Permanent link">&para;</a></h2>
+<p><code>dome.setSceneManager(newManager)</code> transfere a autoridade da fachada. A cena ativa anterior é descartada, exceto quando a mesma instância está sendo transferida para o novo manager.</p>
+<h2 id="libere-recursos">Libere Recursos<a class="headerlink" href="#libere-recursos" title="Permanent link">&para;</a></h2>
+<p>Use <code>dome.dispose()</code> apenas no encerramento terminal. Ele libera outputs, controles, cenas, renderers, callbacks, splash e o thread manager compartilhado. Chamadas repetidas são seguras.</p>
 
 
 

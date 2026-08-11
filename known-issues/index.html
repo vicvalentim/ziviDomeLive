@@ -347,6 +347,26 @@
     
     
       <li class="md-tabs__item">
+        <a href="../architecture/rendering-pipeline/" class="md-tabs__link">
+          
+  
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="../api/overview/" class="md-tabs__link">
           
   
@@ -372,6 +392,46 @@
   
   
   Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../qualification/1.5-calibration-tool/" class="md-tabs__link">
+          
+  
+  
+  Qualification
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../release-notes/1.5.0/" class="md-tabs__link">
+          
+  
+  
+  Release Notes
 
         </a>
       </li>
@@ -716,6 +776,59 @@
   
   
   
+    <a href="../architecture/rendering-pipeline/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
     <a href="../api/overview/" class="md-nav__link">
       
   
@@ -777,6 +890,112 @@
     
   
     Examples
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../qualification/1.5-calibration-tool/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Qualification
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../release-notes/1.5.0/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
   
 
     
@@ -889,6 +1108,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#opengl-error-1282" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenGL Error 1282
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#apple-silicon-and-syphon" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -903,7 +1133,7 @@
   <a href="#linux-external-outputs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Linux external outputs
+        Linux External Outputs
       
     </span>
   </a>
@@ -911,10 +1141,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#opengl-error-1282" class="md-nav__link">
+  <a href="#native-output-qualification" class="md-nav__link">
     <span class="md-ellipsis">
       
-        OpenGL error 1282
+        Native Output Qualification
       
     </span>
   </a>
@@ -1004,19 +1234,28 @@
 
 
 <h1 id="known-issues">Known Issues<a class="headerlink" href="#known-issues" title="Permanent link">&para;</a></h1>
-<h2 id="apple-silicon-and-syphon">Apple Silicon and Syphon<a class="headerlink" href="#apple-silicon-and-syphon" title="Permanent link">&para;</a></h2>
-<p>On macOS with Apple Silicon, full Syphon interoperability may still require the Intel build of Processing running under Rosetta 2. The native ARM Processing stack does not currently provide the same Syphon support level.</p>
-<h2 id="linux-external-outputs">Linux external outputs<a class="headerlink" href="#linux-external-outputs" title="Permanent link">&para;</a></h2>
-<p>Linux builds have reduced support for external video outputs compared with macOS and Windows because the Processing ecosystem dependencies used by this library do not provide the same native integrations for NDI, Syphon, and Spout.</p>
-<h2 id="opengl-error-1282">OpenGL error 1282<a class="headerlink" href="#opengl-error-1282" title="Permanent link">&para;</a></h2>
-<p>Some configurations emit:</p>
+<h2 id="opengl-error-1282">OpenGL Error 1282<a class="headerlink" href="#opengl-error-1282" title="Permanent link">&para;</a></h2>
+<p>Some Processing/JOGL hardware and driver combinations emit:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>OpenGL error 1282 at bot endDraw(): invalid operation
 </span></code></pre></div>
-<p>This is a <code>GL_INVALID_OPERATION</code> raised by the JOGL/Processing OpenGL driver, typically triggered by invalid framebuffer state during rendering or output capture. The error is endemic to certain hardware and driver combinations and has not been fully eliminated. It is generally non-fatal — rendering continues — but may indicate instability in specific setups (particularly Apple Silicon, certain GPU drivers, or complex multi-pass rendering). We continue to investigate the root cause.</p>
-<p><strong>Workarounds that may reduce frequency:</strong>
-- Run Processing using the Intel (Rosetta 2) build on Apple Silicon.
-- Keep external outputs (NDI, Syphon, Spout) disabled when not in use.
-- Use the latest GPU drivers for your platform.</p>
+<p>This <code>GL_INVALID_OPERATION</code> remains endemic to some framebuffer, driver, and multi-pass configurations. Version 1.4 removed a nested NDI draw lifecycle that amplified it, but the broader issue is not considered resolved. It is often non-fatal, yet production systems should treat repeated messages as a qualification failure until rendering and output stability are confirmed.</p>
+<p>Possible mitigations:</p>
+<ul>
+<li>Keep unused external outputs disabled.</li>
+<li>Use a stable GPU driver and Processing build for the target machine.</li>
+<li>On Apple Silicon, compare native ARM and Intel/Rosetta Processing when Syphon is required.</li>
+<li>Reduce output resolution while isolating the failing pass.</li>
+</ul>
+<h2 id="apple-silicon-and-syphon">Apple Silicon and Syphon<a class="headerlink" href="#apple-silicon-and-syphon" title="Permanent link">&para;</a></h2>
+<p>Complete Syphon interoperability may require Intel Processing under Rosetta 2. Native ARM rendering and Syphon are separate qualification questions.</p>
+<h2 id="linux-external-outputs">Linux External Outputs<a class="headerlink" href="#linux-external-outputs" title="Permanent link">&para;</a></h2>
+<p>Core rendering is intended to work on Linux, but the current Processing integrations do not provide Syphon or Spout there, and NDI native support remains reduced/unqualified.</p>
+<h2 id="native-output-qualification">Native Output Qualification<a class="headerlink" href="#native-output-qualification" title="Permanent link">&para;</a></h2>
+<p>Automated tests validate routing and lifecycle without opening real GPU or receiver sessions. Syphon, Spout, NDI discovery, receiver color/orientation, resize, repeated enable/disable, pause/resume, and shutdown must be checked on target hardware.</p>
+<p>NDI is an experimental, unofficial, video-only sender and requires the
+proprietary NDI Runtime to be <a href="../installation/ndi/">installed separately</a>. It is
+not supplied by Processing's Contribution Manager or bundled in the release.</p>
+<p>If an NDI native send does not return during shutdown, publication stops after a bounded wait and state becomes <code>STOPPING</code>; native cleanup completes after the worker exits.</p>
 
 
 

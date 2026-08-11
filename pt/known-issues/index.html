@@ -347,6 +347,26 @@
     
     
       <li class="md-tabs__item">
+        <a href="../architecture/rendering-pipeline/" class="md-tabs__link">
+          
+  
+  
+  Arquitetura
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="../api/overview/" class="md-tabs__link">
           
   
@@ -372,6 +392,46 @@
   
   
   Exemplos
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../qualification/1.5-calibration-tool/" class="md-tabs__link">
+          
+  
+  
+  Qualificação
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../release-notes/1.5.0/" class="md-tabs__link">
+          
+  
+  
+  Notas de Versão
 
         </a>
       </li>
@@ -716,6 +776,59 @@
   
   
   
+    <a href="../architecture/rendering-pipeline/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitetura
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
     <a href="../api/overview/" class="md-nav__link">
       
   
@@ -777,6 +890,112 @@
     
   
     Exemplos
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../qualification/1.5-calibration-tool/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Qualificação
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../release-notes/1.5.0/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notas de Versão
   
 
     
@@ -889,6 +1108,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#opengl-error-1282" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenGL Error 1282
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#apple-silicon-e-syphon" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -903,7 +1133,7 @@
   <a href="#outputs-externos-no-linux" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Outputs externos no Linux
+        Outputs Externos no Linux
       
     </span>
   </a>
@@ -911,10 +1141,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#opengl-error-1282" class="md-nav__link">
+  <a href="#qualificacao-de-outputs-nativos" class="md-nav__link">
     <span class="md-ellipsis">
       
-        OpenGL error 1282
+        Qualificação de Outputs Nativos
       
     </span>
   </a>
@@ -1004,19 +1234,29 @@
 
 
 <h1 id="problemas-conhecidos">Problemas Conhecidos<a class="headerlink" href="#problemas-conhecidos" title="Permanent link">&para;</a></h1>
-<h2 id="apple-silicon-e-syphon">Apple Silicon e Syphon<a class="headerlink" href="#apple-silicon-e-syphon" title="Permanent link">&para;</a></h2>
-<p>No macOS com Apple Silicon, a interoperabilidade completa com Syphon pode exigir a versão Intel do Processing rodando via Rosetta 2. A stack ARM nativa do Processing não oferece o mesmo nível de suporte ao Syphon.</p>
-<h2 id="outputs-externos-no-linux">Outputs externos no Linux<a class="headerlink" href="#outputs-externos-no-linux" title="Permanent link">&para;</a></h2>
-<p>Builds Linux têm suporte reduzido para saídas de vídeo externas em comparação com macOS e Windows, pois as dependências do ecossistema Processing usadas por esta biblioteca não fornecem as mesmas integrações nativas para NDI, Syphon e Spout.</p>
-<h2 id="opengl-error-1282">OpenGL error 1282<a class="headerlink" href="#opengl-error-1282" title="Permanent link">&para;</a></h2>
-<p>Algumas configurações emitem:</p>
+<h2 id="opengl-error-1282">OpenGL Error 1282<a class="headerlink" href="#opengl-error-1282" title="Permanent link">&para;</a></h2>
+<p>Algumas combinações de Processing/JOGL, hardware e driver emitem:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>OpenGL error 1282 at bot endDraw(): invalid operation
 </span></code></pre></div>
-<p>Esse é um <code>GL_INVALID_OPERATION</code> emitido pelo driver OpenGL do JOGL/Processing, geralmente acionado por estado inválido do framebuffer durante renderização ou captura de output. O erro é endêmico em certas combinações de hardware e driver e <strong>não foi completamente eliminado</strong>. Em geral é não-fatal — a renderização continua — mas pode indicar instabilidade em configurações específicas (especialmente Apple Silicon, certos drivers de GPU, ou renderização multi-pass complexa). A investigação da causa raiz está em andamento.</p>
-<p><strong>Medidas que podem reduzir a frequência:</strong>
-- Rode o Processing na versão Intel (Rosetta 2) em Apple Silicon.
-- Mantenha os outputs externos (NDI, Syphon, Spout) desabilitados quando não estiverem em uso.
-- Use os drivers de GPU mais recentes para sua plataforma.</p>
+<p>Esse <code>GL_INVALID_OPERATION</code> continua endêmico em algumas configurações de framebuffer, driver e múltiplos passes. A versão 1.4 removeu um lifecycle NDI aninhado que amplificava o erro, mas o problema mais amplo não é considerado resolvido. Ele costuma ser não fatal, porém sistemas de produção devem tratar mensagens repetidas como falha de qualificação até confirmar estabilidade de renderização e output.</p>
+<p>Possíveis medidas:</p>
+<ul>
+<li>Mantenha outputs externos desabilitados quando não estiverem em uso.</li>
+<li>Use uma combinação estável de driver e Processing na máquina de destino.</li>
+<li>No Apple Silicon, compare Processing ARM nativo e Intel/Rosetta quando Syphon for necessário.</li>
+<li>Reduza a resolução de output enquanto isola o pass que falha.</li>
+</ul>
+<h2 id="apple-silicon-e-syphon">Apple Silicon e Syphon<a class="headerlink" href="#apple-silicon-e-syphon" title="Permanent link">&para;</a></h2>
+<p>A interoperabilidade completa com Syphon pode exigir Processing Intel sob Rosetta 2. Renderização ARM nativa e Syphon são questões separadas de qualificação.</p>
+<h2 id="outputs-externos-no-linux">Outputs Externos no Linux<a class="headerlink" href="#outputs-externos-no-linux" title="Permanent link">&para;</a></h2>
+<p>A renderização principal deve funcionar no Linux, mas as integrações atuais do Processing não oferecem Syphon ou Spout nessa plataforma, e o suporte nativo a NDI permanece reduzido/não qualificado.</p>
+<h2 id="qualificacao-de-outputs-nativos">Qualificação de Outputs Nativos<a class="headerlink" href="#qualificacao-de-outputs-nativos" title="Permanent link">&para;</a></h2>
+<p>Testes automatizados validam routing e lifecycle sem abrir sessões reais de GPU ou receiver. Syphon, Spout, descoberta NDI, cor/orientação no receiver, resize, ciclos de enable/disable, pause/resume e shutdown devem ser verificados no hardware de destino.</p>
+<p>NDI é um sender experimental, não oficial e somente de vídeo. Ele exige que o
+NDI Runtime proprietário seja <a href="../installation/ndi/">instalado separadamente</a>,
+pois não é fornecido pelo Gerenciador de Contribuições do Processing nem
+incluído no pacote da biblioteca.</p>
+<p>Se um envio nativo NDI não retornar durante o shutdown, a publicação para após uma espera limitada e o estado muda para <code>STOPPING</code>; a limpeza nativa termina depois da saída do worker.</p>
 
 
 

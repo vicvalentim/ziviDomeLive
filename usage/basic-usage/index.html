@@ -18,7 +18,7 @@
         <link rel="prev" href="../../getting-started/features/">
       
       
-        <link rel="next" href="../scene-management/">
+        <link rel="next" href="../control-panel/">
       
       
         
@@ -33,7 +33,7 @@
     
     
       
-        <title>Basic Usage - ziviDomeLive - Processing Library Documentation</title>
+        <title>Render Modes - ziviDomeLive - Processing Library Documentation</title>
       
     
     
@@ -86,7 +86,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#basic-usage" class="md-skip">
+        <a href="#render-modes" class="md-skip">
           Skip to content
         </a>
       
@@ -119,7 +119,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Basic Usage
+              Render Modes
             
           </span>
         </div>
@@ -349,6 +349,26 @@
     
     
       <li class="md-tabs__item">
+        <a href="../../architecture/rendering-pipeline/" class="md-tabs__link">
+          
+  
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="../../api/overview/" class="md-tabs__link">
           
   
@@ -374,6 +394,46 @@
   
   
   Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../qualification/1.5-calibration-tool/" class="md-tabs__link">
+          
+  
+  
+  Qualification
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../release-notes/1.5.0/" class="md-tabs__link">
+          
+  
+  
+  Release Notes
 
         </a>
       </li>
@@ -711,6 +771,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Render Modes
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -718,7 +796,7 @@
   <span class="md-ellipsis">
     
   
-    Basic Usage
+    Render Modes
   
 
     
@@ -728,6 +806,147 @@
 
       </a>
       
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#full-compatibility-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FULL Compatibility Mode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dedicated-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dedicated Modes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#floating-domemaster" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Floating Domemaster
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#render-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Render Requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resolution-domains" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resolution Domains
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-guides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related Guides
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../control-panel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control Panel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../spherical-calibration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Spherical Calibration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -851,6 +1070,59 @@
   
   
   
+    <a href="../../architecture/rendering-pipeline/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
     <a href="../../api/overview/" class="md-nav__link">
       
   
@@ -912,6 +1184,112 @@
     
   
     Examples
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../qualification/1.5-calibration-tool/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Qualification
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../release-notes/1.5.0/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
   
 
     
@@ -1058,8 +1436,86 @@
   
 
 
-<h1 id="basic-usage">Basic Usage<a class="headerlink" href="#basic-usage" title="Permanent link">&para;</a></h1>
-<p>Guide to basic usage of ziviDomeLive.</p>
+<h1 id="render-modes">Render Modes<a class="headerlink" href="#render-modes" title="Permanent link">&para;</a></h1>
+<p><code>RenderMode</code> controls the effective representation used by the Processing window and every enabled external output. It does not select an output backend and it does not replace the legacy <code>ViewType</code> routing API.</p>
+<h2 id="full-compatibility-mode">FULL Compatibility Mode<a class="headerlink" href="#full-compatibility-mode" title="Permanent link">&para;</a></h2>
+<p><code>FULL</code> is the default. Existing sketches that never call <code>setRenderMode()</code> keep independent preview and output routes:</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">dome</span><span class="p">.</span><span class="na">setRenderMode</span><span class="p">(</span><span class="n">RenderMode</span><span class="p">.</span><span class="na">FULL</span><span class="p">);</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">dome</span><span class="p">.</span><span class="na">setCurrentView</span><span class="p">(</span><span class="n">zividomelive</span><span class="p">.</span><span class="na">ViewType</span><span class="p">.</span><span class="na">STANDARD</span><span class="p">);</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">OutputManager</span><span class="w"> </span><span class="n">outputs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dome</span><span class="p">.</span><span class="na">getOutputManager</span><span class="p">();</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">outputs</span><span class="p">.</span><span class="na">setNdiView</span><span class="p">(</span><span class="n">zividomelive</span><span class="p">.</span><span class="na">ViewType</span><span class="p">.</span><span class="na">EQUIRECTANGULAR</span><span class="p">);</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">outputs</span><span class="p">.</span><span class="na">setSyphonView</span><span class="p">(</span><span class="n">zividomelive</span><span class="p">.</span><span class="na">ViewType</span><span class="p">.</span><span class="na">FISHEYE_DOMEMASTER</span><span class="p">);</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">outputs</span><span class="p">.</span><span class="na">setSpoutView</span><span class="p">(</span><span class="n">zividomelive</span><span class="p">.</span><span class="na">ViewType</span><span class="p">.</span><span class="na">CUBEMAP</span><span class="p">);</span>
+</span></code></pre></div>
+<p>Only enabled outputs request frames. Merely configuring a route or preparing Syphon/Spout does not activate publication or add a render requirement.</p>
+<h2 id="dedicated-modes">Dedicated Modes<a class="headerlink" href="#dedicated-modes" title="Permanent link">&para;</a></h2>
+<p>Dedicated modes force one effective representation for the main preview and all enabled outputs:</p>
+<table>
+<thead>
+<tr>
+<th><code>RenderMode</code></th>
+<th>Effective <code>ViewType</code></th>
+<th>Main pipeline</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>STANDARD</code></td>
+<td><code>STANDARD</code></td>
+<td>Direct perspective Standard renderer</td>
+</tr>
+<tr>
+<td><code>DOMEMASTER</code></td>
+<td><code>FISHEYE_DOMEMASTER</code></td>
+<td>Cubemap, equirectangular, fisheye</td>
+</tr>
+<tr>
+<td><code>EQUIRECTANGULAR</code></td>
+<td><code>EQUIRECTANGULAR</code></td>
+<td>Cubemap, equirectangular</td>
+</tr>
+<tr>
+<td><code>SKYBOX</code></td>
+<td><code>CUBEMAP</code></td>
+<td>Cubemap, skybox layout</td>
+</tr>
+</tbody>
+</table>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">dome</span><span class="p">.</span><span class="na">setRenderMode</span><span class="p">(</span><span class="n">RenderMode</span><span class="p">.</span><span class="na">DOMEMASTER</span><span class="p">);</span>
+</span></code></pre></div>
+<p>The configured preview and per-output <code>ViewType</code> values are retained while a dedicated mode is active. Returning to <code>FULL</code> restores those independent routes:</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">dome</span><span class="p">.</span><span class="na">setRenderMode</span><span class="p">(</span><span class="n">RenderMode</span><span class="p">.</span><span class="na">FULL</span><span class="p">);</span>
+</span></code></pre></div>
+<h2 id="floating-domemaster">Floating Domemaster<a class="headerlink" href="#floating-domemaster" title="Permanent link">&para;</a></h2>
+<p>The floating fisheye thumbnail is an auxiliary preview service:</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">dome</span><span class="p">.</span><span class="na">setRenderMode</span><span class="p">(</span><span class="n">RenderMode</span><span class="p">.</span><span class="na">STANDARD</span><span class="p">);</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">dome</span><span class="p">.</span><span class="na">setShowPreview</span><span class="p">(</span><span class="kc">true</span><span class="p">);</span>
+</span></code></pre></div>
+<p>This combination intentionally renders the Standard path plus the spherical passes needed by the thumbnail. In other dedicated modes the service can still be enabled programmatically, but the built-in panel hides its redundant toggle.</p>
+<h2 id="render-requirements">Render Requirements<a class="headerlink" href="#render-requirements" title="Permanent link">&para;</a></h2>
+<p>The library computes a dependency closure for each frame:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Standard                 -&gt; Standard only
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>Cubemap layout           -&gt; cubemap capture + layout
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>Equirectangular          -&gt; cubemap capture + equirectangular
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>Fisheye domemaster       -&gt; cubemap capture + equirectangular + fisheye
+</span></code></pre></div>
+<p>When multiple enabled outputs request different views in <code>FULL</code>, their requirements are merged. At most one master cubemap is captured for the frame. See <a href="../../architecture/rendering-pipeline/">Rendering Pipeline</a> for the complete frame order.</p>
+<h2 id="resolution-domains">Resolution Domains<a class="headerlink" href="#resolution-domains" title="Permanent link">&para;</a></h2>
+<p>Standard preview uses the current Processing window dimensions. Spherical preview targets use:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>min(1024, max(256, min(windowWidth, windowHeight)))
+</span></code></pre></div>
+<p>External output targets use the independent output resolution:</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">dome</span><span class="p">.</span><span class="na">resetGraphics</span><span class="p">(</span><span class="mi">2048</span><span class="p">);</span>
+</span></code></pre></div>
+<p>The supported panel presets are <code>1024</code>, <code>2048</code>, <code>3072</code>, and <code>4096</code>. Reallocation is deferred to the draw loop, affects output targets only, and preserves domemaster Size%.</p>
+<h2 id="related-guides">Related Guides<a class="headerlink" href="#related-guides" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../control-panel/">Control Panel</a></li>
+<li><a href="../spherical-calibration/">Spherical Calibration</a></li>
+<li><a href="../external-integration/">External Integration</a></li>
+<li><a href="../../architecture/runtime-lifecycle/">Runtime Lifecycle</a></li>
+</ul>
 
 
 

@@ -18,7 +18,7 @@
         <link rel="prev" href="../event-handling/">
       
       
-        <link rel="next" href="../../api/overview/">
+        <link rel="next" href="../../architecture/rendering-pipeline/">
       
       
         
@@ -349,6 +349,26 @@
     
     
       <li class="md-tabs__item">
+        <a href="../../architecture/rendering-pipeline/" class="md-tabs__link">
+          
+  
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="../../api/overview/" class="md-tabs__link">
           
   
@@ -374,6 +394,46 @@
   
   
   Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../qualification/1.5-calibration-tool/" class="md-tabs__link">
+          
+  
+  
+  Qualification
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../release-notes/1.5.0/" class="md-tabs__link">
+          
+  
+  
+  Release Notes
 
         </a>
       </li>
@@ -709,7 +769,63 @@
   <span class="md-ellipsis">
     
   
-    Basic Usage
+    Render Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../control-panel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control Panel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../spherical-calibration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Spherical Calibration
   
 
     
@@ -795,6 +911,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    External Integration
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -812,6 +946,91 @@
 
       </a>
       
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#configure-routes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure Routes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#toggle-publication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Toggle Publication
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inspect-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inspect Lifecycle
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ndi-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NDI Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#telemetry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Telemetry
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shutdown-and-resume" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shutdown and Resume
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -819,6 +1038,59 @@
             
           </ul>
         </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../architecture/rendering-pipeline/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
       
     </li>
   
@@ -912,6 +1184,112 @@
     
   
     Examples
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../qualification/1.5-calibration-tool/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Qualification
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../release-notes/1.5.0/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
   
 
     
@@ -1059,7 +1437,49 @@
 
 
 <h1 id="external-integration">External Integration<a class="headerlink" href="#external-integration" title="Permanent link">&para;</a></h1>
-<p>Integrating with other tools and libraries.</p>
+<p>External outputs are disabled by default and route independently in <code>RenderMode.FULL</code>.</p>
+<p>NDI is an experimental, unofficial video-only integration and requires a
+separately installed system runtime. Complete the <a href="../../installation/ndi/">NDI Runtime</a>
+setup before enabling it.</p>
+<h2 id="configure-routes">Configure Routes<a class="headerlink" href="#configure-routes" title="Permanent link">&para;</a></h2>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">OutputManager</span><span class="w"> </span><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dome</span><span class="p">.</span><span class="na">getOutputManager</span><span class="p">();</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">output</span><span class="p">.</span><span class="na">setNdiView</span><span class="p">(</span><span class="n">zividomelive</span><span class="p">.</span><span class="na">ViewType</span><span class="p">.</span><span class="na">EQUIRECTANGULAR</span><span class="p">);</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">output</span><span class="p">.</span><span class="na">setSyphonView</span><span class="p">(</span><span class="n">zividomelive</span><span class="p">.</span><span class="na">ViewType</span><span class="p">.</span><span class="na">FISHEYE_DOMEMASTER</span><span class="p">);</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">output</span><span class="p">.</span><span class="na">setSpoutView</span><span class="p">(</span><span class="n">zividomelive</span><span class="p">.</span><span class="na">ViewType</span><span class="p">.</span><span class="na">STANDARD</span><span class="p">);</span>
+</span></code></pre></div>
+<p>Only the platform-valid local texture backend is available: Syphon on macOS or Spout on Windows.</p>
+<h2 id="toggle-publication">Toggle Publication<a class="headerlink" href="#toggle-publication" title="Permanent link">&para;</a></h2>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">output</span><span class="p">.</span><span class="na">toggleOutput</span><span class="p">(</span><span class="s">&quot;ndi&quot;</span><span class="p">);</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">output</span><span class="p">.</span><span class="na">toggleOutput</span><span class="p">(</span><span class="s">&quot;syphon&quot;</span><span class="p">);</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">output</span><span class="p">.</span><span class="na">toggleOutput</span><span class="p">(</span><span class="s">&quot;spout&quot;</span><span class="p">);</span>
+</span></code></pre></div>
+<p>Unsupported local backends ignore the request. A repeated toggle disables an enabled backend. After an initialization failure, another explicit enable toggle retries initialization.</p>
+<h2 id="inspect-lifecycle">Inspect Lifecycle<a class="headerlink" href="#inspect-lifecycle" title="Permanent link">&para;</a></h2>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">OutputManager</span><span class="p">.</span><span class="na">OutputState</span><span class="w"> </span><span class="n">state</span><span class="w"> </span><span class="o">=</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">output</span><span class="p">.</span><span class="na">getOutputState</span><span class="p">(</span><span class="n">OutputManager</span><span class="p">.</span><span class="na">OutputType</span><span class="p">.</span><span class="na">NDI</span><span class="p">);</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">String</span><span class="w"> </span><span class="n">reason</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">output</span><span class="p">.</span><span class="na">getOutputFailureReason</span><span class="p">(</span><span class="n">OutputManager</span><span class="p">.</span><span class="na">OutputType</span><span class="p">.</span><span class="na">NDI</span><span class="p">);</span>
+</span></code></pre></div>
+<p>Availability, initialization, publication, and render demand are separate. An initialized backend does not require rendering until publication is enabled.</p>
+<h2 id="ndi-pipeline">NDI Pipeline<a class="headerlink" href="#ndi-pipeline" title="Permanent link">&para;</a></h2>
+<p>NDI is the GPU-to-CPU boundary:</p>
+<ol>
+<li>The Processing draw thread calls <code>loadPixels()</code> after target rendering completes.</li>
+<li>ARGB pixels are copied into one of three reusable slots.</li>
+<li>A bounded latest-frame-wins queue limits latency.</li>
+<li>A dedicated worker converts to packed RGBA and sends a progressive frame.</li>
+<li>The worker performs no OpenGL calls.</li>
+</ol>
+<p>The default frame-rate metadata follows <code>dome.getTargetFrameRate()</code>. Use <code>setNdiFrameRate()</code> for fractional rates such as <code>60000/1001</code>.</p>
+<h2 id="telemetry">Telemetry<a class="headerlink" href="#telemetry" title="Permanent link">&para;</a></h2>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">output</span><span class="p">.</span><span class="na">getNdiCapturedFrames</span><span class="p">();</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">output</span><span class="p">.</span><span class="na">getNdiSentFrames</span><span class="p">();</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">output</span><span class="p">.</span><span class="na">getNdiDroppedFrames</span><span class="p">();</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">output</span><span class="p">.</span><span class="na">getNdiFailedFrames</span><span class="p">();</span>
+</span></code></pre></div>
+<p>Dropped frames are intentional backpressure events. Failed frames identify capture or sender errors.</p>
+<h2 id="shutdown-and-resume">Shutdown and Resume<a class="headerlink" href="#shutdown-and-resume" title="Permanent link">&para;</a></h2>
+<p><code>pause()</code> records enabled publications, stops outputs, and <code>resume()</code> attempts to restore them. Terminal <code>dispose()</code> releases resources and unregisters callbacks. NDI worker waiting is bounded; a blocked native send moves the backend to <code>STOPPING</code> and defers cleanup until the worker exits.</p>
+<p>Native receiver interoperability remains a hardware qualification item.</p>
 
 
 

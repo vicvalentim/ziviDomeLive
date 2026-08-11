@@ -86,7 +86,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#requisitos-do-sistema-para-zividomelive" class="md-skip">
+        <a href="#requisitos-do-sistema" class="md-skip">
           Ir para o conteúdo
         </a>
       
@@ -349,6 +349,26 @@
     
     
       <li class="md-tabs__item">
+        <a href="../../architecture/rendering-pipeline/" class="md-tabs__link">
+          
+  
+  
+  Arquitetura
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="../../api/overview/" class="md-tabs__link">
           
   
@@ -374,6 +394,46 @@
   
   
   Exemplos
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../qualification/1.5-calibration-tool/" class="md-tabs__link">
+          
+  
+  
+  Qualificação
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../release-notes/1.5.0/" class="md-tabs__link">
+          
+  
+  
+  Notas de Versão
 
         </a>
       </li>
@@ -656,10 +716,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#ambiente-processing" class="md-nav__link">
+  <a href="#runtime" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Ambiente Processing
+        Runtime
       
     </span>
   </a>
@@ -667,10 +727,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#recomendacao-de-hardware" class="md-nav__link">
+  <a href="#hardware" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Recomendação de Hardware
+        Hardware
       
     </span>
   </a>
@@ -678,10 +738,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#notas-para-usuarios-de-apple-silicon-m1-m2-e-posteriores" class="md-nav__link">
+  <a href="#capacidades-por-plataforma" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Notas para Usuários de Apple Silicon (M1, M2 e Posteriores)
+        Capacidades por Plataforma
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#apple-silicon" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Apple Silicon
       
     </span>
   </a>
@@ -740,6 +811,34 @@
     
   
     Dependências
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ndi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Runtime NDI
   
 
     
@@ -893,6 +992,59 @@
   
   
   
+    <a href="../../architecture/rendering-pipeline/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitetura
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
     <a href="../../api/overview/" class="md-nav__link">
       
   
@@ -954,6 +1106,112 @@
     
   
     Exemplos
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../qualification/1.5-calibration-tool/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Qualificação
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../release-notes/1.5.0/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notas de Versão
   
 
     
@@ -1100,49 +1358,61 @@
   
 
 
-<h1 id="requisitos-do-sistema-para-zividomelive">Requisitos do Sistema para ziviDomeLive<a class="headerlink" href="#requisitos-do-sistema-para-zividomelive" title="Permanent link">&para;</a></h1>
-<p>A biblioteca <strong>ziviDomeLive</strong> foi projetada para suportar ambientes visuais imersivos de alto desempenho, incluindo projeções fulldome, instalações de realidade virtual e displays de mídia interativa. Dada sua capacidade de renderização 3D em tempo real, o <strong>ziviDomeLive</strong> exige algumas especificações de sistema e dependências para garantir desempenho ideal. Abaixo estão os requisitos detalhados de sistema, hardware e software.</p>
-<hr />
-<h2 id="ambiente-processing">Ambiente Processing<a class="headerlink" href="#ambiente-processing" title="Permanent link">&para;</a></h2>
-<p>Para aproveitar ao máximo as capacidades do <strong>ziviDomeLive</strong>, use uma versão compatível do Processing com as configurações apropriadas de ambiente. Essas configurações permitem maximizar o desempenho gráfico e a compatibilidade com o sistema:</p>
+<h1 id="requisitos-do-sistema">Requisitos do Sistema<a class="headerlink" href="#requisitos-do-sistema" title="Permanent link">&para;</a></h1>
+<h2 id="runtime">Runtime<a class="headerlink" href="#runtime" title="Permanent link">&para;</a></h2>
 <ul>
-<li>
-<p><strong>Versão do Processing</strong>: Processing 4.x ou superior. A biblioteca é otimizada para as versões mais recentes do Processing, que incorporam atualizações avançadas de renderização 3D e melhor compatibilidade com hardware atual. Versões mais antigas podem não suportar totalmente algumas funcionalidades.</p>
-</li>
-<li>
-<p><strong>Renderizador Gráfico</strong>: Defina seus sketches do Processing para usar o <code>P3D</code> para renderização 3D. O renderizador <code>P3D</code> é essencial para lidar com cenas complexas em 3D, especialmente aquelas envolvendo projeções imersivas fisheye ou equiretangulares necessárias em ambientes de cúpula. Sem o <code>P3D</code>, funcionalidades 3D podem ser limitadas ou indisponíveis.</p>
-</li>
-<li>
-<p><strong>Sistemas Operacionais Suportados</strong>:</p>
-<ul>
-<li><strong>macOS</strong> (10.14 Mojave ou posterior)</li>
-<li><strong>Windows</strong> (Windows 10 ou posterior)</li>
-<li><strong>Linux</strong> (Ubuntu 18.04 LTS ou posterior, Debian-based recomendado)</li>
+<li>Processing 4; a versão 1.5.0 é compilada e testada contra Processing core <code>4.5.6</code></li>
+<li>Renderizador <code>P3D</code></li>
+<li><code>pixelDensity(1)</code> recomendado para estabilidade entre displays</li>
+<li>GPU e driver capazes de expor OpenGL 4.1; os shaders empacotados usam GLSL 4.10</li>
 </ul>
-</li>
-</ul>
-<p>Manter o sistema operacional atualizado pode melhorar significativamente o desempenho e a compatibilidade com integrações externas, particularmente o <strong>Syphon</strong> no macOS e o <strong>Spout</strong> no Windows.</p>
-<hr />
-<h2 id="recomendacao-de-hardware">Recomendação de Hardware<a class="headerlink" href="#recomendacao-de-hardware" title="Permanent link">&para;</a></h2>
-<p>Para renderização em tempo real ideal, especialmente em alta resolução (até 4K) para cúpula completa ou VR, o <strong>ziviDomeLive</strong> exige um hardware robusto para garantir uma experiência fluida e responsiva. Abaixo estão as recomendações de hardware:</p>
-<ul>
-<li><strong>GPU Dedicada</strong>: Use uma placa gráfica moderna dedicada (por exemplo, NVIDIA GeForce RTX ou AMD Radeon RX). Gráficos integrados podem ter dificuldade com projeções em alta resolução e cenas com muitos shaders.</li>
-<li><strong>Memória (RAM)</strong>: 8GB é o mínimo, mas 16GB ou mais são recomendados para lidar com cenas maiores ou integrações simultâneas.</li>
-<li><strong>Processador Multi-core</strong>: Um processador com múltiplos núcleos aprimora o desempenho em renderização em tempo real, especialmente ao lidar com cálculos visuais complexos e múltiplas bibliotecas.</li>
-</ul>
-<hr />
-<h2 id="notas-para-usuarios-de-apple-silicon-m1-m2-e-posteriores">Notas para Usuários de Apple Silicon (M1, M2 e Posteriores)<a class="headerlink" href="#notas-para-usuarios-de-apple-silicon-m1-m2-e-posteriores" title="Permanent link">&para;</a></h2>
-<p>Se estiver usando um sistema <strong>macOS com Apple Silicon (série M)</strong>, considere o seguinte:</p>
-<ul>
-<li>
-<p><strong>Compatibilidade com Syphon</strong>: O Syphon atualmente não suporta a versão ARM nativa do Processing no Apple Silicon. Portanto, se você precisar do Syphon, execute a <strong>versão Intel do Processing</strong> usando <strong>Rosetta 2</strong>. Isso permite reter a funcionalidade completa do Syphon.</p>
-</li>
-<li>
-<p><strong>Limitações da Versão ARM</strong>: Embora a versão ARM (nativa para Apple Silicon) do Processing funcione para a maioria das funcionalidades padrão, ela pode não oferecer suporte total para certas integrações em tempo real. Se o Syphon não for essencial, a versão ARM é aceitável.</p>
-</li>
-</ul>
-<hr />
-<p>Seguindo esses requisitos e recomendações, você garantirá que o <strong>ziviDomeLive</strong> ofereça o melhor desempenho, entregando visuais de alta qualidade e interatividade contínua para seus projetos de mídia imersiva.</p>
+<p>Java 17 é necessário para compilar a biblioteca a partir do código-fonte. O Processing fornece seu próprio runtime Java para sketches instalados.</p>
+<h2 id="hardware">Hardware<a class="headerlink" href="#hardware" title="Permanent link">&para;</a></h2>
+<p>O requisito prático depende da complexidade da cena, resolução de output e quantidade de outputs simultâneos. Uma GPU dedicada é recomendada para renderização esférica 3K/4K e cenas com shaders intensivos. GPUs integradas ou antigas que não criam um contexto OpenGL 4.1 não conseguem compilar os shaders de projeção empacotados. Qualifique a combinação exata de GPU, driver, projetor, lente e receiver antes do uso em produção.</p>
+<h2 id="capacidades-por-plataforma">Capacidades por Plataforma<a class="headerlink" href="#capacidades-por-plataforma" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Capacidade</th>
+<th>macOS</th>
+<th>Windows</th>
+<th>Linux</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Renderização Standard e esférica</td>
+<td>Suportada</td>
+<td>Suportada</td>
+<td>Suportada</td>
+</tr>
+<tr>
+<td>Sender de vídeo NDI</td>
+<td>Experimental; exige NDI Runtime separado e qualificação com receiver</td>
+<td>Experimental; exige NDI Runtime separado e qualificação com receiver</td>
+<td>Experimental, reduzido e não qualificado</td>
+</tr>
+<tr>
+<td>Syphon</td>
+<td>Backend da plataforma</td>
+<td>Indisponível</td>
+<td>Indisponível</td>
+</tr>
+<tr>
+<td>Spout</td>
+<td>Indisponível</td>
+<td>Backend da plataforma</td>
+<td>Indisponível</td>
+</tr>
+</tbody>
+</table>
+<p>"Suportada" para renderização principal descreve o limite pretendido da plataforma, não afirma que toda combinação de GPU e driver passou pelo protocolo visual manual.</p>
+<h2 id="apple-silicon">Apple Silicon<a class="headerlink" href="#apple-silicon" title="Permanent link">&para;</a></h2>
+<p>A stack Processing/Syphon usada pelo projeto pode exigir a versão Intel do Processing sob Rosetta 2 para interoperabilidade completa. Renderização ARM nativa sem Syphon continua possível, mas deve ser qualificada com o sketch e driver de destino.</p>
+<p>Antes da implantação, consulte <a href="../../known-issues/">Problemas Conhecidos</a>,
+<a href="../ndi/">Runtime NDI</a>, o
+<a href="../../qualification/1.5-calibration-tool/">Protocolo do Calibration Tool</a> e a
+<a href="../../qualification/1.5-release-readiness/">Prontidão para Release</a>.</p>
 
 
 
