@@ -22,16 +22,49 @@ final class RenderRequirementsPolicy {
 	/**
 	 * Resolves the passes needed by the application preview.
 	 *
+	 * @param renderMode active global render mode
 	 * @param selectedView view composited into the Processing window
 	 * @param floatingFisheye whether the floating domemaster preview is visible
 	 * @return cached render requirements
 	 */
-	static Requirements forPreview(zividomelive.ViewType selectedView, boolean floatingFisheye) {
-		int requestedViews = maskFor(selectedView);
+	static Requirements forPreview(
+			RenderMode renderMode,
+			zividomelive.ViewType selectedView,
+			boolean floatingFisheye) {
+		int requestedViews = maskFor(resolveView(renderMode, selectedView));
 		if (floatingFisheye) {
 			requestedViews |= FISHEYE;
 		}
 		return REQUIREMENTS[requestedViews];
+	}
+
+	/**
+	 * Resolves a configured legacy view under the active global render mode.
+	 *
+	 * @param renderMode active global mode
+	 * @param configuredView independently configured legacy view
+	 * @return configured view in FULL, otherwise the dedicated mode's representation
+	 */
+	static zividomelive.ViewType resolveView(
+			RenderMode renderMode,
+			zividomelive.ViewType configuredView) {
+		if (renderMode == null || renderMode == RenderMode.FULL) {
+			return configuredView;
+		}
+
+		switch (renderMode) {
+			case STANDARD:
+				return zividomelive.ViewType.STANDARD;
+			case DOMEMASTER:
+				return zividomelive.ViewType.FISHEYE_DOMEMASTER;
+			case EQUIRECTANGULAR:
+				return zividomelive.ViewType.EQUIRECTANGULAR;
+			case SKYBOX:
+				return zividomelive.ViewType.CUBEMAP;
+			case FULL:
+			default:
+				return configuredView;
+		}
 	}
 
 	/**

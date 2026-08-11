@@ -1,6 +1,7 @@
 package com.victorvalentim.zividomelive.manager;
 
 import codeanticode.syphon.SyphonServer;
+import com.victorvalentim.zividomelive.RenderMode;
 import com.victorvalentim.zividomelive.support.LogManager;
 import com.victorvalentim.zividomelive.zividomelive;
 import me.walkerknapp.devolay.DevolayFrameFormatType;
@@ -215,12 +216,13 @@ public class OutputManager implements PConstants {
 	 * @return current graphics target, or {@code null} when unavailable
 	 */
 	private PGraphicsOpenGL resolveGraphics(zividomelive.ViewType viewType) {
-		if (viewType == null) {
+		zividomelive.ViewType effectiveView = resolveOutputView(viewType);
+		if (effectiveView == null) {
 			return null;
 		}
 
 		try {
-			switch (viewType) {
+			switch (effectiveView) {
 				case FISHEYE_DOMEMASTER:
 					return parent.getFisheyeDomemaster() != null
 							? parent.getFisheyeDomemaster().getDomemasterGraphics()
@@ -241,8 +243,30 @@ public class OutputManager implements PConstants {
 					return null;
 			}
 		} catch (RuntimeException error) {
-			logger.warning("resolveGraphics failed for " + viewType + ": " + rootCauseMessage(error));
+			logger.warning("resolveGraphics failed for " + effectiveView + ": " + rootCauseMessage(error));
 			return null;
+		}
+	}
+
+	/** Resolves a configured output route under the facade's global render mode. */
+	zividomelive.ViewType resolveOutputView(zividomelive.ViewType configuredView) {
+		RenderMode renderMode = parent.getRenderMode();
+		if (renderMode == null || renderMode == RenderMode.FULL) {
+			return configuredView;
+		}
+
+		switch (renderMode) {
+			case STANDARD:
+				return zividomelive.ViewType.STANDARD;
+			case DOMEMASTER:
+				return zividomelive.ViewType.FISHEYE_DOMEMASTER;
+			case EQUIRECTANGULAR:
+				return zividomelive.ViewType.EQUIRECTANGULAR;
+			case SKYBOX:
+				return zividomelive.ViewType.CUBEMAP;
+			case FULL:
+			default:
+				return configuredView;
 		}
 	}
 
@@ -1102,25 +1126,27 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * Reports whether an enabled external output requires a view independently of preview mode.
+	 * Reports whether an enabled external output effectively requires a view.
 	 *
-	 * <p>A backend that is merely initialized does not request rendering. Only an enabled output does.</p>
+	 * <p>A backend that is merely initialized does not request rendering. Only an enabled output
+	 * does. Dedicated {@link RenderMode} values override configured output routes without erasing
+	 * them; {@link RenderMode#FULL} restores independent routing.</p>
 	 *
 	 * @param view view whose external-output requirement should be checked
-	 * @return {@code true} when an enabled output is routed to {@code view}
+	 * @return {@code true} when an enabled output effectively resolves to {@code view}
 	 */
 	public boolean requiresView(zividomelive.ViewType view) {
 		if (view == null) {
 			return false;
 		}
 
-		if (isNdiEnabled() && ndiView == view) {
+		if (isNdiEnabled() && resolveOutputView(ndiView) == view) {
 			return true;
 		}
-		if (isSpoutEnabled() && spoutView == view) {
+		if (isSpoutEnabled() && resolveOutputView(spoutView) == view) {
 			return true;
 		}
-		return isSyphonEnabled() && syphonView == view;
+		return isSyphonEnabled() && resolveOutputView(syphonView) == view;
 	}
 
 	/**

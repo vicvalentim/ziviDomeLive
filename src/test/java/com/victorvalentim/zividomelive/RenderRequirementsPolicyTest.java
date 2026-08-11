@@ -10,27 +10,31 @@ class RenderRequirementsPolicyTest {
 	@Test
 	void previewRequirementsPreserveEveryLegacyView() {
 		assertRequirements(
-				RenderRequirementsPolicy.forPreview(zividomelive.ViewType.FISHEYE_DOMEMASTER, false),
+				RenderRequirementsPolicy.forPreview(
+						RenderMode.FULL, zividomelive.ViewType.FISHEYE_DOMEMASTER, false),
 				true, true, false, false, true);
 		assertRequirements(
-				RenderRequirementsPolicy.forPreview(zividomelive.ViewType.EQUIRECTANGULAR, false),
+				RenderRequirementsPolicy.forPreview(
+						RenderMode.FULL, zividomelive.ViewType.EQUIRECTANGULAR, false),
 				false, true, false, false, true);
 		assertRequirements(
-				RenderRequirementsPolicy.forPreview(zividomelive.ViewType.CUBEMAP, false),
+				RenderRequirementsPolicy.forPreview(
+						RenderMode.FULL, zividomelive.ViewType.CUBEMAP, false),
 				false, false, true, false, true);
 		assertRequirements(
-				RenderRequirementsPolicy.forPreview(zividomelive.ViewType.STANDARD, false),
+				RenderRequirementsPolicy.forPreview(
+						RenderMode.FULL, zividomelive.ViewType.STANDARD, false),
 				false, false, false, true, false);
 	}
 
 	@Test
 	void floatingPreviewAddsFisheyeChainWithoutDroppingSelectedView() {
 		RenderRequirementsPolicy.Requirements standard = RenderRequirementsPolicy.forPreview(
-				zividomelive.ViewType.STANDARD, true);
+				RenderMode.FULL, zividomelive.ViewType.STANDARD, true);
 		assertRequirements(standard, true, true, false, true, true);
 
 		RenderRequirementsPolicy.Requirements cubemap = RenderRequirementsPolicy.forPreview(
-				zividomelive.ViewType.CUBEMAP, true);
+				RenderMode.FULL, zividomelive.ViewType.CUBEMAP, true);
 		assertRequirements(cubemap, true, true, true, false, true);
 	}
 
