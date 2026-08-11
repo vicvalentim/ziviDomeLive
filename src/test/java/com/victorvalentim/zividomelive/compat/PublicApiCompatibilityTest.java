@@ -75,6 +75,13 @@ class PublicApiCompatibilityTest {
 				OutputManager.OutputType.SPOUT,
 				OutputManager.OutputType.SYPHON
 		}, OutputManager.OutputType.values());
+		assertArrayEquals(new OutputManager.OutputState[]{
+				OutputManager.OutputState.UNAVAILABLE,
+				OutputManager.OutputState.AVAILABLE,
+				OutputManager.OutputState.INITIALIZED,
+				OutputManager.OutputState.ENABLED,
+				OutputManager.OutputState.STOPPING
+		}, OutputManager.OutputState.values());
 		assertArrayEquals(new LogManager.Mode[]{
 				LogManager.Mode.DEBUG,
 				LogManager.Mode.RELEASE
