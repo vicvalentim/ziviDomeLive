@@ -117,14 +117,18 @@ tasks.test {
     useJUnitPlatform()
 }
 
-// Downloads legacy libraries (ControlP5, Syphon, SpoutProcessing) that are not available on Maven.
-// Runs download_dependencies.sh automatically before compileJava if the libs folder is missing or empty.
+// Downloads pinned legacy libraries that are not available on Maven.
+val requiredLocalLibraries = listOf(
+    file("src/main/libs/controlP5.jar"),
+    file("src/main/libs/spout.jar"),
+    file("src/main/libs/Syphon.jar")
+)
+
 tasks.register<Exec>("downloadDependencies") {
     group = "processing"
-    description = "Downloads legacy Processing libraries (ControlP5, Syphon, SpoutProcessing) via download_dependencies.sh"
+    description = "Downloads checksum-verified ControlP5, Syphon, and Spout dependencies"
     onlyIf {
-        val libsDir = file("src/main/libs")
-        !libsDir.exists() || libsDir.listFiles()?.isEmpty() == true
+        requiredLocalLibraries.any { !it.isFile }
     }
     commandLine("bash", "$rootDir/download_dependencies.sh")
 }
