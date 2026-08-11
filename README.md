@@ -164,7 +164,7 @@ Backend availability, native initialization, publication, and render requirement
 | Syphon | Supported platform; Intel/Rosetta may be required on Apple Silicon | Not available | Not available |
 | Spout | Not available | Supported platform | Not available |
 
-Automated tests do not replace GPU, receiver, or native-sharing qualification. See [the 1.5 release-readiness protocol](docs/qualification/1.5-release-readiness.md).
+Automated tests do not replace GPU, receiver, or native-sharing qualification. See [the 1.5 release-readiness protocol](https://vicvalentim.github.io/ziviDomeLive/qualification/1.5-release-readiness/).
 
 ## Built-in Controls
 
@@ -201,10 +201,10 @@ See the [examples catalog](examples/README.md) for controls and lifecycle conven
 ```bash
 ./gradlew buildReleaseArtifacts
 ./gradlew qualificationTests
-mkdocs build
+mkdocs build --strict
 ```
 
-Release output is written to `release/ziviDomeLive.zip`, `release/ziviDomeLive.pdex`, and `release/ziviDomeLive.txt`. Automated qualification results are written under `build/reports/qualification/` and `build/test-results/qualification/`; test sources are never copied into the Processing package or sketchbook deployment. GPU and native-output checks remain manual and must use real hardware; no golden images are fabricated by the automated suite.
+Release output is written to `release/ziviDomeLive.zip`, `release/ziviDomeLive.pdex`, and `release/ziviDomeLive.txt`. The package includes project and bundled-dependency notices, while test sources and local compile-only helper JARs are excluded from both the Processing package and sketchbook deployment. Automated qualification results are written under `build/reports/qualification/` and `build/test-results/qualification/`. GPU and native-output checks remain manual and must use real hardware; no golden images are fabricated by the automated suite.
 
 ## Known Issues
 
@@ -214,6 +214,6 @@ Release output is written to `release/ziviDomeLive.zip`, `release/ziviDomeLive.p
 
 ## License and Citation
 
-ziviDomeLive is distributed under the [GPL-2.0-only license](LICENSE). Citation metadata is provided in [CITATION.cff](CITATION.cff), with DOI [10.5281/zenodo.15671506](https://doi.org/10.5281/zenodo.15671506).
+ziviDomeLive is distributed under the [GPL-2.0-only license](LICENSE). Bundled components and calibration assets are documented in [THIRD_PARTY.md](THIRD_PARTY.md). Citation metadata is provided in [CITATION.cff](CITATION.cff), with DOI [10.5281/zenodo.15671506](https://doi.org/10.5281/zenodo.15671506).
 
 Copyright (c) 2024 Victor Valentim.

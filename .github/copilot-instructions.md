@@ -113,4 +113,4 @@ Do not reintroduce nested scene draw ownership, texture-bound `glReadPixels`, PB
 mkdocs build --strict
 ```
 
-Automated tests do not prove GPU visual parity or NDI/Syphon/Spout interoperability. Use `examples/CompatibilityLock/` and `docs/qualification/1.5-release-readiness.md` on qualified hardware.
+Automated tests do not prove GPU visual parity or NDI/Syphon/Spout interoperability. Use `examples/CalibrationTool/` and `docs/qualification/1.5-release-readiness.md` on qualified hardware.
