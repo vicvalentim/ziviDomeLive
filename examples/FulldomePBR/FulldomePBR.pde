@@ -32,5 +32,5 @@ void setup() {
 }
 
 void draw() {
-  ziviDome.draw();
+  // ziviDomeLive renders through its registered Processing draw hook.
 }

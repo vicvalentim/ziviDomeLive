@@ -42,6 +42,5 @@ void setup() {
 }
 
 void draw() {
-  // Chama o método draw da biblioteca zividomelive
-  ziviDome.draw();
+  // ziviDomeLive renderiza pelo hook draw registrado no Processing.
 }

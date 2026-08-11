@@ -21,7 +21,6 @@ class Scene1 implements Scene {
   }
 
   public void sceneRender(PGraphicsOpenGL pg) {
-    pg.beginDraw();
     pg.background(22);
     pg.noStroke();
     pg.fill(64, 255, 255, 192);
@@ -51,13 +50,12 @@ class Scene1 implements Scene {
         pg.shininess(10);
         pg.sphereDetail(15);
         pg.sphere(mass.get(particle) * 500);
+        pg.popStyle();
         pg.popMatrix();
       }
     } finally {
       lock.unlock();
     }
-
-    pg.endDraw();
   }
 
   public void keyEvent(processing.event.KeyEvent event) {
