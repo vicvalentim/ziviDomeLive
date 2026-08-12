@@ -58,12 +58,8 @@ public class ziviDomeLive implements PConstants {
 	private int targetFrameRate = 60;
 
 	// Shader resource paths (packaged under data/shaders by the build).
-	private static final String EQUIRECT_VERT = "data/shaders/equirectangular.vert";
-	private static final String EQUIRECT_FRAG = "data/shaders/equirectangular.frag";
 	private static final String EQUIRECT_SAMPLERCUBE_VERT = "data/shaders/samplercube/equirectangular.vert";
 	private static final String EQUIRECT_SAMPLERCUBE_FRAG = "data/shaders/samplercube/equirectangular.frag";
-	private static final String DOME_VERT = "data/shaders/domemaster.vert";
-	private static final String DOME_FRAG = "data/shaders/domemaster.frag";
 	private static final String DOME_SAMPLERCUBE_VERT = "data/shaders/samplercube/fisheye.vert";
 	private static final String DOME_SAMPLERCUBE_FRAG = "data/shaders/samplercube/fisheye.frag";
 	private static final String SKYBOX_SAMPLERCUBE_VERT = "data/shaders/samplercube/skybox.vert";
@@ -470,16 +466,12 @@ public class ziviDomeLive implements PConstants {
 		LOGGER.info("CubemapRenderer (output) initialized at " + outputResolution + "px.");
 		equirectangularRenderer = new EquirectangularRenderer(
 				outputResolution,
-				EQUIRECT_FRAG,
-				EQUIRECT_VERT,
 				EQUIRECT_SAMPLERCUBE_FRAG,
 				EQUIRECT_SAMPLERCUBE_VERT,
 				p);
 		LOGGER.info("EquirectangularRenderer (output) initialized.");
 		fisheyeDomemaster = new FisheyeDomemaster(
 				outputResolution,
-				DOME_FRAG,
-				DOME_VERT,
 				DOME_SAMPLERCUBE_FRAG,
 				DOME_SAMPLERCUBE_VERT,
 				p);
@@ -697,15 +689,11 @@ public class ziviDomeLive implements PConstants {
 		previewCubemapRenderer = new CubemapRenderer(previewResolution, p);
 		previewEquirectangularRenderer = new EquirectangularRenderer(
 				previewResolution,
-				EQUIRECT_FRAG,
-				EQUIRECT_VERT,
 				EQUIRECT_SAMPLERCUBE_FRAG,
 				EQUIRECT_SAMPLERCUBE_VERT,
 				p);
 		previewFisheyeDomemaster = new FisheyeDomemaster(
 				previewResolution,
-				DOME_FRAG,
-				DOME_VERT,
 				DOME_SAMPLERCUBE_FRAG,
 				DOME_SAMPLERCUBE_VERT,
 				p);
@@ -801,26 +789,18 @@ public class ziviDomeLive implements PConstants {
 	 *
 	 * @param preview preview requirements for the current frame
 	 * @param output output requirements for the current frame
-	 * @return master cubemap faces, or {@code null} when no cubemap is required
 	 */
-	PGraphicsOpenGL[] captureMasterCubemap(
+	void captureMasterCubemap(
 			RenderRequirementsPolicy.Requirements preview,
 			RenderRequirementsPolicy.Requirements output) {
 		if (output.needsCubemapSource()) {
 			captureCubemap();
-			return cubemapRenderer != null && !cubemapRenderer.hasNativeCubemapTarget()
-					? cubemapRenderer.getCubemapFaces()
-					: null;
+			return;
 		}
 
 		if (preview.needsCubemapSource()) {
 			capturePreviewCubemap();
-			return previewCubemapRenderer != null && !previewCubemapRenderer.hasNativeCubemapTarget()
-					? previewCubemapRenderer.getCubemapFaces()
-					: null;
 		}
-
-		return null;
 	}
 
 	/**
@@ -843,8 +823,7 @@ public class ziviDomeLive implements PConstants {
 	 */
 	void renderPreviewPipeline(
 			RenderRequirementsPolicy.Requirements preview,
-			RenderRequirementsPolicy.Requirements output,
-			PGraphicsOpenGL[] masterFaces) {
+			RenderRequirementsPolicy.Requirements output) {
 		if (preview.needsStandard()) {
 			standardRendererPreview.render();
 		}
@@ -853,7 +832,7 @@ public class ziviDomeLive implements PConstants {
 			if (output.needsEquirectangular() && output.needsCubemapSource()) {
 				copyToPreview(equirectangularRenderer.getEquirectangular(), previewEquirectangularRenderer.getEquirectangular());
 			} else {
-				previewEquirectangularRenderer.render(resolveMasterNativeCubemap(output), masterFaces);
+				previewEquirectangularRenderer.render(resolveMasterNativeCubemap(output));
 			}
 		}
 
@@ -863,7 +842,6 @@ public class ziviDomeLive implements PConstants {
 			} else {
 				previewFisheyeDomemaster.applyShader(
 						resolveMasterNativeCubemap(output),
-						previewEquirectangularRenderer.getEquirectangular(),
 						getFov());
 			}
 		}
@@ -872,7 +850,7 @@ public class ziviDomeLive implements PConstants {
 			if (output.needsCubemapLayout() && output.needsCubemapSource()) {
 				copyToPreview(cubemapViewRenderer.getCubemap(), previewCubemapViewRenderer.getCubemap());
 			} else {
-				previewCubemapViewRenderer.drawCubemapToGraphics(resolveMasterNativeCubemap(output), masterFaces);
+				previewCubemapViewRenderer.drawCubemapToGraphics(resolveMasterNativeCubemap(output));
 			}
 		}
 	}
@@ -897,30 +875,25 @@ public class ziviDomeLive implements PConstants {
 	 * <p>Returns immediately when {@code outputManager} is {@code null} or inactive.
 	 * Must be called from the Processing draw thread.</p>
 	 */
-	void renderOutputPipeline(
-			RenderRequirementsPolicy.Requirements output,
-			PGraphicsOpenGL[] masterFaces) {
-		if (output.needsCubemapSource() && !hasMasterNativeCubemap(output) && masterFaces == null) {
+	void renderOutputPipeline(RenderRequirementsPolicy.Requirements output) {
+		if (output.needsCubemapSource() && !hasMasterNativeCubemap(output)) {
 			return;
 		}
 
 		if (output.needsEquirectangular()) {
 			equirectangularRenderer.render(
-					cubemapRenderer != null ? cubemapRenderer.getNativeCubemapTarget() : null,
-					masterFaces);
+					cubemapRenderer != null ? cubemapRenderer.getNativeCubemapTarget() : null);
 		}
 
 		if (output.needsFisheye()) {
 			fisheyeDomemaster.applyShader(
 					cubemapRenderer != null ? cubemapRenderer.getNativeCubemapTarget() : null,
-					equirectangularRenderer.getEquirectangular(),
 					getFov());
 		}
 
 		if (output.needsCubemapLayout()) {
 			cubemapViewRenderer.drawCubemapToGraphics(
-					cubemapRenderer != null ? cubemapRenderer.getNativeCubemapTarget() : null,
-					masterFaces);
+					cubemapRenderer != null ? cubemapRenderer.getNativeCubemapTarget() : null);
 		}
 
 		if (output.needsStandard()) {

@@ -49,32 +49,17 @@ class FisheyeDomemasterTest {
 	}
 
 	@Test
-	void setFOVWithNullShaderDoesNotThrow() {
-		FisheyeDomemaster fisheye = newFisheye();
-		assertDoesNotThrow(() -> fisheye.setFOV(210f));
-	}
-
-	@Test
 	void applyShaderWithNullInputsDoesNotThrow() {
 		FisheyeDomemaster fisheye = newFisheye();
 		assertDoesNotThrow(() -> fisheye.applyShader(null, 210f));
-		assertDoesNotThrow(() -> fisheye.applyShader(null, null, 210f));
 	}
 
 	@Test
 	void constructorLoadsSamplerCubeShaderWhenConfigured() {
 		StubApplet applet = new StubApplet();
 
-		new FisheyeDomemaster(
-				1024,
-				"legacy.frag",
-				"legacy.vert",
-				"samplercube.frag",
-				"samplercube.vert",
-				applet);
+		new FisheyeDomemaster(1024, "samplercube.frag", "samplercube.vert", applet);
 
-		assertEquals(List.of(
-				"legacy.frag|legacy.vert",
-				"samplercube.frag|samplercube.vert"), applet.loadedShaders);
+		assertEquals(List.of("samplercube.frag|samplercube.vert"), applet.loadedShaders);
 	}
 }

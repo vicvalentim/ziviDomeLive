@@ -1,6 +1,6 @@
 # Pipeline de Renderização
 
-ziviDomeLive 1.5 mantém dois domínios de renderização. `RenderMode` seleciona comportamento, mas não os reduz a um único backend.
+ziviDomeLive mantém dois domínios de renderização. `RenderMode` seleciona comportamento, mas não os reduz a um único backend.
 
 ## Domínio Standard
 
@@ -17,15 +17,15 @@ Standard renderiza a cena diretamente por sua câmera perspectiva. Ele não capt
 
 ```text
 Scene
-  -> seis faces cubemap de 90 graus
+  -> captura nativa GL_TEXTURE_CUBE_MAP
      -> CubemapViewRenderer -> layout skybox
      -> EquirectangularRenderer -> mapa 2:1
-        -> FisheyeDomemaster -> domemaster quadrado + escala Size%
+     -> FisheyeDomemaster -> domemaster quadrado + escala Size%
 ```
 
-As seis faces usam a tabela estável de orientação `CubemapFace` (`+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`). `CameraManager` permanece como fachada de compatibilidade da 1.x para integrações diretas com renderers. Um único quaternion `SphericalOrientation` é aplicado a todas as faces de preview e output.
+A captura nativa cubemap usa a tabela estável de orientação `CubemapFace` (`+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`). A cena é emitida por um único target offscreen `PGraphicsOpenGL` de comando e renderizada em cada face de um framebuffer cubemap nativo. `CameraManager` permanece como fachada de compatibilidade para integrações diretas com renderers, mas a captura cubemap do runtime usa a tabela canônica `CubemapFace` como fonte autoritativa. Um único quaternion `SphericalOrientation` é aplicado a todas as faces de preview e output.
 
-Essa topologia descreve a implementação 1.x, não um contrato permanente de backend. Uma futura versão major pode trocar texturas ou projeções internas preservando o comportamento visual qualificado.
+Todas as projeções esféricas amostram o cubemap nativo via `samplerCube`; domemaster/fisheye não depende mais de uma textura equiretangular intermediária.
 
 ## Fechamento de Requisitos
 
@@ -36,7 +36,7 @@ Essa topologia descreve a implementação 1.x, não um contrato permanente de ba
 | Standard | Sim | Não | Não | Não | Não |
 | Skybox | Não | Sim | Não | Não | Sim |
 | Equirectangular | Não | Sim | Sim | Não | Não |
-| Domemaster | Não | Sim | Sim | Sim | Não |
+| Domemaster | Não | Sim | Não | Sim | Não |
 
 O requisito de preview, domemaster flutuante e todos os outputs habilitados é resolvido independentemente e compartilhado quando possível.
 
@@ -73,19 +73,17 @@ cubemap, PBO e sync fence para que PRs posteriores de cubemap nativo e readback
 possam condicionar seus caminhos GL explicitamente.
 
 `CubemapTarget` controla armazenamento nativo `GL_TEXTURE_CUBE_MAP` com política
-conservadora de textura e framebuffers de cópia reutilizáveis. A captura em
-runtime ainda renderiza cada face da cena em targets `PGraphicsOpenGL` do
-Processing para preservar o contrato `Scene.sceneRender(PGraphicsOpenGL)`, e
-depois copia cada face concluída pelo caminho GPU para a face correspondente do
-cubemap nativo. `EquirectangularRenderer` amostra esse cubemap nativo
-diretamente quando ele está disponível, usando o shader legado de seis texturas
-como fallback.
+conservadora de textura, um framebuffer de renderização e um renderbuffer de
+profundidade. A captura em runtime preserva o contrato
+`Scene.sceneRender(PGraphicsOpenGL)` usando um único graphics Processing
+offscreen como emissor de comandos enquanto cada face cubemap nativa é ligada
+como target framebuffer ativo. Nenhum array legado `PGraphicsOpenGL[]` de faces
+ou fallback de seis texturas é mantido.
 
 Os recursos de shader `samplerCube` para os modos cubemap, equiretangular,
-domemaster/fisheye e skybox ficam preparados em `data/shaders/samplercube/` nos
-artefatos empacotados. Equiretangular agora é selecionado em runtime para
-amostragem do cubemap nativo; domemaster/fisheye e skybox continuam preparados
-para PRs posteriores da migração.
+domemaster/fisheye e skybox ficam em `data/shaders/samplercube/` nos artefatos
+empacotados. Todos os renderers esféricos de runtime amostram o cubemap nativo
+diretamente.
 
 ## Ownership de Resolução
 
@@ -109,7 +107,7 @@ A resolução de output não redefine a resolução de preview. A realocação o
 
 ## Contratos Estáveis e Internos
 
-Estáveis na 1.5:
+Estáveis:
 
 - separação comportamental Standard/esférico
 - orientação das faces cubemap e layout skybox
@@ -120,10 +118,8 @@ Estáveis na 1.5:
 
 Detalhes internos:
 
-- `PGraphicsOpenGL[]` como contrato das faces renderizadas pela Scene
-- `CubemapTarget` é preenchido a partir das faces capturadas e alimenta o output equiretangular quando disponível
-- shaders `samplerCube` de domemaster/fisheye e skybox estão empacotados, mas ainda não são selecionados em runtime
-- domemaster consumindo atualmente a saída equiretangular
-- estratégia exata de alocação e cópia entre renderers
+- um graphics Processing offscreen como emissor de comandos alimentando FBOs de face cubemap nativos
+- política de alocação e framebuffer de `CubemapTarget`
+- estratégia exata de alocação de renderers e mipmaps
 
 Consulte [Lifecycle de Runtime](runtime-lifecycle.md) e [Prontidão da Release](../qualification/1.5-release-readiness.md).

@@ -120,13 +120,13 @@ RGBA8 quadrada para cada `CubemapFace` canônica. Ele aplica defaults
 conservadores: filtros min/mag lineares, clamp-to-edge nos três eixos, sem
 mipmaps, e seamless cubemap apenas quando o contexto ativo anuncia suporte.
 
-`CubemapRenderer` mantém os targets de face `PGraphicsOpenGL[]` da geração 1.x
-como contrato de renderização da cena e copia cada face concluída para
-`CubemapTarget` por blit GPU-side via framebuffer quando o contexto ativo
-suporta texturas cubemap e FBOs. `EquirectangularRenderer` o amostra diretamente
-quando disponível; PRs posteriores farão o mesmo para domemaster/fisheye e
-skybox. Os recursos de shader `samplerCube` adaptados são empacotados em
-`data/shaders/samplercube/`.
+`CubemapRenderer` preserva o contrato `Scene.sceneRender(PGraphicsOpenGL)` com
+um único graphics Processing offscreen como emissor de comandos, mas liga cada
+face de `CubemapTarget` como framebuffer nativo ativo enquanto a cena desenha.
+Não existe mais array legado `PGraphicsOpenGL[]` de faces nem fallback de seis
+texturas. `EquirectangularRenderer`, `FisheyeDomemaster` e
+`CubemapViewRenderer` amostram diretamente o cubemap nativo. Os recursos de
+shader `samplerCube` adaptados são empacotados em `data/shaders/samplercube/`.
 
 ## OrbitCamera
 

@@ -14,11 +14,10 @@ import java.util.logging.Logger;
 public class CubemapViewRenderer {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final int CUBEMAP_TEXTURE_UNIT = 1;
+    private static final int[] FACE_ROTATIONS = {2, 2, 2, 2, 2, 2};
     private int resolution;
     private PGraphicsOpenGL cubemap;
     private final PShader samplerCubeShader;
-    private final int[] faceRotations = {2, 2, 2, 2, 2, 2};
-    private final boolean[] faceInversions = {true, true, true, true, true, true};
     private final int[] faceInversionsAsUniform = {1, 1, 1, 1, 1, 1};
     private final PApplet parent;
     private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
@@ -88,51 +87,20 @@ public class CubemapViewRenderer {
     }
 
     /**
-     * Draws the cubemap faces onto the PGraphics object.
-     *
-     * @param cubemapFaces an array of PGraphics objects representing the cubemap faces
-     */
-    public void drawCubemapToGraphics(PGraphicsOpenGL[] cubemapFaces) {
-        if (cubemapFaces == null || cubemapFaces.length != 6) {
-            LOGGER.warning("Invalid cubemapFaces: expected 6 faces.");
-            return;
-        }
-
-        if (cubemap == null) {
-            initializeCubemap();
-        }
-
-        cubemap.beginDraw();
-        cubemap.background(0, 0);
-        applyTransformations(cubemap, cubemapFaces[3], (float) resolution / 2, 0, (float) resolution / 2, (float) resolution / 2, faceRotations[3], faceInversions[3]);
-        applyTransformations(cubemap, cubemapFaces[1], 0, (float) resolution / 2, (float) resolution / 2, (float) resolution / 2, faceRotations[0], faceInversions[0]);
-        applyTransformations(cubemap, cubemapFaces[4], (float) resolution / 2, (float) resolution / 2, (float) resolution / 2, (float) resolution / 2, faceRotations[4], faceInversions[4]);
-        applyTransformations(cubemap, cubemapFaces[0], resolution, (float) resolution / 2, (float) resolution / 2, (float) resolution / 2, faceRotations[1], faceInversions[1]);
-        applyTransformations(cubemap, cubemapFaces[5], (float) (resolution * 3) / 2, (float) resolution / 2, (float) resolution / 2, (float) resolution / 2, faceRotations[5], faceInversions[5]);
-        applyTransformations(cubemap, cubemapFaces[2], (float) resolution / 2, resolution, (float) resolution / 2, (float) resolution / 2, faceRotations[2], faceInversions[2]);
-        cubemap.endDraw();
-    }
-
-    /**
-     * Draws the cubemap layout from a native cubemap when available.
-     *
-     * <p>The Processing face-array renderer remains the fallback so the view still works
-     * on OpenGL contexts where the native cubemap path is unavailable.</p>
+     * Draws the cubemap layout from a native samplerCube cubemap.
      *
      * @param nativeCubemap native cubemap populated by {@code CubemapRenderer}
-     * @param fallbackFaces legacy Processing face targets used when native sampling is unavailable
      */
-    public void drawCubemapToGraphics(CubemapTarget nativeCubemap, PGraphicsOpenGL[] fallbackFaces) {
+    public void drawCubemapToGraphics(CubemapTarget nativeCubemap) {
         if (nativeCubemap == null || !nativeCubemap.isAllocated() || samplerCubeShader == null) {
-            drawCubemapToGraphics(fallbackFaces);
+            LOGGER.warning("Native cubemap or cubemap layout samplerCube shader unavailable; skipping render.");
             return;
         }
         try {
             drawSamplerCubeToGraphics(nativeCubemap);
         } catch (RuntimeException error) {
-            LOGGER.warning("Native cubemap layout samplerCube render failed; falling back to Processing faces: "
+            LOGGER.warning("Native cubemap layout samplerCube render failed: "
                     + error.getMessage());
-            drawCubemapToGraphics(fallbackFaces);
         }
     }
 
@@ -147,7 +115,7 @@ public class CubemapViewRenderer {
             cubemap.background(0, 0);
             samplerCubeShader.set("resolution", cubemap.width, cubemap.height);
             samplerCubeShader.set("cubemap", CUBEMAP_TEXTURE_UNIT);
-            samplerCubeShader.set("faceRotations", faceRotations);
+            samplerCubeShader.set("faceRotations", FACE_ROTATIONS);
             samplerCubeShader.set("faceInversions", faceInversionsAsUniform);
             cubemap.shader(samplerCubeShader);
             glAdapter.bindCubemapTexture(cubemap, nativeCubemap, CUBEMAP_TEXTURE_UNIT);
@@ -162,35 +130,6 @@ public class CubemapViewRenderer {
                 cubemap.endDraw();
             }
         }
-    }
-
-    /**
-     * Applies transformations of rotation and inversion to the cubemap faces.
-     *
-     * @param target the target PGraphics object
-     * @param face the PGraphics object representing the cubemap face
-     * @param x the x-coordinate for the transformation
-     * @param y the y-coordinate for the transformation
-     * @param w the width of the face
-     * @param h the height of the face
-     * @param rotation the number of 90-degree rotations to apply
-     * @param invert whether to apply horizontal inversion
-     */
-    void applyTransformations(PGraphicsOpenGL target, PGraphicsOpenGL face, float x, float y, float w, float h, int rotation, boolean invert) {
-        target.pushMatrix();
-        target.translate(x + w / 2, y + h / 2);
-
-        for (int i = 0; i < rotation; i++) {
-            target.rotate(PApplet.HALF_PI);
-        }
-
-        if (invert) {
-            target.scale(-1, 1);
-        }
-
-        target.imageMode(PApplet.CENTER);
-        target.image(face, 0, 0, w, h);
-        target.popMatrix();
     }
 
     /**

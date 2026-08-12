@@ -33,11 +33,12 @@ STANDARD
 Scene -> StandardRenderer -> Standard target
 
 SPHERICAL
-Scene -> six cubemap faces -> equirectangular -> domemaster
-                          \-> cubemap layout
+Scene -> native GL_TEXTURE_CUBE_MAP -> equirectangular
+                                    \-> domemaster
+                                    \-> cubemap layout
 ```
 
-The spherical topology above remains an internal 1.x implementation detail. It is not a promise that future major versions must use `PGraphicsOpenGL[]` or derive domemaster from equirectangular output.
+The spherical topology above is an internal implementation detail. The stable behavior is the rendered spherical output, not the exact allocation strategy behind it.
 
 ## Qualification
 

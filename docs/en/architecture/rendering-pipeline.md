@@ -1,6 +1,6 @@
 # Rendering Pipeline
 
-ziviDomeLive 1.5 keeps two rendering domains. `RenderMode` selects behavior but does not collapse them into one backend.
+ziviDomeLive keeps two rendering domains. `RenderMode` selects behavior but does not collapse them into one backend.
 
 ## Standard Domain
 
@@ -17,15 +17,15 @@ Standard renders the scene directly through its perspective camera. It does not 
 
 ```text
 Scene
-  -> six 90-degree cubemap faces
+  -> native GL_TEXTURE_CUBE_MAP capture
      -> CubemapViewRenderer -> skybox layout
      -> EquirectangularRenderer -> 2:1 map
-        -> FisheyeDomemaster -> square domemaster + Size% scaling
+     -> FisheyeDomemaster -> square domemaster + Size% scaling
 ```
 
-The six faces use the stable `CubemapFace` orientation table (`+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`). `CameraManager` remains as the 1.x compatibility facade for direct renderer integrations. One shared `SphericalOrientation` quaternion is applied to every face for preview and output.
+The native cubemap capture uses the stable `CubemapFace` orientation table (`+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`). The scene is emitted through one offscreen `PGraphicsOpenGL` command target and rendered into each face of a native cubemap framebuffer. `CameraManager` remains as the compatibility facade for direct renderer integrations, but the runtime cubemap capture uses the canonical `CubemapFace` table as its authoritative source. One shared `SphericalOrientation` quaternion is applied to every face for preview and output.
 
-This topology describes the 1.x implementation, not a permanent backend contract. A future major version may change textures or projection internals while preserving qualified visual behavior.
+All spherical projections sample the native cubemap through `samplerCube`; domemaster/fisheye no longer depends on an intermediate equirectangular texture.
 
 ## Requirement Closure
 
@@ -36,7 +36,7 @@ This topology describes the 1.x implementation, not a permanent backend contract
 | Standard | Yes | No | No | No | No |
 | Skybox | No | Yes | No | No | Yes |
 | Equirectangular | No | Yes | Yes | No | No |
-| Domemaster | No | Yes | Yes | Yes | No |
+| Domemaster | No | Yes | No | Yes | No |
 
 The preview request, floating domemaster request, and all enabled output requests are resolved independently and then shared where possible.
 
@@ -73,18 +73,16 @@ sync fence support so later native cubemap and readback PRs can gate their GL
 paths explicitly.
 
 `CubemapTarget` owns native `GL_TEXTURE_CUBE_MAP` storage with conservative
-texture policy and reusable copy framebuffers. Runtime capture still renders
-each scene face into Processing-owned `PGraphicsOpenGL` targets to preserve the
-`Scene.sceneRender(PGraphicsOpenGL)` contract, then copies each completed face
-GPU-side into the matching native cubemap face. `EquirectangularRenderer`
-samples this native cubemap directly when it is available, falling back to the
-legacy six-texture shader otherwise.
+texture policy, a render framebuffer, and a depth renderbuffer. Runtime capture
+preserves the `Scene.sceneRender(PGraphicsOpenGL)` contract by using one
+offscreen Processing graphics object as the command emitter while binding each
+native cubemap face as the active framebuffer target. No legacy `PGraphicsOpenGL[]`
+face array or six-texture fallback path is kept.
 
 SamplerCube projection shader resources for cubemap, equirectangular,
 domemaster/fisheye, and skybox modes are staged under
-`data/shaders/samplercube/` in packaged artifacts. Equirectangular is now
-runtime-selected for native cubemap sampling; domemaster/fisheye and skybox
-remain staged for later migration PRs.
+`data/shaders/samplercube/` in packaged artifacts. All spherical runtime
+renderers sample the native cubemap directly.
 
 ## Resolution Ownership
 
@@ -108,7 +106,7 @@ Output resolution does not redefine preview resolution. Reallocation happens on 
 
 ## Stable and Internal Contracts
 
-Stable for 1.5:
+Stable:
 
 - Standard/spherical behavioral separation
 - cubemap face orientation and skybox layout
@@ -119,10 +117,8 @@ Stable for 1.5:
 
 Internal implementation details:
 
-- `PGraphicsOpenGL[]` as the scene-rendering face contract
-- `CubemapTarget` is populated from captured faces and feeds equirectangular output when available
-- domemaster/fisheye and skybox samplerCube shaders are packaged but not yet runtime-selected
-- domemaster currently consuming equirectangular output
-- exact renderer allocation/copy strategy
+- one offscreen Processing graphics command target feeding native cubemap face FBOs
+- `CubemapTarget` allocation and framebuffer policy
+- exact renderer allocation and mipmap strategy
 
 See [Runtime Lifecycle](runtime-lifecycle.md) and [Release Readiness](../qualification/1.5-release-readiness.md).

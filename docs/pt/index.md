@@ -33,11 +33,12 @@ STANDARD
 Scene -> StandardRenderer -> target Standard
 
 ESFÉRICO
-Scene -> seis faces cubemap -> equiretangular -> domemaster
-                              \-> layout cubemap
+Scene -> GL_TEXTURE_CUBE_MAP nativo -> equiretangular
+                                  \-> domemaster
+                                  \-> layout cubemap
 ```
 
-A topologia esférica acima continua sendo um detalhe interno da geração 1.x. Ela não obriga futuras versões major a usar `PGraphicsOpenGL[]` nem a derivar domemaster de equiretangular.
+A topologia esférica acima é um detalhe interno de implementação. O comportamento estável é o output esférico renderizado, não a estratégia exata de alocação por trás dele.
 
 ## Qualificação
 

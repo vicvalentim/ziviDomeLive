@@ -23,26 +23,17 @@ class EquirectangularRendererTest {
 	}
 
 	@Test
-	void renderWithNullShaderAndMissingFacesDoesNotThrow() {
+	void renderWithMissingNativeCubemapDoesNotThrow() {
 		EquirectangularRenderer renderer = new EquirectangularRenderer(1024, "frag", "vert", new StubApplet());
 		assertDoesNotThrow(() -> renderer.render(null));
-		assertDoesNotThrow(() -> renderer.render(null, null));
 	}
 
 	@Test
 	void constructorLoadsSamplerCubeShaderWhenConfigured() {
 		StubApplet applet = new StubApplet();
 
-		new EquirectangularRenderer(
-				1024,
-				"legacy.frag",
-				"legacy.vert",
-				"samplercube.frag",
-				"samplercube.vert",
-				applet);
+		new EquirectangularRenderer(1024, "samplercube.frag", "samplercube.vert", applet);
 
-		assertEquals(List.of(
-				"legacy.frag|legacy.vert",
-				"samplercube.frag|samplercube.vert"), applet.loadedShaders);
+		assertEquals(List.of("samplercube.frag|samplercube.vert"), applet.loadedShaders);
 	}
 }

@@ -126,25 +126,21 @@ class RenderPipelineTest {
 		}
 
 		@Override
-		PGraphicsOpenGL[] captureMasterCubemap(
+		void captureMasterCubemap(
 				RenderRequirementsPolicy.Requirements preview,
 				RenderRequirementsPolicy.Requirements output) {
 			calls.add("capture");
-			return null;
 		}
 
 		@Override
-		void renderOutputPipeline(
-				RenderRequirementsPolicy.Requirements output,
-				PGraphicsOpenGL[] masterFaces) {
+		void renderOutputPipeline(RenderRequirementsPolicy.Requirements output) {
 			calls.add("output-passes");
 		}
 
 		@Override
 		void renderPreviewPipeline(
 				RenderRequirementsPolicy.Requirements preview,
-				RenderRequirementsPolicy.Requirements output,
-				PGraphicsOpenGL[] masterFaces) {
+				RenderRequirementsPolicy.Requirements output) {
 			calls.add("preview-passes");
 		}
 

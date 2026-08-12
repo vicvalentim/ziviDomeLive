@@ -45,9 +45,9 @@ class CubemapViewRendererTest {
 	}
 
 	@Test
-	void nativePathFallsBackWhenCubemapIsMissing() {
+	void nativePathSkipsWhenCubemapIsMissing() {
 		CubemapViewRenderer renderer = new CubemapViewRenderer(new StubApplet(), 1024);
 
-		assertDoesNotThrow(() -> renderer.drawCubemapToGraphics(null, null));
+		assertDoesNotThrow(() -> renderer.drawCubemapToGraphics(null));
 	}
 }
