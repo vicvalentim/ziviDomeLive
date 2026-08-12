@@ -41,6 +41,7 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	private final PApplet p;
+	private final RenderPipeline renderPipeline;
 	private InitState initState = InitState.NOT_INITIALIZED;
 	private boolean paused;
 	private boolean disposed;
@@ -128,6 +129,7 @@ public class ziviDomeLive implements PConstants {
 			throw new IllegalArgumentException("PApplet instance cannot be null.");
 		}
 		this.p = p;
+		this.renderPipeline = new RenderPipeline(this);
 		this.sceneManager = new SceneManager();
 
 		welcome();
@@ -691,7 +693,7 @@ public class ziviDomeLive implements PConstants {
 	 * <p>Called at the beginning of each draw cycle. The Standard preview renderer is included
 	 * in the check because it belongs to the preview pipeline.</p>
 	 */
-	private void ensurePreviewRenderers() {
+	void ensurePreviewRenderers() {
 		int expected = computePreviewResolution();
 		if (previewCubemapRenderer == null
 				|| previewEquirectangularRenderer == null
@@ -719,7 +721,7 @@ public class ziviDomeLive implements PConstants {
 	 *
 	 * @return cached requirements for the current preview state
 	 */
-	private RenderRequirementsPolicy.Requirements computePreviewRequirements() {
+	RenderRequirementsPolicy.Requirements computePreviewRequirements() {
 		return RenderRequirementsPolicy.forPreview(renderMode, getCurrentView(), showPreview);
 	}
 
@@ -728,7 +730,7 @@ public class ziviDomeLive implements PConstants {
 	 *
 	 * @return cached requirements for all enabled external-output routes
 	 */
-	private RenderRequirementsPolicy.Requirements computeOutputRequirements() {
+	RenderRequirementsPolicy.Requirements computeOutputRequirements() {
 		boolean outputsActive = outputManager != null && outputManager.isActive();
 		return RenderRequirementsPolicy.forOutputs(
 				outputsActive,
@@ -750,7 +752,7 @@ public class ziviDomeLive implements PConstants {
 	 * @param output output requirements for the current frame
 	 * @return master cubemap faces, or {@code null} when no cubemap is required
 	 */
-	private PGraphicsOpenGL[] captureMasterCubemap(
+	PGraphicsOpenGL[] captureMasterCubemap(
 			RenderRequirementsPolicy.Requirements preview,
 			RenderRequirementsPolicy.Requirements output) {
 		if (output.needsCubemapSource()) {
@@ -784,7 +786,7 @@ public class ziviDomeLive implements PConstants {
 	 *
 	 * <p>Must be called from the Processing draw thread after {@link #ensurePreviewRenderers()}.</p>
 	 */
-	private void renderPreviewPipeline(
+	void renderPreviewPipeline(
 			RenderRequirementsPolicy.Requirements preview,
 			RenderRequirementsPolicy.Requirements output,
 			PGraphicsOpenGL[] masterFaces) {
@@ -837,7 +839,7 @@ public class ziviDomeLive implements PConstants {
 	 * <p>Returns immediately when {@code outputManager} is {@code null} or inactive.
 	 * Must be called from the Processing draw thread.</p>
 	 */
-	private void renderOutputPipeline(
+	void renderOutputPipeline(
 			RenderRequirementsPolicy.Requirements output,
 			PGraphicsOpenGL[] masterFaces) {
 		if (output.needsCubemapSource() && masterFaces == null) {
@@ -869,7 +871,7 @@ public class ziviDomeLive implements PConstants {
 	 * {@link processing.core.PApplet#image(processing.core.PImage, float, float, float, float)}
 	 * here. Output FBOs are never drawn onto the main window by this method.</p>
 	 */
-	private void displayPreviewCurrentView() {
+	void displayPreviewCurrentView() {
 		ViewType effectiveView = RenderRequirementsPolicy.resolveView(renderMode, getCurrentView());
 		switch (effectiveView) {
 			case SKYBOX:
@@ -897,7 +899,7 @@ public class ziviDomeLive implements PConstants {
 		}
 
 		// Renderiza o conteúdo principal em segundo plano
-		renderContent();
+		renderPipeline.renderFrame();
 
 		// Atualiza e renderiza a splash screen enquanto ativa
 		if (splash != null && splash.showSplash) {
@@ -917,56 +919,11 @@ public class ziviDomeLive implements PConstants {
 		}
 	}
 
-	/**
-	 * Executes the independent preview and external-output rendering pipelines for one frame.
-	 *
-	 * <p>The Processing window always displays preview-resolution FBOs. High-resolution output
-	 * FBOs remain offscreen and are submitted only to enabled backends after all relevant
-	 * {@code endDraw()} calls have completed.</p>
-	 *
-	 * <p>Frame order:</p>
-	 * <ol>
-	 *   <li>Clear the window background.</li>
-	 *   <li>Apply any pending output-resolution change (output FBOs only, preview unaffected).</li>
-	 *   <li>Ensure preview FBOs are valid for the current window size.</li>
-	 *   <li>Resolve preview and output requirements, then capture at most one master cubemap.</li>
-	 *   <li>When at least one output is active, run its minimal projection passes and submit
-	 *       completed targets to the enabled backends.</li>
-	 *   <li>Run the preview passes, reusing completed output projections when available.</li>
-	 *   <li>Composite the preview FBO onto the window.</li>
-	 *   <li>Optionally draw the floating fisheye thumbnail (preview FBO only).</li>
-	 *   <li>Draw the control panel.</li>
-	 * </ol>
-	 */
-	void renderContent() {
-		if (standardRendererPreview == null || standardRenderer == null || getCurrentScene() == null) {
-			LOGGER.severe("Cannot render content: renderer or scene not initialized.");
-			return;
-		}
-
-		clearBackground();
-		handleGraphicsReset();
-		ensurePreviewRenderers();
-		syncCurrentSceneToRenderers();
-
-		RenderRequirementsPolicy.Requirements preview = computePreviewRequirements();
-		RenderRequirementsPolicy.Requirements output = computeOutputRequirements();
-		PGraphicsOpenGL[] masterFaces = captureMasterCubemap(preview, output);
-
-		if (outputManager != null && outputManager.isActive()) {
-			renderOutputPipeline(output, masterFaces);
-			outputManager.sendOutput();
-		}
-
-		renderPreviewPipeline(preview, output, masterFaces);
-
-		// Only preview FBOs are composited onto the main window.
-		displayPreviewCurrentView();
-
-		if (showPreview) {
-			drawFloatingPreview();
-		}
-		drawControlPanel();
+	/** Returns whether the current renderer backend and active scene can produce a frame. */
+	boolean isRenderContentReady() {
+		return standardRendererPreview != null
+				&& standardRenderer != null
+				&& getCurrentScene() != null;
 	}
 
 	void clearBackground() {
@@ -980,7 +937,7 @@ public class ziviDomeLive implements PConstants {
 	 * on the next published frame via
 	 * {@link com.victorvalentim.zividomelive.manager.OutputManager#notifyResolutionChanged(int)}.</p>
 	 */
-	private void handleGraphicsReset() {
+	void handleGraphicsReset() {
 		if (pendingOutputReset) {
 			LOGGER.info("Applying output resolution change: " + pendingOutputResolution + "px.");
 			releaseOutputGraphicsResources();
@@ -1032,7 +989,7 @@ public class ziviDomeLive implements PConstants {
 	/**
 	 * Sets the current view to {@link ViewType#DOMEMASTER}.
 	 *
-	 * @deprecated The library's internal draw loop ({@code draw()} → {@code renderContent()})
+	 * @deprecated The library's internal draw loop ({@code draw()} → {@code RenderPipeline})
 	 *             renders every frame automatically. Call {@link #setCurrentView(ViewType)}
 	 *             directly and let the pipeline handle the rest. This method is retained for
 	 *             source compatibility only.
@@ -1075,7 +1032,7 @@ public class ziviDomeLive implements PConstants {
 	/**
 	 * Draws the control panel if it is set to be shown.
 	 */
-	private void drawControlPanel() {
+	void drawControlPanel() {
 		p.hint(DISABLE_DEPTH_TEST);
 		controlManager.updateFpsLabel(p.frameRate);
 
@@ -1248,7 +1205,7 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/** Keeps stateful Standard renderers aligned with the authoritative SceneManager. */
-	private void syncCurrentSceneToRenderers() {
+	void syncCurrentSceneToRenderers() {
 		Scene activeScene = getCurrentScene();
 		if (standardRenderer != null) {
 			standardRenderer.setCurrentScene(activeScene);
