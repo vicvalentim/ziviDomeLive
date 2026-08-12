@@ -53,7 +53,8 @@ not resize the Processing preview window.
 - `renderFisheyeDomemaster()`, `renderEquirectangular()`, `renderCubemap()`, and `renderStandard()` remain deprecated compatibility shims.
 - Renderer getters remain public for compatibility, but renderer topology is not a permanent backend contract.
 
-Generated Javadocs in the release package are the signature-level reference.
+Generated Javadocs in the release package and on GitHub Pages are the signature-level reference.
+Use [Generated Javadocs](javadocs.md) for direct API signatures,
 Use [Core Classes](core-classes.md) for ownership and state semantics,
 [Operational Helpers](helper-functions.md) for runtime controls, and the
 [Scene Interface](scene-interface.md) for the drawing contract.

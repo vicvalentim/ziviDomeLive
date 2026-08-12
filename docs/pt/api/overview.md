@@ -53,7 +53,8 @@ redimensiona a janela de preview do Processing.
 - `renderFisheyeDomemaster()`, `renderEquirectangular()`, `renderCubemap()` e `renderStandard()` continuam como shims de compatibilidade depreciados.
 - Getters de renderers permanecem públicos por compatibilidade, mas a topologia interna não é um contrato permanente.
 
-Os Javadocs gerados no pacote de release são a referência de assinaturas.
-Consulte [Classes Principais](core-classes.md) para ownership e estados,
+Os Javadocs gerados no pacote de release e no GitHub Pages são a referência de assinaturas.
+Consulte [Javadocs Gerados](javadocs.md) para assinaturas diretas,
+[Classes Principais](core-classes.md) para ownership e estados,
 [Funções Operacionais](helper-functions.md) para controles de runtime e
 [Interface Scene](scene-interface.md) para o contrato de desenho.

@@ -25,28 +25,40 @@ theme:
         name: Switch to light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: teal
-      accent: cyan
+      primary: blue
+      accent: indigo
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: green
-      accent: lime
+      primary: blue
+      accent: cyan
       toggle:
         icon: material/brightness-4
         name: Switch to system preference
   features:
+    - announce.dismiss
     - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
     - navigation.expand
     - navigation.top
     - navigation.prune
+    - navigation.footer
+    - navigation.path
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
     - toc.integrate
     - toc.follow
+    - content.action.edit
+    - content.action.view
     - content.code.copy
     - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
   icon:
     repo: fontawesome/brands/github
     search: material/magnify
@@ -82,6 +94,7 @@ plugins:
             Key Features: Funcionalidades Principais
             Usage: Uso
             Render Modes: Modos de Renderização
+            Visual Capture Guide: Guia de Capturas Visuais
             Control Panel: Painel de Controle
             Spherical Calibration: Calibração Esférica
             Scene Management: Gerenciamento de Cenas
@@ -95,6 +108,7 @@ plugins:
             Core Classes: Classes Principais
             Scene Interface: Interface de Cena
             Helper Functions: Funções Auxiliares
+            Generated Javadocs: Javadocs Gerados
             Examples: Exemplos
             Basic Examples: Exemplos Básicos
             Advanced Examples: Exemplos Avançados
@@ -105,6 +119,7 @@ plugins:
             Release Notes: Notas de Versão
             Version 2.0.0: Versão 2.0.0
             Version 1.5.0: Versão 1.5.0
+            Project: Projeto
             Contributing: Contribuindo
             Known Issues: Problemas Conhecidos
             Author: Autor
@@ -122,7 +137,15 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.tilde
   - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tabbed:
+      alternate_style: true
   - pymdownx.snippets:
       base_path:
         - ./examples/
@@ -135,6 +158,13 @@ markdown_extensions:
 
 extra:
   generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/vicvalentim/ziviDomeLive
+      name: ziviDomeLive on GitHub
+    - icon: fontawesome/solid/globe
+      link: https://vicvalentim.com/
+      name: Victor Valentim
 
 extra_css:
   - assets/css/extra.css
@@ -154,6 +184,7 @@ nav:
       - Key Features: getting-started/features.md
   - Usage:
       - Render Modes: usage/basic-usage.md
+      - Visual Capture Guide: usage/visual-capture-guide.md
       - Control Panel: usage/control-panel.md
       - Spherical Calibration: usage/spherical-calibration.md
       - Scene Management: usage/scene-management.md
@@ -167,6 +198,7 @@ nav:
       - Core Classes: api/core-classes.md
       - Scene Interface: api/scene-interface.md
       - Helper Functions: api/helper-functions.md
+      - Generated Javadocs: api/javadocs.md
   - Examples:
       - Basic Examples: examples/basic.md
       - Advanced Examples: examples/advanced.md
@@ -177,7 +209,8 @@ nav:
   - Release Notes:
       - Version 2.0.0: release-notes/2.0.0.md
       - Version 1.5.0: release-notes/1.5.0.md
-  - Contributing: contributing.md
-  - Known Issues: known-issues.md
-  - Author: author.md
-  - License: license.md
+  - Project:
+      - Contributing: contributing.md
+      - Known Issues: known-issues.md
+      - Author: author.md
+      - License: license.md
