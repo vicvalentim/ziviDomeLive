@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SphericalShaderResourcesTest {
@@ -28,16 +29,14 @@ class SphericalShaderResourcesTest {
 	}
 
 	@Test
-	void legacyProcessingShaderFallbackStillUsesCurrentGraphicsTexturePipeline() throws IOException {
+	void legacyProcessingShaderFallbackResourcesAreRemoved() {
 		Path activeShaderRoot = projectRoot().resolve("shaders");
 
-		String equirectangular = Files.readString(activeShaderRoot.resolve("equirectangular.frag"));
-		String domemaster = Files.readString(activeShaderRoot.resolve("domemaster.frag"));
-
-		assertAll("legacy Processing shader fallback",
-				() -> assertTrue(equirectangular.contains("uniform sampler2D posX, negX, posY, negY, posZ, negZ")),
-				() -> assertTrue(equirectangular.contains("bilinearInterpolate(posX")),
-				() -> assertTrue(domemaster.contains("uniform sampler2D equirectangularMap")));
+		assertAll("legacy Processing shader fallback removed",
+				() -> assertFalse(Files.exists(activeShaderRoot.resolve("equirectangular.frag"))),
+				() -> assertFalse(Files.exists(activeShaderRoot.resolve("equirectangular.vert"))),
+				() -> assertFalse(Files.exists(activeShaderRoot.resolve("domemaster.frag"))),
+				() -> assertFalse(Files.exists(activeShaderRoot.resolve("domemaster.vert"))));
 	}
 
 	@Test

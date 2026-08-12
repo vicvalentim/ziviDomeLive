@@ -2,8 +2,6 @@ package com.victorvalentim.zividomelive;
 
 import com.victorvalentim.zividomelive.manager.OutputManager;
 import com.victorvalentim.zividomelive.support.LogManager;
-import processing.opengl.PGraphicsOpenGL;
-
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -60,15 +58,15 @@ final class RenderPipeline {
 
 		RenderRequirementsPolicy.Requirements preview = runtime.computePreviewRequirements();
 		RenderRequirementsPolicy.Requirements output = runtime.computeOutputRequirements();
-		PGraphicsOpenGL[] masterFaces = runtime.captureMasterCubemap(preview, output);
+		runtime.captureMasterCubemap(preview, output);
 
 		OutputManager outputManager = runtime.getOutputManager();
 		if (outputManager != null && outputManager.isActive()) {
-			runtime.renderOutputPipeline(output, masterFaces);
+			runtime.renderOutputPipeline(output);
 			outputManager.sendOutput(finalFrameViews);
 		}
 
-		runtime.renderPreviewPipeline(preview, output, masterFaces);
+		runtime.renderPreviewPipeline(preview, output);
 		runtime.displayPreviewCurrentView();
 
 		if (runtime.isShowPreview()) {

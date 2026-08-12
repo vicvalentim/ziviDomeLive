@@ -4,7 +4,7 @@ package com.victorvalentim.zividomelive;
  * Internal policy that expands requested views into the render passes needed to produce them.
  *
  * <p>The policy is deliberately independent from renderer instances and output backends. This
- * keeps view selection separate from the 1.x rendering topology while providing one place for
+ * keeps view selection separate from the concrete rendering topology while providing one place for
  * dependency closure. Results are cached because the policy runs once per frame.</p>
  */
 final class RenderRequirementsPolicy {
@@ -140,10 +140,10 @@ final class RenderRequirementsPolicy {
 
 		private Requirements(int requestedViews) {
 			needsFisheye = (requestedViews & FISHEYE) != 0;
-			needsEquirectangular = (requestedViews & EQUIRECTANGULAR) != 0 || needsFisheye;
+			needsEquirectangular = (requestedViews & EQUIRECTANGULAR) != 0;
 			needsCubemapLayout = (requestedViews & CUBEMAP_LAYOUT) != 0;
 			needsStandard = (requestedViews & STANDARD) != 0;
-			needsCubemapSource = needsEquirectangular || needsCubemapLayout;
+			needsCubemapSource = needsFisheye || needsEquirectangular || needsCubemapLayout;
 		}
 
 		boolean needsFisheye() {

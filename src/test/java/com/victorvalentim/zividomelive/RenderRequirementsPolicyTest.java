@@ -12,7 +12,7 @@ class RenderRequirementsPolicyTest {
 		assertRequirements(
 				RenderRequirementsPolicy.forPreview(
 						RenderMode.FULL, ViewType.DOMEMASTER, false),
-				true, true, false, false, true);
+				true, false, false, false, true);
 		assertRequirements(
 				RenderRequirementsPolicy.forPreview(
 						RenderMode.FULL, ViewType.EQUIRECTANGULAR, false),
@@ -31,11 +31,11 @@ class RenderRequirementsPolicyTest {
 	void floatingPreviewAddsFisheyeChainWithoutDroppingSelectedView() {
 		RenderRequirementsPolicy.Requirements standard = RenderRequirementsPolicy.forPreview(
 				RenderMode.FULL, ViewType.STANDARD, true);
-		assertRequirements(standard, true, true, false, true, true);
+		assertRequirements(standard, true, false, false, true, true);
 
 		RenderRequirementsPolicy.Requirements cubemap = RenderRequirementsPolicy.forPreview(
 				RenderMode.FULL, ViewType.SKYBOX, true);
-		assertRequirements(cubemap, true, true, true, false, true);
+		assertRequirements(cubemap, true, false, true, false, true);
 	}
 
 	@Test
@@ -67,7 +67,7 @@ class RenderRequirementsPolicyTest {
 			assertRequirements(
 					requirements,
 					fisheye,
-					equirectangular || fisheye,
+					equirectangular,
 					cubemap,
 					standard,
 					fisheye || equirectangular || cubemap);
