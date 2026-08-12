@@ -9,6 +9,7 @@ import processing.opengl.PGraphicsOpenGL;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 /**
@@ -136,13 +137,34 @@ public final class CubemapTarget implements AutoCloseable {
 	 * @param renderOperation operation that emits Processing/OpenGL draw commands
 	 */
 	public void renderFace(CubemapFace face, PGraphicsOpenGL graphics, Runnable renderOperation) {
+		renderFace(face, graphics, ignored -> renderOperation.run());
+	}
+
+	/**
+	 * Binds a cubemap face and exposes the already-active PGL context to the render pass.
+	 *
+	 * <p>The overload is intended for native passes that must share the exact framebuffer and
+	 * context used by Processing scene capture. Callers must not invoke {@code beginPGL()} or
+	 * {@code endPGL()} from inside the operation.</p>
+	 *
+	 * @param face target cubemap face
+	 * @param graphics Processing OpenGL target used to emit scene draw commands
+	 * @param renderOperation operation receiving the active PGL context
+	 */
+	public void renderFace(
+			CubemapFace face,
+			PGraphicsOpenGL graphics,
+			Consumer<PGL> renderOperation) {
 		Objects.requireNonNull(face, "face");
 		Objects.requireNonNull(graphics, "graphics");
 		Objects.requireNonNull(renderOperation, "renderOperation");
 		ensureAllocated();
 
 		glAdapter.withPgl(graphics, pgl -> {
-			withCubemapFaceFramebuffer(pgl, glTargetFor(face), renderOperation);
+			withCubemapFaceFramebuffer(
+					pgl,
+					glTargetFor(face),
+					() -> renderOperation.accept(pgl));
 			return null;
 		});
 		mipmapsValid = false;

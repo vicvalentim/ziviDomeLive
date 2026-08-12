@@ -31,17 +31,23 @@ class SphericalShaderResourcesTest {
 	@Test
 	void environmentBackgroundShadersArePackagedForLdrEquirectangularMaps() throws IOException {
 		Path shaderRoot = projectRoot().resolve("shaders/environment");
+		String renderer = Files.readString(projectRoot().resolve(
+				"src/main/java/com/victorvalentim/zividomelive/render/EnvironmentBackgroundRenderer.java"));
 
 		assertAll("environment background shader resources",
-				() -> assertShader(shaderRoot, "equirectangular_background.vert", "uniform mat4 transform"),
-				() -> assertShader(shaderRoot, "equirectangular_background.frag", "uniform sampler2D environmentMap"),
-				() -> assertShader(shaderRoot, "equirectangular_background.frag", "directionForCanonicalFace"),
-				() -> assertShader(shaderRoot, "equirectangular_background.frag", "equirectangularUv"),
-				() -> assertShader(shaderRoot, "equirectangular_background.frag", "environmentRotation"),
-				() -> assertShader(shaderRoot, "equirectangular_background.frag", "yawOffset"),
-				() -> assertShader(shaderRoot, "equirectangular_background.frag", "intensity"),
-				() -> assertShader(shaderRoot, "equirectangular_background.vert",
-						"gl_Position.z = gl_Position.w * 0.999999"));
+				() -> assertShader(shaderRoot, "equirectangular_background.vert", "gl_VertexID"),
+				() -> assertShader(shaderRoot, "equirectangular_background.vert", "FULLSCREEN_TRIANGLE"),
+				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "uniform sampler2D environmentMap"),
+				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "faceResolution"),
+				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "directionForCanonicalFace"),
+				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "equirectangularUv"),
+				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "environmentRotation"),
+				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "yawOffset"),
+				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "intensity"),
+				() -> assertTrue(renderer.contains("pgl.drawArrays(PGL.TRIANGLES, 0, 3)")),
+				() -> assertTrue(renderer.contains("pgl.depthFunc(PGL.LEQUAL)")),
+				() -> assertTrue(renderer.contains("pgl.depthMask(false)")),
+				() -> assertFalse(renderer.contains("target.rect(")));
 	}
 
 	@Test
@@ -130,6 +136,20 @@ class SphericalShaderResourcesTest {
 		if (fileName.endsWith(".frag")) {
 			assertTrue(source.contains("#define PROCESSING_COLOR_SHADER"), fileName);
 		}
+	}
+
+	private static void assertNativeShader(
+			Path shaderRoot,
+			String fileName,
+			String requiredSnippet) throws IOException {
+		Path shader = shaderRoot.resolve(fileName);
+		String source = Files.readString(shader);
+
+		assertAll(fileName,
+				() -> assertTrue(Files.isRegularFile(shader)),
+				() -> assertTrue(source.startsWith("#version 410 core")),
+				() -> assertTrue(source.contains(requiredSnippet)),
+				() -> assertFalse(source.contains("#define PROCESSING_")));
 	}
 
 	private static Path projectRoot() {
