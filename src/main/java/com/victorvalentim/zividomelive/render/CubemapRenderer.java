@@ -4,6 +4,7 @@ import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.render.camera.CameraManager;
 import com.victorvalentim.zividomelive.render.camera.CameraOrientation;
 import com.victorvalentim.zividomelive.render.camera.CubemapFace;
+import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
 import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.PApplet;
 import processing.core.PConstants;
@@ -26,6 +27,7 @@ public class CubemapRenderer implements PConstants {
     private PGraphicsOpenGL[] cubemapFaces;
     private int resolution;
     private final PApplet parent;
+    private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
 
     // Cached frustum parameters
     private volatile float cachedNearPlane;
@@ -59,9 +61,9 @@ public class CubemapRenderer implements PConstants {
         }
         for (int i = 0; i < NUM_FACES; i++) {
             if (cubemapFaces[i] != null) {
-                cubemapFaces[i].dispose();
+                glAdapter.dispose(cubemapFaces[i]);
             }
-            cubemapFaces[i] = (PGraphicsOpenGL) parent.createGraphics(resolution, resolution, P3D);
+            cubemapFaces[i] = glAdapter.createGraphics(parent, resolution, resolution, P3D);
         }
     }
 
@@ -220,7 +222,7 @@ public class CubemapRenderer implements PConstants {
         if (cubemapFaces != null) {
             for (PGraphics face : cubemapFaces) {
                 if (face != null) {
-                    face.dispose();
+                    glAdapter.dispose(face);
                 }
             }
             cubemapFaces = null;

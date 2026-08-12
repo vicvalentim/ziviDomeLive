@@ -1,5 +1,6 @@
 package com.victorvalentim.zividomelive.manager;
 
+import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
 import com.victorvalentim.zividomelive.support.LogManager;
 import me.walkerknapp.devolay.DevolayFrameFormatType;
 import me.walkerknapp.devolay.DevolayFrameFourCCType;
@@ -30,6 +31,7 @@ final class NdiOutputBackend {
 
 	private final Logger logger = LogManager.getLogger();
 	private final long shutdownTimeoutMillis;
+	private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
 	private final Object lifecycleLock = new Object();
 
 	private volatile DevolaySender ndiSender;
@@ -158,20 +160,17 @@ final class NdiOutputBackend {
 
 		boolean queued = false;
 		try {
-			graphics.loadPixels();
-
 			int width = graphics.width;
 			int height = graphics.height;
 			int pixelCount = Math.multiplyExact(width, height);
 
-			if (graphics.pixels == null || graphics.pixels.length < pixelCount) {
+			slot.ensureCapacity(width, height);
+			if (!glAdapter.copyPixels(graphics, slot.argbPixels, pixelCount)) {
 				ndiFailedFrames.incrementAndGet();
 				logger.warning("NDI frame skipped: Processing pixel buffer is unavailable or incomplete.");
 				return;
 			}
 
-			slot.ensureCapacity(width, height);
-			System.arraycopy(graphics.pixels, 0, slot.argbPixels, 0, pixelCount);
 			slot.width = width;
 			slot.height = height;
 			slot.pixelCount = pixelCount;

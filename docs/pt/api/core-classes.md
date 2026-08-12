@@ -104,6 +104,14 @@ câmera: `+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`. `CameraManager` continua disponíve
 para compatibilidade com a 1.x e inicializa suas orientações a partir dessa
 tabela canônica.
 
+## ProcessingGlAdapter
+
+`ProcessingGlAdapter` centraliza as operações Processing/OpenGL atualmente
+necessárias pelo pipeline de renderização e pelos backends de output: alocação
+de targets gráficos, verificações de textura, cópia via `loadPixels()`, descarte
+e descoberta de capabilities PGL. `ProcessingGlCapabilities` registra se o
+contexto ativo anuncia suporte a textura, FBO, cubemap, PBO e sync fence.
+
 ## OrbitCamera
 
 `OrbitCamera` é uma transformação opcional em scene space, compartilhada por

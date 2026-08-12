@@ -3,6 +3,7 @@ package com.victorvalentim.zividomelive;
 import com.victorvalentim.zividomelive.manager.*;
 import com.victorvalentim.zividomelive.render.*;
 import com.victorvalentim.zividomelive.render.camera.*;
+import com.victorvalentim.zividomelive.render.gl.*;
 import com.victorvalentim.zividomelive.render.modes.*;
 import com.victorvalentim.zividomelive.support.*;
 import processing.core.*;
@@ -280,14 +281,16 @@ public class ziviDomeLive implements PConstants {
 	 * @param p the PApplet instance used for rendering
 	 */
 	public void printOpenGLInfo(PApplet p) {
-		if (p.g instanceof PGraphicsOpenGL pgl) {
-			PGL pglContext = pgl.beginPGL();
-
-			LOGGER.info("OpenGL Version: " + pglContext.getString(PGL.VERSION));
-			LOGGER.info("OpenGL Vendor: " + pglContext.getString(PGL.VENDOR));
-			LOGGER.info("OpenGL Renderer: " + pglContext.getString(PGL.RENDERER));
-
-			pgl.endPGL();
+		ProcessingGlCapabilities capabilities = ProcessingGlAdapter.getDefault().queryCapabilities(p);
+		if (capabilities.isOpenGlRenderer()) {
+			LOGGER.info("OpenGL Version: " + capabilities.version());
+			LOGGER.info("OpenGL Vendor: " + capabilities.vendor());
+			LOGGER.info("OpenGL Renderer: " + capabilities.renderer());
+			LOGGER.info("OpenGL Texture Support: " + capabilities.supportsTexture());
+			LOGGER.info("OpenGL FBO Support: " + capabilities.supportsFramebuffer());
+			LOGGER.info("OpenGL Cubemap Support: " + capabilities.supportsCubemap());
+			LOGGER.info("OpenGL PBO Support: " + capabilities.supportsPixelBufferObject());
+			LOGGER.info("OpenGL Fence Support: " + capabilities.supportsSyncFence());
 		} else {
 			LOGGER.severe("The current renderer is not OpenGL.");
 		}

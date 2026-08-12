@@ -63,6 +63,16 @@ Quando um output habilitado exige dados esféricos, seu cubemap na resolução d
 
 Isso evita captura duplicada da cena mantendo janela Processing e outputs externos em domínios de target separados.
 
+## Fronteira Processing GL
+
+`ProcessingGlAdapter` é a fronteira estreita para as chamadas Processing/OpenGL
+atuais: alocação de targets, verificação de textura, readback `loadPixels()` do
+NDI, descarte de targets e descoberta de capabilities pelo contexto PGL ativo.
+As capabilities reportadas incluem suporte a textura, FBO, cubemap, PBO e sync
+fence para que PRs posteriores de cubemap nativo e readback possam condicionar
+seus caminhos GL explicitamente. Esta PR não introduz armazenamento cubemap
+nativo, projeção samplerCube, readback PBO ou sincronização por fence.
+
 ## Ownership de Resolução
 
 | Target | Política de dimensão | Recriado quando |

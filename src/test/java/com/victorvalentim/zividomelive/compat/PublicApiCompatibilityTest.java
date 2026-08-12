@@ -13,6 +13,8 @@ import com.victorvalentim.zividomelive.render.camera.CameraManager;
 import com.victorvalentim.zividomelive.render.camera.CubemapFace;
 import com.victorvalentim.zividomelive.render.camera.MouseControlledCamera;
 import com.victorvalentim.zividomelive.render.camera.OrbitCamera;
+import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
+import com.victorvalentim.zividomelive.render.gl.ProcessingGlCapabilities;
 import com.victorvalentim.zividomelive.render.modes.CubemapViewRenderer;
 import com.victorvalentim.zividomelive.render.modes.EquirectangularRenderer;
 import com.victorvalentim.zividomelive.render.modes.FisheyeDomemaster;
@@ -136,6 +138,8 @@ class PublicApiCompatibilityTest {
 				SphericalOrientation.class,
 				CameraManager.class,
 				CubemapFace.class,
+				ProcessingGlAdapter.class,
+				ProcessingGlCapabilities.class,
 				MouseControlledCamera.class,
 				OrbitCamera.class,
 				CubemapViewRenderer.class,

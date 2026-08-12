@@ -1,5 +1,6 @@
 package com.victorvalentim.zividomelive.render.modes;
 
+import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
 import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.*;
 import processing.opengl.*;
@@ -15,6 +16,7 @@ public class EquirectangularRenderer {
     private final PShader equirectangularShader;
     private final PApplet parent;
     private final int resolution;
+    private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
 
     /**
      * Constructs an EquirectangularRenderer with the specified resolution, shader files, and parent PApplet.
@@ -35,9 +37,9 @@ public class EquirectangularRenderer {
      */
     private void initializeEquirectangular() {
         if (equirectangular != null) {
-            equirectangular.dispose();
+            glAdapter.dispose(equirectangular);
         }
-        equirectangular = (PGraphicsOpenGL) parent.createGraphics(resolution * 2, resolution, PApplet.P2D);
+        equirectangular = glAdapter.createGraphics(parent, resolution * 2, resolution, PApplet.P2D);
     }
 
     /**
@@ -77,7 +79,7 @@ public class EquirectangularRenderer {
             return false;
         }
         for (int i = 0; i < 6; i++) {
-            if (faces[i] == null || faces[i].getTexture() == null) {
+            if (!glAdapter.hasTexture(faces[i])) {
                 return false;
             }
         }
@@ -101,7 +103,7 @@ public class EquirectangularRenderer {
      */
     public void dispose() {
         if (equirectangular != null) {
-            equirectangular.dispose();
+            glAdapter.dispose(equirectangular);
             equirectangular = null;
         }
     }

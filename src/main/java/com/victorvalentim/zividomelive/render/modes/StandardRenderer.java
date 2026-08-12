@@ -2,6 +2,7 @@ package com.victorvalentim.zividomelive.render.modes;
 
 import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.render.camera.MouseControlledCamera;
+import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
 import processing.core.*;
 import processing.opengl.PGraphicsOpenGL;
 
@@ -35,6 +36,7 @@ public class StandardRenderer {
     private Scene currentScene;
     private MouseControlledCamera cam;
     private final PApplet parent;
+    private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
 
     /**
      * Fixed buffer width. Zero signals dynamic mode ({@code parent.width} is used each frame).
@@ -107,9 +109,9 @@ public class StandardRenderer {
     /** Allocates or reallocates the off-screen buffer at the requested dimensions. */
     private void initializeStandardView(int width, int height) {
         if (standardView != null) {
-            standardView.dispose();
+            glAdapter.dispose(standardView);
         }
-        standardView = (PGraphicsOpenGL) parent.createGraphics(width, height, PApplet.P3D);
+        standardView = glAdapter.createGraphics(parent, width, height, PApplet.P3D);
     }
 
     // -------------------------------------------------------------------------
@@ -247,7 +249,7 @@ public class StandardRenderer {
      */
     public void dispose() {
         if (standardView != null) {
-            standardView.dispose();
+            glAdapter.dispose(standardView);
             standardView = null;
         }
     }
