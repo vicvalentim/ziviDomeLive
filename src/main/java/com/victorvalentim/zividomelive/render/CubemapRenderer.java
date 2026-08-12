@@ -21,8 +21,8 @@ import java.util.logging.Logger;
  */
 public class CubemapRenderer implements PConstants {
     private static final int NUM_FACES = CubemapFace.count();
-    private static final float DEFAULT_NEAR_PLANE = 0.01f;
-    private static final float DEFAULT_FAR_PLANE = 10000000.0f;
+    private static final float DEFAULT_NEAR_PLANE = 1.0f;
+    private static final float DEFAULT_FAR_PLANE = 22000.0f;
     private static final Logger LOGGER = LogManager.getLogger();
 
     private PGraphicsOpenGL[] cubemapFaces;
@@ -49,7 +49,7 @@ public class CubemapRenderer implements PConstants {
     public CubemapRenderer(int initialResolution, PApplet parent) {
         this.parent = parent;
         this.resolution = initialResolution;
-        initializeCubemapFaces();
+        initializeNativeCubemapTarget();
         cachedNearPlane = DEFAULT_NEAR_PLANE;
         cachedFarPlane = DEFAULT_FAR_PLANE;
         cachedFieldOfView = PApplet.PI / 2;
@@ -58,7 +58,7 @@ public class CubemapRenderer implements PConstants {
     /**
      * Initializes or reinitializes the cubemap faces with the current resolution.
      */
-    private void initializeCubemapFaces() {
+    private void initializeLegacyCubemapFaces() {
         if (cubemapFaces == null) {
             cubemapFaces = new PGraphicsOpenGL[NUM_FACES];
         }
@@ -68,7 +68,10 @@ public class CubemapRenderer implements PConstants {
             }
             cubemapFaces[i] = glAdapter.createGraphics(parent, resolution, resolution, P3D);
         }
-        initializeNativeCubemapTarget();
+        if (LogManager.isDebugEnabled()) {
+            LOGGER.fine("Legacy Processing cubemap faces allocated: resolution=" + resolution
+                    + ", faces=" + NUM_FACES);
+        }
     }
 
     /**
@@ -79,7 +82,8 @@ public class CubemapRenderer implements PConstants {
     void updateResolution(int newResolution) {
         if (this.resolution != newResolution) {
             this.resolution = newResolution;
-            initializeCubemapFaces();
+            disposeLegacyCubemapFaces();
+            initializeNativeCubemapTarget();
         }
     }
 
@@ -113,6 +117,37 @@ public class CubemapRenderer implements PConstants {
                   face.upX(), face.upY(), face.upZ());
         pg.perspective(cachedFieldOfView, 1, cachedNearPlane, cachedFarPlane);
 
+        pg.applyMatrix(sphericalOrientation.toMatrix());
+    }
+
+    /**
+     * Configures the parent renderer while a native cubemap face is attached to the active FBO.
+     *
+     * <p>This follows the Processing PGL sampleCube reference: face cameras are aligned to the
+     * OpenGL cubemap target order, with Processing's Y-up/Y-down convention corrected by
+     * {@code scale(-1, 1, -1)} before the scene is rendered.</p>
+     */
+    private void configureNativeCameraForFace(
+            PGraphicsOpenGL pg,
+            CubemapFace face,
+            Quaternion sphericalOrientation,
+            float fieldOfView) {
+        switch (face) {
+            case POSITIVE_Y -> pg.camera(
+                    0f, 0f, 0f,
+                    0f, -1f, 0f,
+                    0f, 0f, -1f);
+            case NEGATIVE_Y -> pg.camera(
+                    0f, 0f, 0f,
+                    0f, 1f, 0f,
+                    0f, 0f, 1f);
+            default -> pg.camera(
+                    0f, 0f, 0f,
+                    face.centerX(), face.centerY(), face.centerZ(),
+                    face.upX(), face.upY(), face.upZ());
+        }
+        pg.perspective(fieldOfView, 1.0f, cachedNearPlane, cachedFarPlane);
+        pg.scale(-1f, 1f, -1f);
         pg.applyMatrix(sphericalOrientation.toMatrix());
     }
 
@@ -158,12 +193,29 @@ public class CubemapRenderer implements PConstants {
             Quaternion sphericalOrientation,
             CameraManager cameraManager,
             Scene currentScene) {
-        if (cubemapFaces == null) {
-            initializeCubemapFaces();
-        }
         Quaternion effectiveOrientation = sphericalOrientation == null
                 ? new Quaternion(0.0f, 0.0f, 0.0f, 1.0f)
                 : sphericalOrientation;
+        if (captureNativeCubemap(effectiveOrientation, cameraManager, currentScene)) {
+            return;
+        }
+        captureLegacyProcessingFaces(effectiveOrientation, cameraManager, currentScene);
+    }
+
+    private void captureLegacyProcessingFaces(
+            Quaternion effectiveOrientation,
+            CameraManager cameraManager,
+            Scene currentScene) {
+        if (cubemapFaces == null) {
+            initializeLegacyCubemapFaces();
+        }
+        if (LogManager.isDebugEnabled()) {
+            LOGGER.fine("Legacy Processing cubemap capture begin: resolution=" + resolution
+                    + ", fovDeg=" + PApplet.degrees(cachedFieldOfView)
+                    + ", near=" + cachedNearPlane
+                    + ", far=" + cachedFarPlane
+                    + ", scene=" + (currentScene != null ? currentScene.getName() : "<none>"));
+        }
         for (int i = 0; i < NUM_FACES; i++) {
             cubemapFaces[i].beginDraw();
             cubemapFaces[i].background(0, 0);
@@ -189,12 +241,28 @@ public class CubemapRenderer implements PConstants {
     public void captureCubemap(
             Quaternion sphericalOrientation,
             Scene currentScene) {
-        if (cubemapFaces == null) {
-            initializeCubemapFaces();
-        }
         Quaternion effectiveOrientation = sphericalOrientation == null
                 ? new Quaternion(0.0f, 0.0f, 0.0f, 1.0f)
                 : sphericalOrientation;
+        if (captureNativeCubemap(effectiveOrientation, null, currentScene)) {
+            return;
+        }
+        captureLegacyProcessingFaces(effectiveOrientation, currentScene);
+    }
+
+    private void captureLegacyProcessingFaces(
+            Quaternion effectiveOrientation,
+            Scene currentScene) {
+        if (cubemapFaces == null) {
+            initializeLegacyCubemapFaces();
+        }
+        if (LogManager.isDebugEnabled()) {
+            LOGGER.fine("Legacy Processing cubemap capture begin: resolution=" + resolution
+                    + ", fovDeg=" + PApplet.degrees(cachedFieldOfView)
+                    + ", near=" + cachedNearPlane
+                    + ", far=" + cachedFarPlane
+                    + ", scene=" + (currentScene != null ? currentScene.getName() : "<none>"));
+        }
         for (int i = 0; i < NUM_FACES; i++) {
             cubemapFaces[i].beginDraw();
             cubemapFaces[i].background(0, 0);
@@ -211,6 +279,62 @@ public class CubemapRenderer implements PConstants {
         refreshNativeCubemapMipmaps();
     }
 
+    private boolean captureNativeCubemap(
+            Quaternion effectiveOrientation,
+            CameraManager cameraManager,
+            Scene currentScene) {
+        if (nativeCubemapTarget == null) {
+            return false;
+        }
+        if (!(parent.g instanceof PGraphicsOpenGL parentGraphics)) {
+            LOGGER.warning("Native cubemap capture unavailable: parent renderer is not PGraphicsOpenGL.");
+            return false;
+        }
+
+        float captureFieldOfView = cachedFieldOfView;
+        if (LogManager.isDebugEnabled()) {
+            LOGGER.fine("Native cubemap capture begin: resolution=" + resolution
+                    + ", fovDeg=" + PApplet.degrees(captureFieldOfView)
+                    + ", near=" + cachedNearPlane
+                    + ", far=" + cachedFarPlane
+                    + ", scene=" + (currentScene != null ? currentScene.getName() : "<none>")
+                    + ", cameraSource=sampleCube"
+                    + (cameraManager != null ? ", legacyCameraManagerFallback=true" : ""));
+        }
+
+        try {
+            for (CubemapFace face : CubemapFace.values()) {
+                if (LogManager.isDebugEnabled()) {
+                    LOGGER.finer("Native cubemap capture face begin: " + face
+                            + " -> glTarget=0x" + Integer.toHexString(CubemapTarget.glTargetFor(face)));
+                }
+                nativeCubemapTarget.renderFace(face, () -> {
+                    parentGraphics.resetMatrix();
+                    parentGraphics.background(0, 0);
+                    configureNativeCameraForFace(
+                            parentGraphics,
+                            face,
+                            effectiveOrientation,
+                            captureFieldOfView);
+                    if (currentScene != null) {
+                        currentScene.sceneRender(parentGraphics);
+                    }
+                    parentGraphics.flush();
+                });
+            }
+            refreshNativeCubemapMipmaps();
+            if (LogManager.isDebugEnabled()) {
+                LOGGER.fine("Native cubemap capture completed.");
+            }
+            return true;
+        } catch (RuntimeException error) {
+            LOGGER.warning("Native cubemap capture failed; falling back to Processing face capture: "
+                    + error.getMessage());
+            disposeNativeCubemapTarget();
+            return false;
+        }
+    }
+
     /**
      * Returns an array of cubemap faces.
      *
@@ -218,7 +342,7 @@ public class CubemapRenderer implements PConstants {
      */
     public PGraphicsOpenGL[] getCubemapFaces() {
         if (cubemapFaces == null) {
-            initializeCubemapFaces();
+            initializeLegacyCubemapFaces();
         }
         return cubemapFaces;
     }
@@ -236,9 +360,23 @@ public class CubemapRenderer implements PConstants {
     }
 
     /**
+     * Reports whether the renderer currently owns an allocated native cubemap.
+     *
+     * @return {@code true} when direct {@code GL_TEXTURE_CUBE_MAP} capture is available
+     */
+    public boolean hasNativeCubemapTarget() {
+        return nativeCubemapTarget != null && nativeCubemapTarget.isAllocated();
+    }
+
+    /**
      * Disposes of cubemap faces to free up resources.
      */
     public void dispose() {
+        disposeLegacyCubemapFaces();
+        disposeNativeCubemapTarget();
+    }
+
+    private void disposeLegacyCubemapFaces() {
         if (cubemapFaces != null) {
             for (PGraphics face : cubemapFaces) {
                 if (face != null) {
@@ -247,7 +385,6 @@ public class CubemapRenderer implements PConstants {
             }
             cubemapFaces = null;
         }
-        disposeNativeCubemapTarget();
     }
 
     private void initializeNativeCubemapTarget() {

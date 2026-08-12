@@ -1,6 +1,7 @@
 package com.victorvalentim.zividomelive.support;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.*;
 
@@ -47,6 +48,15 @@ public class LogManager {
 	 */
 	public static synchronized Mode getMode() {
 		return currentMode;
+	}
+
+	/**
+	 * Reports whether verbose debug logging is enabled.
+	 *
+	 * @return {@code true} when the current mode is {@link Mode#DEBUG}
+	 */
+	public static synchronized boolean isDebugEnabled() {
+		return currentMode == Mode.DEBUG;
 	}
 
 	/**
@@ -167,8 +177,20 @@ public class LogManager {
 	private static class CustomFormatter extends Formatter {
 		@Override
 		public String format(LogRecord record) {
+			String source = record.getSourceClassName() != null
+					? record.getSourceClassName()
+					: record.getLoggerName();
+			if (record.getSourceMethodName() != null) {
+				source += "#" + record.getSourceMethodName();
+			}
 			return "[" +
+					Instant.ofEpochMilli(record.getMillis()) +
+					"] [" +
 					record.getLevel().getLocalizedName() +
+					"] [" +
+					Thread.currentThread().getName() +
+					"] [" +
+					source +
 					"] " +
 					formatMessage(record) + "\n";
 		}

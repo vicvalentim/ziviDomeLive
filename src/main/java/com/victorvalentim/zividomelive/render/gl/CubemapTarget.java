@@ -1,6 +1,7 @@
 package com.victorvalentim.zividomelive.render.gl;
 
 import com.victorvalentim.zividomelive.render.camera.CubemapFace;
+import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.PApplet;
 import processing.opengl.PGL;
 import processing.opengl.PGraphicsOpenGL;
@@ -8,24 +9,30 @@ import processing.opengl.PGraphicsOpenGL;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.Objects;
+import java.util.logging.Logger;
 
 /**
  * Native OpenGL cubemap texture owned by the spherical rendering pipeline.
  *
- * <p>This target owns the {@code GL_TEXTURE_CUBE_MAP} allocation and reusable
- * framebuffer objects used to copy rendered Processing face textures into it.
- * Sampling it from projection shaders is introduced by later migration steps.</p>
+ * <p>This target owns the {@code GL_TEXTURE_CUBE_MAP} allocation, the framebuffer used
+ * for direct native face rendering, and fallback copy framebuffers for legacy Processing
+ * face textures. The primary 2.0 path renders into the cubemap face attachments directly.</p>
  */
 public final class CubemapTarget implements AutoCloseable {
+	private static final Logger LOGGER = LogManager.getLogger();
 	private static final int GL_TEXTURE_CUBE_MAP_SEAMLESS = 0x884F;
 	private static final int GL_ACTIVE_TEXTURE = 0x84E0;
 	private static final int GL_TEXTURE_BINDING_CUBE_MAP = 0x8514;
+	private static final int GL_READ_FRAMEBUFFER_BINDING = 0x8CAA;
+	private static final int GL_DRAW_FRAMEBUFFER_BINDING = 0x8CA6;
 
 	private final PApplet parent;
 	private final ProcessingGlAdapter glAdapter;
 	private final int resolution;
 	private int readFramebufferId;
 	private int drawFramebufferId;
+	private int renderFramebufferId;
+	private int depthRenderbufferId;
 	private int textureId;
 	private boolean mipmapsValid;
 
@@ -35,19 +42,24 @@ public final class CubemapTarget implements AutoCloseable {
 			int resolution,
 			int readFramebufferId,
 			int drawFramebufferId,
+			int renderFramebufferId,
+			int depthRenderbufferId,
 			int textureId) {
 		this.parent = Objects.requireNonNull(parent, "parent");
 		this.glAdapter = Objects.requireNonNull(glAdapter, "glAdapter");
 		this.resolution = resolution;
 		this.readFramebufferId = readFramebufferId;
 		this.drawFramebufferId = drawFramebufferId;
+		this.renderFramebufferId = renderFramebufferId;
+		this.depthRenderbufferId = depthRenderbufferId;
 		this.textureId = textureId;
 		this.mipmapsValid = true;
 	}
 
 	/**
-	 * Allocates a native OpenGL cubemap texture with conservative 2.0 defaults
-	 * and reusable framebuffer objects for GPU-side face copies.
+	 * Allocates a native OpenGL cubemap texture with conservative 2.0 defaults,
+	 * a reusable direct-render framebuffer, depth renderbuffer, and fallback copy
+	 * framebuffer objects.
 	 *
 	 * @param parent Processing parent with an active OpenGL renderer
 	 * @param resolution square face size in pixels
@@ -71,7 +83,25 @@ public final class CubemapTarget implements AutoCloseable {
 		}
 
 		int[] resources = glAdapter.withPgl(parent, pgl -> allocateResources(pgl, resolution, capabilities));
-		return new CubemapTarget(parent, glAdapter, resolution, resources[1], resources[2], resources[0]);
+		if (LogManager.isDebugEnabled()) {
+			LOGGER.fine("Native CubemapTarget allocated: resolution=" + resolution
+					+ ", textureId=" + resources[0]
+					+ ", readFbo=" + resources[1]
+					+ ", drawFbo=" + resources[2]
+					+ ", renderFbo=" + resources[3]
+					+ ", depthRbo=" + resources[4]
+					+ ", seamless=" + capabilities.supportsSeamlessCubemap()
+					+ ", anisotropic=" + capabilities.supportsAnisotropicFiltering());
+		}
+		return new CubemapTarget(
+				parent,
+				glAdapter,
+				resolution,
+				resources[1],
+				resources[2],
+				resources[3],
+				resources[4],
+				resources[0]);
 	}
 
 	/**
@@ -114,6 +144,29 @@ public final class CubemapTarget implements AutoCloseable {
 	}
 
 	/**
+	 * Binds a cubemap face as the active draw framebuffer and runs the supplied render pass.
+	 *
+	 * <p>This mirrors the native PGL sampleCube sketch: one framebuffer is reused while
+	 * {@code framebufferTexture2D} attaches each {@code GL_TEXTURE_CUBE_MAP_*} face directly.
+	 * The Processing draw callback runs while that framebuffer is active, so scene code can
+	 * keep using the current {@code PGraphicsOpenGL} contract.</p>
+	 *
+	 * @param face target cubemap face
+	 * @param renderOperation operation that emits Processing/OpenGL draw commands
+	 */
+	public void renderFace(CubemapFace face, Runnable renderOperation) {
+		Objects.requireNonNull(face, "face");
+		Objects.requireNonNull(renderOperation, "renderOperation");
+		ensureAllocated();
+
+		glAdapter.withPgl(parent, pgl -> {
+			withCubemapFaceFramebuffer(pgl, glTargetFor(face), renderOperation);
+			return null;
+		});
+		mipmapsValid = false;
+	}
+
+	/**
 	 * Regenerates mipmaps after one or more cubemap faces have changed.
 	 *
 	 * <p>The renderer calls this once after the six Processing faces have been copied,
@@ -128,6 +181,9 @@ public final class CubemapTarget implements AutoCloseable {
 			return null;
 		});
 		mipmapsValid = true;
+		if (LogManager.isDebugEnabled()) {
+			LOGGER.finer("Native CubemapTarget mipmaps regenerated: textureId=" + textureId);
+		}
 	}
 
 	/**
@@ -171,18 +227,39 @@ public final class CubemapTarget implements AutoCloseable {
 		int texture = textureId;
 		int readFramebuffer = readFramebufferId;
 		int drawFramebuffer = drawFramebufferId;
-		if (texture == 0 && readFramebuffer == 0 && drawFramebuffer == 0) {
+		int renderFramebuffer = renderFramebufferId;
+		int depthRenderbuffer = depthRenderbufferId;
+		if (texture == 0
+				&& readFramebuffer == 0
+				&& drawFramebuffer == 0
+				&& renderFramebuffer == 0
+				&& depthRenderbuffer == 0) {
 			return;
 		}
 		textureId = 0;
 		readFramebufferId = 0;
 		drawFramebufferId = 0;
+		renderFramebufferId = 0;
+		depthRenderbufferId = 0;
 		glAdapter.withPgl(parent, pgl -> {
-			if (readFramebuffer != 0 || drawFramebuffer != 0) {
-				IntBuffer framebufferBuffer = IntBuffer.allocate(2);
+			if (LogManager.isDebugEnabled()) {
+				LOGGER.fine("Disposing native CubemapTarget: textureId=" + texture
+						+ ", readFbo=" + readFramebuffer
+						+ ", drawFbo=" + drawFramebuffer
+						+ ", renderFbo=" + renderFramebuffer
+						+ ", depthRbo=" + depthRenderbuffer);
+			}
+			if (readFramebuffer != 0 || drawFramebuffer != 0 || renderFramebuffer != 0) {
+				IntBuffer framebufferBuffer = IntBuffer.allocate(3);
 				framebufferBuffer.put(0, readFramebuffer);
 				framebufferBuffer.put(1, drawFramebuffer);
-				pgl.deleteFramebuffers(2, framebufferBuffer);
+				framebufferBuffer.put(2, renderFramebuffer);
+				pgl.deleteFramebuffers(3, framebufferBuffer);
+			}
+			if (depthRenderbuffer != 0) {
+				IntBuffer renderbufferBuffer = IntBuffer.allocate(1);
+				renderbufferBuffer.put(0, depthRenderbuffer);
+				pgl.deleteRenderbuffers(1, renderbufferBuffer);
 			}
 			if (texture != 0) {
 				IntBuffer textureBuffer = IntBuffer.allocate(1);
@@ -202,7 +279,11 @@ public final class CubemapTarget implements AutoCloseable {
 	}
 
 	void ensureAllocated() {
-		if (!isAllocated() || readFramebufferId == 0 || drawFramebufferId == 0) {
+		if (!isAllocated()
+				|| readFramebufferId == 0
+				|| drawFramebufferId == 0
+				|| renderFramebufferId == 0
+				|| depthRenderbufferId == 0) {
 			throw new IllegalStateException("Cubemap target has been disposed.");
 		}
 	}
@@ -220,7 +301,13 @@ public final class CubemapTarget implements AutoCloseable {
 		int textureId = allocateTexture(pgl, resolution, capabilities);
 		try {
 			int[] framebufferIds = allocateFramebuffers(pgl);
-			return new int[]{textureId, framebufferIds[0], framebufferIds[1]};
+			int depthRenderbufferId = allocateDepthRenderbuffer(pgl, resolution);
+			return new int[]{
+					textureId,
+					framebufferIds[0],
+					framebufferIds[1],
+					framebufferIds[2],
+					depthRenderbufferId};
 		} catch (RuntimeException error) {
 			IntBuffer textureBuffer = IntBuffer.allocate(1);
 			textureBuffer.put(0, textureId);
@@ -230,15 +317,35 @@ public final class CubemapTarget implements AutoCloseable {
 	}
 
 	private static int[] allocateFramebuffers(PGL pgl) {
-		IntBuffer framebufferBuffer = IntBuffer.allocate(2);
-		pgl.genFramebuffers(2, framebufferBuffer);
+		IntBuffer framebufferBuffer = IntBuffer.allocate(3);
+		pgl.genFramebuffers(3, framebufferBuffer);
 		int readFramebufferId = framebufferBuffer.get(0);
 		int drawFramebufferId = framebufferBuffer.get(1);
-		if (readFramebufferId == 0 || drawFramebufferId == 0) {
-			pgl.deleteFramebuffers(2, framebufferBuffer);
-			throw new IllegalStateException("OpenGL did not allocate cubemap copy framebuffers.");
+		int renderFramebufferId = framebufferBuffer.get(2);
+		if (readFramebufferId == 0 || drawFramebufferId == 0 || renderFramebufferId == 0) {
+			pgl.deleteFramebuffers(3, framebufferBuffer);
+			throw new IllegalStateException("OpenGL did not allocate cubemap framebuffers.");
 		}
-		return new int[]{readFramebufferId, drawFramebufferId};
+		return new int[]{readFramebufferId, drawFramebufferId, renderFramebufferId};
+	}
+
+	private static int allocateDepthRenderbuffer(PGL pgl, int resolution) {
+		IntBuffer renderbufferBuffer = IntBuffer.allocate(1);
+		pgl.genRenderbuffers(1, renderbufferBuffer);
+		int renderbufferId = renderbufferBuffer.get(0);
+		if (renderbufferId == 0) {
+			throw new IllegalStateException("OpenGL did not allocate cubemap depth renderbuffer.");
+		}
+		try {
+			pgl.bindRenderbuffer(PGL.RENDERBUFFER, renderbufferId);
+			pgl.renderbufferStorage(PGL.RENDERBUFFER, PGL.DEPTH_COMPONENT24, resolution, resolution);
+			return renderbufferId;
+		} catch (RuntimeException error) {
+			pgl.deleteRenderbuffers(1, renderbufferBuffer);
+			throw error;
+		} finally {
+			pgl.bindRenderbuffer(PGL.RENDERBUFFER, 0);
+		}
 	}
 
 	private static int allocateTexture(
@@ -315,6 +422,65 @@ public final class CubemapTarget implements AutoCloseable {
 		} finally {
 			pgl.bindTexture(PGL.TEXTURE_CUBE_MAP, savedCubemapBinding.get(0));
 			pgl.activeTexture(savedActiveTexture.get(0));
+		}
+	}
+
+	private void withCubemapFaceFramebuffer(PGL pgl, int cubemapFaceTarget, Runnable renderOperation) {
+		IntBuffer savedReadFramebuffer = IntBuffer.allocate(1);
+		IntBuffer savedDrawFramebuffer = IntBuffer.allocate(1);
+		IntBuffer savedViewport = IntBuffer.allocate(4);
+		pgl.getIntegerv(GL_READ_FRAMEBUFFER_BINDING, savedReadFramebuffer);
+		pgl.getIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, savedDrawFramebuffer);
+		pgl.getIntegerv(PGL.VIEWPORT, savedViewport);
+
+		try {
+			if (LogManager.isDebugEnabled()) {
+				LOGGER.finer("Native cubemap FBO attach: textureId=" + textureId
+						+ ", renderFbo=" + renderFramebufferId
+						+ ", depthRbo=" + depthRenderbufferId
+						+ ", faceTarget=0x" + Integer.toHexString(cubemapFaceTarget)
+						+ ", resolution=" + resolution);
+			}
+			pgl.bindFramebuffer(PGL.FRAMEBUFFER, renderFramebufferId);
+			pgl.framebufferTexture2D(
+					PGL.FRAMEBUFFER,
+					PGL.COLOR_ATTACHMENT0,
+					cubemapFaceTarget,
+					textureId,
+					0);
+			pgl.framebufferRenderbuffer(
+					PGL.FRAMEBUFFER,
+					PGL.DEPTH_ATTACHMENT,
+					PGL.RENDERBUFFER,
+					depthRenderbufferId);
+			pgl.drawBuffer(PGL.COLOR_ATTACHMENT0);
+			ensureFramebufferComplete(pgl, PGL.FRAMEBUFFER, "render");
+			pgl.viewport(0, 0, resolution, resolution);
+			pgl.clearColor(0f, 0f, 0f, 0f);
+			pgl.clearDepth(1.0f);
+			pgl.clear(PGL.COLOR_BUFFER_BIT | PGL.DEPTH_BUFFER_BIT);
+
+			renderOperation.run();
+			pgl.flush();
+		} finally {
+			pgl.bindFramebuffer(PGL.FRAMEBUFFER, renderFramebufferId);
+			pgl.framebufferTexture2D(PGL.FRAMEBUFFER, PGL.COLOR_ATTACHMENT0, cubemapFaceTarget, 0, 0);
+			pgl.framebufferRenderbuffer(PGL.FRAMEBUFFER, PGL.DEPTH_ATTACHMENT, PGL.RENDERBUFFER, 0);
+			pgl.bindFramebuffer(PGL.READ_FRAMEBUFFER, savedReadFramebuffer.get(0));
+			pgl.bindFramebuffer(PGL.DRAW_FRAMEBUFFER, savedDrawFramebuffer.get(0));
+			pgl.viewport(
+					savedViewport.get(0),
+					savedViewport.get(1),
+					savedViewport.get(2),
+					savedViewport.get(3));
+		}
+	}
+
+	private static void ensureFramebufferComplete(PGL pgl, int target, String label) {
+		int status = pgl.checkFramebufferStatus(target);
+		if (status != PGL.FRAMEBUFFER_COMPLETE) {
+			throw new IllegalStateException("Cubemap " + label
+					+ " framebuffer is incomplete: 0x" + Integer.toHexString(status));
 		}
 	}
 

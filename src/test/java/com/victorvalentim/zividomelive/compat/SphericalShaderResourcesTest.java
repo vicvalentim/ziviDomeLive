@@ -41,55 +41,52 @@ class SphericalShaderResourcesTest {
 	}
 
 	@Test
-	void samplerCubeEquirectangularShaderPreservesLegacyFaceOrientation() throws IOException {
+	void samplerCubeEquirectangularShaderUsesNativeSampleCubeOrientation() throws IOException {
 		Path shaderRoot = projectRoot().resolve("shaders/samplercube");
 
 		String equirectangular = Files.readString(shaderRoot.resolve("equirectangular.frag"));
 
 		assertAll("samplerCube equirectangular orientation",
-				() -> assertTrue(equirectangular.contains("legacyCubemapDirectionToSamplerCube")),
-				() -> assertTrue(equirectangular.contains("float theta = uv.x * 2.0 * PI")),
-				() -> assertTrue(equirectangular.contains("float phi = uv.y * PI")),
-				() -> assertTrue(equirectangular.contains("-sinPhi * sinTheta")),
-				() -> assertTrue(equirectangular.contains("cosPhi")),
-				() -> assertTrue(equirectangular.contains("-sinPhi * cosTheta")),
-				() -> assertTrue(equirectangular.contains("return vec3(dir.x, dir.y, -dir.z)")),
-				() -> assertTrue(equirectangular.contains("return vec3(dir.x, -dir.y, dir.z)")));
+				() -> assertTrue(equirectangular.contains("float theta = -(uv.x * 2.0 * PI - PI)")),
+				() -> assertTrue(equirectangular.contains("float phi = uv.y * PI - PI / 2.0")),
+				() -> assertTrue(equirectangular.contains("-cosPhi * sinTheta")),
+				() -> assertTrue(equirectangular.contains("sinPhi")),
+				() -> assertTrue(equirectangular.contains("-cosPhi * cosTheta")),
+				() -> assertTrue(equirectangular.contains("texture(cubemap, applyEAC(dir))")));
 	}
 
 	@Test
-	void samplerCubeFisheyeShaderPreservesLegacyDomemasterOrientation() throws IOException {
+	void samplerCubeFisheyeShaderUsesNativeSampleCubeOrientation() throws IOException {
 		Path shaderRoot = projectRoot().resolve("shaders/samplercube");
 
 		String fisheye = Files.readString(shaderRoot.resolve("fisheye.frag"));
 
 		assertAll("samplerCube fisheye orientation",
-				() -> assertTrue(fisheye.contains("legacyCubemapDirectionToSamplerCube")),
-				() -> assertTrue(fisheye.contains("uv.x = -uv.x")),
-				() -> assertTrue(fisheye.contains("-sin(theta) * cos(phi)")),
-				() -> assertTrue(fisheye.contains("-sin(theta) * sin(phi)")),
+				() -> assertTrue(fisheye.contains("uv.y *= resolution.y / resolution.x")),
+				() -> assertTrue(fisheye.contains("sin(theta) * cos(phi)")),
+				() -> assertTrue(fisheye.contains("sin(theta) * sin(phi)")),
 				() -> assertTrue(fisheye.contains("cos(theta)")),
-				() -> assertTrue(fisheye.contains("return vec3(dir.x, dir.y, -dir.z)")),
-				() -> assertTrue(fisheye.contains("return vec3(dir.x, -dir.y, dir.z)")));
+				() -> assertTrue(fisheye.contains("dir.z = -dir.z")),
+				() -> assertTrue(fisheye.contains("texture(cubemap, applyEAC(normalize(dir)))")));
 	}
 
 	@Test
-	void samplerCubeSkyboxShaderPreservesLegacyCubemapLayout() throws IOException {
+	void samplerCubeSkyboxShaderUsesNativeSampleCubeLayout() throws IOException {
 		Path shaderRoot = projectRoot().resolve("shaders/samplercube");
 
 		String skybox = Files.readString(shaderRoot.resolve("skybox.frag"));
 
 		assertAll("samplerCube skybox layout",
-				() -> assertTrue(skybox.contains("legacyCubemapDirectionToSamplerCube")),
-				() -> assertTrue(skybox.contains("faceIndex = NEGATIVE_Y")),
-				() -> assertTrue(skybox.contains("faceIndex = NEGATIVE_X")),
-				() -> assertTrue(skybox.contains("faceIndex = POSITIVE_Z")),
-				() -> assertTrue(skybox.contains("faceIndex = POSITIVE_X")),
-				() -> assertTrue(skybox.contains("faceIndex = NEGATIVE_Z")),
-				() -> assertTrue(skybox.contains("faceIndex = POSITIVE_Y")),
-				() -> assertTrue(skybox.contains("vec2 sourceUV = vec2(faceUV.x, 1.0 - faceUV.y)")),
-				() -> assertTrue(skybox.contains("return vec3(dir.x, dir.y, -dir.z)")),
-				() -> assertTrue(skybox.contains("return vec3(dir.x, -dir.y, dir.z)")));
+				() -> assertTrue(skybox.contains("uniform int faceRotations[6]")),
+				() -> assertTrue(skybox.contains("uniform bool faceInversions[6]")),
+				() -> assertTrue(skybox.contains("faceIndex = 1")),
+				() -> assertTrue(skybox.contains("faceIndex = 2")),
+				() -> assertTrue(skybox.contains("faceIndex = 3")),
+				() -> assertTrue(skybox.contains("faceIndex = 4")),
+				() -> assertTrue(skybox.contains("faceIndex = 0")),
+				() -> assertTrue(skybox.contains("faceIndex = 5")),
+				() -> assertTrue(skybox.contains("dir = applyTransformations(dir, faceRotations[faceIndex], faceInversions[faceIndex])")),
+				() -> assertTrue(skybox.contains("dir.z = -dir.z")));
 	}
 
 	@Test

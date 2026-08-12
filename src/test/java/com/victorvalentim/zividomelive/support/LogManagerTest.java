@@ -26,9 +26,11 @@ class LogManagerTest {
 	void setModeUpdatesGetMode() {
 		LogManager.setMode(LogManager.Mode.DEBUG);
 		assertEquals(LogManager.Mode.DEBUG, LogManager.getMode());
+		assertTrue(LogManager.isDebugEnabled());
 
 		LogManager.setMode(LogManager.Mode.RELEASE);
 		assertEquals(LogManager.Mode.RELEASE, LogManager.getMode());
+		assertFalse(LogManager.isDebugEnabled());
 	}
 
 	@Test
