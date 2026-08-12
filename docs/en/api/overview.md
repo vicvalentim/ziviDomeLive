@@ -51,7 +51,7 @@ not resize the Processing preview window.
 - `ViewType` is top-level in 2.0; the nested 1.x enum and its old constant names are not retained.
 - `RenderMode.FULL` preserves the compatibility routing model.
 - `renderFisheyeDomemaster()`, `renderEquirectangular()`, `renderCubemap()`, and `renderStandard()` remain deprecated compatibility shims.
-- Renderer getters remain public for 1.x compatibility, but renderer topology is not a permanent backend contract.
+- Renderer getters remain public for compatibility, but renderer topology is not a permanent backend contract.
 
 Generated Javadocs in the release package are the signature-level reference.
 Use [Core Classes](core-classes.md) for ownership and state semantics,

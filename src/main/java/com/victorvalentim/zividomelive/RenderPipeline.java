@@ -6,7 +6,7 @@ import java.util.Objects;
 import java.util.logging.Logger;
 
 /**
- * Coordinates one frame using the runtime's existing 1.5 renderer backend.
+ * Coordinates one frame using the runtime renderer backend.
  *
  * <p>The Processing window always displays preview-resolution FBOs. High-resolution output
  * FBOs remain offscreen and are submitted only to enabled backends after all relevant

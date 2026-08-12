@@ -20,7 +20,7 @@ mkdocs build --strict
 - Use `LogManager` for library logging.
 - Use `ThreadManager` for shared background tasks.
 - Keep Syphon/Spout on the `PGraphicsOpenGL` path.
-- Do not add experimental 2.0 render backends to the 1.x line.
+- Do not reintroduce the removed `PGraphicsOpenGL[]` spherical capture path.
 
 GPU or output changes require the CalibrationTool visual protocol and target-platform hardware evidence in addition to unit tests.
 

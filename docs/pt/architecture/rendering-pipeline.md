@@ -69,8 +69,8 @@ Isso evita captura duplicada da cena mantendo janela Processing e outputs extern
 atuais: alocação de targets, verificação de textura, readback `loadPixels()` do
 NDI, descarte de targets e descoberta de capabilities pelo contexto PGL ativo.
 As capabilities reportadas incluem suporte a textura, FBO, cubemap, seamless
-cubemap, PBO e sync fence para que PRs posteriores de cubemap nativo e readback
-possam condicionar seus caminhos GL explicitamente.
+cubemap, PBO e sync fence para que os caminhos nativos de captura e readback
+possam condicionar seu uso de GL explicitamente.
 
 `CubemapTarget` controla armazenamento nativo `GL_TEXTURE_CUBE_MAP` com política
 conservadora de textura, um framebuffer de renderização e um renderbuffer de
@@ -122,4 +122,4 @@ Detalhes internos:
 - política de alocação e framebuffer de `CubemapTarget`
 - estratégia exata de alocação de renderers e mipmaps
 
-Consulte [Lifecycle de Runtime](runtime-lifecycle.md) e [Prontidão da Release](../qualification/1.5-release-readiness.md).
+Consulte [Lifecycle de Runtime](runtime-lifecycle.md) e [Prontidão da Release](../qualification/2.0-release-readiness.md).

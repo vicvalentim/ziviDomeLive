@@ -25,7 +25,7 @@ Dedicated modes force one effective representation for the main preview and all 
 | `RenderMode` | Effective `ViewType` | Main pipeline |
 |---|---|---|
 | `STANDARD` | `STANDARD` | Direct perspective Standard renderer |
-| `DOMEMASTER` | `DOMEMASTER` | Cubemap, equirectangular, fisheye |
+| `DOMEMASTER` | `DOMEMASTER` | Cubemap, fisheye samplerCube |
 | `EQUIRECTANGULAR` | `EQUIRECTANGULAR` | Cubemap, equirectangular |
 | `SKYBOX` | `SKYBOX` | Cubemap, skybox layout |
 
@@ -58,7 +58,7 @@ The library computes a dependency closure for each frame:
 Standard                 -> Standard only
 Cubemap layout           -> cubemap capture + layout
 Equirectangular          -> cubemap capture + equirectangular
-Fisheye domemaster       -> cubemap capture + equirectangular + fisheye
+Fisheye domemaster       -> cubemap capture + fisheye samplerCube
 ```
 
 When multiple enabled outputs request different views in `FULL`, their requirements are merged. At most one master cubemap is captured for the frame. See [Rendering Pipeline](../architecture/rendering-pipeline.md) for the complete frame order.

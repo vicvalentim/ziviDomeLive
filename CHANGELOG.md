@@ -2,6 +2,34 @@
 
 All notable changes to this project are documented in this file.
 
+## [2.0.0] - 2026-08-12
+
+Version 2.0.0 promotes the spherical renderer to the native OpenGL cubemap
+pipeline while preserving the Processing-facing scene contract.
+
+### Changed
+- Replaced the six independent Processing cubemap face targets with direct
+  native `GL_TEXTURE_CUBE_MAP` face capture through a reusable framebuffer.
+- Routed equirectangular, domemaster/fisheye, and skybox renderers through
+  `samplerCube` shaders that sample `CubemapTarget` directly.
+- Made domemaster/fisheye independent from the intermediate equirectangular
+  pass.
+- Preserved the original `CubemapView` skybox cross matrix in the native
+  samplerCube layout.
+- Reduced native cubemap logging noise while keeping allocation/failure and
+  bounded GL-error diagnostics.
+
+### Removed
+- Removed the six-texture Processing spherical shader passes from packaged
+  resources.
+- Removed the `PGraphicsOpenGL[]` spherical fallback path from the runtime
+  pipeline.
+
+### Validation
+- `CalibrationTool` was run in `SKYBOX` mode against the native cubemap path.
+- `./gradlew clean test build` remains the automated source validation gate;
+  GPU and native-output quality still require manual hardware qualification.
+
 ## [1.5.0] - 2026-08-11
 
 Version 1.5.0 is the final consolidation release for the 1.x renderer. It keeps the

@@ -1,13 +1,13 @@
 # NDI Runtime
 
 !!! warning "Experimental and unofficial integration"
-    NDI output in ziviDomeLive 1.5.0 is an experimental, community-maintained
+    NDI output in ziviDomeLive 2.0.0 is an experimental, community-maintained
     video sender. It is not an official Processing or NDI integration and is
     not affiliated with or endorsed by Vizrt NDI AB. There is no official NDI
     library supplied by Processing: NDI support is therefore not installed from
     Processing's Contribution Manager.
 
-    Version 1.5.0 sends video only. It does not provide NDI audio, reception,
+    Version 2.0.0 sends video only. It does not provide NDI audio, reception,
     tally, PTZ, or a discovery user interface. Qualify the exact sender,
     receiver, network, operating system, and frame format before production use.
 
@@ -82,7 +82,7 @@ itself.
 
 ## Linux
 
-NDI on Linux is experimental and not part of the qualified 1.5.0 output matrix.
+NDI on Linux is experimental and not part of the qualified 2.0.0 output matrix.
 The public NDI Tools desktop bundle is provided for Windows and macOS; Linux
 users should obtain the current NDI SDK/runtime from the
 [official NDI SDK page](https://ndi.video/for-developers/ndi-sdk/) and accept
@@ -128,7 +128,7 @@ Expected state after successful initialization is `ENABLED`. Common failures:
 
 The automated suite checks routing, RGBA conversion, progressive metadata,
 backpressure, and shutdown without opening a real NDI session. Successful
-production use still requires the [hardware qualification protocol](../qualification/1.5-release-readiness.md).
+production use still requires the [hardware qualification protocol](../qualification/2.0-release-readiness.md).
 
 ## Licensing Boundary
 

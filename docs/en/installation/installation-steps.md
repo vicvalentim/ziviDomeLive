@@ -2,7 +2,7 @@
 
 ## Processing Contribution Manager
 
-After the 1.5.0 package is published:
+After the 2.0.0 package is published:
 
 1. Open Processing.
 2. Select **Sketch > Import Library > Add Library...**.
