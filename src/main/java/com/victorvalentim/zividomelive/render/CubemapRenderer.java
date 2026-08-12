@@ -4,6 +4,7 @@ import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.render.camera.CameraManager;
 import com.victorvalentim.zividomelive.render.camera.CameraOrientation;
 import com.victorvalentim.zividomelive.render.camera.CubemapFace;
+import com.victorvalentim.zividomelive.render.gl.CubemapTarget;
 import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
 import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.PApplet;
@@ -25,9 +26,11 @@ public class CubemapRenderer implements PConstants {
     private static final Logger LOGGER = LogManager.getLogger();
 
     private PGraphicsOpenGL[] cubemapFaces;
+    private CubemapTarget nativeCubemapTarget;
     private int resolution;
     private final PApplet parent;
     private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
+    private boolean nativeCubemapUnavailableLogged;
 
     // Cached frustum parameters
     private volatile float cachedNearPlane;
@@ -65,6 +68,7 @@ public class CubemapRenderer implements PConstants {
             }
             cubemapFaces[i] = glAdapter.createGraphics(parent, resolution, resolution, P3D);
         }
+        initializeNativeCubemapTarget();
     }
 
     /**
@@ -171,6 +175,7 @@ public class CubemapRenderer implements PConstants {
                 currentScene.sceneRender(cubemapFaces[i]);
             }
             cubemapFaces[i].endDraw();
+            copyToNativeCubemapFace(cubemapFaces[i], CubemapFace.at(i));
         }
     }
 
@@ -200,6 +205,7 @@ public class CubemapRenderer implements PConstants {
                 currentScene.sceneRender(cubemapFaces[i]);
             }
             cubemapFaces[i].endDraw();
+            copyToNativeCubemapFace(cubemapFaces[i], CubemapFace.at(i));
         }
     }
 
@@ -216,6 +222,18 @@ public class CubemapRenderer implements PConstants {
     }
 
     /**
+     * Returns the native cubemap target populated from captured Processing faces.
+     *
+     * <p>Projection renderers continue to consume {@link #getCubemapFaces()} until the
+     * samplerCube projection PRs switch them over.</p>
+     *
+     * @return native cubemap target, or {@code null} when unsupported/unavailable
+     */
+    public CubemapTarget getNativeCubemapTarget() {
+        return nativeCubemapTarget;
+    }
+
+    /**
      * Disposes of cubemap faces to free up resources.
      */
     public void dispose() {
@@ -226,6 +244,42 @@ public class CubemapRenderer implements PConstants {
                 }
             }
             cubemapFaces = null;
+        }
+        disposeNativeCubemapTarget();
+    }
+
+    private void initializeNativeCubemapTarget() {
+        disposeNativeCubemapTarget();
+        try {
+            nativeCubemapTarget = CubemapTarget.create(parent, resolution);
+            nativeCubemapUnavailableLogged = false;
+        } catch (IllegalStateException error) {
+            nativeCubemapTarget = null;
+            if (!nativeCubemapUnavailableLogged) {
+                LOGGER.warning("Native cubemap target unavailable; retaining Processing cubemap faces: "
+                        + error.getMessage());
+                nativeCubemapUnavailableLogged = true;
+            }
+        }
+    }
+
+    private void copyToNativeCubemapFace(PGraphicsOpenGL source, CubemapFace face) {
+        if (nativeCubemapTarget == null) {
+            return;
+        }
+        try {
+            nativeCubemapTarget.copyFaceFrom(source, face);
+        } catch (RuntimeException error) {
+            LOGGER.warning("Native cubemap face copy failed; disabling native cubemap bridge: "
+                    + error.getMessage());
+            disposeNativeCubemapTarget();
+        }
+    }
+
+    private void disposeNativeCubemapTarget() {
+        if (nativeCubemapTarget != null) {
+            nativeCubemapTarget.dispose();
+            nativeCubemapTarget = null;
         }
     }
 }

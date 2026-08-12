@@ -1,9 +1,14 @@
 package com.victorvalentim.zividomelive.render.gl;
 
+import com.victorvalentim.zividomelive.render.camera.CubemapFace;
 import processing.core.PApplet;
 import processing.core.PGraphics;
 import processing.opengl.PGL;
 import processing.opengl.PGraphicsOpenGL;
+import processing.opengl.Texture;
+
+import java.nio.IntBuffer;
+import java.util.Objects;
 
 /**
  * Narrow boundary for Processing/OpenGL operations used by the current renderer pipeline.
@@ -15,6 +20,12 @@ import processing.opengl.PGraphicsOpenGL;
  */
 public final class ProcessingGlAdapter {
 	private static final ProcessingGlAdapter DEFAULT = new ProcessingGlAdapter();
+	private static final int GL_READ_FRAMEBUFFER_BINDING = 0x8CAA;
+	private static final int GL_DRAW_FRAMEBUFFER_BINDING = 0x8CA6;
+	private static final ThreadLocal<IntBuffer> READ_FRAMEBUFFER_SCRATCH =
+			ThreadLocal.withInitial(() -> IntBuffer.allocate(1));
+	private static final ThreadLocal<IntBuffer> DRAW_FRAMEBUFFER_SCRATCH =
+			ThreadLocal.withInitial(() -> IntBuffer.allocate(1));
 
 	private ProcessingGlAdapter() {
 	}
@@ -123,6 +134,45 @@ public final class ProcessingGlAdapter {
 	}
 
 	/**
+	 * Copies a rendered Processing texture into a native cubemap face using GPU-side FBO blit.
+	 *
+	 * @param parent Processing parent with the active GL context
+	 * @param source rendered Processing graphics target
+	 * @param target native cubemap target
+	 * @param face target cubemap face
+	 */
+	public void copyTextureToCubemapFace(
+			PApplet parent,
+			PGraphicsOpenGL source,
+			CubemapTarget target,
+			CubemapFace face) {
+		Objects.requireNonNull(source, "source");
+		Objects.requireNonNull(target, "target");
+		Objects.requireNonNull(face, "face");
+		target.ensureAllocated();
+
+		Texture sourceTexture = source.getTexture();
+		if (sourceTexture == null || sourceTexture.glName == 0) {
+			throw new IllegalStateException("Processing source texture is not available for cubemap copy.");
+		}
+		validateCubemapCopyDimensions(source.width, source.height, target.resolution());
+		int glFaceTarget = CubemapTarget.glTargetFor(face);
+
+		withPgl(parent, pgl -> {
+			blitTextureToCubemapFace(
+					pgl,
+					sourceTexture.glTarget,
+					sourceTexture.glName,
+					target.textureId(),
+					target.readFramebufferId(),
+					target.drawFramebufferId(),
+					glFaceTarget,
+					target.resolution());
+			return null;
+		});
+	}
+
+	/**
 	 * Disposes a Processing graphics target when present.
 	 *
 	 * @param graphics graphics target to dispose, may be {@code null}
@@ -130,6 +180,77 @@ public final class ProcessingGlAdapter {
 	public void dispose(PGraphics graphics) {
 		if (graphics != null) {
 			graphics.dispose();
+		}
+	}
+
+	static void validateCubemapCopyDimensions(int sourceWidth, int sourceHeight, int targetResolution) {
+		if (sourceWidth <= 0 || sourceHeight <= 0) {
+			throw new IllegalArgumentException("Source dimensions must be positive.");
+		}
+		if (sourceWidth != targetResolution || sourceHeight != targetResolution) {
+			throw new IllegalArgumentException("Source face dimensions must match cubemap resolution.");
+		}
+	}
+
+	private static void blitTextureToCubemapFace(
+			PGL pgl,
+			int sourceTextureTarget,
+			int sourceTextureId,
+			int cubemapTextureId,
+			int readFramebufferId,
+			int drawFramebufferId,
+			int cubemapFaceTarget,
+			int resolution) {
+		IntBuffer savedReadFramebuffer = READ_FRAMEBUFFER_SCRATCH.get();
+		IntBuffer savedDrawFramebuffer = DRAW_FRAMEBUFFER_SCRATCH.get();
+		savedReadFramebuffer.clear();
+		savedDrawFramebuffer.clear();
+		pgl.getIntegerv(GL_READ_FRAMEBUFFER_BINDING, savedReadFramebuffer);
+		pgl.getIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, savedDrawFramebuffer);
+		int savedReadFramebufferId = savedReadFramebuffer.get(0);
+		int savedDrawFramebufferId = savedDrawFramebuffer.get(0);
+
+		try {
+			pgl.bindFramebuffer(PGL.READ_FRAMEBUFFER, readFramebufferId);
+			pgl.framebufferTexture2D(
+					PGL.READ_FRAMEBUFFER,
+					PGL.COLOR_ATTACHMENT0,
+					sourceTextureTarget,
+					sourceTextureId,
+					0);
+			pgl.readBuffer(PGL.COLOR_ATTACHMENT0);
+			ensureFramebufferComplete(pgl, PGL.READ_FRAMEBUFFER, "read");
+
+			pgl.bindFramebuffer(PGL.DRAW_FRAMEBUFFER, drawFramebufferId);
+			pgl.framebufferTexture2D(
+					PGL.DRAW_FRAMEBUFFER,
+					PGL.COLOR_ATTACHMENT0,
+					cubemapFaceTarget,
+					cubemapTextureId,
+					0);
+			pgl.drawBuffer(PGL.COLOR_ATTACHMENT0);
+			ensureFramebufferComplete(pgl, PGL.DRAW_FRAMEBUFFER, "draw");
+
+			pgl.blitFramebuffer(
+					0, 0, resolution, resolution,
+					0, 0, resolution, resolution,
+					PGL.COLOR_BUFFER_BIT,
+					PGL.NEAREST);
+		} finally {
+			pgl.bindFramebuffer(PGL.READ_FRAMEBUFFER, readFramebufferId);
+			pgl.framebufferTexture2D(PGL.READ_FRAMEBUFFER, PGL.COLOR_ATTACHMENT0, sourceTextureTarget, 0, 0);
+			pgl.bindFramebuffer(PGL.DRAW_FRAMEBUFFER, drawFramebufferId);
+			pgl.framebufferTexture2D(PGL.DRAW_FRAMEBUFFER, PGL.COLOR_ATTACHMENT0, cubemapFaceTarget, 0, 0);
+			pgl.bindFramebuffer(PGL.READ_FRAMEBUFFER, savedReadFramebufferId);
+			pgl.bindFramebuffer(PGL.DRAW_FRAMEBUFFER, savedDrawFramebufferId);
+		}
+	}
+
+	private static void ensureFramebufferComplete(PGL pgl, int target, String label) {
+		int status = pgl.checkFramebufferStatus(target);
+		if (status != PGL.FRAMEBUFFER_COMPLETE) {
+			throw new IllegalStateException("Cubemap copy " + label
+					+ " framebuffer is incomplete: 0x" + Integer.toHexString(status));
 		}
 	}
 

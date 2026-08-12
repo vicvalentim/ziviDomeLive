@@ -120,10 +120,11 @@ RGBA8 quadrada para cada `CubemapFace` canônica. Ele aplica defaults
 conservadores: filtros min/mag lineares, clamp-to-edge nos três eixos, sem
 mipmaps, e seamless cubemap apenas quando o contexto ativo anuncia suporte.
 
-A classe ainda não está conectada ao pipeline de renderização. A captura em
-runtime continua usando `PGraphicsOpenGL[]`; PRs posteriores copiarão as faces
-renderizadas para `CubemapTarget` e atualizarão os shaders de projeção para
-amostrá-lo diretamente.
+`CubemapRenderer` mantém os targets de face `PGraphicsOpenGL[]` da geração 1.x
+como contrato de renderização da cena e copia cada face concluída para
+`CubemapTarget` por blit GPU-side via framebuffer quando o contexto ativo
+suporta texturas cubemap e FBOs. PRs posteriores atualizarão os shaders de
+projeção para amostrá-lo diretamente.
 Os recursos de shader `samplerCube` adaptados são empacotados em
 `data/shaders/samplercube/` para esses passes de projeção posteriores.
 
