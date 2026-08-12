@@ -24,12 +24,15 @@ release/ziviDomeLive/reference/index.html
 
 ## Publishing model
 
-The GitHub Pages workflow now runs `./gradlew javadoc`, builds the MkDocs site, and copies `build/docs/javadoc` into `site/reference`. After the site is deployed, the URL above resolves to the exact Javadocs for that commit.
+The GitHub Pages workflow runs `./gradlew javadoc`, builds the MkDocs site, and copies `build/docs/javadoc` into `site/reference`. The same generated reference is also copied into `site/pt/reference` so localized pages can link to Javadocs without leaving the deployed site tree. After the site is deployed, the URL above resolves to the exact Javadocs for that commit.
 
 For a local preview that includes Javadocs:
 
 ```bash
+./gradlew javadoc --console=plain
 .venv-docs/bin/mkdocs build --strict
 cp -R build/docs/javadoc site/reference
+mkdir -p site/pt
+cp -R build/docs/javadoc site/pt/reference
 python3 -m http.server 8000 --directory site
 ```
