@@ -149,7 +149,7 @@ ziviDome.setEnvironmentBackgroundIntensity(1.0f);
 ziviDome.setEnvironmentBackgroundYawOffset(0.0f);
 ```
 
-The current environment pass is LDR (`PImage`) and is rendered behind each native cubemap face before `sceneRender()`. Domemaster, equirectangular, and skybox projections then sample the same cubemap as usual. HDR textures, IBL prefiltering, and AO remain future rendering stages.
+The current environment pass is LDR (`PImage`) and is rendered as an infinite far-depth background after `sceneRender()`. This survives scene-owned `background()` calls while keeping foreground geometry in front. Domemaster, equirectangular, and skybox projections then sample the same cubemap as usual. HDR textures, IBL prefiltering, and AO remain future rendering stages.
 
 ## Spherical Calibration
 

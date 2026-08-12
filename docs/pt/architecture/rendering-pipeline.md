@@ -26,7 +26,7 @@ Scene.sceneRender(PGraphicsOpenGL)
 
 A captura nativa cubemap usa a tabela estável de orientação `CubemapFace` (`+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`). A cena é emitida por um único target offscreen `PGraphicsOpenGL` de comando e renderizada em cada face de um framebuffer cubemap nativo. `CameraManager` permanece como fachada de compatibilidade para integrações diretas com renderers, mas a captura cubemap do runtime usa a tabela canônica `CubemapFace` como fonte autoritativa. Um único quaternion `SphericalOrientation` é aplicado a todas as faces de preview e output.
 
-Quando um background equiretangular LDR é configurado, `EnvironmentBackgroundRenderer` preenche cada face cubemap primeiro com depth test desabilitado e depois delega para `Scene.sceneRender(PGraphicsOpenGL)`. Isso mantém mapas de céu e estrelas fora da geometria da cena, preservando a mesma fonte cubemap para domemaster, equiretangular e skybox.
+Quando um background equiretangular LDR é configurado, `EnvironmentBackgroundRenderer` o desenha depois de `Scene.sceneRender(PGraphicsOpenGL)` com profundidade de far plane. Isso faz o fundo se comportar como um ambiente infinito: chamadas `background()` da cena não o apagam, a geometria em primeiro plano continua na frente e domemaster, equiretangular e skybox compartilham a mesma fonte cubemap.
 
 Todas as projeções esféricas amostram o cubemap nativo via `samplerCube`; domemaster/fisheye não depende mais de uma textura equiretangular intermediária.
 

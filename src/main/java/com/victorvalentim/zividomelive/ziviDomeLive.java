@@ -1777,10 +1777,11 @@ public class ziviDomeLive implements PConstants {
 	/**
 	 * Sets an LDR equirectangular environment background for spherical render modes.
 	 *
-	 * <p>The image is rendered by the library behind each native cubemap face before the
-	 * active {@link Scene} is drawn. This keeps backgrounds out of scene geometry and makes
-	 * the same environment available to domemaster, equirectangular, and skybox projections.
-	 * Passing {@code null} clears the environment.</p>
+	 * <p>The image is rendered by the library as an infinite far-depth background after the
+	 * active {@link Scene} is drawn. This keeps backgrounds out of scene geometry, survives
+	 * scene-owned {@code background()} calls, and makes the same environment available to
+	 * domemaster, equirectangular, and skybox projections. Passing {@code null} clears the
+	 * environment.</p>
 	 *
 	 * @param image equirectangular Processing image, or {@code null} to clear
 	 */

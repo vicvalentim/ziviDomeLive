@@ -38,7 +38,7 @@ shaders.
   cubemap layout, equirectangular projection, fisheye/domemaster projection,
   and skybox inspection.
 - LDR equirectangular environment background service that paints a `PImage`
-  behind each native cubemap face before scene rendering.
+  as an infinite far-depth background after scene rendering.
 - Publication-focused documentation, including Processing Contribution Manager
   metadata guidance, release packaging checks, generated Javadocs links, and
   bilingual MkDocs navigation.
