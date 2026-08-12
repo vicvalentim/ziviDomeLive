@@ -177,6 +177,7 @@ public class CubemapRenderer implements PConstants {
             cubemapFaces[i].endDraw();
             copyToNativeCubemapFace(cubemapFaces[i], CubemapFace.at(i));
         }
+        refreshNativeCubemapMipmaps();
     }
 
     /**
@@ -207,6 +208,7 @@ public class CubemapRenderer implements PConstants {
             cubemapFaces[i].endDraw();
             copyToNativeCubemapFace(cubemapFaces[i], CubemapFace.at(i));
         }
+        refreshNativeCubemapMipmaps();
     }
 
     /**
@@ -271,6 +273,19 @@ public class CubemapRenderer implements PConstants {
             nativeCubemapTarget.copyFaceFrom(source, face);
         } catch (RuntimeException error) {
             LOGGER.warning("Native cubemap face copy failed; disabling native cubemap bridge: "
+                    + error.getMessage());
+            disposeNativeCubemapTarget();
+        }
+    }
+
+    private void refreshNativeCubemapMipmaps() {
+        if (nativeCubemapTarget == null || nativeCubemapTarget.hasValidMipmaps()) {
+            return;
+        }
+        try {
+            nativeCubemapTarget.generateMipmaps();
+        } catch (RuntimeException error) {
+            LOGGER.warning("Native cubemap mipmap refresh failed; disabling native cubemap bridge: "
                     + error.getMessage());
             disposeNativeCubemapTarget();
         }

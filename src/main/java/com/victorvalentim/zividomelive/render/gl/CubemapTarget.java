@@ -5,6 +5,7 @@ import processing.core.PApplet;
 import processing.opengl.PGL;
 import processing.opengl.PGraphicsOpenGL;
 
+import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.Objects;
 
@@ -17,6 +18,8 @@ import java.util.Objects;
  */
 public final class CubemapTarget implements AutoCloseable {
 	private static final int GL_TEXTURE_CUBE_MAP_SEAMLESS = 0x884F;
+	private static final int GL_ACTIVE_TEXTURE = 0x84E0;
+	private static final int GL_TEXTURE_BINDING_CUBE_MAP = 0x8514;
 
 	private final PApplet parent;
 	private final ProcessingGlAdapter glAdapter;
@@ -24,6 +27,7 @@ public final class CubemapTarget implements AutoCloseable {
 	private int readFramebufferId;
 	private int drawFramebufferId;
 	private int textureId;
+	private boolean mipmapsValid;
 
 	private CubemapTarget(
 			PApplet parent,
@@ -38,6 +42,7 @@ public final class CubemapTarget implements AutoCloseable {
 		this.readFramebufferId = readFramebufferId;
 		this.drawFramebufferId = drawFramebufferId;
 		this.textureId = textureId;
+		this.mipmapsValid = true;
 	}
 
 	/**
@@ -105,6 +110,33 @@ public final class CubemapTarget implements AutoCloseable {
 	public void copyFaceFrom(PGraphicsOpenGL source, CubemapFace face) {
 		ensureAllocated();
 		glAdapter.copyTextureToCubemapFace(parent, source, this, face);
+		mipmapsValid = false;
+	}
+
+	/**
+	 * Regenerates mipmaps after one or more cubemap faces have changed.
+	 *
+	 * <p>The renderer calls this once after the six Processing faces have been copied,
+	 * keeping samplerCube projection passes texture-complete without regenerating mipmaps
+	 * six times per frame.</p>
+	 */
+	public void generateMipmaps() {
+		ensureAllocated();
+		glAdapter.withPgl(parent, pgl -> {
+			withTextureUnitZeroCubemapBound(pgl, textureId, () ->
+					pgl.generateMipmap(PGL.TEXTURE_CUBE_MAP));
+			return null;
+		});
+		mipmapsValid = true;
+	}
+
+	/**
+	 * Reports whether mipmaps match the current base cubemap faces.
+	 *
+	 * @return {@code true} after allocation or the latest successful mipmap regeneration
+	 */
+	public boolean hasValidMipmaps() {
+		return mipmapsValid;
 	}
 
 	/**
@@ -221,25 +253,23 @@ public final class CubemapTarget implements AutoCloseable {
 		}
 
 		try {
-			pgl.bindTexture(PGL.TEXTURE_CUBE_MAP, textureId);
-			pgl.texParameteri(PGL.TEXTURE_CUBE_MAP, PGL.TEXTURE_MIN_FILTER, PGL.LINEAR);
-			pgl.texParameteri(PGL.TEXTURE_CUBE_MAP, PGL.TEXTURE_MAG_FILTER, PGL.LINEAR);
-			pgl.texParameteri(PGL.TEXTURE_CUBE_MAP, PGL.TEXTURE_WRAP_S, PGL.CLAMP_TO_EDGE);
-			pgl.texParameteri(PGL.TEXTURE_CUBE_MAP, PGL.TEXTURE_WRAP_T, PGL.CLAMP_TO_EDGE);
-			pgl.texParameteri(PGL.TEXTURE_CUBE_MAP, PGL.TEXTURE_WRAP_R, PGL.CLAMP_TO_EDGE);
+			withTextureUnitZeroCubemapBound(pgl, textureId, () -> {
+				configureSampling(pgl, capabilities);
 
-			for (CubemapFace face : CubemapFace.values()) {
-				pgl.texImage2D(
-						glTargetFor(face),
-						0,
-						PGL.RGBA8,
-						resolution,
-						resolution,
-						0,
-						PGL.RGBA,
-						PGL.UNSIGNED_BYTE,
-						null);
-			}
+				for (CubemapFace face : CubemapFace.values()) {
+					pgl.texImage2D(
+							glTargetFor(face),
+							0,
+							PGL.RGBA8,
+							resolution,
+							resolution,
+							0,
+							PGL.RGBA,
+							PGL.UNSIGNED_BYTE,
+							null);
+				}
+				pgl.generateMipmap(PGL.TEXTURE_CUBE_MAP);
+			});
 
 			if (capabilities.supportsSeamlessCubemap()) {
 				pgl.enable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -249,8 +279,47 @@ public final class CubemapTarget implements AutoCloseable {
 			textureBuffer.put(0, textureId);
 			pgl.deleteTextures(1, textureBuffer);
 			throw error;
-		} finally {
-			pgl.bindTexture(PGL.TEXTURE_CUBE_MAP, 0);
 		}
+	}
+
+	private static void configureSampling(PGL pgl, ProcessingGlCapabilities capabilities) {
+		pgl.texParameteri(PGL.TEXTURE_CUBE_MAP, PGL.TEXTURE_MIN_FILTER, PGL.LINEAR_MIPMAP_LINEAR);
+		pgl.texParameteri(PGL.TEXTURE_CUBE_MAP, PGL.TEXTURE_MAG_FILTER, PGL.LINEAR);
+		pgl.texParameteri(PGL.TEXTURE_CUBE_MAP, PGL.TEXTURE_WRAP_S, PGL.CLAMP_TO_EDGE);
+		pgl.texParameteri(PGL.TEXTURE_CUBE_MAP, PGL.TEXTURE_WRAP_T, PGL.CLAMP_TO_EDGE);
+		pgl.texParameteri(PGL.TEXTURE_CUBE_MAP, PGL.TEXTURE_WRAP_R, PGL.CLAMP_TO_EDGE);
+
+		if (capabilities.supportsAnisotropicFiltering()) {
+			pgl.texParameterf(
+					PGL.TEXTURE_CUBE_MAP,
+					PGL.TEXTURE_MAX_ANISOTROPY,
+					maxSupportedAnisotropy(pgl));
+		}
+	}
+
+	private static float maxSupportedAnisotropy(PGL pgl) {
+		FloatBuffer maxAnisotropy = FloatBuffer.allocate(1);
+		pgl.getFloatv(PGL.MAX_TEXTURE_MAX_ANISOTROPY, maxAnisotropy);
+		return Math.max(1.0f, maxAnisotropy.get(0));
+	}
+
+	private static void withTextureUnitZeroCubemapBound(PGL pgl, int textureId, GlStateOperation operation) {
+		IntBuffer savedActiveTexture = IntBuffer.allocate(1);
+		IntBuffer savedCubemapBinding = IntBuffer.allocate(1);
+		pgl.getIntegerv(GL_ACTIVE_TEXTURE, savedActiveTexture);
+		pgl.activeTexture(PGL.TEXTURE0);
+		pgl.getIntegerv(GL_TEXTURE_BINDING_CUBE_MAP, savedCubemapBinding);
+		try {
+			pgl.bindTexture(PGL.TEXTURE_CUBE_MAP, textureId);
+			operation.run();
+		} finally {
+			pgl.bindTexture(PGL.TEXTURE_CUBE_MAP, savedCubemapBinding.get(0));
+			pgl.activeTexture(savedActiveTexture.get(0));
+		}
+	}
+
+	@FunctionalInterface
+	private interface GlStateOperation {
+		void run();
 	}
 }

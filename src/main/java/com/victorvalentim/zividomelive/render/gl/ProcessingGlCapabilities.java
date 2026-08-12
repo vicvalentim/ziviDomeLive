@@ -18,6 +18,7 @@ public final class ProcessingGlCapabilities {
 	private final boolean framebufferSupported;
 	private final boolean cubemapSupported;
 	private final boolean seamlessCubemapSupported;
+	private final boolean anisotropicFilteringSupported;
 	private final boolean pixelBufferObjectSupported;
 	private final boolean syncFenceSupported;
 
@@ -30,6 +31,7 @@ public final class ProcessingGlCapabilities {
 			boolean framebufferSupported,
 			boolean cubemapSupported,
 			boolean seamlessCubemapSupported,
+			boolean anisotropicFilteringSupported,
 			boolean pixelBufferObjectSupported,
 			boolean syncFenceSupported) {
 		this.openGlRenderer = openGlRenderer;
@@ -40,6 +42,7 @@ public final class ProcessingGlCapabilities {
 		this.framebufferSupported = framebufferSupported;
 		this.cubemapSupported = cubemapSupported;
 		this.seamlessCubemapSupported = seamlessCubemapSupported;
+		this.anisotropicFilteringSupported = anisotropicFilteringSupported;
 		this.pixelBufferObjectSupported = pixelBufferObjectSupported;
 		this.syncFenceSupported = syncFenceSupported;
 	}
@@ -50,7 +53,7 @@ public final class ProcessingGlCapabilities {
 	 * @return unavailable capabilities snapshot
 	 */
 	public static ProcessingGlCapabilities unavailable() {
-		return new ProcessingGlCapabilities(false, "", "", "", false, false, false, false, false, false);
+		return new ProcessingGlCapabilities(false, "", "", "", false, false, false, false, false, false, false);
 	}
 
 	/**
@@ -79,6 +82,8 @@ public final class ProcessingGlCapabilities {
 				|| hasExtension(normalizedExtensions, "gl_ext_texture_cube_map");
 		boolean seamlessCubemap = (desktopGl && parsed.atLeast(3, 2))
 				|| hasExtension(normalizedExtensions, "gl_arb_seamless_cube_map");
+		boolean anisotropicFiltering = hasExtension(normalizedExtensions, "gl_ext_texture_filter_anisotropic")
+				|| hasExtension(normalizedExtensions, "gl_arb_texture_filter_anisotropic");
 		boolean pbo = parsed.atLeast(2, 1)
 				|| hasExtension(normalizedExtensions, "gl_arb_pixel_buffer_object")
 				|| hasExtension(normalizedExtensions, "gl_ext_pixel_buffer_object");
@@ -95,6 +100,7 @@ public final class ProcessingGlCapabilities {
 				framebuffer,
 				cubemap,
 				seamlessCubemap,
+				anisotropicFiltering,
 				pbo,
 				fence);
 	}
@@ -169,6 +175,15 @@ public final class ProcessingGlCapabilities {
 	 */
 	public boolean supportsSeamlessCubemap() {
 		return seamlessCubemapSupported;
+	}
+
+	/**
+	 * Reports whether anisotropic texture filtering is advertised.
+	 *
+	 * @return {@code true} when anisotropic filtering support is extension-backed
+	 */
+	public boolean supportsAnisotropicFiltering() {
+		return anisotropicFilteringSupported;
 	}
 
 	/**
