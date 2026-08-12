@@ -54,6 +54,21 @@ public final class ProcessingGlAdapter {
 		}
 	}
 
+	<T> T withPgl(PApplet parent, PglOperation<T> operation) {
+		if (parent == null || !(parent.g instanceof PGraphicsOpenGL graphics)) {
+			throw new IllegalStateException("Processing OpenGL renderer is not available.");
+		}
+		PGL pgl = graphics.beginPGL();
+		try {
+			if (pgl == null) {
+				throw new IllegalStateException("Processing PGL context is not available.");
+			}
+			return operation.apply(pgl);
+		} finally {
+			graphics.endPGL();
+		}
+	}
+
 	/**
 	 * Creates a Processing OpenGL graphics target.
 	 *
@@ -116,5 +131,10 @@ public final class ProcessingGlAdapter {
 		if (graphics != null) {
 			graphics.dispose();
 		}
+	}
+
+	@FunctionalInterface
+	interface PglOperation<T> {
+		T apply(PGL pgl);
 	}
 }

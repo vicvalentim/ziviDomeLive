@@ -289,6 +289,7 @@ public class ziviDomeLive implements PConstants {
 			LOGGER.info("OpenGL Texture Support: " + capabilities.supportsTexture());
 			LOGGER.info("OpenGL FBO Support: " + capabilities.supportsFramebuffer());
 			LOGGER.info("OpenGL Cubemap Support: " + capabilities.supportsCubemap());
+			LOGGER.info("OpenGL Seamless Cubemap Support: " + capabilities.supportsSeamlessCubemap());
 			LOGGER.info("OpenGL PBO Support: " + capabilities.supportsPixelBufferObject());
 			LOGGER.info("OpenGL Fence Support: " + capabilities.supportsSyncFence());
 		} else {
