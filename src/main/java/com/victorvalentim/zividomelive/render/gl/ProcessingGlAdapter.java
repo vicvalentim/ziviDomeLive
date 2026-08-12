@@ -12,9 +12,9 @@ import java.util.Objects;
  * Narrow boundary for Processing/OpenGL operations used by the current renderer pipeline.
  *
  * <p>This class deliberately keeps ownership with Processing. It centralizes current
- * operations such as target allocation, texture presence checks, CPU pixel readback, disposal,
- * and capability queries; native cubemap, PBO, and fence objects are introduced only by later
- * PRs that need them directly.</p>
+ * operations such as target allocation, texture presence checks, native cubemap binding,
+ * CPU pixel readback, disposal, and capability queries. Native resources remain owned by the
+ * specialized render/output classes that need them directly.</p>
  */
 public final class ProcessingGlAdapter {
 	private static final ProcessingGlAdapter DEFAULT = new ProcessingGlAdapter();

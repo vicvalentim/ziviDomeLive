@@ -85,7 +85,7 @@ public class OutputManager implements PConstants {
 	private volatile ViewType syphonView = ViewType.DOMEMASTER;
 
 	/** Prevents repeated warnings from the deprecated single-view setter. */
-	private boolean legacySetViewWarningLogged;
+	private boolean deprecatedSetViewWarningLogged;
 
 	/**
 	 * Creates an output manager and the three concrete backend services.
@@ -302,8 +302,8 @@ public class OutputManager implements PConstants {
 	 */
 	@Deprecated
 	public void setView(ViewType viewType) {
-		if (!legacySetViewWarningLogged) {
-			legacySetViewWarningLogged = true;
+		if (!deprecatedSetViewWarningLogged) {
+			deprecatedSetViewWarningLogged = true;
 			logger.warning(
 					"OutputManager.setView() is deprecated and no longer changes external outputs."
 			);

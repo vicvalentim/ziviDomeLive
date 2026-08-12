@@ -19,6 +19,8 @@ public class EquirectangularRenderer {
     private final PApplet parent;
     private final int resolution;
     private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
+    private boolean unavailableWarningLogged;
+    private boolean renderFailureWarningLogged;
 
     /**
      * Constructs an EquirectangularRenderer with the specified resolution, samplerCube shader files, and parent PApplet.
@@ -53,14 +55,22 @@ public class EquirectangularRenderer {
      */
     public void render(CubemapTarget nativeCubemap) {
         if (nativeCubemap == null || !nativeCubemap.isAllocated() || samplerCubeShader == null) {
-            LOGGER.warning("Native cubemap or equirectangular samplerCube shader unavailable; skipping render.");
+            if (!unavailableWarningLogged) {
+                LOGGER.warning("Native cubemap or equirectangular samplerCube shader unavailable; skipping render.");
+                unavailableWarningLogged = true;
+            }
             return;
         }
         try {
             renderSamplerCube(nativeCubemap);
+            unavailableWarningLogged = false;
+            renderFailureWarningLogged = false;
         } catch (RuntimeException error) {
-            LOGGER.warning("Native equirectangular samplerCube render failed: "
-                    + error.getMessage());
+            if (!renderFailureWarningLogged) {
+                LOGGER.warning("Native equirectangular samplerCube render failed: "
+                        + error.getMessage());
+                renderFailureWarningLogged = true;
+            }
         }
     }
 

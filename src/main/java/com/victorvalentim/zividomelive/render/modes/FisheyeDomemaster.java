@@ -23,6 +23,8 @@ public class FisheyeDomemaster {
     private float sizePercentage;
     private final PApplet parent;
     private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
+    private boolean unavailableWarningLogged;
+    private boolean renderFailureWarningLogged;
 
     /**
      * Constructs a FisheyeDomemaster with the specified resolution, samplerCube shader files, and parent PApplet.
@@ -87,14 +89,22 @@ public class FisheyeDomemaster {
      */
     public void applyShader(CubemapTarget nativeCubemap, float fov) {
         if (nativeCubemap == null || !nativeCubemap.isAllocated() || samplerCubeShader == null) {
-            LOGGER.warning("Native cubemap or fisheye samplerCube shader unavailable; skipping shader pass.");
+            if (!unavailableWarningLogged) {
+                LOGGER.warning("Native cubemap or fisheye samplerCube shader unavailable; skipping shader pass.");
+                unavailableWarningLogged = true;
+            }
             return;
         }
         try {
             applySamplerCubeShader(nativeCubemap, fov);
+            unavailableWarningLogged = false;
+            renderFailureWarningLogged = false;
         } catch (RuntimeException error) {
-            LOGGER.warning("Native fisheye samplerCube render failed: "
-                    + error.getMessage());
+            if (!renderFailureWarningLogged) {
+                LOGGER.warning("Native fisheye samplerCube render failed: "
+                        + error.getMessage());
+                renderFailureWarningLogged = true;
+            }
         }
     }
 

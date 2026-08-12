@@ -50,7 +50,7 @@ class OutputRoutingCompatibilityTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	void legacySingleViewSetterDoesNotMutatePerOutputRouting() {
+	void deprecatedSingleViewSetterDoesNotMutatePerOutputRouting() {
 		outputManager.setNdiView(ViewType.EQUIRECTANGULAR);
 		outputManager.setSpoutView(ViewType.SKYBOX);
 		outputManager.setSyphonView(ViewType.STANDARD);

@@ -29,7 +29,7 @@ final class SpoutOutputBackend {
 	}
 
 	/** Creates the native sender without enabling publication. */
-	void initialize(PGraphicsOpenGL graphics, int fallbackResolution) {
+	void initialize(PGraphicsOpenGL graphics, int initialResolution) {
 		if (!supported || sender != null || unavailable) {
 			return;
 		}
@@ -43,8 +43,8 @@ final class SpoutOutputBackend {
 				initialWidth = graphics.width;
 				initialHeight = graphics.height;
 			} else {
-				initialWidth = fallbackResolution;
-				initialHeight = fallbackResolution;
+				initialWidth = initialResolution;
+				initialHeight = initialResolution;
 			}
 
 			newSender = new Spout(parent);
@@ -86,10 +86,10 @@ final class SpoutOutputBackend {
 	}
 
 	/** Toggles publication without destroying or recreating the native sender. */
-	void toggle(PGraphicsOpenGL graphics, int fallbackResolution) {
+	void toggle(PGraphicsOpenGL graphics, int initialResolution) {
 		if (sender == null) {
 			prepareRetry();
-			initialize(graphics, fallbackResolution);
+			initialize(graphics, initialResolution);
 		}
 
 		if (sender == null) {

@@ -17,7 +17,7 @@ Typical sequence:
 constructor
   -> register pre/draw/post/input/dispose hooks
 setup()
-  -> target frame rate, OpenGL diagnostics, hints, OutputManager, splash, fallback scene
+  -> target frame rate, OpenGL diagnostics, hints, OutputManager, splash, bootstrap scene
 first post()
   -> CameraManager, output and preview renderers, Syphon/Spout preparation, ControlManager
   -> MANAGERS_READY

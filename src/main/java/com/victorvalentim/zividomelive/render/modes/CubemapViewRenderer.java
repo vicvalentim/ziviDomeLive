@@ -26,6 +26,8 @@ public class CubemapViewRenderer {
     private final PShader samplerCubeShader;
     private final PApplet parent;
     private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
+    private boolean unavailableWarningLogged;
+    private boolean renderFailureWarningLogged;
 
     /**
      * Constructs a CubemapViewRenderer with the specified parent PApplet and resolution.
@@ -98,14 +100,22 @@ public class CubemapViewRenderer {
      */
     public void drawCubemapToGraphics(CubemapTarget nativeCubemap) {
         if (nativeCubemap == null || !nativeCubemap.isAllocated() || samplerCubeShader == null) {
-            LOGGER.warning("Native cubemap or cubemap layout samplerCube shader unavailable; skipping render.");
+            if (!unavailableWarningLogged) {
+                LOGGER.warning("Native cubemap or cubemap layout samplerCube shader unavailable; skipping render.");
+                unavailableWarningLogged = true;
+            }
             return;
         }
         try {
             drawSamplerCubeToGraphics(nativeCubemap);
+            unavailableWarningLogged = false;
+            renderFailureWarningLogged = false;
         } catch (RuntimeException error) {
-            LOGGER.warning("Native cubemap layout samplerCube render failed: "
-                    + error.getMessage());
+            if (!renderFailureWarningLogged) {
+                LOGGER.warning("Native cubemap layout samplerCube render failed: "
+                        + error.getMessage());
+                renderFailureWarningLogged = true;
+            }
         }
     }
 

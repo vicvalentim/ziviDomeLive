@@ -95,7 +95,7 @@ public class ControlManager {
         cp5.getController("resetControls").onClick(event -> parent.resetControls());
     }
 
-    /** Adds preview representation controls without changing their legacy positions. */
+    /** Adds preview representation controls without changing their established positions. */
     private void addViewControls() {
         previewToggle = cp5.addToggle("previewToggle")
                 .setPosition(

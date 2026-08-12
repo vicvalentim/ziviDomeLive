@@ -6,6 +6,6 @@ provided for the Processing PGL migration. They are packaged with the library
 under `data/shaders/samplercube/`.
 
 The spherical pipeline wires the equirectangular, fisheye, and cubemap-layout
-samplerCube shaders directly to the native `CubemapTarget`. The legacy
-six-texture Processing shader passes were removed with the `PGraphicsOpenGL[]`
-face-array path.
+samplerCube shaders directly to the native `CubemapTarget`. The previous
+six-texture Processing shader passes were removed with the independent
+face-target array path.
