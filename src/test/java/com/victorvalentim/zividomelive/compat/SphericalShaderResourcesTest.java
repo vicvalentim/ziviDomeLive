@@ -41,6 +41,23 @@ class SphericalShaderResourcesTest {
 	}
 
 	@Test
+	void samplerCubeEquirectangularShaderPreservesLegacyFaceOrientation() throws IOException {
+		Path shaderRoot = projectRoot().resolve("shaders/samplercube");
+
+		String equirectangular = Files.readString(shaderRoot.resolve("equirectangular.frag"));
+
+		assertAll("samplerCube equirectangular orientation",
+				() -> assertTrue(equirectangular.contains("legacyCubemapDirectionToSamplerCube")),
+				() -> assertTrue(equirectangular.contains("float theta = uv.x * 2.0 * PI")),
+				() -> assertTrue(equirectangular.contains("float phi = uv.y * PI")),
+				() -> assertTrue(equirectangular.contains("-sinPhi * sinTheta")),
+				() -> assertTrue(equirectangular.contains("cosPhi")),
+				() -> assertTrue(equirectangular.contains("-sinPhi * cosTheta")),
+				() -> assertTrue(equirectangular.contains("return vec3(dir.x, dir.y, -dir.z)")),
+				() -> assertTrue(equirectangular.contains("return vec3(dir.x, -dir.y, dir.z)")));
+	}
+
+	@Test
 	void packagedJarTaskIncludesNestedShaderResources() throws IOException {
 		String buildScript = Files.readString(projectRoot().resolve("build.gradle.kts"));
 
