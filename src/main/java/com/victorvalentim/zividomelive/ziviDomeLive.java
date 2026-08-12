@@ -119,6 +119,7 @@ public class ziviDomeLive implements PConstants {
 	private ViewType currentView = ViewType.DOMEMASTER;
 	private RenderMode renderMode = RenderMode.FULL;
 	private StandardOutputAspectMode standardOutputAspectMode = StandardOutputAspectMode.AUTO;
+	private boolean sphericalCaptureActive = false;
 
 	private boolean pendingOutputReset = false;
 	private int pendingOutputResolution = outputResolution;
@@ -741,8 +742,13 @@ public class ziviDomeLive implements PConstants {
 
 	private void capturePreviewCubemap() {
 		if (previewCubemapRenderer != null) {
-			previewCubemapRenderer.captureCubemap(
-					sphericalOrientation.getQuaternion(), getCurrentScene());
+			sphericalCaptureActive = true;
+			try {
+				previewCubemapRenderer.captureCubemap(
+						sphericalOrientation.getQuaternion(), getCurrentScene());
+			} finally {
+				sphericalCaptureActive = false;
+			}
 		}
 	}
 
@@ -1037,8 +1043,13 @@ public class ziviDomeLive implements PConstants {
 	 */
 	private void captureCubemap() {
 		if (cubemapRenderer != null) {
-			cubemapRenderer.captureCubemap(
-					sphericalOrientation.getQuaternion(), getCurrentScene());
+			sphericalCaptureActive = true;
+			try {
+				cubemapRenderer.captureCubemap(
+						sphericalOrientation.getQuaternion(), getCurrentScene());
+			} finally {
+				sphericalCaptureActive = false;
+			}
 		} else {
 			LOGGER.severe("Error: CubemapRenderer not initialized.");
 		}
@@ -1772,6 +1783,22 @@ public class ziviDomeLive implements PConstants {
 	 */
 	public OrbitCamera getSceneCamera() {
 		return sceneCamera;
+	}
+
+	/**
+	 * Reports whether the current {@link Scene#sceneRender(PGraphicsOpenGL)} call is being
+	 * executed by a spherical cubemap capture pass.
+	 *
+	 * <p>Scenes can use this to skip viewport-only background geometry, HUDs, or helper
+	 * elements that should not be baked into domemaster, equirectangular, or skybox outputs.
+	 * The method does not change the {@code sceneRender(PGraphicsOpenGL)} contract; it only
+	 * exposes the current renderer phase.</p>
+	 *
+	 * @return {@code true} while a cubemap capture pass is rendering the scene
+	 * @since 2.0.0
+	 */
+	public boolean isSphericalCaptureActive() {
+		return sphericalCaptureActive;
 	}
 
 	/**

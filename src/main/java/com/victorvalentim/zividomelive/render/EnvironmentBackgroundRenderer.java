@@ -7,6 +7,7 @@ import processing.core.PConstants;
 import processing.core.PImage;
 import processing.core.PMatrix3D;
 import processing.opengl.PGraphicsOpenGL;
+import processing.opengl.PGL;
 import processing.opengl.PShader;
 
 import java.util.Objects;
@@ -181,6 +182,11 @@ public final class EnvironmentBackgroundRenderer implements PConstants {
 			target.resetMatrix();
 			target.ortho();
 			target.noStroke();
+			PGL pgl = target.beginPGL();
+			pgl.enable(PGL.DEPTH_TEST);
+			pgl.depthFunc(PGL.LEQUAL);
+			pgl.depthMask(false);
+			target.endPGL();
 			equirectangularShader.set("environmentMap", equirectangularImage);
 			equirectangularShader.set("resolution", target.width, target.height);
 			equirectangularShader.set("faceIndex", face.ordinal());
@@ -190,6 +196,10 @@ public final class EnvironmentBackgroundRenderer implements PConstants {
 			target.shader(equirectangularShader);
 			target.rect(0, 0, target.width, target.height);
 		} finally {
+			PGL pgl = target.beginPGL();
+			pgl.depthMask(true);
+			pgl.depthFunc(PGL.LESS);
+			target.endPGL();
 			target.resetShader();
 			target.popMatrix();
 			target.popStyle();

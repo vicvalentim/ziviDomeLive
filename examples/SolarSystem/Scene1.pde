@@ -336,8 +336,12 @@ class Scene1 implements Scene {
         // 4) Planetas + luas (com órbitas de luas via m.displayOrbit())
         renderer.drawPlanetsAndMoons(pg, showLabels, showMoonOrbits);
 
-        // 5) Céu
-        renderer.drawSkySphere(pg);
+        // 5) Céu legado do exemplo: somente para Standard.
+        // Nos modos esféricos, o fundo é desenhado pela API de environment da biblioteca
+        // como background infinito da captura cubemap, sem geometria de esfera.
+        if (shouldDrawLegacySkySphere()) {
+          renderer.drawSkySphere(pg);
+        }
 
       pg.popMatrix();
     } finally {
@@ -348,6 +352,10 @@ class Scene1 implements Scene {
   // ————————————————————————————————
   // Funções auxiliares
   // ————————————————————————————————
+  private boolean shouldDrawLegacySkySphere() {
+    return !(parent.hasEnvironmentBackground() && parent.isSphericalCaptureActive());
+  }
+
   private void changeRenderingMode(int mode) {
     renderer.setRenderingMode(mode);
     sun.setRenderingMode(mode);
