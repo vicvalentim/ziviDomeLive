@@ -66,6 +66,8 @@ public class ziviDomeLive implements PConstants {
 	private static final String DOME_FRAG = "data/shaders/domemaster.frag";
 	private static final String DOME_SAMPLERCUBE_VERT = "data/shaders/samplercube/fisheye.vert";
 	private static final String DOME_SAMPLERCUBE_FRAG = "data/shaders/samplercube/fisheye.frag";
+	private static final String SKYBOX_SAMPLERCUBE_VERT = "data/shaders/samplercube/skybox.vert";
+	private static final String SKYBOX_SAMPLERCUBE_FRAG = "data/shaders/samplercube/skybox.frag";
 
 	private ControlManager controlManager;
 	// Output pipeline (high resolution)
@@ -482,7 +484,11 @@ public class ziviDomeLive implements PConstants {
 				p);
 		fisheyeDomemaster.setSizePercentage(fishSize);
 		LOGGER.info("FisheyeDomemaster (output) initialized.");
-		cubemapViewRenderer = new CubemapViewRenderer(p, outputResolution);
+		cubemapViewRenderer = new CubemapViewRenderer(
+				p,
+				outputResolution,
+				SKYBOX_SAMPLERCUBE_FRAG,
+				SKYBOX_SAMPLERCUBE_VERT);
 		LOGGER.info("CubemapViewRenderer (output) initialized.");
 		int[] standardOutputDimensions = computeStandardOutputDimensions();
 		standardRenderer = new StandardRenderer(
@@ -703,7 +709,11 @@ public class ziviDomeLive implements PConstants {
 				DOME_SAMPLERCUBE_VERT,
 				p);
 		previewFisheyeDomemaster.setSizePercentage(fishSize);
-		previewCubemapViewRenderer = new CubemapViewRenderer(p, previewResolution);
+		previewCubemapViewRenderer = new CubemapViewRenderer(
+				p,
+				previewResolution,
+				SKYBOX_SAMPLERCUBE_FRAG,
+				SKYBOX_SAMPLERCUBE_VERT);
 
 		// Dynamic dimensions (0, 0) → renderer uses parent.width/parent.height each frame,
 		// preserving the window aspect ratio and handling window resize automatically.
@@ -852,7 +862,7 @@ public class ziviDomeLive implements PConstants {
 			if (output.needsCubemapLayout() && output.needsCubemapSource()) {
 				copyToPreview(cubemapViewRenderer.getCubemap(), previewCubemapViewRenderer.getCubemap());
 			} else {
-				previewCubemapViewRenderer.drawCubemapToGraphics(masterFaces);
+				previewCubemapViewRenderer.drawCubemapToGraphics(resolveMasterNativeCubemap(output), masterFaces);
 			}
 		}
 	}
@@ -898,7 +908,9 @@ public class ziviDomeLive implements PConstants {
 		}
 
 		if (output.needsCubemapLayout()) {
-			cubemapViewRenderer.drawCubemapToGraphics(masterFaces);
+			cubemapViewRenderer.drawCubemapToGraphics(
+					cubemapRenderer != null ? cubemapRenderer.getNativeCubemapTarget() : null,
+					masterFaces);
 		}
 
 		if (output.needsStandard()) {
