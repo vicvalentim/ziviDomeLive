@@ -124,6 +124,8 @@ A classe ainda não está conectada ao pipeline de renderização. A captura em
 runtime continua usando `PGraphicsOpenGL[]`; PRs posteriores copiarão as faces
 renderizadas para `CubemapTarget` e atualizarão os shaders de projeção para
 amostrá-lo diretamente.
+Os recursos de shader `samplerCube` adaptados são empacotados em
+`data/shaders/samplercube/` para esses passes de projeção posteriores.
 
 ## OrbitCamera
 
