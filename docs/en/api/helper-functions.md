@@ -37,6 +37,19 @@ The scene camera transforms scene space and is distinct from spherical pitch/yaw
 Disable camera input when the owning scene is disposed so later scenes do not
 inherit drag or wheel interaction unintentionally.
 
+## Environment Background
+
+```java
+PImage stars = loadImage("textures/8k_stars_milky_way.jpg");
+dome.setEquirectangularBackground(stars);
+dome.setEnvironmentBackgroundIntensity(1.0f);
+dome.setEnvironmentBackgroundYawOffset(0.0f);
+```
+
+The environment background is an LDR `PImage` service owned by the library. It is drawn behind each native cubemap face before `sceneRender()`, so domemaster, equirectangular, and skybox projections receive the same background without requiring a scene-owned sky sphere. Use `clearEnvironmentBackground()` when the owning scene is disposed.
+
+HDR loading, IBL maps, and ambient occlusion are not enabled by this helper yet.
+
 ## Output Diagnostics
 
 ```java

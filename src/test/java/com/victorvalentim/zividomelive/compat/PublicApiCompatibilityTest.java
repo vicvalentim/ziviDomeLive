@@ -7,6 +7,7 @@ import com.victorvalentim.zividomelive.RenderMode;
 import com.victorvalentim.zividomelive.ViewType;
 import com.victorvalentim.zividomelive.manager.OutputManager;
 import com.victorvalentim.zividomelive.render.CubemapRenderer;
+import com.victorvalentim.zividomelive.render.EnvironmentBackgroundRenderer;
 import com.victorvalentim.zividomelive.render.Quaternion;
 import com.victorvalentim.zividomelive.render.SphericalOrientation;
 import com.victorvalentim.zividomelive.render.camera.CameraManager;
@@ -26,6 +27,7 @@ import com.victorvalentim.zividomelive.support.ThreadManager;
 import com.victorvalentim.zividomelive.ziviDomeLive;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
+import processing.core.PImage;
 import processing.event.KeyEvent;
 import processing.event.MouseEvent;
 import processing.opengl.PGraphicsOpenGL;
@@ -135,6 +137,7 @@ class PublicApiCompatibilityTest {
 				SceneManager.class,
 				OutputManager.class,
 				CubemapRenderer.class,
+				EnvironmentBackgroundRenderer.class,
 				Quaternion.class,
 				SphericalOrientation.class,
 				CameraManager.class,
@@ -189,6 +192,16 @@ class PublicApiCompatibilityTest {
 		assertMethod("getSceneCamera");
 		assertMethod("setSceneCameraInputEnabled", boolean.class);
 		assertMethod("isSceneCameraInputEnabled");
+		assertMethod("setEquirectangularBackground", PImage.class);
+		assertMethod("setEquirectangularBackground", String.class);
+		assertMethod("clearEnvironmentBackground");
+		assertMethod("hasEnvironmentBackground");
+		assertMethod("setEnvironmentBackgroundVisible", boolean.class);
+		assertMethod("isEnvironmentBackgroundVisible");
+		assertMethod("setEnvironmentBackgroundIntensity", float.class);
+		assertMethod("getEnvironmentBackgroundIntensity");
+		assertMethod("setEnvironmentBackgroundYawOffset", float.class);
+		assertMethod("getEnvironmentBackgroundYawOffset");
 	}
 
 	@Test

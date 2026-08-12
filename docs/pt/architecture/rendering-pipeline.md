@@ -16,7 +16,8 @@ Standard renderiza a cena diretamente por sua câmera perspectiva. Ele não capt
 ## Domínio Esférico
 
 ```text
-Scene
+Background de ambiente opcional
+Scene.sceneRender(PGraphicsOpenGL)
   -> captura nativa GL_TEXTURE_CUBE_MAP
      -> CubemapViewRenderer -> layout skybox
      -> EquirectangularRenderer -> mapa 2:1
@@ -24,6 +25,8 @@ Scene
 ```
 
 A captura nativa cubemap usa a tabela estável de orientação `CubemapFace` (`+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`). A cena é emitida por um único target offscreen `PGraphicsOpenGL` de comando e renderizada em cada face de um framebuffer cubemap nativo. `CameraManager` permanece como fachada de compatibilidade para integrações diretas com renderers, mas a captura cubemap do runtime usa a tabela canônica `CubemapFace` como fonte autoritativa. Um único quaternion `SphericalOrientation` é aplicado a todas as faces de preview e output.
+
+Quando um background equiretangular LDR é configurado, `EnvironmentBackgroundRenderer` preenche cada face cubemap primeiro com depth test desabilitado e depois delega para `Scene.sceneRender(PGraphicsOpenGL)`. Isso mantém mapas de céu e estrelas fora da geometria da cena, preservando a mesma fonte cubemap para domemaster, equiretangular e skybox.
 
 Todas as projeções esféricas amostram o cubemap nativo via `samplerCube`; domemaster/fisheye não depende mais de uma textura equiretangular intermediária.
 
@@ -84,6 +87,9 @@ Os recursos de shader `samplerCube` para os modos cubemap, equiretangular,
 domemaster/fisheye e skybox ficam em `data/shaders/samplercube/` nos artefatos
 empacotados. Todos os renderers esféricos de runtime amostram o cubemap nativo
 diretamente.
+
+Os shaders LDR de background de ambiente ficam em `data/shaders/environment/`.
+Eles são separados de futuros passes HDR, IBL e ambient occlusion.
 
 ## Ownership de Resolução
 

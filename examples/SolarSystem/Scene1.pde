@@ -62,6 +62,10 @@ class Scene1 implements Scene {
 
     sun     = configLoader.loadSun();
     planets = configLoader.loadConfiguration();
+    if (configLoader.getSkyTexture() != null) {
+      parent.setEquirectangularBackground(configLoader.getSkyTexture());
+      parent.setEnvironmentBackgroundIntensity(1.0f);
+    }
 
     // configura central bodies
     for (Planet p : planets) {
@@ -525,6 +529,7 @@ class Scene1 implements Scene {
    * Limpa todos os recursos utilizados pela cena.
    */
   public void dispose() {
+    parent.clearEnvironmentBackground();
     textureManager.clear();
     configLoader.dispose();
     for (Planet p:planets) p.dispose();

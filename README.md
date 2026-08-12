@@ -138,6 +138,19 @@ A scene may implement:
 
 Never call `beginDraw()` or `endDraw()` inside `sceneRender()`.
 
+## Environment Background
+
+Use a library-owned equirectangular background when a sky, star field, or LDR environment map should appear in spherical render modes without drawing a giant sphere inside the scene:
+
+```java
+PImage stars = loadImage("textures/8k_stars_milky_way.jpg");
+ziviDome.setEquirectangularBackground(stars);
+ziviDome.setEnvironmentBackgroundIntensity(1.0f);
+ziviDome.setEnvironmentBackgroundYawOffset(0.0f);
+```
+
+The current environment pass is LDR (`PImage`) and is rendered behind each native cubemap face before `sceneRender()`. Domemaster, equirectangular, and skybox projections then sample the same cubemap as usual. HDR textures, IBL prefiltering, and AO remain future rendering stages.
+
 ## Spherical Calibration
 
 - FOV range: `0..360`, default `210`

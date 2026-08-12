@@ -37,6 +37,19 @@ A câmera da cena transforma o scene space e é distinta de pitch/yaw/roll esfé
 Desabilite o input da câmera no descarte da cena proprietária para que cenas
 seguintes não herdem drag ou roda do mouse sem intenção.
 
+## Background de Ambiente
+
+```java
+PImage stars = loadImage("textures/8k_stars_milky_way.jpg");
+dome.setEquirectangularBackground(stars);
+dome.setEnvironmentBackgroundIntensity(1.0f);
+dome.setEnvironmentBackgroundYawOffset(0.0f);
+```
+
+O background de ambiente é um serviço LDR com `PImage` controlado pela biblioteca. Ele é desenhado atrás de cada face cubemap nativa antes de `sceneRender()`, então domemaster, equiretangular e skybox recebem o mesmo fundo sem exigir uma sky sphere dentro da cena. Use `clearEnvironmentBackground()` quando a cena proprietária for descartada.
+
+Carregamento HDR, mapas IBL e ambient occlusion ainda não são habilitados por este helper.
+
 ## Diagnóstico de Output
 
 ```java
