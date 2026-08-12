@@ -35,6 +35,7 @@ class ReleaseMetadataTest {
 	@Test
 	void generatedProcessingMetadataKeepsReleaseQualificationFields() throws IOException {
 		Properties release = loadProperties("release.properties");
+		Properties library = loadProperties("library.properties");
 		String build = read("build.gradle.kts");
 
 		for (String key : new String[]{
@@ -47,19 +48,31 @@ class ReleaseMetadataTest {
 			assertTrue(build.contains("property(\"" + key + "\""), key);
 		}
 		assertEquals("4.5.6", release.getProperty("tested.processingVersion"));
+		assertEquals("https://vicvalentim.github.io/ziviDomeLive/", release.getProperty("url"));
+		assertEquals("https://vicvalentim.github.io/ziviDomeLive/", library.getProperty("url"));
+		assertEquals("Renders fulldome, equirectangular, skybox, and Standard views from Processing sketches.",
+				library.getProperty("sentence"));
+		assertFalse(library.getProperty("sentence").toLowerCase().contains("library"));
+		assertTrue(library.getProperty("paragraph").contains("platform-specific dependencies"));
 	}
 
 	@Test
 	void releaseDocumentationExposesNewApiAndQualificationBoundary() throws IOException {
 		String readme = read("README.md");
 		String qualification = read("docs/en/qualification/2.0-release-readiness.md");
+		String publication = read("docs/en/qualification/processing-publication.md");
 
 		assertTrue(readme.contains("setRenderMode(RenderMode.FULL)"));
 		assertTrue(readme.contains("OutputManager.OutputState"));
 		assertTrue(readme.contains("Platform Matrix"));
+		assertTrue(readme.contains("Processing Publication"));
 		assertTrue(qualification.contains("native cubemap"));
 		assertTrue(qualification.contains("CalibrationTool"));
 		assertTrue(qualification.contains("No golden images"));
+		assertTrue(qualification.contains("Processing Publication"));
+		assertTrue(publication.contains("reference/index.html"));
+		assertTrue(publication.contains("ziviDomeLive.zip"));
+		assertTrue(publication.contains("Contribution Manager"));
 	}
 
 	@Test

@@ -9,9 +9,9 @@ hide:
 <div markdown>
 <span class="zd-kicker">Processing 4 · Fulldome · Native Cubemap</span>
 
-# Real-time spherical rendering for artists who need control.
+# Processing 4 rendering for fulldome and spherical output.
 
-ziviDomeLive is a Processing 4 library for fulldome, monoscopic VR, immersive installations, and GPU-native spherical output. Version 2.0.0 keeps the familiar `Scene.sceneRender(PGraphicsOpenGL)` contract while consolidating native `GL_TEXTURE_CUBE_MAP` capture and direct `samplerCube` projection shaders.
+ziviDomeLive extends Processing sketches with scene management, Standard preview rendering, native cubemap capture, domemaster projection, equirectangular output, skybox inspection, and optional external video routing. This manual documents installation, dependencies, examples, public API, release artifacts, and hardware qualification for version 2.0.0.
 
 <div class="zd-badges" markdown>
 <span class="zd-badge">2.0.0</span>
@@ -24,7 +24,7 @@ ziviDomeLive is a Processing 4 library for fulldome, monoscopic VR, immersive in
 <div class="zd-actions" markdown>
 [Start with Quickstart](getting-started/quickstart.md){ .zd-button }
 [See render modes](usage/basic-usage.md){ .zd-button .zd-button--secondary }
-[Plan screenshots](usage/visual-capture-guide.md){ .zd-button .zd-button--secondary }
+[Capture guide](usage/visual-capture-guide.md){ .zd-button .zd-button--secondary }
 [Open Javadocs](api/javadocs.md){ .zd-button .zd-button--secondary }
 </div>
 </div>
@@ -32,7 +32,7 @@ ziviDomeLive is a Processing 4 library for fulldome, monoscopic VR, immersive in
 <div class="zd-visual" markdown>
 <div class="zd-placeholder" markdown>
 <div class="zd-placeholder__label" markdown>
-**Hero capture placeholder**
+**Primary screenshot placeholder**
 
 Replace later with a manual capture of `CalibrationTool` in `SKYBOX` mode, preferably 16:9.
 </div>
@@ -44,21 +44,21 @@ Replace later with a manual capture of `CalibrationTool` in `SKYBOX` mode, prefe
 
 <div class="zd-grid" markdown>
 <div class="zd-card" markdown>
-### Native spherical capture
+### Native cubemap capture
 
-Spherical rendering now writes into one native cubemap target instead of keeping the old `PGraphicsOpenGL[]` face-array fallback alive.
+Spherical rendering writes to a native `GL_TEXTURE_CUBE_MAP` target. Projection passes sample that target directly through `samplerCube` shaders.
 </div>
 
 <div class="zd-card" markdown>
-### Direct projection shaders
+### Processing-facing scene contract
 
-Equirectangular, domemaster, and skybox projections sample the cubemap through `samplerCube`, reducing pipeline indirection and preserving face orientation.
+User sketches implement `Scene.sceneRender(PGraphicsOpenGL)`. The library owns target setup, cubemap capture, projection passes, and output routing.
 </div>
 
 <div class="zd-card" markdown>
-### Stable Processing contract
+### Publication-ready artifacts
 
-Scenes still render through `Scene.sceneRender(PGraphicsOpenGL)`, so existing sketches can migrate without adopting a custom context object.
+Release builds produce the Processing ZIP, PDEX installer, metadata TXT, examples, license files, and generated Javadocs under `reference/`.
 </div>
 </div>
 
@@ -123,16 +123,16 @@ Suggested file: `docs/assets/images/screenshots/skybox-layout.png`
 </div>
 </div>
 
-Use the [Visual Capture Guide](usage/visual-capture-guide.md) when you are ready to replace these placeholders with final screenshots.
+Use the [Visual Capture Guide](usage/visual-capture-guide.md) to replace these placeholders with final screenshots.
 
 ## Start here
 
-1. Review the [system requirements](installation/requirements.md) and [dependencies](installation/dependencies.md).
-2. Install the packaged library using the [installation guide](installation/installation-steps.md).
-3. Build a first scene with the [quickstart](getting-started/quickstart.md).
-4. Choose between independent routing and dedicated rendering in [Render Modes](usage/basic-usage.md).
-5. Learn the [control panel](usage/control-panel.md) and [spherical calibration](usage/spherical-calibration.md).
-6. Review the [2.0.0 release notes](release-notes/2.0.0.md) before upgrading an existing sketch.
+1. Review the [system requirements](installation/requirements.md), [dependencies](installation/dependencies.md), and [installation steps](installation/installation-steps.md).
+2. Open a contributed example, then build a first scene with the [quickstart](getting-started/quickstart.md).
+3. Choose a representation with [Render Modes](usage/basic-usage.md).
+4. Calibrate spherical output with the [Control Panel](usage/control-panel.md) and [Spherical Calibration](usage/spherical-calibration.md) pages.
+5. Use [Generated Javadocs](api/javadocs.md) for signatures and the [API Overview](api/overview.md) for ownership rules.
+6. Before publishing or deploying, complete [Processing Publication](qualification/processing-publication.md) and [2.0 Release Readiness](qualification/2.0-release-readiness.md).
 
 ## Stable 2.0 contracts
 

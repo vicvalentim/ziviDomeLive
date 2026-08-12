@@ -1,6 +1,6 @@
 # Guia de Capturas Visuais
 
-Esta página é uma área de preparação para as imagens que vão deixar a documentação concreta. Os placeholders abaixo já estão estilizados como slots finais: faça as capturas manuais, salve com os nomes sugeridos e depois substitua cada bloco por uma imagem Markdown normal.
+Esta página define os espaços de captura usados pelo manual. Faça as capturas manualmente, salve com os nomes sugeridos e depois substitua cada bloco por uma imagem Markdown normal.
 
 !!! tip "Ritmo de captura recomendado"
     Capture o mesmo sketch em `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR` e `SKYBOX` para que a pessoa leitora compare os modos sem se perguntar se a cena mudou.
@@ -21,7 +21,7 @@ Esta página é uma área de preparação para as imagens que vão deixar a docu
 <div class="zd-check" markdown>
 **3. Ignore o ruído GL 1282**
 
-<span>O aviso conhecido do teardown do Processing não bloqueia a captura.</span>
+<span>O aviso conhecido do teardown do Processing não invalida a captura.</span>
 </div>
 <div class="zd-check" markdown>
 **4. Mantenha nomes estáveis**
@@ -97,7 +97,7 @@ Mantenha as imagens em `docs/assets/images/screenshots/` e prefira PNG para UI o
 | Captura | Proporção sugerida | O que ela deve provar |
 |---|---:|---|
 | Hero / SKYBOX | 16:9 | Layout das faces, continuidade de horizonte e identidade visual |
-| Preview Standard | 16:9 | A view Processing normal segue independente |
+| Preview Standard | 16:9 | O preview Standard da janela Processing permanece independente |
 | Domemaster | 1:1 | Forma fisheye, FOV, Size% e enquadramento de dome |
 | Equiretangular | 2:1 | Qualidade de costura e continuidade horizontal |
 | Painel de controle | 16:9 ou crop | Routing de modos, controles de calibração e estado de output |

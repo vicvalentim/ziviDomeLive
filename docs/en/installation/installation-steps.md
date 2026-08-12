@@ -10,9 +10,7 @@ After the 2.0.0 package is published:
 4. Install the library and its declared dependencies.
 5. Restart Processing.
 
-Open **File > Examples > Contributed Libraries > ziviDomeLive > EmptyProject**.
-The empty black scene should start without shader or dependency errors; press
-`h` to confirm that the control panel can be shown and hidden.
+After installation, open **File > Examples > Contributed Libraries > ziviDomeLive > EmptyProject**. The empty scene should start without shader or dependency errors. Press `h` to confirm that the control panel can be shown and hidden.
 
 NDI is optional and cannot be installed through Processing's Contribution
 Manager. Install the system [NDI Runtime](ndi.md) separately before enabling the
@@ -20,7 +18,7 @@ experimental NDI video output.
 
 ## Release Artifact
 
-For manual installation, use the packaged artifact from the matching release rather than the repository source ZIP:
+For manual installation, use the packaged artifact from the matching release. Do not install the repository source ZIP as a Processing library:
 
 1. Download `ziviDomeLive.zip` or `ziviDomeLive.pdex`.
 2. Extract the top-level `ziviDomeLive` folder.
@@ -32,7 +30,7 @@ The archive includes Devolay but not the proprietary NDI Runtime. NDI users must
 complete the separate [NDI Runtime](ndi.md) installation for their operating
 system.
 
-The installed structure must contain:
+The installed structure must follow this Processing library layout:
 
 ```text
 libraries/ziviDomeLive/
@@ -44,7 +42,7 @@ libraries/ziviDomeLive/
 
 ## Source Checkout
 
-For development:
+Use a source checkout only for development or release verification:
 
 ```bash
 git clone https://github.com/vicvalentim/ziviDomeLive.git
@@ -53,7 +51,7 @@ cd ziviDomeLive
 ./gradlew qualificationTests
 ```
 
-The installable output is generated under `release/`.
+The installable output is generated under `release/` as `ziviDomeLive.zip`, `ziviDomeLive.pdex`, and `ziviDomeLive.txt`.
 
 For a local sketchbook deployment instead of a release package:
 
@@ -61,6 +59,4 @@ For a local sketchbook deployment instead of a release package:
 ./gradlew deployToProcessingSketchbook
 ```
 
-This task deploys the library and examples, but deliberately excludes
-`src/test` and does not execute qualification. Run `qualificationTests`
-separately before treating the checkout as release-ready.
+This task deploys the library and examples, but deliberately excludes `src/test` and does not execute qualification. Run `qualificationTests` separately before treating the checkout as release-ready. For publication checks, see [Processing Publication](../qualification/processing-publication.md).

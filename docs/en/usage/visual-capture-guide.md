@@ -1,6 +1,6 @@
 # Visual Capture Guide
 
-This page is a staging area for the screenshots that will make the documentation feel concrete. The placeholders below are intentionally styled like final slots: capture the images manually, save them with the suggested names, then replace each placeholder block with a normal Markdown image.
+This page defines the screenshot slots used by the manual. Capture the images manually, save them with the suggested names, then replace each placeholder block with a normal Markdown image.
 
 !!! tip "Recommended capture rhythm"
     Capture the same sketch in `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR`, and `SKYBOX` so readers can compare modes without wondering whether the scene changed.
@@ -21,7 +21,7 @@ This page is a staging area for the screenshots that will make the documentation
 <div class="zd-check" markdown>
 **3. Ignore GL 1282 noise**
 
-<span>The known Processing teardown warning is not a screenshot blocker.</span>
+<span>The known Processing teardown warning does not invalidate a capture.</span>
 </div>
 <div class="zd-check" markdown>
 **4. Keep naming stable**
@@ -97,7 +97,7 @@ Keep screenshots under `docs/assets/images/screenshots/` and prefer PNG for UI o
 | Capture | Suggested ratio | What it should prove |
 |---|---:|---|
 | Hero / SKYBOX | 16:9 | Face layout, horizon continuity, overall identity |
-| Standard preview | 16:9 | Normal Processing view still works independently |
+| Standard preview | 16:9 | Standard Processing-window preview remains independent |
 | Domemaster | 1:1 | Fisheye shape, FOV, Size%, dome framing |
 | Equirectangular | 2:1 | Seam quality and horizontal continuity |
 | Control panel | 16:9 or cropped | Mode routing, calibration controls, output state |
