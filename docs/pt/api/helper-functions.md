@@ -32,7 +32,7 @@ camera.setDistanceLimits(100, 5000);
 camera.setCollapseGuard(20);
 ```
 
-A câmera da cena transforma o scene space e é distinta de pitch/yaw/roll esféricos, do `CameraManager` das seis faces e da câmera perspectiva Standard.
+A câmera da cena transforma o scene space e é distinta de pitch/yaw/roll esféricos, da tabela canônica `CubemapFace` de seis faces e da câmera perspectiva Standard.
 
 Desabilite o input da câmera no descarte da cena proprietária para que cenas
 seguintes não herdem drag ou roda do mouse sem intenção.

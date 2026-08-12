@@ -28,7 +28,7 @@ class CameraManagerTest {
 
     @Test
     void constructor_createsSixOrientations() {
-        assertEquals(6, manager.orientations.size(),
+        assertEquals(CubemapFace.count(), manager.orientations.size(),
                 "A cubemap has exactly 6 faces, so 6 orientations are required");
     }
 
@@ -162,7 +162,21 @@ class CameraManagerTest {
     void initializeOrientations_afterDispose_restoresSixOrientations() {
         manager.dispose();
         manager.initializeOrientations();
-        assertEquals(6, manager.orientations.size(),
+        assertEquals(CubemapFace.count(), manager.orientations.size(),
                 "initializeOrientations() must restore the full set of 6 orientations");
+    }
+
+    @Test
+    void initializeOrientations_copiesCanonicalFaceTable() {
+        for (int i = 0; i < CubemapFace.count(); i++) {
+            CubemapFace face = CubemapFace.at(i);
+            CameraOrientation o = manager.getOrientation(i);
+            assertEquals(face.centerX(), o.centerX, 0f, "Face " + i + ": centerX");
+            assertEquals(face.centerY(), o.centerY, 0f, "Face " + i + ": centerY");
+            assertEquals(face.centerZ(), o.centerZ, 0f, "Face " + i + ": centerZ");
+            assertEquals(face.upX(), o.upX, 0f, "Face " + i + ": upX");
+            assertEquals(face.upY(), o.upY, 0f, "Face " + i + ": upY");
+            assertEquals(face.upZ(), o.upZ, 0f, "Face " + i + ": upZ");
+        }
     }
 }

@@ -97,6 +97,13 @@ uma conversão Euler de `getQuaternion()`. A ordem dos comandos é significativa
 Aplicações normalmente usam esse comportamento pelos métodos de calibração da
 fachada em vez de criar outra orientação.
 
+## CubemapFace E CameraManager
+
+`CubemapFace` define a ordem qualificada das faces cubemap e seus vetores de
+câmera: `+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`. `CameraManager` continua disponível
+para compatibilidade com a 1.x e inicializa suas orientações a partir dessa
+tabela canônica.
+
 ## OrbitCamera
 
 `OrbitCamera` é uma transformação opcional em scene space, compartilhada por

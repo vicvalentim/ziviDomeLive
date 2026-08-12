@@ -705,7 +705,7 @@ public class ziviDomeLive implements PConstants {
 	private void capturePreviewCubemap() {
 		if (previewCubemapRenderer != null) {
 			previewCubemapRenderer.captureCubemap(
-					sphericalOrientation.getQuaternion(), cameraManager, getCurrentScene());
+					sphericalOrientation.getQuaternion(), getCurrentScene());
 		}
 	}
 
@@ -990,7 +990,7 @@ public class ziviDomeLive implements PConstants {
 	private void captureCubemap() {
 		if (cubemapRenderer != null) {
 			cubemapRenderer.captureCubemap(
-					sphericalOrientation.getQuaternion(), cameraManager, getCurrentScene());
+					sphericalOrientation.getQuaternion(), getCurrentScene());
 		} else {
 			LOGGER.severe("Error: CubemapRenderer not initialized.");
 		}

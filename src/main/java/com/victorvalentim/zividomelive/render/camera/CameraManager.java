@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The CameraManager class manages a list of CameraOrientation objects.
- * It provides methods to initialize and retrieve different camera orientations.
+ * Compatibility facade for cubemap camera orientations.
+ *
+ * <p>The canonical six-face contract lives in {@link CubemapFace}. This class
+ * keeps the 1.x public API available for direct renderer integrations.</p>
  */
 public class CameraManager {
     List<CameraOrientation> orientations;
@@ -21,13 +23,10 @@ public class CameraManager {
      * Initializes the list of camera orientations with predefined values.
      */
     void initializeOrientations() {
-        orientations = new ArrayList<>();
-        orientations.add(new CameraOrientation(0, 0, 0, 1, 0, 0, 0, -1, 0));
-        orientations.add(new CameraOrientation(0, 0, 0, -1, 0, 0, 0, -1, 0));
-        orientations.add(new CameraOrientation(0, 0, 0, 0, 1, 0, 0, 0, 1));
-        orientations.add(new CameraOrientation(0, 0, 0, 0, -1, 0, 0, 0, -1));
-        orientations.add(new CameraOrientation(0, 0, 0, 0, 0, 1, 0, -1, 0));
-        orientations.add(new CameraOrientation(0, 0, 0, 0, 0, -1, 0, -1, 0));
+        orientations = new ArrayList<>(CubemapFace.count());
+        for (int i = 0; i < CubemapFace.count(); i++) {
+            orientations.add(CubemapFace.at(i).createCameraOrientation());
+        }
     }
 
     /**
