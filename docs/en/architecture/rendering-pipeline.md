@@ -69,8 +69,8 @@ This avoids duplicate scene capture while keeping the Processing window and exte
 target allocation, texture presence checks, `loadPixels()` readback for NDI,
 target disposal, and capability discovery from the active PGL context. The
 reported capabilities include texture, FBO, cubemap, seamless cubemap, PBO, and
-sync fence support so later native cubemap and readback PRs can gate their GL
-paths explicitly.
+sync fence support so native capture and readback paths can gate their GL usage
+explicitly.
 
 `CubemapTarget` owns native `GL_TEXTURE_CUBE_MAP` storage with conservative
 texture policy, a render framebuffer, and a depth renderbuffer. Runtime capture
@@ -121,4 +121,4 @@ Internal implementation details:
 - `CubemapTarget` allocation and framebuffer policy
 - exact renderer allocation and mipmap strategy
 
-See [Runtime Lifecycle](runtime-lifecycle.md) and [Release Readiness](../qualification/1.5-release-readiness.md).
+See [Runtime Lifecycle](runtime-lifecycle.md) and [Release Readiness](../qualification/2.0-release-readiness.md).

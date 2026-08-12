@@ -2,7 +2,7 @@
 
 ## Gerenciador de Contribuições
 
-Depois da publicação do pacote 1.5.0:
+Depois da publicação do pacote 2.0.0:
 
 1. Abra o Processing.
 2. Selecione **Sketch > Import Library > Add Library...**.

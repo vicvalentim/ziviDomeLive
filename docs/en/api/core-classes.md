@@ -118,8 +118,9 @@ texture, FBO, cubemap, seamless cubemap, PBO, and sync fence support.
 
 `CubemapTarget` owns a native `GL_TEXTURE_CUBE_MAP` allocation with one square
 RGBA8 face for each canonical `CubemapFace`. It applies conservative defaults:
-linear min/mag filtering, clamp-to-edge wrapping on all three axes, no mipmaps,
-and seamless cubemap sampling only when the active context advertises support.
+linear mipmapped min filtering, linear mag filtering, clamp-to-edge wrapping on
+all three axes, regenerated mipmaps after capture, and seamless cubemap sampling
+only when the active context advertises support.
 
 `CubemapRenderer` preserves the `Scene.sceneRender(PGraphicsOpenGL)` contract
 with one offscreen Processing graphics command target, but binds each
@@ -143,7 +144,7 @@ active.
 
 ## Renderers
 
-The public 1.x renderer classes remain available for compatibility:
+The public renderer classes remain available for advanced integrations:
 
 - `StandardRenderer`
 - `CubemapRenderer`
@@ -151,7 +152,7 @@ The public 1.x renderer classes remain available for compatibility:
 - `FisheyeDomemaster`
 - `CubemapViewRenderer`
 
-Applications should prefer the facade and `RenderMode`. Direct renderer ownership is advanced 1.x integration and may not transfer unchanged to 2.0.
+Applications should prefer the facade and `RenderMode`. Direct renderer ownership is advanced integration and should not rely on internal allocation details.
 
 Do not retain a renderer target across `resetGraphics()`: resolution changes
 are deferred to the render loop and can replace high-resolution renderer

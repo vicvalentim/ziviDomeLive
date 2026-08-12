@@ -49,9 +49,9 @@ redimensiona a janela de preview do Processing.
 
 - A fachada pública é `ziviDomeLive`; a classe em minúsculas da 1.x não é mantida na 2.0.
 - `ViewType` é top-level na 2.0; o enum aninhado da 1.x e seus nomes antigos não são mantidos.
-- `RenderMode.FULL` preserva o modelo legado de roteamento.
+- `RenderMode.FULL` preserva o modelo de roteamento por compatibilidade.
 - `renderFisheyeDomemaster()`, `renderEquirectangular()`, `renderCubemap()` e `renderStandard()` continuam como shims de compatibilidade depreciados.
-- Getters de renderers permanecem públicos na 1.x, mas a topologia interna não é um contrato permanente.
+- Getters de renderers permanecem públicos por compatibilidade, mas a topologia interna não é um contrato permanente.
 
 Os Javadocs gerados no pacote de release são a referência de assinaturas.
 Consulte [Classes Principais](core-classes.md) para ownership e estados,

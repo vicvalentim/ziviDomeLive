@@ -13,8 +13,8 @@ void settings() {
 }
 
 void setup() {
-  // Optional: enable verbose library logs for debugging.
-  ziviDomeLive.enableDebugLogging();
+  // Uncomment while diagnosing a sketch:
+  // ziviDomeLive.enableDebugLogging();
 
   // Initialize the ziviDomeLive library
   ziviDome = new ziviDomeLive(this);

@@ -1,10 +1,10 @@
-# ziviDomeLive 1.5.0
+# ziviDomeLive 2.0.0
 
 ![Splash do ziviDomeLive](../assets/images/splash.jpg){ width="520" }
 
 ziviDomeLive é uma biblioteca para Processing 4 voltada a gráficos fulldome, VR monoscópico e instalações imersivas em tempo real. Ela combina gerenciamento do ciclo de vida de cenas, renderização Standard e esférica independentes, calibração de domemaster e roteamento opcional por NDI, Syphon ou Spout.
 
-A versão 1.5.0 consolida a arquitetura madura da geração 1.x. Ela preserva a fachada pública `zividomelive` e a ordem legada de `ViewType`, adicionando `RenderMode`, requisitos de renderização centralizados, ownership previsível do lifecycle, controles esféricos por quaternion e estados observáveis para outputs.
+A versão 2.0.0 consolida o renderer cubemap nativo. Ela preserva o contrato Processing `Scene.sceneRender(PGraphicsOpenGL)`, mas substitui o backend esférico baseado em array de faces por captura nativa `GL_TEXTURE_CUBE_MAP` e shaders de projeção `samplerCube`.
 
 ## Comece Aqui
 
@@ -13,13 +13,14 @@ A versão 1.5.0 consolida a arquitetura madura da geração 1.x. Ela preserva a 
 3. Crie a primeira cena com o [guia rápido](getting-started/quickstart.md).
 4. Escolha entre roteamento independente e renderização dedicada em [Modos de Renderização](usage/basic-usage.md).
 5. Conheça o [painel de controle](usage/control-panel.md) e a [calibração esférica](usage/spherical-calibration.md).
-6. Consulte as [notas da versão 1.5.0](release-notes/1.5.0.md) antes de atualizar um sketch existente.
+6. Consulte as [notas da versão 2.0.0](release-notes/2.0.0.md) antes de atualizar um sketch existente.
 
-## Contratos Estáveis da 1.5
+## Contratos Estáveis da 2.0
 
 - `Scene.sceneRender(PGraphicsOpenGL)` recebe um target já aberto; a biblioteca controla `beginDraw()` e `endDraw()`.
 - `RenderMode.FULL` é o padrão e preserva rotas independentes de preview e output.
 - A renderização Standard é independente da captura cubemap esférica.
+- A captura esférica escreve em um `GL_TEXTURE_CUBE_MAP` nativo; equiretangular, domemaster e skybox o amostram diretamente.
 - Pitch, yaw e roll esféricos compõem deltas mínimos em um único quaternion normalizado; os valores da fachada continuam como acumuladores de controle.
 - O FOV do domemaster varia de `0..360`, com padrão `210`.
 - O Size% do domemaster varia de `0..100`, com padrão `100`.
@@ -42,6 +43,6 @@ A topologia esférica acima é um detalhe interno de implementação. O comporta
 
 ## Qualificação
 
-A suíte Java valida API, estado, lifecycle, routing, matemática, metadata e contratos de release sem exigir GPU. Comece pela [arquitetura de renderização](architecture/rendering-pipeline.md) e depois use o [protocolo do CalibrationTool](qualification/1.5-calibration-tool.md) e o [checklist de prontidão](qualification/1.5-release-readiness.md) em hardware qualificado. O repositório não fabrica imagens golden.
+A suíte Java valida API, estado, lifecycle, routing, matemática, metadata e contratos de release sem exigir GPU. Comece pela [arquitetura de renderização](architecture/rendering-pipeline.md) e depois use o [protocolo do CalibrationTool](qualification/1.5-calibration-tool.md) e o [checklist de prontidão 2.0](qualification/2.0-release-readiness.md) em hardware qualificado. O repositório não fabrica imagens golden.
 
 Consulte os [problemas conhecidos](known-issues.md) antes de uma implantação de produção.

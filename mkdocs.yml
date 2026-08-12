@@ -101,7 +101,9 @@ plugins:
             Qualification: Qualificação
             Calibration Tool Protocol: Protocolo da Ferramenta de Calibração
             Release Readiness: Prontidão da Release
+            Release Readiness 2.0: Prontidão da Release 2.0
             Release Notes: Notas de Versão
+            Version 2.0.0: Versão 2.0.0
             Version 1.5.0: Versão 1.5.0
             Contributing: Contribuindo
             Known Issues: Problemas Conhecidos
@@ -170,8 +172,10 @@ nav:
       - Advanced Examples: examples/advanced.md
   - Qualification:
       - Calibration Tool Protocol: qualification/1.5-calibration-tool.md
-      - Release Readiness: qualification/1.5-release-readiness.md
+      - Release Readiness 2.0: qualification/2.0-release-readiness.md
+      - Release Readiness 1.5: qualification/1.5-release-readiness.md
   - Release Notes:
+      - Version 2.0.0: release-notes/2.0.0.md
       - Version 1.5.0: release-notes/1.5.0.md
   - Contributing: contributing.md
   - Known Issues: known-issues.md

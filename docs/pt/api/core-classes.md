@@ -117,8 +117,9 @@ sync fence.
 
 `CubemapTarget` controla uma alocação nativa `GL_TEXTURE_CUBE_MAP` com uma face
 RGBA8 quadrada para cada `CubemapFace` canônica. Ele aplica defaults
-conservadores: filtros min/mag lineares, clamp-to-edge nos três eixos, sem
-mipmaps, e seamless cubemap apenas quando o contexto ativo anuncia suporte.
+conservadores: filtro min linear com mipmaps, filtro mag linear, clamp-to-edge
+nos três eixos, mipmaps regenerados após a captura e seamless cubemap apenas
+quando o contexto ativo anuncia suporte.
 
 `CubemapRenderer` preserva o contrato `Scene.sceneRender(PGraphicsOpenGL)` com
 um único graphics Processing offscreen como emissor de comandos, mas liga cada
@@ -142,9 +143,9 @@ ativo.
 
 ## Renderers
 
-As classes públicas de renderer da geração 1.x continuam disponíveis para compatibilidade: `StandardRenderer`, `CubemapRenderer`, `EquirectangularRenderer`, `FisheyeDomemaster` e `CubemapViewRenderer`.
+As classes públicas de renderer continuam disponíveis para integrações avançadas: `StandardRenderer`, `CubemapRenderer`, `EquirectangularRenderer`, `FisheyeDomemaster` e `CubemapViewRenderer`.
 
-Aplicações devem preferir a fachada e `RenderMode`. Ownership direto dos renderers é integração avançada da 1.x e pode não migrar sem mudanças para a 2.0.
+Aplicações devem preferir a fachada e `RenderMode`. Ownership direto dos renderers é integração avançada e não deve depender de detalhes internos de alocação.
 
 Não retenha um target de renderer depois de `resetGraphics()`: a mudança de
 resolução é adiada para o render loop e pode substituir as instâncias de alta

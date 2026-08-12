@@ -22,7 +22,7 @@ import java.util.logging.Logger;
  */
 public class CubemapRenderer implements PConstants {
     private static final float DEFAULT_NEAR_PLANE = 1.0f;
-    private static final float DEFAULT_FAR_PLANE = 122000.0f;
+    private static final float DEFAULT_FAR_PLANE = 1122000.0f;
     private static final Logger LOGGER = LogManager.getLogger();
 
     private PGraphicsOpenGL nativeCaptureGraphics;

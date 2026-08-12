@@ -2,7 +2,7 @@
 
 ## Runtime
 
-- Processing 4; a versão 1.5.0 é compilada e testada contra Processing core `4.5.6`
+- Processing 4; a versão 2.0.0 é compilada e testada contra Processing core `4.5.6`
 - Renderizador `P3D`
 - `pixelDensity(1)` recomendado para estabilidade entre displays
 - GPU e driver capazes de expor OpenGL 4.1; os shaders empacotados usam GLSL 4.10
@@ -31,4 +31,4 @@ A stack Processing/Syphon usada pelo projeto pode exigir a versão Intel do Proc
 Antes da implantação, consulte [Problemas Conhecidos](../known-issues.md),
 [Runtime NDI](ndi.md), o
 [Protocolo do Calibration Tool](../qualification/1.5-calibration-tool.md) e a
-[Prontidão para Release](../qualification/1.5-release-readiness.md).
+[Prontidão para Release](../qualification/2.0-release-readiness.md).

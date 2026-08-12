@@ -15,8 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ReleaseMetadataTest {
 
 	private static final Path PROJECT_ROOT = Path.of(System.getProperty("user.dir"));
-	private static final String RELEASE_VERSION = "1.5.0";
-	private static final String PROCESSING_RELEASE_NUMBER = "10";
+	private static final String RELEASE_VERSION = "2.0.0";
+	private static final String PROCESSING_RELEASE_NUMBER = "11";
 
 	@Test
 	void releaseVersionIsAlignedAcrossMetadata() throws IOException {
@@ -52,12 +52,13 @@ class ReleaseMetadataTest {
 	@Test
 	void releaseDocumentationExposesNewApiAndQualificationBoundary() throws IOException {
 		String readme = read("README.md");
-		String qualification = read("docs/en/qualification/1.5-release-readiness.md");
+		String qualification = read("docs/en/qualification/2.0-release-readiness.md");
 
 		assertTrue(readme.contains("setRenderMode(RenderMode.FULL)"));
 		assertTrue(readme.contains("OutputManager.OutputState"));
 		assertTrue(readme.contains("Platform Matrix"));
-		assertTrue(qualification.contains("GPU visual compatibility"));
+		assertTrue(qualification.contains("native cubemap"));
+		assertTrue(qualification.contains("CalibrationTool"));
 		assertTrue(qualification.contains("No golden images"));
 	}
 

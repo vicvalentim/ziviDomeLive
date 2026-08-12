@@ -1,10 +1,10 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15671506.svg)](https://doi.org/10.5281/zenodo.15671506)
 
-# ziviDomeLive 1.5.0
+# ziviDomeLive 2.0.0
 
 ziviDomeLive is a Processing 4 library for real-time fulldome, monoscopic VR, and immersive installation graphics. It provides scene lifecycle management, independent Standard and spherical rendering, fisheye domemaster calibration, equirectangular and cubemap views, and optional NDI, Syphon, or Spout output routing.
 
-Version 1.5.0 is the final consolidation of the 1.x architecture. It adds an operational `RenderMode` API and stronger lifecycle, routing, output, testing, and documentation contracts without introducing the experimental renderer planned for 2.0. See the [1.5.0 release notes](https://vicvalentim.github.io/ziviDomeLive/release-notes/1.5.0/) for the upgrade summary and compatibility notes.
+Version 2.0.0 promotes the spherical renderer to a native OpenGL cubemap pipeline. Scenes keep the familiar `sceneRender(PGraphicsOpenGL)` contract, while spherical capture writes directly into a `GL_TEXTURE_CUBE_MAP` and every spherical projection samples it through `samplerCube` shaders. See the [2.0.0 release notes](https://vicvalentim.github.io/ziviDomeLive/release-notes/2.0.0/) for the migration summary and validation notes.
 
 ## Requirements
 
@@ -25,11 +25,12 @@ The library keeps Standard and spherical rendering as separate domains:
 ```text
 Scene -> StandardRenderer -> Standard target
 
-Scene -> six cubemap faces -> equirectangular -> fisheye domemaster
-                          \-> cubemap skybox layout
+Scene -> native GL_TEXTURE_CUBE_MAP -> equirectangular
+                                    \-> fisheye domemaster
+                                    \-> cubemap skybox layout
 ```
 
-The 1.x spherical topology is an internal implementation detail. The stable contracts are the rendered content, cubemap orientation and layout, spherical pitch/yaw/roll behavior, domemaster FOV, and Size% calibration.
+The spherical topology is an internal implementation detail. The stable contracts are the rendered content, cubemap orientation and layout, spherical pitch/yaw/roll behavior, domemaster FOV, and Size% calibration. The current implementation does not allocate six independent Processing face targets.
 
 ### RenderMode
 
@@ -182,7 +183,7 @@ Backend availability, native initialization, publication, and render requirement
 | Syphon | Supported platform; Intel/Rosetta may be required on Apple Silicon | Not available | Not available |
 | Spout | Not available | Supported platform | Not available |
 
-Automated tests do not replace GPU, receiver, or native-sharing qualification. See [the 1.5 release-readiness protocol](https://vicvalentim.github.io/ziviDomeLive/qualification/1.5-release-readiness/).
+Automated tests do not replace GPU, receiver, or native-sharing qualification. See [the 2.0 release-readiness protocol](https://vicvalentim.github.io/ziviDomeLive/qualification/2.0-release-readiness/).
 
 ## Built-in Controls
 

@@ -25,7 +25,7 @@ Modos dedicados forçam uma representação efetiva para o preview principal e t
 | `RenderMode` | `ViewType` efetivo | Pipeline principal |
 |---|---|---|
 | `STANDARD` | `STANDARD` | Renderer Standard perspectiva direto |
-| `DOMEMASTER` | `DOMEMASTER` | Cubemap, equiretangular, fisheye |
+| `DOMEMASTER` | `DOMEMASTER` | Cubemap, fisheye samplerCube |
 | `EQUIRECTANGULAR` | `EQUIRECTANGULAR` | Cubemap, equiretangular |
 | `SKYBOX` | `SKYBOX` | Cubemap, layout skybox |
 
@@ -58,7 +58,7 @@ A biblioteca calcula o fechamento de dependências a cada frame:
 Standard                 -> somente Standard
 Layout cubemap           -> captura cubemap + layout
 Equirectangular          -> captura cubemap + equiretangular
-Domemaster fisheye       -> captura cubemap + equiretangular + fisheye
+Domemaster fisheye       -> captura cubemap + fisheye samplerCube
 ```
 
 Quando outputs habilitados solicitam views diferentes em `FULL`, seus requisitos são combinados. No máximo um cubemap mestre é capturado por frame. Consulte [Pipeline de Renderização](../architecture/rendering-pipeline.md) para a ordem completa.

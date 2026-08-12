@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this library, please cite it as indicated below."
 title: "ziviDomeLive: Processing library for immersive fulldome visuals"
-version: "1.5.0"
+version: "2.0.0"
 doi: "10.5281/zenodo.15671506"
 authors:
   - family-names: Valentim
@@ -20,5 +20,6 @@ abstract: >
   ziviDomeLive is a Java library for the Processing platform that streamlines the
   development of real-time visual experiences for fulldome projection, mono VR and
   other immersive installations. It provides explicit render modes, independent
-  Standard and spherical pipelines, dynamic resolution switching, scene lifecycle
-  management, and optional NDI, Syphon, or Spout routing for live video output.
+  Standard and native samplerCube spherical pipelines, dynamic resolution switching,
+  scene lifecycle management, and optional NDI, Syphon, or Spout routing for live
+  video output.
