@@ -7,6 +7,7 @@ import processing.opengl.PShader;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -49,5 +50,12 @@ class CubemapViewRendererTest {
 		CubemapViewRenderer renderer = new CubemapViewRenderer(new StubApplet(), 1024);
 
 		assertDoesNotThrow(() -> renderer.drawCubemapToGraphics(null));
+	}
+
+	@Test
+	void nativeSkyboxPreservesOriginalCubemapViewMatrix() {
+		assertArrayEquals(new int[]{3, 1, 4, 0, 5, 2}, CubemapViewRenderer.cubemapLayoutFaceOrder());
+		assertArrayEquals(new int[]{2, 2, 2, 2, 2, 2}, CubemapViewRenderer.faceRotations());
+		assertArrayEquals(new int[]{1, 1, 1, 1, 1, 1}, CubemapViewRenderer.faceInversions());
 	}
 }
