@@ -296,6 +296,7 @@ public class ziviDomeLive implements PConstants {
 			LOGGER.info("OpenGL FBO Support: " + capabilities.supportsFramebuffer());
 			LOGGER.info("OpenGL Cubemap Support: " + capabilities.supportsCubemap());
 			LOGGER.info("OpenGL Seamless Cubemap Support: " + capabilities.supportsSeamlessCubemap());
+			LOGGER.info("OpenGL Anisotropic Filtering Support: " + capabilities.supportsAnisotropicFiltering());
 			LOGGER.info("OpenGL PBO Support: " + capabilities.supportsPixelBufferObject());
 			LOGGER.info("OpenGL Fence Support: " + capabilities.supportsSyncFence());
 		} else {
@@ -758,6 +759,11 @@ public class ziviDomeLive implements PConstants {
 		return previewCubemapRenderer != null ? previewCubemapRenderer.getNativeCubemapTarget() : null;
 	}
 
+	private boolean hasMasterNativeCubemap(RenderRequirementsPolicy.Requirements output) {
+		CubemapTarget nativeCubemap = resolveMasterNativeCubemap(output);
+		return nativeCubemap != null && nativeCubemap.isAllocated();
+	}
+
 	/**
 	 * Computes the window-preview requirements for the current frame.
 	 *
@@ -802,12 +808,16 @@ public class ziviDomeLive implements PConstants {
 			RenderRequirementsPolicy.Requirements output) {
 		if (output.needsCubemapSource()) {
 			captureCubemap();
-			return cubemapRenderer != null ? cubemapRenderer.getCubemapFaces() : null;
+			return cubemapRenderer != null && !cubemapRenderer.hasNativeCubemapTarget()
+					? cubemapRenderer.getCubemapFaces()
+					: null;
 		}
 
 		if (preview.needsCubemapSource()) {
 			capturePreviewCubemap();
-			return previewCubemapRenderer != null ? previewCubemapRenderer.getCubemapFaces() : null;
+			return previewCubemapRenderer != null && !previewCubemapRenderer.hasNativeCubemapTarget()
+					? previewCubemapRenderer.getCubemapFaces()
+					: null;
 		}
 
 		return null;
@@ -890,7 +900,7 @@ public class ziviDomeLive implements PConstants {
 	void renderOutputPipeline(
 			RenderRequirementsPolicy.Requirements output,
 			PGraphicsOpenGL[] masterFaces) {
-		if (output.needsCubemapSource() && masterFaces == null) {
+		if (output.needsCubemapSource() && !hasMasterNativeCubemap(output) && masterFaces == null) {
 			return;
 		}
 

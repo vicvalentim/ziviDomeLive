@@ -19,6 +19,7 @@ public class CubemapViewRenderer {
     private final PShader samplerCubeShader;
     private final int[] faceRotations = {2, 2, 2, 2, 2, 2};
     private final boolean[] faceInversions = {true, true, true, true, true, true};
+    private final int[] faceInversionsAsUniform = {1, 1, 1, 1, 1, 1};
     private final PApplet parent;
     private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
 
@@ -146,6 +147,8 @@ public class CubemapViewRenderer {
             cubemap.background(0, 0);
             samplerCubeShader.set("resolution", cubemap.width, cubemap.height);
             samplerCubeShader.set("cubemap", CUBEMAP_TEXTURE_UNIT);
+            samplerCubeShader.set("faceRotations", faceRotations);
+            samplerCubeShader.set("faceInversions", faceInversionsAsUniform);
             cubemap.shader(samplerCubeShader);
             glAdapter.bindCubemapTexture(cubemap, nativeCubemap, CUBEMAP_TEXTURE_UNIT);
             cubemapBound = true;
