@@ -100,6 +100,8 @@ class ReleaseMetadataTest {
 		assertTrue(releaseWorkflow.contains("fail_on_unmatched_files: true"));
 		assertTrue(websiteWorkflow.contains("pip install -r requirements-docs.txt"));
 		assertTrue(websiteWorkflow.contains("mkdocs build --strict"));
+		assertTrue(websiteWorkflow.contains("cp -R build/docs/javadoc site/reference"));
+		assertTrue(websiteWorkflow.contains("cp -R build/docs/javadoc site/pt/reference"));
 		assertTrue(previewWorkflow.contains("pip install -r requirements-docs.txt"));
 		assertTrue(previewWorkflow.contains("mkdocs build --strict"));
 		assertTrue(documentationRequirements.contains("mkdocs>=1.6.1,<2.0"));

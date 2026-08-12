@@ -37,7 +37,10 @@ jobs:
         run: mkdocs build --strict
 
       - name: Attach Javadocs to website
-        run: cp -R build/docs/javadoc site/reference
+        run: |
+          cp -R build/docs/javadoc site/reference
+          mkdir -p site/pt
+          cp -R build/docs/javadoc site/pt/reference
 
       - name: Deploy website
         uses: JamesIves/github-pages-deploy-action@v4
