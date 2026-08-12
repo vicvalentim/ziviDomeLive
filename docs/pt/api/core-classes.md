@@ -52,6 +52,8 @@ A troca descarta a cena anterior e configura a nova. `clearScenes()` descarta a 
 ## OutputManager
 
 O manager separa rota configurada, disponibilidade, inicialização nativa, publicação e requisitos de renderização.
+Internamente ele delega o ownership nativo a serviços concretos de NDI, Syphon e
+Spout; essas classes de implementação não fazem parte da API pública.
 
 ```java
 OutputManager output = dome.getOutputManager();
