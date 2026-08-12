@@ -77,6 +77,12 @@ resource with conservative texture policy. It is not yet the master spherical
 source for frames; capture still produces `PGraphicsOpenGL[]` until the native
 capture PR copies rendered faces into this target.
 
+SamplerCube projection shader resources for cubemap, equirectangular,
+domemaster/fisheye, and skybox modes are staged under
+`data/shaders/samplercube/` in packaged artifacts. They are adapted for the
+native cubemap migration, but the active runtime still loads
+`data/shaders/equirectangular.*` and `data/shaders/domemaster.*`.
+
 ## Resolution Ownership
 
 | Target | Dimension policy | Recreated when |
@@ -112,6 +118,7 @@ Internal implementation details:
 
 - `PGraphicsOpenGL[]` as cubemap storage
 - `CubemapTarget` native storage exists but is not yet wired into frame capture
+- samplerCube projection shaders are packaged but not yet runtime-selected
 - domemaster currently consuming equirectangular output
 - exact renderer allocation/copy strategy
 

@@ -77,6 +77,12 @@ isolado com política conservadora de textura. Ele ainda não é a fonte esféri
 mestre dos frames; a captura continua produzindo `PGraphicsOpenGL[]` até a PR de
 captura nativa copiar as faces renderizadas para esse target.
 
+Os recursos de shader `samplerCube` para os modos cubemap, equiretangular,
+domemaster/fisheye e skybox ficam preparados em `data/shaders/samplercube/` nos
+artefatos empacotados. Eles já estão adaptados para a migração de cubemap
+nativo, mas o runtime ativo ainda carrega `data/shaders/equirectangular.*` e
+`data/shaders/domemaster.*`.
+
 ## Ownership de Resolução
 
 | Target | Política de dimensão | Recriado quando |
@@ -112,6 +118,7 @@ Detalhes internos:
 
 - `PGraphicsOpenGL[]` como armazenamento cubemap
 - `CubemapTarget` nativo existe, mas ainda não está conectado à captura de frames
+- shaders de projeção `samplerCube` estão empacotados, mas ainda não são selecionados em runtime
 - domemaster consumindo atualmente a saída equiretangular
 - estratégia exata de alocação e cópia entre renderers
 

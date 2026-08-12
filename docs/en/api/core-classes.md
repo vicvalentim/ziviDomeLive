@@ -124,6 +124,8 @@ and seamless cubemap sampling only when the active context advertises support.
 The class is intentionally not wired into the render pipeline yet. Current
 runtime capture still uses `PGraphicsOpenGL[]`; later migration PRs copy rendered
 faces into `CubemapTarget` and update projection shaders to sample it directly.
+The adapted samplerCube shader resources are packaged under
+`data/shaders/samplercube/` for those later projection passes.
 
 ## OrbitCamera
 
