@@ -14,11 +14,16 @@ import java.util.logging.Logger;
 public class CubemapViewRenderer {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final int CUBEMAP_TEXTURE_UNIT = 1;
+    /**
+     * Original CubemapView cross order, expressed with the canonical CubemapFace indices:
+     * top, left, center, right, far-right, bottom.
+     */
+    private static final int[] CUBEMAP_LAYOUT_FACE_ORDER = {3, 1, 4, 0, 5, 2};
     private static final int[] FACE_ROTATIONS = {2, 2, 2, 2, 2, 2};
+    private static final int[] FACE_INVERSIONS = {1, 1, 1, 1, 1, 1};
     private int resolution;
     private PGraphicsOpenGL cubemap;
     private final PShader samplerCubeShader;
-    private final int[] faceInversionsAsUniform = {1, 1, 1, 1, 1, 1};
     private final PApplet parent;
     private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
 
@@ -115,8 +120,9 @@ public class CubemapViewRenderer {
             cubemap.background(0, 0);
             samplerCubeShader.set("resolution", cubemap.width, cubemap.height);
             samplerCubeShader.set("cubemap", CUBEMAP_TEXTURE_UNIT);
+            samplerCubeShader.set("layoutFaces", CUBEMAP_LAYOUT_FACE_ORDER);
             samplerCubeShader.set("faceRotations", FACE_ROTATIONS);
-            samplerCubeShader.set("faceInversions", faceInversionsAsUniform);
+            samplerCubeShader.set("faceInversions", FACE_INVERSIONS);
             cubemap.shader(samplerCubeShader);
             glAdapter.bindCubemapTexture(cubemap, nativeCubemap, CUBEMAP_TEXTURE_UNIT);
             cubemapBound = true;
@@ -140,5 +146,17 @@ public class CubemapViewRenderer {
             glAdapter.dispose(cubemap);
             cubemap = null;
         }
+    }
+
+    static int[] cubemapLayoutFaceOrder() {
+        return CUBEMAP_LAYOUT_FACE_ORDER.clone();
+    }
+
+    static int[] faceRotations() {
+        return FACE_ROTATIONS.clone();
+    }
+
+    static int[] faceInversions() {
+        return FACE_INVERSIONS.clone();
     }
 }

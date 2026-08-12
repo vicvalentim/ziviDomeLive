@@ -10,8 +10,12 @@ const float PI = 3.1415926535897932384626433832795;
 
 vec3 applyEAC(vec3 dir) {
     vec3 absDir = abs(dir);
-    float scaleFactor = 1.0 / max(max(absDir.x, absDir.y), absDir.z);
-    return dir * scaleFactor;
+    float dominantAxis = max(max(absDir.x, absDir.y), absDir.z);
+    return dir / max(dominantAxis, 0.000001);
+}
+
+vec4 sampleCubemapEAC(vec3 dir) {
+    return texture(cubemap, applyEAC(normalize(dir)));
 }
 
 void main() {
@@ -31,5 +35,5 @@ void main() {
         -cosPhi * cosTheta
     );
 
-    FragColor = texture(cubemap, applyEAC(dir));
+    FragColor = sampleCubemapEAC(dir);
 }

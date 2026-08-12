@@ -51,7 +51,8 @@ class SphericalShaderResourcesTest {
 				() -> assertTrue(equirectangular.contains("-cosPhi * sinTheta")),
 				() -> assertTrue(equirectangular.contains("sinPhi")),
 				() -> assertTrue(equirectangular.contains("-cosPhi * cosTheta")),
-				() -> assertTrue(equirectangular.contains("texture(cubemap, applyEAC(dir))")));
+				() -> assertTrue(equirectangular.contains("vec4 sampleCubemapEAC(vec3 dir)")),
+				() -> assertTrue(equirectangular.contains("FragColor = sampleCubemapEAC(dir)")));
 	}
 
 	@Test
@@ -66,7 +67,8 @@ class SphericalShaderResourcesTest {
 				() -> assertTrue(fisheye.contains("sin(theta) * sin(phi)")),
 				() -> assertTrue(fisheye.contains("cos(theta)")),
 				() -> assertTrue(fisheye.contains("dir.z = -dir.z")),
-				() -> assertTrue(fisheye.contains("texture(cubemap, applyEAC(normalize(dir)))")));
+				() -> assertTrue(fisheye.contains("vec4 sampleCubemapEAC(vec3 dir)")),
+				() -> assertTrue(fisheye.contains("FragColor = sampleCubemapEAC(dir)")));
 	}
 
 	@Test
@@ -76,16 +78,19 @@ class SphericalShaderResourcesTest {
 		String skybox = Files.readString(shaderRoot.resolve("skybox.frag"));
 
 		assertAll("samplerCube skybox layout",
+				() -> assertTrue(skybox.contains("uniform int layoutFaces[6]")),
 				() -> assertTrue(skybox.contains("uniform int faceRotations[6]")),
-				() -> assertTrue(skybox.contains("uniform bool faceInversions[6]")),
-				() -> assertTrue(skybox.contains("faceIndex = 1")),
-				() -> assertTrue(skybox.contains("faceIndex = 2")),
-				() -> assertTrue(skybox.contains("faceIndex = 3")),
-				() -> assertTrue(skybox.contains("faceIndex = 4")),
-				() -> assertTrue(skybox.contains("faceIndex = 0")),
-				() -> assertTrue(skybox.contains("faceIndex = 5")),
-				() -> assertTrue(skybox.contains("dir = applyTransformations(dir, faceRotations[faceIndex], faceInversions[faceIndex])")),
-				() -> assertTrue(skybox.contains("dir.z = -dir.z")));
+				() -> assertTrue(skybox.contains("uniform int faceInversions[6]")),
+				() -> assertTrue(skybox.contains("faceIndex = layoutFaces[SLOT_TOP]")),
+				() -> assertTrue(skybox.contains("faceIndex = layoutFaces[SLOT_LEFT]")),
+				() -> assertTrue(skybox.contains("faceIndex = layoutFaces[SLOT_CENTER]")),
+				() -> assertTrue(skybox.contains("faceIndex = layoutFaces[SLOT_RIGHT]")),
+				() -> assertTrue(skybox.contains("faceIndex = layoutFaces[SLOT_FAR_RIGHT]")),
+				() -> assertTrue(skybox.contains("faceIndex = layoutFaces[SLOT_BOTTOM]")),
+				() -> assertTrue(skybox.contains("vec3 directionForCanonicalFace(int faceIndex, vec2 faceUV)")),
+				() -> assertTrue(skybox.contains("dir = applyLegacyFaceTransform(dir, faceRotations[faceIndex], faceInversions[faceIndex])")),
+				() -> assertTrue(skybox.contains("dir.z = -dir.z")),
+				() -> assertTrue(skybox.contains("FragColor = sampleCubemapEAC(dir)")));
 	}
 
 	@Test
