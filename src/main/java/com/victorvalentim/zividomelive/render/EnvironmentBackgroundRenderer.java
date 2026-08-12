@@ -15,10 +15,9 @@ import java.util.logging.Logger;
 /**
  * Draws a library-owned equirectangular environment behind spherical scene capture.
  *
- * <p>This is intentionally a background service, not scene geometry. The renderer fills each
- * native cubemap face with depth testing disabled before {@code Scene.sceneRender(PGraphicsOpenGL)}
- * is invoked, so foreground scene geometry starts with the depth buffer prepared by the cubemap
- * target.</p>
+ * <p>This is intentionally a background service, not scene geometry. The renderer draws after
+ * {@code Scene.sceneRender(PGraphicsOpenGL)} at far-plane depth, so scene-owned
+ * {@code background()} calls cannot erase it and foreground geometry remains in front.</p>
  */
 public final class EnvironmentBackgroundRenderer implements PConstants {
 	private static final Logger LOGGER = LogManager.getLogger();
@@ -177,8 +176,8 @@ public final class EnvironmentBackgroundRenderer implements PConstants {
 			CubemapFace face,
 			PMatrix3D orientationMatrix) {
 		target.pushStyle();
+		target.pushMatrix();
 		try {
-			target.hint(DISABLE_DEPTH_TEST);
 			target.resetMatrix();
 			target.ortho();
 			target.noStroke();
@@ -192,7 +191,7 @@ public final class EnvironmentBackgroundRenderer implements PConstants {
 			target.rect(0, 0, target.width, target.height);
 		} finally {
 			target.resetShader();
-			target.hint(ENABLE_DEPTH_TEST);
+			target.popMatrix();
 			target.popStyle();
 		}
 	}

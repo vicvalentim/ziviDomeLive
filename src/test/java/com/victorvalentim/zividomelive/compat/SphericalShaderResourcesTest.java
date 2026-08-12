@@ -39,7 +39,8 @@ class SphericalShaderResourcesTest {
 				() -> assertShader(shaderRoot, "equirectangular_background.frag", "equirectangularUv"),
 				() -> assertShader(shaderRoot, "equirectangular_background.frag", "environmentRotation"),
 				() -> assertShader(shaderRoot, "equirectangular_background.frag", "yawOffset"),
-				() -> assertShader(shaderRoot, "equirectangular_background.frag", "intensity"));
+				() -> assertShader(shaderRoot, "equirectangular_background.frag", "intensity"),
+				() -> assertShader(shaderRoot, "equirectangular_background.vert", "gl_Position.z = gl_Position.w * 0.999999"));
 	}
 
 	@Test

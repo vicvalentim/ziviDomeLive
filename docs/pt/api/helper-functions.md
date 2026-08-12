@@ -46,7 +46,7 @@ dome.setEnvironmentBackgroundIntensity(1.0f);
 dome.setEnvironmentBackgroundYawOffset(0.0f);
 ```
 
-O background de ambiente é um serviço LDR com `PImage` controlado pela biblioteca. Ele é desenhado atrás de cada face cubemap nativa antes de `sceneRender()`, então domemaster, equiretangular e skybox recebem o mesmo fundo sem exigir uma sky sphere dentro da cena. Use `clearEnvironmentBackground()` quando a cena proprietária for descartada.
+O background de ambiente é um serviço LDR com `PImage` controlado pela biblioteca. Ele é desenhado como fundo infinito em profundidade de far plane depois de `sceneRender()`, então chamadas `background()` da cena não o apagam e a geometria em primeiro plano permanece na frente. Domemaster, equiretangular e skybox recebem o mesmo fundo sem exigir uma sky sphere dentro da cena. Use `clearEnvironmentBackground()` quando a cena proprietária for descartada.
 
 Carregamento HDR, mapas IBL e ambient occlusion ainda não são habilitados por este helper.
 

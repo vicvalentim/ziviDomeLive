@@ -190,11 +190,6 @@ public class CubemapRenderer implements PConstants {
                     nativeCubemapTarget.renderFace(face, captureGraphics, () -> {
                         captureGraphics.resetMatrix();
                         captureGraphics.background(0, 0);
-                        environmentBackgroundRenderer.renderCubemapFace(
-                                captureGraphics,
-                                face,
-                                effectiveOrientation);
-                        captureGraphics.resetMatrix();
                         configureNativeCameraForFace(
                                 captureGraphics,
                                 face,
@@ -203,6 +198,10 @@ public class CubemapRenderer implements PConstants {
                         if (currentScene != null) {
                             currentScene.sceneRender(captureGraphics);
                         }
+                        environmentBackgroundRenderer.renderCubemapFace(
+                                captureGraphics,
+                                face,
+                                effectiveOrientation);
                         captureGraphics.noLights();
                         captureGraphics.flush();
                     });
