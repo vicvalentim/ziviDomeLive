@@ -3,30 +3,34 @@ package com.victorvalentim.zividomelive.render;
 import com.victorvalentim.zividomelive.render.camera.CubemapFace;
 import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.PApplet;
-import processing.core.PConstants;
 import processing.core.PImage;
 import processing.core.PMatrix3D;
+import processing.opengl.PGL;
 import processing.opengl.PGraphicsOpenGL;
 import processing.opengl.PShader;
+import processing.opengl.Texture;
 
+import java.nio.IntBuffer;
 import java.util.Objects;
 import java.util.logging.Logger;
 
 /**
  * Draws a library-owned equirectangular environment behind spherical scene capture.
  *
- * <p>This is intentionally a background service, not scene geometry. The renderer draws after
- * {@code Scene.sceneRender(PGraphicsOpenGL)} at far-plane depth, so scene-owned
- * {@code background()} calls cannot erase it and foreground geometry remains in front.</p>
+ * <p>This is a native background pass, not scene geometry. After Processing flushes the scene
+ * into the active cubemap-face framebuffer, the renderer emits one fullscreen triangle at far
+ * depth. It therefore survives scene-owned {@code background()} calls while leaving foreground
+ * depth intact.</p>
  */
-public final class EnvironmentBackgroundRenderer implements PConstants {
+public final class EnvironmentBackgroundRenderer {
 	private static final Logger LOGGER = LogManager.getLogger();
+	private static final int GL_DEPTH_FUNC = 0x0B74;
 	private static final String EQUIRECTANGULAR_BACKGROUND_VERT =
 			"data/shaders/environment/equirectangular_background.vert";
 	private static final String EQUIRECTANGULAR_BACKGROUND_FRAG =
 			"data/shaders/environment/equirectangular_background.frag";
 
-	private final PShader equirectangularShader;
+	private final NativeEnvironmentShader equirectangularShader;
 	private PImage equirectangularImage;
 	private boolean visible = true;
 	private float intensity = 1.0f;
@@ -41,9 +45,12 @@ public final class EnvironmentBackgroundRenderer implements PConstants {
 	 */
 	public EnvironmentBackgroundRenderer(PApplet parent) {
 		Objects.requireNonNull(parent, "parent cannot be null");
-		PShader shader = null;
+		NativeEnvironmentShader shader = null;
 		try {
-			shader = parent.loadShader(EQUIRECTANGULAR_BACKGROUND_FRAG, EQUIRECTANGULAR_BACKGROUND_VERT);
+			shader = new NativeEnvironmentShader(
+					parent,
+					EQUIRECTANGULAR_BACKGROUND_VERT,
+					EQUIRECTANGULAR_BACKGROUND_FRAG);
 		} catch (RuntimeException error) {
 			LOGGER.warning("Environment background shader unavailable: " + error.getMessage());
 			unavailableWarningLogged = true;
@@ -134,18 +141,20 @@ public final class EnvironmentBackgroundRenderer implements PConstants {
 	 * Draws the configured equirectangular background into one native cubemap face.
 	 *
 	 * @param target active Processing OpenGL command target
+	 * @param pgl already-active PGL context owning the cubemap-face framebuffer
 	 * @param face target cubemap face
 	 * @param sphericalOrientation orientation shared by the spherical capture
 	 * @return {@code true} when a background pass was drawn
 	 */
 	public boolean renderCubemapFace(
 			PGraphicsOpenGL target,
+			PGL pgl,
 			CubemapFace face,
 			Quaternion sphericalOrientation) {
 		if (!visible || equirectangularImage == null) {
 			return false;
 		}
-		if (target == null || face == null || equirectangularShader == null) {
+		if (target == null || pgl == null || face == null || equirectangularShader == null) {
 			if (!unavailableWarningLogged) {
 				LOGGER.warning("Environment background unavailable; cubemap face background skipped.");
 				unavailableWarningLogged = true;
@@ -157,7 +166,7 @@ public final class EnvironmentBackgroundRenderer implements PConstants {
 			PMatrix3D orientationMatrix = sphericalOrientation == null
 					? new PMatrix3D()
 					: sphericalOrientation.toMatrix();
-			renderFullscreenBackground(target, face, orientationMatrix);
+			renderFullscreenBackground(target, pgl, face, orientationMatrix);
 			renderFailureWarningLogged = false;
 			unavailableWarningLogged = false;
 			return true;
@@ -173,29 +182,79 @@ public final class EnvironmentBackgroundRenderer implements PConstants {
 
 	private void renderFullscreenBackground(
 			PGraphicsOpenGL target,
+			PGL pgl,
 			CubemapFace face,
 			PMatrix3D orientationMatrix) {
-		target.pushStyle();
-		target.pushMatrix();
+		Texture environmentTexture = target.getTexture(equirectangularImage);
+		if (environmentTexture == null || !environmentTexture.available()) {
+			throw new IllegalStateException("Environment image has no available OpenGL texture.");
+		}
+
+		boolean depthTestEnabled = pgl.isEnabled(PGL.DEPTH_TEST);
+		boolean blendEnabled = pgl.isEnabled(PGL.BLEND);
+		boolean cullFaceEnabled = pgl.isEnabled(PGL.CULL_FACE);
+		boolean scissorTestEnabled = pgl.isEnabled(PGL.SCISSOR_TEST);
+		IntBuffer savedDepthFunction = IntBuffer.allocate(1);
+		IntBuffer savedDepthMask = IntBuffer.allocate(1);
+		pgl.getIntegerv(GL_DEPTH_FUNC, savedDepthFunction);
+		pgl.getBooleanv(PGL.DEPTH_WRITEMASK, savedDepthMask);
+
+		float maxU = environmentTexture.maxTexcoordU();
+		float maxV = environmentTexture.maxTexcoordV();
+		float scaleU = environmentTexture.invertedX() ? -maxU : maxU;
+		float scaleV = environmentTexture.invertedY() ? -maxV : maxV;
+		float offsetU = environmentTexture.invertedX() ? maxU : 0.0f;
+		float offsetV = environmentTexture.invertedY() ? maxV : 0.0f;
+
 		try {
-			target.resetMatrix();
-			target.ortho();
-			target.hint(ENABLE_DEPTH_TEST);
-			target.hint(DISABLE_DEPTH_MASK);
-			target.noStroke();
 			equirectangularShader.set("environmentMap", equirectangularImage);
-			equirectangularShader.set("resolution", target.width, target.height);
-			equirectangularShader.set("faceIndex", face.ordinal());
+			equirectangularShader.set("faceResolution", target.width, target.height);
+			equirectangularShader.set("environmentUvScale", scaleU, scaleV);
+			equirectangularShader.set("environmentUvOffset", offsetU, offsetV);
+			equirectangularShader.set("faceIndex", face.index());
 			equirectangularShader.set("environmentRotation", orientationMatrix);
 			equirectangularShader.set("yawOffset", yawOffset);
 			equirectangularShader.set("intensity", intensity);
-			target.shader(equirectangularShader);
-			target.rect(0, 0, target.width, target.height);
+
+			pgl.enable(PGL.DEPTH_TEST);
+			pgl.depthFunc(PGL.LEQUAL);
+			pgl.depthMask(false);
+			pgl.disable(PGL.BLEND);
+			pgl.disable(PGL.CULL_FACE);
+			pgl.disable(PGL.SCISSOR_TEST);
+
+			equirectangularShader.bindFor(target);
+			pgl.drawArrays(PGL.TRIANGLES, 0, 3);
 		} finally {
-			target.hint(ENABLE_DEPTH_MASK);
-			target.resetShader();
-			target.popMatrix();
-			target.popStyle();
+			if (equirectangularShader.bound()) {
+				equirectangularShader.unbind();
+			}
+			pgl.depthMask(savedDepthMask.get(0) != 0);
+			pgl.depthFunc(savedDepthFunction.get(0));
+			restoreCapability(pgl, PGL.DEPTH_TEST, depthTestEnabled);
+			restoreCapability(pgl, PGL.BLEND, blendEnabled);
+			restoreCapability(pgl, PGL.CULL_FACE, cullFaceEnabled);
+			restoreCapability(pgl, PGL.SCISSOR_TEST, scissorTestEnabled);
+		}
+	}
+
+	private static void restoreCapability(PGL pgl, int capability, boolean enabled) {
+		if (enabled) {
+			pgl.enable(capability);
+		} else {
+			pgl.disable(capability);
+		}
+	}
+
+	/** Keeps Processing texture management while allowing a native draw call. */
+	private static final class NativeEnvironmentShader extends PShader {
+		private NativeEnvironmentShader(PApplet parent, String vertexPath, String fragmentPath) {
+			super(parent, vertexPath, fragmentPath);
+		}
+
+		private void bindFor(PGraphicsOpenGL target) {
+			setRenderer(target);
+			bind();
 		}
 	}
 }

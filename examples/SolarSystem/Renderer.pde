@@ -155,7 +155,6 @@ class Renderer {
   public void drawSkySphere(PGraphicsOpenGL pg) {
     if (renderingMode != 2) return;
     pg.pushMatrix();
-      boolean depthMaskDisabled = false;
       if (sun != null) {
         PVector sunPx = sun.getPositionAU().copy()
                            .mult(pxPerAU());
@@ -165,8 +164,6 @@ class Renderer {
 
       PGL pgl = pg.beginPGL();
       pgl.disable(PGL.CULL_FACE);
-      pgl.depthMask(false);
-      depthMaskDisabled = true;
       pg.endPGL();
 
       boolean shaderApplied = false;
@@ -191,9 +188,6 @@ class Renderer {
       pg.resetShader();
 
       pgl = pg.beginPGL();
-      if (depthMaskDisabled) {
-        pgl.depthMask(true);
-      }
       pgl.enable(PGL.CULL_FACE);
       pg.endPGL();
     pg.popMatrix();

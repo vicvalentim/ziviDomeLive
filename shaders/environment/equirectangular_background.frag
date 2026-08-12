@@ -1,8 +1,8 @@
 #version 410 core
-#define PROCESSING_COLOR_SHADER
-
 uniform sampler2D environmentMap;
-uniform vec2 resolution;
+uniform vec2 faceResolution;
+uniform vec2 environmentUvScale;
+uniform vec2 environmentUvOffset;
 uniform int faceIndex;
 uniform mat4 environmentRotation;
 uniform float yawOffset;
@@ -48,13 +48,15 @@ vec2 equirectangularUv(vec3 dir) {
 }
 
 void main() {
-    vec2 faceUV = gl_FragCoord.xy / resolution;
+    vec2 faceUV = gl_FragCoord.xy / faceResolution;
     faceUV.y = 1.0 - faceUV.y;
 
     vec3 dir = directionForCanonicalFace(faceIndex, faceUV);
     dir.z = -dir.z;
     dir = (environmentRotation * vec4(dir, 0.0)).xyz;
 
-    vec4 color = texture(environmentMap, equirectangularUv(dir));
+    vec2 environmentUV = equirectangularUv(dir);
+    environmentUV = environmentUV * environmentUvScale + environmentUvOffset;
+    vec4 color = texture(environmentMap, environmentUV);
     FragColor = vec4(color.rgb * max(intensity, 0.0), color.a);
 }

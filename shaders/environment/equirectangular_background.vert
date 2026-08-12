@@ -1,10 +1,11 @@
 #version 410 core
 
-uniform mat4 transform;
-
-in vec4 vertex;
+const vec2 FULLSCREEN_TRIANGLE[3] = vec2[](
+    vec2(-1.0, -1.0),
+    vec2( 3.0, -1.0),
+    vec2(-1.0,  3.0)
+);
 
 void main() {
-    gl_Position = transform * vertex;
-    gl_Position.z = gl_Position.w * 0.999999;
+    gl_Position = vec4(FULLSCREEN_TRIANGLE[gl_VertexID], 1.0, 1.0);
 }
