@@ -58,6 +58,22 @@ class SphericalShaderResourcesTest {
 	}
 
 	@Test
+	void samplerCubeFisheyeShaderPreservesLegacyDomemasterOrientation() throws IOException {
+		Path shaderRoot = projectRoot().resolve("shaders/samplercube");
+
+		String fisheye = Files.readString(shaderRoot.resolve("fisheye.frag"));
+
+		assertAll("samplerCube fisheye orientation",
+				() -> assertTrue(fisheye.contains("legacyCubemapDirectionToSamplerCube")),
+				() -> assertTrue(fisheye.contains("uv.x = -uv.x")),
+				() -> assertTrue(fisheye.contains("-sin(theta) * cos(phi)")),
+				() -> assertTrue(fisheye.contains("-sin(theta) * sin(phi)")),
+				() -> assertTrue(fisheye.contains("cos(theta)")),
+				() -> assertTrue(fisheye.contains("return vec3(dir.x, dir.y, -dir.z)")),
+				() -> assertTrue(fisheye.contains("return vec3(dir.x, -dir.y, dir.z)")));
+	}
+
+	@Test
 	void packagedJarTaskIncludesNestedShaderResources() throws IOException {
 		String buildScript = Files.readString(projectRoot().resolve("build.gradle.kts"));
 

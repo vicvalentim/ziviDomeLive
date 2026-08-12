@@ -64,6 +64,8 @@ public class ziviDomeLive implements PConstants {
 	private static final String EQUIRECT_SAMPLERCUBE_FRAG = "data/shaders/samplercube/equirectangular.frag";
 	private static final String DOME_VERT = "data/shaders/domemaster.vert";
 	private static final String DOME_FRAG = "data/shaders/domemaster.frag";
+	private static final String DOME_SAMPLERCUBE_VERT = "data/shaders/samplercube/fisheye.vert";
+	private static final String DOME_SAMPLERCUBE_FRAG = "data/shaders/samplercube/fisheye.frag";
 
 	private ControlManager controlManager;
 	// Output pipeline (high resolution)
@@ -471,7 +473,13 @@ public class ziviDomeLive implements PConstants {
 				EQUIRECT_SAMPLERCUBE_VERT,
 				p);
 		LOGGER.info("EquirectangularRenderer (output) initialized.");
-		fisheyeDomemaster = new FisheyeDomemaster(outputResolution, DOME_FRAG, DOME_VERT, p);
+		fisheyeDomemaster = new FisheyeDomemaster(
+				outputResolution,
+				DOME_FRAG,
+				DOME_VERT,
+				DOME_SAMPLERCUBE_FRAG,
+				DOME_SAMPLERCUBE_VERT,
+				p);
 		fisheyeDomemaster.setSizePercentage(fishSize);
 		LOGGER.info("FisheyeDomemaster (output) initialized.");
 		cubemapViewRenderer = new CubemapViewRenderer(p, outputResolution);
@@ -687,7 +695,13 @@ public class ziviDomeLive implements PConstants {
 				EQUIRECT_SAMPLERCUBE_FRAG,
 				EQUIRECT_SAMPLERCUBE_VERT,
 				p);
-		previewFisheyeDomemaster = new FisheyeDomemaster(previewResolution, DOME_FRAG, DOME_VERT, p);
+		previewFisheyeDomemaster = new FisheyeDomemaster(
+				previewResolution,
+				DOME_FRAG,
+				DOME_VERT,
+				DOME_SAMPLERCUBE_FRAG,
+				DOME_SAMPLERCUBE_VERT,
+				p);
 		previewFisheyeDomemaster.setSizePercentage(fishSize);
 		previewCubemapViewRenderer = new CubemapViewRenderer(p, previewResolution);
 
@@ -827,7 +841,10 @@ public class ziviDomeLive implements PConstants {
 			if (output.needsFisheye()) {
 				copyToPreview(fisheyeDomemaster.getDomemasterGraphics(), previewFisheyeDomemaster.getDomemasterGraphics());
 			} else {
-				previewFisheyeDomemaster.applyShader(previewEquirectangularRenderer.getEquirectangular(), getFov());
+				previewFisheyeDomemaster.applyShader(
+						resolveMasterNativeCubemap(output),
+						previewEquirectangularRenderer.getEquirectangular(),
+						getFov());
 			}
 		}
 
@@ -875,7 +892,9 @@ public class ziviDomeLive implements PConstants {
 
 		if (output.needsFisheye()) {
 			fisheyeDomemaster.applyShader(
-					equirectangularRenderer.getEquirectangular(), getFov());
+					cubemapRenderer != null ? cubemapRenderer.getNativeCubemapTarget() : null,
+					equirectangularRenderer.getEquirectangular(),
+					getFov());
 		}
 
 		if (output.needsCubemapLayout()) {

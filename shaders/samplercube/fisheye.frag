@@ -15,9 +15,20 @@ vec3 applyEAC(vec3 dir) {
     return dir * scaleFactor;
 }
 
+vec3 legacyCubemapDirectionToSamplerCube(vec3 dir) {
+    vec3 absDir = abs(dir);
+
+    // Match the legacy domemaster -> equirectangular -> six-face path while
+    // sampling the native OpenGL cubemap directly.
+    if (absDir.y >= absDir.x && absDir.y >= absDir.z) {
+        return vec3(dir.x, dir.y, -dir.z);
+    }
+    return vec3(dir.x, -dir.y, dir.z);
+}
+
 void main() {
     vec2 uv = (gl_FragCoord.xy / resolution) * 2.0 - 1.0;
-    uv.y *= resolution.y / resolution.x;
+    uv.x = -uv.x;
 
     float r = length(uv);
     float phi = atan(uv.y, uv.x);
@@ -31,10 +42,11 @@ void main() {
     float theta = r * (maxTheta / 2.0);
 
     vec3 dir = vec3(
-        sin(theta) * cos(phi),
-        sin(theta) * sin(phi),
-        -cos(theta)
+        -sin(theta) * cos(phi),
+        -sin(theta) * sin(phi),
+        cos(theta)
     );
 
-    FragColor = texture(cubemap, applyEAC(normalize(dir)));
+    vec3 sampleDir = legacyCubemapDirectionToSamplerCube(applyEAC(normalize(dir)));
+    FragColor = texture(cubemap, sampleDir);
 }
