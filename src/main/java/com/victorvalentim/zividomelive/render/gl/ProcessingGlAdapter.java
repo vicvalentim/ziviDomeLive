@@ -20,6 +20,7 @@ import java.util.Objects;
  */
 public final class ProcessingGlAdapter {
 	private static final ProcessingGlAdapter DEFAULT = new ProcessingGlAdapter();
+	private static final int GL_ACTIVE_TEXTURE = 0x84E0;
 	private static final int GL_READ_FRAMEBUFFER_BINDING = 0x8CAA;
 	private static final int GL_DRAW_FRAMEBUFFER_BINDING = 0x8CA6;
 	private static final ThreadLocal<IntBuffer> READ_FRAMEBUFFER_SCRATCH =
@@ -184,9 +185,11 @@ public final class ProcessingGlAdapter {
 		target.ensureAllocated();
 		validateTextureUnit(textureUnit);
 		withPgl(graphics, pgl -> {
+			IntBuffer savedActiveTexture = IntBuffer.allocate(1);
+			pgl.getIntegerv(GL_ACTIVE_TEXTURE, savedActiveTexture);
 			pgl.activeTexture(PGL.TEXTURE0 + textureUnit);
 			pgl.bindTexture(PGL.TEXTURE_CUBE_MAP, target.textureId());
-			pgl.activeTexture(PGL.TEXTURE0);
+			pgl.activeTexture(savedActiveTexture.get(0));
 			return null;
 		});
 	}
@@ -200,9 +203,11 @@ public final class ProcessingGlAdapter {
 	public void unbindCubemapTexture(PGraphicsOpenGL graphics, int textureUnit) {
 		validateTextureUnit(textureUnit);
 		withPgl(graphics, pgl -> {
+			IntBuffer savedActiveTexture = IntBuffer.allocate(1);
+			pgl.getIntegerv(GL_ACTIVE_TEXTURE, savedActiveTexture);
 			pgl.activeTexture(PGL.TEXTURE0 + textureUnit);
 			pgl.bindTexture(PGL.TEXTURE_CUBE_MAP, 0);
-			pgl.activeTexture(PGL.TEXTURE0);
+			pgl.activeTexture(savedActiveTexture.get(0));
 			return null;
 		});
 	}

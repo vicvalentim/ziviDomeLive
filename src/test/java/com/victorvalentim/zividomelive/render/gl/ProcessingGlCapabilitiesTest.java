@@ -16,6 +16,7 @@ class ProcessingGlCapabilitiesTest {
 		assertFalse(capabilities.supportsFramebuffer());
 		assertFalse(capabilities.supportsCubemap());
 		assertFalse(capabilities.supportsSeamlessCubemap());
+		assertFalse(capabilities.supportsAnisotropicFiltering());
 		assertFalse(capabilities.supportsPixelBufferObject());
 		assertFalse(capabilities.supportsSyncFence());
 	}
@@ -33,6 +34,7 @@ class ProcessingGlCapabilitiesTest {
 		assertTrue(capabilities.supportsFramebuffer());
 		assertTrue(capabilities.supportsCubemap());
 		assertTrue(capabilities.supportsSeamlessCubemap());
+		assertFalse(capabilities.supportsAnisotropicFiltering());
 		assertTrue(capabilities.supportsPixelBufferObject());
 		assertTrue(capabilities.supportsSyncFence());
 	}
@@ -44,11 +46,13 @@ class ProcessingGlCapabilitiesTest {
 				"Vendor",
 				"Renderer",
 				"GL_ARB_framebuffer_object GL_ARB_texture_cube_map "
-						+ "GL_ARB_seamless_cube_map GL_ARB_pixel_buffer_object GL_ARB_sync");
+						+ "GL_ARB_seamless_cube_map GL_EXT_texture_filter_anisotropic "
+						+ "GL_ARB_pixel_buffer_object GL_ARB_sync");
 
 		assertTrue(capabilities.supportsFramebuffer());
 		assertTrue(capabilities.supportsCubemap());
 		assertTrue(capabilities.supportsSeamlessCubemap());
+		assertTrue(capabilities.supportsAnisotropicFiltering());
 		assertTrue(capabilities.supportsPixelBufferObject());
 		assertTrue(capabilities.supportsSyncFence());
 	}
@@ -65,6 +69,7 @@ class ProcessingGlCapabilitiesTest {
 		assertFalse(capabilities.supportsFramebuffer());
 		assertFalse(capabilities.supportsCubemap());
 		assertFalse(capabilities.supportsSeamlessCubemap());
+		assertFalse(capabilities.supportsAnisotropicFiltering());
 		assertFalse(capabilities.supportsPixelBufferObject());
 		assertFalse(capabilities.supportsSyncFence());
 	}
