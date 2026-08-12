@@ -4,31 +4,117 @@ All notable changes to this project are documented in this file.
 
 ## [2.0.0] - 2026-08-12
 
-Version 2.0.0 promotes the spherical renderer to the native OpenGL cubemap
-pipeline while preserving the Processing-facing scene contract.
+Version 2.0.0 is the native-cubemap major release. It keeps the Processing
+scene contract and the Standard/spherical rendering split, but replaces the
+old six-Processing-target spherical backend with a GPU-resident
+`GL_TEXTURE_CUBE_MAP` pipeline sampled directly by the final projection
+shaders.
+
+### Breaking Changes
+- Renamed the public facade class from `zividomelive` to `ziviDomeLive`.
+  The Java package remains `com.victorvalentim.zividomelive`.
+- Extracted `ViewType` from the facade into the top-level public API:
+  `com.victorvalentim.zividomelive.ViewType`.
+- Replaced the 1.x view names with the final 2.0 names and order:
+  `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR`, `SKYBOX`.
+- Advanced integrations that consumed internal `PGraphicsOpenGL[]` cubemap
+  faces must migrate to the native cubemap path.
+
+### Added
+- Native `CubemapTarget` ownership for `GL_TEXTURE_CUBE_MAP` texture storage,
+  cubemap face attachments, framebuffer binding, conservative texture
+  filtering, and seamless-cubemap capability handling.
+- `ProcessingGlAdapter` and `ProcessingGlCapabilities` as the narrow PGL seam
+  for graphics allocation, texture checks, framebuffer operations, cubemap
+  binding, NDI readback, disposal, and OpenGL capability discovery.
+- `CubemapFace` as the canonical table for the six native cubemap faces and
+  their orientation contract.
+- `RenderPipeline` to own per-frame orchestration while preserving the facade's
+  public lifecycle and Processing hook behavior.
+- `FrameViews` as the minimal final-frame boundary used by output publishers.
+- Separate concrete output backend services for NDI, Syphon, and Spout without
+  introducing a backend factory layer.
+- GLSL 4.10 `samplerCube` shader set under `data/shaders/samplercube/` for
+  cubemap layout, equirectangular projection, fisheye/domemaster projection,
+  and skybox inspection.
+- Publication-focused documentation, including Processing Contribution Manager
+  metadata guidance, release packaging checks, generated Javadocs links, and
+  bilingual MkDocs navigation.
 
 ### Changed
-- Replaced the six independent Processing cubemap face targets with direct
-  native `GL_TEXTURE_CUBE_MAP` face capture through a reusable framebuffer.
-- Routed equirectangular, domemaster/fisheye, and skybox renderers through
-  `samplerCube` shaders that sample `CubemapTarget` directly.
-- Made domemaster/fisheye independent from the intermediate equirectangular
-  pass.
-- Preserved the original `CubemapView` skybox cross matrix in the native
-  samplerCube layout.
-- Reduced native cubemap logging noise while keeping allocation/failure and
-  bounded GL-error diagnostics.
+- Replaced the six independent Processing cubemap face targets with native
+  cubemap face capture through a reusable framebuffer.
+- Kept `Scene.sceneRender(PGraphicsOpenGL)` as the Processing-facing scene
+  contract. The library continues to own `beginDraw()` and `endDraw()`.
+- Kept `STANDARD` rendering independent from spherical cubemap capture.
+- Rendered equirectangular output directly from the native cubemap with a
+  `samplerCube` shader.
+- Rendered domemaster/fisheye output directly from the native cubemap,
+  removing the equirectangular intermediate from that path.
+- Rendered the skybox/cubemap layout directly from the native cubemap while
+  preserving the original `CubemapView` cross-matrix orientation.
+- Updated render requirements so domemaster, equirectangular, and skybox are
+  sibling projections fed by the same cubemap source instead of a lateral
+  projection chain.
+- Kept `RenderMode.FULL` as the default operational mode and preserved
+  independent preview and output routes.
+- Kept dedicated `RenderMode` values as temporary effective-view overrides
+  that do not erase stored `ViewType` routing.
+- Kept Syphon and Spout on the GPU-native `PGraphicsOpenGL` publication path.
+- Kept NDI as the explicit GPU-to-CPU/network boundary with Processing-thread
+  pixel capture, three bounded frame slots, latest-frame-wins backpressure, a
+  dedicated sender worker, progressive RGBA metadata, and bounded shutdown.
+- Reduced native cubemap logging noise while preserving allocation, failure,
+  capability, and bounded GL-error diagnostics.
+- Reworked the README and MkDocs site into a Processing-library manual with
+  installation, dependencies, API, examples, architecture, qualification, and
+  publication pages.
+- Updated Processing metadata to point to the stable public documentation URL
+  and to describe platform-specific output dependencies.
+
+### Fixed
+- Corrected native equirectangular orientation against the `sampleCube`
+  reference path.
+- Preserved skybox face positions and rotations from the original
+  `CubemapView` layout when switching to native `samplerCube` sampling.
+- Avoided the black-screen regression by returning to the single reusable
+  `PGraphicsOpenGL` command target feeding native cubemap faces.
+- Prevented the removed spherical fallback from masking native cubemap capture
+  failures during validation.
+- Kept the known Processing/OpenGL `1282` teardown diagnostic documented as a
+  non-fatal runtime note unless paired with visible rendering failure.
 
 ### Removed
-- Removed the six-texture Processing spherical shader passes from packaged
-  resources.
 - Removed the `PGraphicsOpenGL[]` spherical fallback path from the runtime
-  pipeline.
+  renderer.
+- Removed the old six-texture Processing spherical shader passes from packaged
+  resources.
+- Removed the cubemap-to-equirectangular-to-domemaster dependency chain from
+  the active spherical pipeline.
+- Removed permanent legacy/parallel renderer scaffolding from the 2.0 runtime.
 
 ### Validation
-- `CalibrationTool` was run in `SKYBOX` mode against the native cubemap path.
-- `./gradlew clean test build` remains the automated source validation gate;
-  GPU and native-output quality still require manual hardware qualification.
+- Added or updated tests for facade rename, top-level `ViewType`, enum order,
+  `FrameViews`, render requirements, cubemap face mappings, GL capability
+  handling, samplerCube shader resources, metadata, packaging, documentation
+  publication, and output routing boundaries.
+- Automated gates cover Java compilation, unit tests, Javadocs,
+  Processing-library metadata, release ZIP/PDEX/TXT generation, packaged
+  shader resources, legal files, and byte-identical ZIP/PDEX output.
+- MkDocs builds English and Portuguese documentation in strict mode and the
+  GitHub Pages workflow publishes generated Javadocs for both localized site
+  trees.
+- GPU image quality, projector/lens behavior, and NDI/Syphon/Spout receiver
+  interoperability remain manual qualification tasks on target hardware.
+
+### Not Included in 2.0.0
+- Spherical Mirror is not included and no `SPHERICAL_MIRROR` enum value is
+  exposed yet.
+- HDR render targets, IBL/PBR engine features, ambient occlusion, direct NDI
+  RGBA readback, PBO/fence-based NDI transfer, and performance telemetry remain
+  future work.
+- NDI still uses the safe Processing-thread `loadPixels()` readback boundary;
+  no OpenGL calls are made by the NDI sender worker.
 
 ## [1.5.0] - 2026-08-11
 
