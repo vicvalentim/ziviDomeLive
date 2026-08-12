@@ -1,5 +1,6 @@
 package com.victorvalentim.zividomelive.compat;
 
+import com.victorvalentim.zividomelive.FrameViews;
 import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.SceneManager;
 import com.victorvalentim.zividomelive.RenderMode;
@@ -71,6 +72,16 @@ class PublicApiCompatibilityTest {
 	}
 
 	@Test
+	void frameViewsExposeOnlyCompletedTargetsByLogicalView() throws Exception {
+		assertTrue(Modifier.isPublic(FrameViews.class.getModifiers()));
+		assertTrue(FrameViews.class.isInterface());
+		assertEquals(PGraphicsOpenGL.class,
+				FrameViews.class.getMethod("getFrame", ViewType.class).getReturnType());
+		assertNotNull(OutputManager.class.getMethod("sendOutput", FrameViews.class));
+		assertNotNull(OutputManager.class.getMethod("sendOutput"));
+	}
+
+	@Test
 	void publicEnumsRemainSourceCompatible() {
 		assertArrayEquals(new RenderMode[]{
 				RenderMode.FULL,
@@ -115,6 +126,7 @@ class PublicApiCompatibilityTest {
 		Class<?>[] publicTypes = {
 				RenderMode.class,
 				ViewType.class,
+				FrameViews.class,
 				Scene.class,
 				SceneManager.class,
 				OutputManager.class,

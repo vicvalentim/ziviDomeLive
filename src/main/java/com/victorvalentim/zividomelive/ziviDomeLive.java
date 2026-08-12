@@ -352,7 +352,7 @@ public class ziviDomeLive implements PConstants {
 			 * initialization during library startup so the later UI toggle is immediate.
 			 */
 			if (outputManager != null) {
-				outputManager.initializeLocalTextureOutput();
+				outputManager.initializeLocalTextureOutput(renderPipeline.finalFrameViews());
 
 				if (outputManager.isLocalTextureInitialized()) {
 					LOGGER.info(
@@ -473,10 +473,6 @@ public class ziviDomeLive implements PConstants {
 		);
 		LOGGER.info("StandardRenderer (output) initialized at "
 				+ standardOutputDimensions[0] + "×" + standardOutputDimensions[1] + "px.");
-		// Refresh OutputManager cache so Syphon/Spout have valid PGraphics references.
-		if (outputManager != null) {
-			outputManager.refreshCachedGraphics();
-		}
 	}
 
 	private int computePreviewResolution() {
@@ -826,7 +822,7 @@ public class ziviDomeLive implements PConstants {
 	 * and remain offscreen. They are never composited onto the Processing window. After this
 	 * method returns, all relevant {@code endDraw()} calls have completed and the FBOs are
 	 * ready for
-	 * {@link com.victorvalentim.zividomelive.manager.OutputManager#sendOutput()}.</p>
+	 * {@link com.victorvalentim.zividomelive.manager.OutputManager#sendOutput(FrameViews)}.</p>
 	 *
 	 * <p>The set of passes is derived from
 	 * {@link com.victorvalentim.zividomelive.manager.OutputManager#requiresView(ViewType)}:
@@ -861,6 +857,39 @@ public class ziviDomeLive implements PConstants {
 
 		if (output.needsStandard()) {
 			standardRenderer.render();
+		}
+	}
+
+	/**
+	 * Resolves a completed high-resolution output target without exposing its producer.
+	 *
+	 * <p>The returned target is owned by the existing renderer backend and remains valid only
+	 * until that backend is reallocated or disposed.</p>
+	 */
+	PGraphicsOpenGL resolveFinalFrame(ViewType view) {
+		if (view == null) {
+			return null;
+		}
+
+		switch (view) {
+			case DOMEMASTER:
+				return fisheyeDomemaster != null
+						? fisheyeDomemaster.getDomemasterGraphics()
+						: null;
+			case EQUIRECTANGULAR:
+				return equirectangularRenderer != null
+						? equirectangularRenderer.getEquirectangular()
+						: null;
+			case SKYBOX:
+				return cubemapViewRenderer != null
+						? cubemapViewRenderer.getCubemap()
+						: null;
+			case STANDARD:
+				return standardRenderer != null
+						? standardRenderer.getStandardView()
+						: null;
+			default:
+				return null;
 		}
 	}
 

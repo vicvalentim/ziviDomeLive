@@ -76,6 +76,11 @@ rota efetiva sem apagar o valor; `FULL` o restaura. Syphon e Spout recebem
 diretamente o `PGraphicsOpenGL` selecionado. NDI faz readback dos pixels na
 render thread e envia por um pipeline worker limitado a três slots.
 
+O `RenderPipeline` automático fornece targets completos por `FrameViews`.
+`OutputManager` escolhe o `ViewType` lógico a publicar e não inspeciona o
+renderer concreto que o produziu. Aplicações normalmente não precisam chamar
+diretamente o overload `sendOutput(FrameViews)`.
+
 ## SphericalOrientation
 
 `SphericalOrientation` controla a atitude compartilhada por todas as projeções

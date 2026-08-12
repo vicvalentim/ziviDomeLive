@@ -1,6 +1,7 @@
 package com.victorvalentim.zividomelive.manager;
 
 import codeanticode.syphon.SyphonServer;
+import com.victorvalentim.zividomelive.FrameViews;
 import com.victorvalentim.zividomelive.RenderMode;
 import com.victorvalentim.zividomelive.ViewType;
 import com.victorvalentim.zividomelive.support.LogManager;
@@ -102,6 +103,7 @@ public class OutputManager implements PConstants {
 	private final boolean isWindows;
 	private final LocalTextureBackend localTextureBackend;
 	private final long ndiShutdownTimeoutMillis;
+	private FrameViews latestFrameViews;
 
 	/* Independent output routing. Preview/viewer state is intentionally not stored here. */
 	private volatile ViewType ndiView = ViewType.DOMEMASTER;
@@ -241,45 +243,28 @@ public class OutputManager implements PConstants {
 	/**
 	 * Compatibility method retained for callers that previously refreshed cached graphics references.
 	 *
-	 * <p>Graphics references are resolved on every frame, so this method intentionally does nothing.</p>
+	 * <p>Graphics references now come from {@link FrameViews} at the frame boundary, so this
+	 * method intentionally does nothing.</p>
 	 */
 	public void refreshCachedGraphics() {
-		// No-op by design: resolving per frame prevents stale references after renderer reallocation.
+		// No-op by design: FrameViews resolves current targets after renderer reallocation.
 	}
 
 	/**
-	 * Resolves the current graphics target directly from the corresponding renderer.
+	 * Resolves the current graphics target from the completed final-frame contract.
 	 *
+	 * @param frameViews completed final views supplied by the render pipeline
 	 * @param viewType view whose graphics target should be returned
 	 * @return current graphics target, or {@code null} when unavailable
 	 */
-	private PGraphicsOpenGL resolveGraphics(ViewType viewType) {
+	PGraphicsOpenGL resolveGraphics(FrameViews frameViews, ViewType viewType) {
 		ViewType effectiveView = resolveOutputView(viewType);
-		if (effectiveView == null) {
+		if (frameViews == null || effectiveView == null) {
 			return null;
 		}
 
 		try {
-			switch (effectiveView) {
-				case DOMEMASTER:
-					return parent.getFisheyeDomemaster() != null
-							? parent.getFisheyeDomemaster().getDomemasterGraphics()
-							: null;
-				case EQUIRECTANGULAR:
-					return parent.getEquirectangularRenderer() != null
-							? parent.getEquirectangularRenderer().getEquirectangular()
-							: null;
-				case SKYBOX:
-					return parent.getCubemapViewRenderer() != null
-							? parent.getCubemapViewRenderer().getCubemap()
-							: null;
-				case STANDARD:
-					return parent.getStandardRenderer() != null
-							? parent.getStandardRenderer().getStandardView()
-							: null;
-				default:
-					return null;
-			}
+			return frameViews.getFrame(effectiveView);
 		} catch (RuntimeException error) {
 			logger.warning("resolveGraphics failed for " + effectiveView + ": " + rootCauseMessage(error));
 			return null;
@@ -318,6 +303,23 @@ public class OutputManager implements PConstants {
 	 * Spout sender. On unsupported platforms, it performs no operation.</p>
 	 */
 	public void initializeLocalTextureOutput() {
+		initializeLocalTextureBackend(latestFrameViews);
+	}
+
+	/**
+	 * Prepares the local texture backend using completed final views for initial dimensions.
+	 *
+	 * @param frameViews final-frame contract supplied by the render pipeline
+	 * @since 2.0.0
+	 */
+	public void initializeLocalTextureOutput(FrameViews frameViews) {
+		if (frameViews != null) {
+			latestFrameViews = frameViews;
+		}
+		initializeLocalTextureOutput();
+	}
+
+	private void initializeLocalTextureBackend(FrameViews frameViews) {
 		if (localTextureInitialized || localTextureUnavailable) {
 			return;
 		}
@@ -327,7 +329,7 @@ public class OutputManager implements PConstants {
 				initializeSyphonBackend();
 				break;
 			case SPOUT:
-				initializeSpoutBackend();
+				initializeSpoutBackend(frameViews);
 				break;
 			case NONE:
 			default:
@@ -379,14 +381,14 @@ public class OutputManager implements PConstants {
 	/**
 	 * Creates the Windows Spout sender without enabling publication.
 	 */
-	private void initializeSpoutBackend() {
+	private void initializeSpoutBackend(FrameViews frameViews) {
 		if (localTextureBackend != LocalTextureBackend.SPOUT || spoutSender != null) {
 			return;
 		}
 
 		Spout sender = null;
 		try {
-			PGraphicsOpenGL graphics = resolveGraphics(spoutView);
+			PGraphicsOpenGL graphics = resolveGraphics(frameViews, spoutView);
 
 			int width;
 			int height;
@@ -656,24 +658,45 @@ public class OutputManager implements PConstants {
 	}
 
 	/**
-	 * Sends one frame to every enabled output.
+	 * Sends one completed frame to every enabled output.
 	 *
 	 * <p>This method must run once per Processing draw cycle, after all relevant graphics targets
 	 * have completed {@code endDraw()}. The local GPU output is published before NDI readback.</p>
+	 *
+	 * @param frameViews completed final views supplied by the render pipeline
+	 * @since 2.0.0
+	 */
+	public void sendOutput(FrameViews frameViews) {
+		if (frameViews == null) {
+			return;
+		}
+
+		latestFrameViews = frameViews;
+		sendOutput();
+	}
+
+	/**
+	 * Republishes the most recently supplied final-frame contract.
+	 *
+	 * <p>Retained for source compatibility. The automatic render pipeline uses
+	 * {@link #sendOutput(FrameViews)} so the current frame boundary is explicit.</p>
 	 */
 	public void sendOutput() {
-		sendLocalTextureFrame();
-		captureNdiFrame();
+		FrameViews frameViews = latestFrameViews;
+		if (frameViews != null) {
+			sendLocalTextureFrame(frameViews);
+			captureNdiFrame(frameViews);
+		}
 	}
 
 	/** Publishes the single platform-local texture output on the Processing/OpenGL thread. */
-	private void sendLocalTextureFrame() {
+	private void sendLocalTextureFrame(FrameViews frameViews) {
 		switch (localTextureBackend) {
 			case SPOUT:
-				sendSpoutFrame();
+				sendSpoutFrame(frameViews);
 				break;
 			case SYPHON:
-				sendSyphonFrame();
+				sendSyphonFrame(frameViews);
 				break;
 			case NONE:
 			default:
@@ -686,13 +709,13 @@ public class OutputManager implements PConstants {
 	 *
 	 * <p>No pixel readback or intermediate graphics target is created.</p>
 	 */
-	private void sendSpoutFrame() {
+	private void sendSpoutFrame(FrameViews frameViews) {
 		if (!spoutEnabled || spoutSender == null || !isWindows) {
 			return;
 		}
 
 		try {
-			PGraphicsOpenGL graphics = resolveGraphics(spoutView);
+			PGraphicsOpenGL graphics = resolveGraphics(frameViews, spoutView);
 			if (graphics == null) {
 				return;
 			}
@@ -720,13 +743,13 @@ public class OutputManager implements PConstants {
 	 *
 	 * <p>No pixel readback or intermediate graphics target is created.</p>
 	 */
-	private void sendSyphonFrame() {
+	private void sendSyphonFrame(FrameViews frameViews) {
 		if (!syphonEnabled || syphonServer == null || !isMacOS) {
 			return;
 		}
 
 		try {
-			PGraphicsOpenGL graphics = resolveGraphics(syphonView);
+			PGraphicsOpenGL graphics = resolveGraphics(frameViews, syphonView);
 			if (graphics != null) {
 				syphonServer.sendImage(graphics);
 				localTextureFailureReason = "";
@@ -756,7 +779,7 @@ public class OutputManager implements PConstants {
 		}
 
 		if (localTextureBackend == LocalTextureBackend.SPOUT && spoutSender != null) {
-			PGraphicsOpenGL graphics = resolveGraphics(spoutView);
+			PGraphicsOpenGL graphics = resolveGraphics(latestFrameViews, spoutView);
 			if (graphics != null && graphics.width > 0 && graphics.height > 0) {
 				try {
 					spoutSender.updateSender(graphics.width, graphics.height);
@@ -772,6 +795,9 @@ public class OutputManager implements PConstants {
 									+ localTextureFailureReason
 					);
 				}
+			} else {
+				spoutWidth = -1;
+				spoutHeight = -1;
 			}
 		}
 	}
@@ -782,12 +808,12 @@ public class OutputManager implements PConstants {
 	 * <p>{@code loadPixels()} must remain on the Processing/OpenGL thread. Conversion and synchronous
 	 * NDI sending are performed by the dedicated worker. The latest-frame policy keeps latency bounded.</p>
 	 */
-	private void captureNdiFrame() {
+	private void captureNdiFrame(FrameViews frameViews) {
 		if (!ndiEnabled || ndiSender == null || !ndiWorkerRunning) {
 			return;
 		}
 
-		PGraphicsOpenGL graphics = resolveGraphics(ndiView);
+		PGraphicsOpenGL graphics = resolveGraphics(frameViews, ndiView);
 		if (graphics == null || graphics.width <= 0 || graphics.height <= 0) {
 			return;
 		}

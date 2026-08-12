@@ -19,9 +19,16 @@ final class RenderPipeline {
 	private static final Logger LOGGER = LogManager.getLogger();
 
 	private final ziviDomeLive runtime;
+	private final FrameViews finalFrameViews;
 
 	RenderPipeline(ziviDomeLive runtime) {
 		this.runtime = Objects.requireNonNull(runtime, "runtime cannot be null");
+		this.finalFrameViews = runtime::resolveFinalFrame;
+	}
+
+	/** Returns the stable, allocation-free final-frame boundary owned by this pipeline. */
+	FrameViews finalFrameViews() {
+		return finalFrameViews;
 	}
 
 	/**
@@ -58,7 +65,7 @@ final class RenderPipeline {
 		OutputManager outputManager = runtime.getOutputManager();
 		if (outputManager != null && outputManager.isActive()) {
 			runtime.renderOutputPipeline(output, masterFaces);
-			outputManager.sendOutput();
+			outputManager.sendOutput(finalFrameViews);
 		}
 
 		runtime.renderPreviewPipeline(preview, output, masterFaces);

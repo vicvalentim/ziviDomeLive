@@ -10,7 +10,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RenderPipelineTest {
 
@@ -26,6 +28,18 @@ class RenderPipelineTest {
 		new RenderPipeline(runtime).renderFrame();
 
 		assertEquals(List.of("ready"), runtime.calls);
+	}
+
+	@Test
+	void reusesOneFrameViewsBoundaryAndResolvesTargetsLazily() {
+		RecordingRuntime runtime = new RecordingRuntime(true);
+		RenderPipeline pipeline = new RenderPipeline(runtime);
+
+		FrameViews frameViews = pipeline.finalFrameViews();
+
+		assertSame(frameViews, pipeline.finalFrameViews());
+		frameViews.getFrame(ViewType.STANDARD);
+		assertEquals(List.of("resolve-frame-STANDARD"), runtime.calls);
 	}
 
 	@Test
@@ -51,6 +65,7 @@ class RenderPipelineTest {
 				"floating-preview",
 				"controls"
 		), runtime.calls);
+		assertTrue(runtime.outputManager.receivedFrameViews);
 	}
 
 	private static void setInitialized(ziviDomeLive runtime) throws Exception {
@@ -62,7 +77,7 @@ class RenderPipelineTest {
 	private static final class RecordingRuntime extends ziviDomeLive {
 		private final List<String> calls = new ArrayList<>();
 		private final boolean ready;
-		private final OutputManager outputManager;
+		private final RecordingOutputManager outputManager;
 
 		private RecordingRuntime(boolean ready) {
 			super(new PApplet());
@@ -139,6 +154,12 @@ class RenderPipelineTest {
 		}
 
 		@Override
+		PGraphicsOpenGL resolveFinalFrame(ViewType view) {
+			calls.add("resolve-frame-" + view);
+			return null;
+		}
+
+		@Override
 		public boolean isShowPreview() {
 			return true;
 		}
@@ -161,6 +182,7 @@ class RenderPipelineTest {
 
 	private static final class RecordingOutputManager extends OutputManager {
 		private final List<String> calls;
+		private boolean receivedFrameViews;
 
 		private RecordingOutputManager(ziviDomeLive parent, List<String> calls) {
 			super(parent);
@@ -173,7 +195,8 @@ class RenderPipelineTest {
 		}
 
 		@Override
-		public void sendOutput() {
+		public void sendOutput(FrameViews frameViews) {
+			receivedFrameViews = frameViews != null;
 			calls.add("send-output");
 		}
 	}

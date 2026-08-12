@@ -7,6 +7,7 @@
 | `ziviDomeLive` | Processing integration, lifecycle, rendering, calibration, and service access |
 | `RenderMode` | Global rendering behavior |
 | `ViewType` | Preview and independent output route selection in `FULL` mode |
+| `FrameViews` | Completed final targets exposed by logical view without renderer coupling |
 | `Scene` | User drawing and event contract |
 | `SceneManager` | Scene registration, active ownership, switching, and disposal |
 | `OutputManager` | NDI, Syphon, and Spout routing and lifecycle |
