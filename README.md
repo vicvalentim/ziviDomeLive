@@ -2,9 +2,9 @@
 
 # ziviDomeLive 2.0.0
 
-ziviDomeLive is a Processing 4 library for real-time fulldome, monoscopic VR, and immersive installation graphics. It provides scene lifecycle management, independent Standard and spherical rendering, fisheye domemaster calibration, equirectangular and cubemap views, and optional NDI, Syphon, or Spout output routing.
+ziviDomeLive is a Processing 4 library for fulldome, monoscopic VR, and immersive installation sketches. It provides scene lifecycle management, independent Standard and spherical rendering, native cubemap capture, domemaster calibration, equirectangular and skybox views, and optional NDI, Syphon, or Spout output routing.
 
-Version 2.0.0 promotes the spherical renderer to a native OpenGL cubemap pipeline. Scenes keep the familiar `sceneRender(PGraphicsOpenGL)` contract, while spherical capture writes directly into a `GL_TEXTURE_CUBE_MAP` and every spherical projection samples it through `samplerCube` shaders. See the [2.0.0 release notes](https://vicvalentim.github.io/ziviDomeLive/release-notes/2.0.0/) for the migration summary and validation notes.
+The public manual is available at [vicvalentim.github.io/ziviDomeLive](https://vicvalentim.github.io/ziviDomeLive/). Version 2.0.0 promotes the spherical renderer to a native OpenGL cubemap pipeline. Scenes keep the Processing-facing `sceneRender(PGraphicsOpenGL)` contract, while spherical capture writes directly into a `GL_TEXTURE_CUBE_MAP` and every spherical projection samples it through `samplerCube` shaders. See the [2.0.0 release notes](https://vicvalentim.github.io/ziviDomeLive/release-notes/2.0.0/) for migration and validation notes.
 
 ## Requirements
 
@@ -67,14 +67,14 @@ Output resolution and publication toggles remain available in every mode. Pitch,
 
 ## Installation
 
-Install the published package through Processing's Contribution Manager when available, or install a release artifact manually:
+Install the published package through Processing's Contribution Manager when available. For manual installation, use the packaged release artifact rather than the repository source archive:
 
 1. Download `ziviDomeLive.zip` or `ziviDomeLive.pdex` from the matching release.
 2. Extract the `ziviDomeLive` folder into the Processing sketchbook `libraries` directory.
 3. Install ControlP5 and the platform-local sharing library required by the sketch.
 4. Restart Processing and open an example from **File > Examples > Contributed Libraries > ziviDomeLive**.
 
-Cloning the source repository is intended for development. Use `./gradlew buildReleaseArtifacts` to produce the installable package layout.
+Cloning the source repository is intended for development. Use `./gradlew buildReleaseArtifacts` to produce the installable package layout, including `library.properties`, examples, generated reference documentation, and release metadata.
 
 ## Quickstart
 
@@ -224,6 +224,8 @@ mkdocs build --strict
 ```
 
 Release output is written to `release/ziviDomeLive.zip`, `release/ziviDomeLive.pdex`, and `release/ziviDomeLive.txt`. The package includes project and bundled-dependency notices, while test sources and local compile-only helper JARs are excluded from both the Processing package and sketchbook deployment. Automated qualification results are written under `build/reports/qualification/` and `build/test-results/qualification/`. GPU and native-output checks remain manual and must use real hardware; no golden images are fabricated by the automated suite.
+
+Before submitting a release to the Processing Contribution Manager, review the [Processing Publication checklist](https://vicvalentim.github.io/ziviDomeLive/qualification/processing-publication/) and confirm that the ZIP, PDEX, TXT metadata file, examples, `reference/index.html`, source repository, and license notices are all present.
 
 ## Known Issues
 
