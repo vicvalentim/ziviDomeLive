@@ -1,6 +1,7 @@
 package com.victorvalentim.zividomelive.render.modes;
 
 
+import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
 import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.PApplet;
 import processing.core.PGraphics;
@@ -19,6 +20,7 @@ public class FisheyeDomemaster {
     private final int resolution;
     private float sizePercentage;
     private final PApplet parent;
+    private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
 
     /**
      * Constructs a FisheyeDomemaster with the specified resolution, shader files, and parent PApplet.
@@ -40,9 +42,9 @@ public class FisheyeDomemaster {
      */
     private void initializeDomemaster() {
         if (domemaster != null) {
-            domemaster.dispose();
+            glAdapter.dispose(domemaster);
         }
-        domemaster = (PGraphicsOpenGL) parent.createGraphics(resolution, resolution, PApplet.P2D);
+        domemaster = glAdapter.createGraphics(parent, resolution, resolution, PApplet.P2D);
     }
 
     /**
@@ -50,9 +52,9 @@ public class FisheyeDomemaster {
      */
     private void initializeDomemasterSize() {
         if (domemasterSize != null) {
-            domemasterSize.dispose();
+            glAdapter.dispose(domemasterSize);
         }
-        domemasterSize = (PGraphicsOpenGL) parent.createGraphics(resolution, resolution, PApplet.P2D);
+        domemasterSize = glAdapter.createGraphics(parent, resolution, resolution, PApplet.P2D);
     }
 
     /**
@@ -143,11 +145,11 @@ public class FisheyeDomemaster {
      */
     public void dispose() {
         if (domemaster != null) {
-            domemaster.dispose();
+            glAdapter.dispose(domemaster);
             domemaster = null;
         }
         if (domemasterSize != null) {
-            domemasterSize.dispose();
+            glAdapter.dispose(domemasterSize);
             domemasterSize = null;
         }
     }

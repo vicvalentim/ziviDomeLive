@@ -1,5 +1,6 @@
 package com.victorvalentim.zividomelive.render.modes;
 
+import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
 import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.*;
 import processing.opengl.PGraphicsOpenGL;
@@ -15,6 +16,7 @@ public class CubemapViewRenderer {
     private final int[] faceRotations = {2, 2, 2, 2, 2, 2};
     private final boolean[] faceInversions = {true, true, true, true, true, true};
     private final PApplet parent;
+    private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
 
     /**
      * Constructs a CubemapViewRenderer with the specified parent PApplet and resolution.
@@ -32,9 +34,9 @@ public class CubemapViewRenderer {
      */
     private void initializeCubemap() {
         if (cubemap != null) {
-            cubemap.dispose();
+            glAdapter.dispose(cubemap);
         }
-        cubemap = (PGraphicsOpenGL) parent.createGraphics(resolution * 2, resolution * 3 / 2, PApplet.P2D);
+        cubemap = glAdapter.createGraphics(parent, resolution * 2, resolution * 3 / 2, PApplet.P2D);
     }
 
     /**
@@ -121,7 +123,7 @@ public class CubemapViewRenderer {
      */
     public void dispose() {
         if (cubemap != null) {
-            cubemap.dispose();
+            glAdapter.dispose(cubemap);
             cubemap = null;
         }
     }

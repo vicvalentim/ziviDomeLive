@@ -106,6 +106,14 @@ methods rather than constructing a separate orientation object.
 `+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`. `CameraManager` remains available for
 1.x compatibility and initializes its orientations from that canonical table.
 
+## ProcessingGlAdapter
+
+`ProcessingGlAdapter` centralizes the Processing/OpenGL operations currently
+needed by the render pipeline and output backends: graphics target allocation,
+texture checks, `loadPixels()` copy, disposal, and PGL capability discovery.
+`ProcessingGlCapabilities` records whether the active context advertises
+texture, FBO, cubemap, PBO, and sync fence support.
+
 ## OrbitCamera
 
 `OrbitCamera` is an optional scene-space transform. It is shared across all
