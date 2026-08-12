@@ -23,7 +23,7 @@ Scene
         -> FisheyeDomemaster -> square domemaster + Size% scaling
 ```
 
-The six faces use the stable `CameraManager` orientation table. One shared `SphericalOrientation` quaternion is applied to every face for preview and output.
+The six faces use the stable `CubemapFace` orientation table (`+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`). `CameraManager` remains as the 1.x compatibility facade for direct renderer integrations. One shared `SphericalOrientation` quaternion is applied to every face for preview and output.
 
 This topology describes the 1.x implementation, not a permanent backend contract. A future major version may change textures or projection internals while preserving qualified visual behavior.
 

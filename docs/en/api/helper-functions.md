@@ -32,7 +32,7 @@ camera.setDistanceLimits(100, 5000);
 camera.setCollapseGuard(20);
 ```
 
-The scene camera transforms scene space and is distinct from spherical pitch/yaw/roll, the six-face `CameraManager`, and the Standard perspective camera.
+The scene camera transforms scene space and is distinct from spherical pitch/yaw/roll, the canonical six-face `CubemapFace` table, and the Standard perspective camera.
 
 Disable camera input when the owning scene is disposed so later scenes do not
 inherit drag or wheel interaction unintentionally.

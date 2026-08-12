@@ -3,6 +3,7 @@ package com.victorvalentim.zividomelive.render;
 import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.render.camera.CameraManager;
 import com.victorvalentim.zividomelive.render.camera.CameraOrientation;
+import com.victorvalentim.zividomelive.render.camera.CubemapFace;
 import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.PApplet;
 import processing.core.PConstants;
@@ -17,7 +18,7 @@ import java.util.logging.Logger;
  * It uses cached frustum parameters for rendering.
  */
 public class CubemapRenderer implements PConstants {
-    private static final int NUM_FACES = 6;
+    private static final int NUM_FACES = CubemapFace.count();
     private static final float DEFAULT_NEAR_PLANE = 0.01f;
     private static final float DEFAULT_FAR_PLANE = 10000000.0f;
     private static final Logger LOGGER = LogManager.getLogger();
@@ -94,6 +95,22 @@ public class CubemapRenderer implements PConstants {
     }
 
     /**
+     * Configures the camera for a canonical cubemap face without requiring a CameraManager.
+     * @param face canonical cubemap face in stable layout order
+     * @param sphericalOrientation unit quaternion describing the spherical orientation
+     */
+    private void configureCameraForFace(
+            PGraphicsOpenGL pg,
+            CubemapFace face,
+            Quaternion sphericalOrientation) {
+        pg.camera(0f, 0f, 0f, face.centerX(), face.centerY(), face.centerZ(),
+                  face.upX(), face.upY(), face.upZ());
+        pg.perspective(cachedFieldOfView, 1, cachedNearPlane, cachedFarPlane);
+
+        pg.applyMatrix(sphericalOrientation.toMatrix());
+    }
+
+    /**
      * Captures the cubemap faces based on the camera orientation.
      *
      * @param pitch rotation around the X axis
@@ -107,6 +124,21 @@ public class CubemapRenderer implements PConstants {
         legacyOrientation.setYaw(yaw);
         legacyOrientation.setRoll(roll);
         captureCubemap(legacyOrientation.getQuaternion(), cameraManager, currentScene);
+    }
+
+    /**
+     * Captures the cubemap faces based on the canonical face orientations.
+     *
+     * @param pitch rotation around the X axis
+     * @param yaw   rotation around the Z axis
+     * @param roll  rotation around the Y axis
+     * @param currentScene the current scene to render
+     */
+    public void captureCubemap(float pitch, float yaw, float roll, Scene currentScene) {
+        legacyOrientation.setPitch(pitch);
+        legacyOrientation.setYaw(yaw);
+        legacyOrientation.setRoll(roll);
+        captureCubemap(legacyOrientation.getQuaternion(), currentScene);
     }
 
     /**
@@ -132,6 +164,35 @@ public class CubemapRenderer implements PConstants {
             configureCameraForFace(
                     cubemapFaces[i],
                     cameraManager.getOrientation(i),
+                    effectiveOrientation);
+            if (currentScene != null) {
+                currentScene.sceneRender(cubemapFaces[i]);
+            }
+            cubemapFaces[i].endDraw();
+        }
+    }
+
+    /**
+     * Captures the cubemap faces using the canonical cubemap-face orientation table.
+     *
+     * @param sphericalOrientation unit quaternion describing the spherical orientation
+     * @param currentScene the current scene to render
+     */
+    public void captureCubemap(
+            Quaternion sphericalOrientation,
+            Scene currentScene) {
+        if (cubemapFaces == null) {
+            initializeCubemapFaces();
+        }
+        Quaternion effectiveOrientation = sphericalOrientation == null
+                ? new Quaternion(0.0f, 0.0f, 0.0f, 1.0f)
+                : sphericalOrientation;
+        for (int i = 0; i < NUM_FACES; i++) {
+            cubemapFaces[i].beginDraw();
+            cubemapFaces[i].background(0, 0);
+            configureCameraForFace(
+                    cubemapFaces[i],
+                    CubemapFace.at(i),
                     effectiveOrientation);
             if (currentScene != null) {
                 currentScene.sceneRender(cubemapFaces[i]);

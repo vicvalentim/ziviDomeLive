@@ -100,6 +100,12 @@ therefore significant. `reset()` restores identity and zero accumulators.
 Applications usually access this behavior through the facade's calibration
 methods rather than constructing a separate orientation object.
 
+## CubemapFace And CameraManager
+
+`CubemapFace` defines the qualified cubemap face order and camera vectors:
+`+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`. `CameraManager` remains available for
+1.x compatibility and initializes its orientations from that canonical table.
+
 ## OrbitCamera
 
 `OrbitCamera` is an optional scene-space transform. It is shared across all
