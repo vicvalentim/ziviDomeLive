@@ -110,7 +110,20 @@ tabela canônica.
 necessárias pelo pipeline de renderização e pelos backends de output: alocação
 de targets gráficos, verificações de textura, cópia via `loadPixels()`, descarte
 e descoberta de capabilities PGL. `ProcessingGlCapabilities` registra se o
-contexto ativo anuncia suporte a textura, FBO, cubemap, PBO e sync fence.
+contexto ativo anuncia suporte a textura, FBO, cubemap, seamless cubemap, PBO e
+sync fence.
+
+## CubemapTarget
+
+`CubemapTarget` controla uma alocação nativa `GL_TEXTURE_CUBE_MAP` com uma face
+RGBA8 quadrada para cada `CubemapFace` canônica. Ele aplica defaults
+conservadores: filtros min/mag lineares, clamp-to-edge nos três eixos, sem
+mipmaps, e seamless cubemap apenas quando o contexto ativo anuncia suporte.
+
+A classe ainda não está conectada ao pipeline de renderização. A captura em
+runtime continua usando `PGraphicsOpenGL[]`; PRs posteriores copiarão as faces
+renderizadas para `CubemapTarget` e atualizarão os shaders de projeção para
+amostrá-lo diretamente.
 
 ## OrbitCamera
 

@@ -17,6 +17,7 @@ public final class ProcessingGlCapabilities {
 	private final boolean textureSupported;
 	private final boolean framebufferSupported;
 	private final boolean cubemapSupported;
+	private final boolean seamlessCubemapSupported;
 	private final boolean pixelBufferObjectSupported;
 	private final boolean syncFenceSupported;
 
@@ -28,6 +29,7 @@ public final class ProcessingGlCapabilities {
 			boolean textureSupported,
 			boolean framebufferSupported,
 			boolean cubemapSupported,
+			boolean seamlessCubemapSupported,
 			boolean pixelBufferObjectSupported,
 			boolean syncFenceSupported) {
 		this.openGlRenderer = openGlRenderer;
@@ -37,6 +39,7 @@ public final class ProcessingGlCapabilities {
 		this.textureSupported = textureSupported;
 		this.framebufferSupported = framebufferSupported;
 		this.cubemapSupported = cubemapSupported;
+		this.seamlessCubemapSupported = seamlessCubemapSupported;
 		this.pixelBufferObjectSupported = pixelBufferObjectSupported;
 		this.syncFenceSupported = syncFenceSupported;
 	}
@@ -47,7 +50,7 @@ public final class ProcessingGlCapabilities {
 	 * @return unavailable capabilities snapshot
 	 */
 	public static ProcessingGlCapabilities unavailable() {
-		return new ProcessingGlCapabilities(false, "", "", "", false, false, false, false, false);
+		return new ProcessingGlCapabilities(false, "", "", "", false, false, false, false, false, false);
 	}
 
 	/**
@@ -65,6 +68,7 @@ public final class ProcessingGlCapabilities {
 			String renderer,
 			String extensions) {
 		Version parsed = parseVersion(version);
+		boolean desktopGl = !normalize(version).toLowerCase(Locale.ROOT).contains("opengl es");
 		String normalizedExtensions = normalize(extensions).toLowerCase(Locale.ROOT);
 
 		boolean framebuffer = parsed.atLeast(3, 0)
@@ -73,6 +77,8 @@ public final class ProcessingGlCapabilities {
 		boolean cubemap = parsed.atLeast(1, 3)
 				|| hasExtension(normalizedExtensions, "gl_arb_texture_cube_map")
 				|| hasExtension(normalizedExtensions, "gl_ext_texture_cube_map");
+		boolean seamlessCubemap = (desktopGl && parsed.atLeast(3, 2))
+				|| hasExtension(normalizedExtensions, "gl_arb_seamless_cube_map");
 		boolean pbo = parsed.atLeast(2, 1)
 				|| hasExtension(normalizedExtensions, "gl_arb_pixel_buffer_object")
 				|| hasExtension(normalizedExtensions, "gl_ext_pixel_buffer_object");
@@ -88,6 +94,7 @@ public final class ProcessingGlCapabilities {
 				true,
 				framebuffer,
 				cubemap,
+				seamlessCubemap,
 				pbo,
 				fence);
 	}
@@ -153,6 +160,15 @@ public final class ProcessingGlCapabilities {
 	 */
 	public boolean supportsCubemap() {
 		return cubemapSupported;
+	}
+
+	/**
+	 * Reports whether seamless cubemap sampling is advertised.
+	 *
+	 * @return {@code true} when seamless cubemap support is core or extension-backed
+	 */
+	public boolean supportsSeamlessCubemap() {
+		return seamlessCubemapSupported;
 	}
 
 	/**

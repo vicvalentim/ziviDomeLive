@@ -112,7 +112,18 @@ methods rather than constructing a separate orientation object.
 needed by the render pipeline and output backends: graphics target allocation,
 texture checks, `loadPixels()` copy, disposal, and PGL capability discovery.
 `ProcessingGlCapabilities` records whether the active context advertises
-texture, FBO, cubemap, PBO, and sync fence support.
+texture, FBO, cubemap, seamless cubemap, PBO, and sync fence support.
+
+## CubemapTarget
+
+`CubemapTarget` owns a native `GL_TEXTURE_CUBE_MAP` allocation with one square
+RGBA8 face for each canonical `CubemapFace`. It applies conservative defaults:
+linear min/mag filtering, clamp-to-edge wrapping on all three axes, no mipmaps,
+and seamless cubemap sampling only when the active context advertises support.
+
+The class is intentionally not wired into the render pipeline yet. Current
+runtime capture still uses `PGraphicsOpenGL[]`; later migration PRs copy rendered
+faces into `CubemapTarget` and update projection shaders to sample it directly.
 
 ## OrbitCamera
 

@@ -68,10 +68,14 @@ This avoids duplicate scene capture while keeping the Processing window and exte
 `ProcessingGlAdapter` is the narrow boundary for current Processing/OpenGL calls:
 target allocation, texture presence checks, `loadPixels()` readback for NDI,
 target disposal, and capability discovery from the active PGL context. The
-reported capabilities include texture, FBO, cubemap, PBO, and sync fence support
-so later native cubemap and readback PRs can gate their GL paths explicitly.
-This PR does not introduce native cubemap storage, samplerCube projection, PBO
-readback, or fence synchronization.
+reported capabilities include texture, FBO, cubemap, seamless cubemap, PBO, and
+sync fence support so later native cubemap and readback PRs can gate their GL
+paths explicitly.
+
+`CubemapTarget` introduces native `GL_TEXTURE_CUBE_MAP` storage as an isolated
+resource with conservative texture policy. It is not yet the master spherical
+source for frames; capture still produces `PGraphicsOpenGL[]` until the native
+capture PR copies rendered faces into this target.
 
 ## Resolution Ownership
 
@@ -107,6 +111,7 @@ Stable for 1.5:
 Internal implementation details:
 
 - `PGraphicsOpenGL[]` as cubemap storage
+- `CubemapTarget` native storage exists but is not yet wired into frame capture
 - domemaster currently consuming equirectangular output
 - exact renderer allocation/copy strategy
 

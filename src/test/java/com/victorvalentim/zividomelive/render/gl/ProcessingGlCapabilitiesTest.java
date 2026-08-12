@@ -15,6 +15,7 @@ class ProcessingGlCapabilitiesTest {
 		assertFalse(capabilities.supportsTexture());
 		assertFalse(capabilities.supportsFramebuffer());
 		assertFalse(capabilities.supportsCubemap());
+		assertFalse(capabilities.supportsSeamlessCubemap());
 		assertFalse(capabilities.supportsPixelBufferObject());
 		assertFalse(capabilities.supportsSyncFence());
 	}
@@ -31,6 +32,7 @@ class ProcessingGlCapabilitiesTest {
 		assertTrue(capabilities.supportsTexture());
 		assertTrue(capabilities.supportsFramebuffer());
 		assertTrue(capabilities.supportsCubemap());
+		assertTrue(capabilities.supportsSeamlessCubemap());
 		assertTrue(capabilities.supportsPixelBufferObject());
 		assertTrue(capabilities.supportsSyncFence());
 	}
@@ -42,10 +44,11 @@ class ProcessingGlCapabilitiesTest {
 				"Vendor",
 				"Renderer",
 				"GL_ARB_framebuffer_object GL_ARB_texture_cube_map "
-						+ "GL_ARB_pixel_buffer_object GL_ARB_sync");
+						+ "GL_ARB_seamless_cube_map GL_ARB_pixel_buffer_object GL_ARB_sync");
 
 		assertTrue(capabilities.supportsFramebuffer());
 		assertTrue(capabilities.supportsCubemap());
+		assertTrue(capabilities.supportsSeamlessCubemap());
 		assertTrue(capabilities.supportsPixelBufferObject());
 		assertTrue(capabilities.supportsSyncFence());
 	}
@@ -61,7 +64,19 @@ class ProcessingGlCapabilitiesTest {
 		assertTrue(capabilities.supportsTexture());
 		assertFalse(capabilities.supportsFramebuffer());
 		assertFalse(capabilities.supportsCubemap());
+		assertFalse(capabilities.supportsSeamlessCubemap());
 		assertFalse(capabilities.supportsPixelBufferObject());
 		assertFalse(capabilities.supportsSyncFence());
+	}
+
+	@Test
+	void openglEsVersionDoesNotImplyDesktopSeamlessCubemap() {
+		ProcessingGlCapabilities capabilities = ProcessingGlCapabilities.fromOpenGlStrings(
+				"OpenGL ES 3.2",
+				"Vendor",
+				"Renderer",
+				"");
+
+		assertFalse(capabilities.supportsSeamlessCubemap());
 	}
 }
