@@ -6,6 +6,7 @@ import com.victorvalentim.zividomelive.render.modes.StandardRenderer;
 import com.victorvalentim.zividomelive.support.ThreadManager;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
+import processing.core.PImage;
 import processing.opengl.PShader;
 import processing.opengl.PGraphicsOpenGL;
 
@@ -82,6 +83,30 @@ class ZividomeliveLifecycleTest {
 
 		lib.setTargetFrameRate(120);
 		assertEquals(120, lib.getTargetFrameRate());
+	}
+
+	@Test
+	void environmentBackgroundStateIsConfigurableBeforeRendererInitialization() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		PImage image = new PImage(4, 2);
+
+		assertFalse(lib.hasEnvironmentBackground());
+		assertTrue(lib.isEnvironmentBackgroundVisible());
+		assertEquals(1.0f, lib.getEnvironmentBackgroundIntensity(), 1e-6f);
+		assertEquals(0.0f, lib.getEnvironmentBackgroundYawOffset(), 1e-6f);
+
+		lib.setEquirectangularBackground(image);
+		lib.setEnvironmentBackgroundVisible(false);
+		lib.setEnvironmentBackgroundIntensity(-2.0f);
+		lib.setEnvironmentBackgroundYawOffset(0.75f);
+
+		assertTrue(lib.hasEnvironmentBackground());
+		assertFalse(lib.isEnvironmentBackgroundVisible());
+		assertEquals(0.0f, lib.getEnvironmentBackgroundIntensity(), 1e-6f);
+		assertEquals(0.75f, lib.getEnvironmentBackgroundYawOffset(), 1e-6f);
+
+		lib.clearEnvironmentBackground();
+		assertFalse(lib.hasEnvironmentBackground());
 	}
 
 	@Test

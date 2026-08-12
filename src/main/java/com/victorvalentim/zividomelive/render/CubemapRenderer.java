@@ -8,6 +8,7 @@ import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
 import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.PApplet;
 import processing.core.PConstants;
+import processing.core.PImage;
 import processing.opengl.PGraphicsOpenGL;
 
 import java.util.logging.Logger;
@@ -27,6 +28,7 @@ public class CubemapRenderer implements PConstants {
 
     private PGraphicsOpenGL nativeCaptureGraphics;
     private CubemapTarget nativeCubemapTarget;
+    private final EnvironmentBackgroundRenderer environmentBackgroundRenderer;
     private int resolution;
     private final PApplet parent;
     private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
@@ -49,6 +51,7 @@ public class CubemapRenderer implements PConstants {
     public CubemapRenderer(int initialResolution, PApplet parent) {
         this.parent = parent;
         this.resolution = initialResolution;
+        this.environmentBackgroundRenderer = new EnvironmentBackgroundRenderer(parent);
         initializeNativeCubemapTarget();
         cachedNearPlane = DEFAULT_NEAR_PLANE;
         cachedFarPlane = DEFAULT_FAR_PLANE;
@@ -187,6 +190,11 @@ public class CubemapRenderer implements PConstants {
                     nativeCubemapTarget.renderFace(face, captureGraphics, () -> {
                         captureGraphics.resetMatrix();
                         captureGraphics.background(0, 0);
+                        environmentBackgroundRenderer.renderCubemapFace(
+                                captureGraphics,
+                                face,
+                                effectiveOrientation);
+                        captureGraphics.resetMatrix();
                         configureNativeCameraForFace(
                                 captureGraphics,
                                 face,
@@ -229,6 +237,83 @@ public class CubemapRenderer implements PConstants {
      */
     public boolean hasNativeCubemapTarget() {
         return nativeCubemapTarget != null && nativeCubemapTarget.isAllocated();
+    }
+
+    /**
+     * Sets the LDR equirectangular environment image rendered behind spherical capture.
+     *
+     * @param image Processing image, or {@code null} to clear the environment
+     */
+    public void setEquirectangularBackground(PImage image) {
+        environmentBackgroundRenderer.setEquirectangularImage(image);
+    }
+
+    /** Clears the configured environment background. */
+    public void clearEnvironmentBackground() {
+        environmentBackgroundRenderer.clear();
+    }
+
+    /**
+     * Reports whether this renderer has an environment image configured.
+     *
+     * @return {@code true} when an equirectangular background image is available
+     */
+    public boolean hasEnvironmentBackground() {
+        return environmentBackgroundRenderer.hasEquirectangularImage();
+    }
+
+    /**
+     * Shows or hides the configured environment background.
+     *
+     * @param visible {@code true} to draw the background
+     */
+    public void setEnvironmentBackgroundVisible(boolean visible) {
+        environmentBackgroundRenderer.setVisible(visible);
+    }
+
+    /**
+     * Reports whether the environment background is visible.
+     *
+     * @return {@code true} when visible
+     */
+    public boolean isEnvironmentBackgroundVisible() {
+        return environmentBackgroundRenderer.isVisible();
+    }
+
+    /**
+     * Sets the background colour multiplier used by the equirectangular environment pass.
+     *
+     * @param intensity non-negative multiplier
+     */
+    public void setEnvironmentIntensity(float intensity) {
+        environmentBackgroundRenderer.setIntensity(intensity);
+    }
+
+    /**
+     * Returns the current environment colour multiplier.
+     *
+     * @return non-negative multiplier
+     */
+    public float getEnvironmentIntensity() {
+        return environmentBackgroundRenderer.getIntensity();
+    }
+
+    /**
+     * Rotates the equirectangular environment around the vertical axis.
+     *
+     * @param yawOffset radians added to the source longitude lookup
+     */
+    public void setEnvironmentYawOffset(float yawOffset) {
+        environmentBackgroundRenderer.setYawOffset(yawOffset);
+    }
+
+    /**
+     * Returns the current environment yaw offset.
+     *
+     * @return yaw offset in radians
+     */
+    public float getEnvironmentYawOffset() {
+        return environmentBackgroundRenderer.getYawOffset();
     }
 
     /**

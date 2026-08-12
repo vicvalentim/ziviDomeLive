@@ -29,6 +29,20 @@ class SphericalShaderResourcesTest {
 	}
 
 	@Test
+	void environmentBackgroundShadersArePackagedForLdrEquirectangularMaps() throws IOException {
+		Path shaderRoot = projectRoot().resolve("shaders/environment");
+
+		assertAll("environment background shader resources",
+				() -> assertShader(shaderRoot, "equirectangular_background.vert", "uniform mat4 transform"),
+				() -> assertShader(shaderRoot, "equirectangular_background.frag", "uniform sampler2D environmentMap"),
+				() -> assertShader(shaderRoot, "equirectangular_background.frag", "directionForCanonicalFace"),
+				() -> assertShader(shaderRoot, "equirectangular_background.frag", "equirectangularUv"),
+				() -> assertShader(shaderRoot, "equirectangular_background.frag", "environmentRotation"),
+				() -> assertShader(shaderRoot, "equirectangular_background.frag", "yawOffset"),
+				() -> assertShader(shaderRoot, "equirectangular_background.frag", "intensity"));
+	}
+
+	@Test
 	void sixTextureProcessingShaderResourcesAreRemoved() {
 		Path activeShaderRoot = projectRoot().resolve("shaders");
 

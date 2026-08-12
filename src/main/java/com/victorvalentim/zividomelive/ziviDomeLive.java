@@ -88,6 +88,10 @@ public class ziviDomeLive implements PConstants {
 	// Native scene-space orbit camera service (see OrbitCamera).
 	private final OrbitCamera sceneCamera = new OrbitCamera();
 	private boolean sceneCameraInputEnabled = false;
+	private PImage environmentBackgroundImage;
+	private boolean environmentBackgroundVisible = true;
+	private float environmentBackgroundIntensity = 1.0f;
+	private float environmentBackgroundYawOffset = 0.0f;
 	private OutputManager outputManager;
 	private boolean resumeNdiOutput;
 	private boolean resumeSpoutOutput;
@@ -463,6 +467,7 @@ public class ziviDomeLive implements PConstants {
 			return;
 		}
 		cubemapRenderer = new CubemapRenderer(outputResolution, p);
+		applyEnvironmentBackgroundSettings(cubemapRenderer);
 		LOGGER.info("CubemapRenderer (output) initialized at " + outputResolution + "px.");
 		equirectangularRenderer = new EquirectangularRenderer(
 				outputResolution,
@@ -687,6 +692,7 @@ public class ziviDomeLive implements PConstants {
 		previewResolution = computePreviewResolution();
 
 		previewCubemapRenderer = new CubemapRenderer(previewResolution, p);
+		applyEnvironmentBackgroundSettings(previewCubemapRenderer);
 		previewEquirectangularRenderer = new EquirectangularRenderer(
 				previewResolution,
 				EQUIRECT_SAMPLERCUBE_FRAG,
@@ -1769,6 +1775,110 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
+	 * Sets an LDR equirectangular environment background for spherical render modes.
+	 *
+	 * <p>The image is rendered by the library behind each native cubemap face before the
+	 * active {@link Scene} is drawn. This keeps backgrounds out of scene geometry and makes
+	 * the same environment available to domemaster, equirectangular, and skybox projections.
+	 * Passing {@code null} clears the environment.</p>
+	 *
+	 * @param image equirectangular Processing image, or {@code null} to clear
+	 */
+	public void setEquirectangularBackground(PImage image) {
+		environmentBackgroundImage = image;
+		syncEnvironmentBackgroundSettings();
+	}
+
+	/**
+	 * Loads and sets an LDR equirectangular environment background from the sketch data path.
+	 *
+	 * @param imagePath Processing data path or absolute image path
+	 */
+	public void setEquirectangularBackground(String imagePath) {
+		if (imagePath == null || imagePath.isBlank()) {
+			clearEnvironmentBackground();
+			return;
+		}
+		PImage image = p.loadImage(imagePath);
+		if (image == null) {
+			LOGGER.warning("Could not load equirectangular environment background: " + imagePath);
+			return;
+		}
+		setEquirectangularBackground(image);
+	}
+
+	/** Clears the configured environment background. */
+	public void clearEnvironmentBackground() {
+		setEquirectangularBackground((PImage) null);
+	}
+
+	/**
+	 * Reports whether an environment background image is currently configured.
+	 *
+	 * @return {@code true} when an image is configured
+	 */
+	public boolean hasEnvironmentBackground() {
+		return environmentBackgroundImage != null;
+	}
+
+	/**
+	 * Shows or hides the configured environment background without releasing the image.
+	 *
+	 * @param visible {@code true} to draw the environment background
+	 */
+	public void setEnvironmentBackgroundVisible(boolean visible) {
+		environmentBackgroundVisible = visible;
+		syncEnvironmentBackgroundSettings();
+	}
+
+	/**
+	 * Reports whether the configured environment background is visible.
+	 *
+	 * @return {@code true} when visible
+	 */
+	public boolean isEnvironmentBackgroundVisible() {
+		return environmentBackgroundVisible;
+	}
+
+	/**
+	 * Sets the colour multiplier applied to the LDR environment background.
+	 *
+	 * @param intensity non-negative colour multiplier
+	 */
+	public void setEnvironmentBackgroundIntensity(float intensity) {
+		environmentBackgroundIntensity = Math.max(0.0f, intensity);
+		syncEnvironmentBackgroundSettings();
+	}
+
+	/**
+	 * Returns the current environment background colour multiplier.
+	 *
+	 * @return non-negative colour multiplier
+	 */
+	public float getEnvironmentBackgroundIntensity() {
+		return environmentBackgroundIntensity;
+	}
+
+	/**
+	 * Rotates the equirectangular environment lookup around the vertical axis.
+	 *
+	 * @param yawOffset radians added to the source longitude lookup
+	 */
+	public void setEnvironmentBackgroundYawOffset(float yawOffset) {
+		environmentBackgroundYawOffset = yawOffset;
+		syncEnvironmentBackgroundSettings();
+	}
+
+	/**
+	 * Returns the current equirectangular environment yaw offset.
+	 *
+	 * @return yaw offset in radians
+	 */
+	public float getEnvironmentBackgroundYawOffset() {
+		return environmentBackgroundYawOffset;
+	}
+
+	/**
 	 * Enables or disables built-in mouse handling for the scene camera.
 	 * When enabled, the library forwards mouse drag/wheel events to
 	 * {@link #getSceneCamera()} automatically.
@@ -1796,6 +1906,21 @@ public class ziviDomeLive implements PConstants {
 	public PApplet getPApplet() {
 
 		return p;
+	}
+
+	private void syncEnvironmentBackgroundSettings() {
+		applyEnvironmentBackgroundSettings(cubemapRenderer);
+		applyEnvironmentBackgroundSettings(previewCubemapRenderer);
+	}
+
+	private void applyEnvironmentBackgroundSettings(CubemapRenderer renderer) {
+		if (renderer == null) {
+			return;
+		}
+		renderer.setEquirectangularBackground(environmentBackgroundImage);
+		renderer.setEnvironmentBackgroundVisible(environmentBackgroundVisible);
+		renderer.setEnvironmentIntensity(environmentBackgroundIntensity);
+		renderer.setEnvironmentYawOffset(environmentBackgroundYawOffset);
 	}
 
 	/**

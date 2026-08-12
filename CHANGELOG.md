@@ -37,6 +37,8 @@ shaders.
 - GLSL 4.10 `samplerCube` shader set under `data/shaders/samplercube/` for
   cubemap layout, equirectangular projection, fisheye/domemaster projection,
   and skybox inspection.
+- LDR equirectangular environment background service that paints a `PImage`
+  behind each native cubemap face before scene rendering.
 - Publication-focused documentation, including Processing Contribution Manager
   metadata guidance, release packaging checks, generated Javadocs links, and
   bilingual MkDocs navigation.
@@ -46,6 +48,8 @@ shaders.
   cubemap face capture through a reusable framebuffer.
 - Kept `Scene.sceneRender(PGraphicsOpenGL)` as the Processing-facing scene
   contract. The library continues to own `beginDraw()` and `endDraw()`.
+- Moved sky/star-field background ownership for spherical modes into the
+  render pipeline through `setEquirectangularBackground(PImage)`.
 - Kept `STANDARD` rendering independent from spherical cubemap capture.
 - Rendered equirectangular output directly from the native cubemap with a
   `samplerCube` shader.
@@ -110,7 +114,7 @@ shaders.
 ### Not Included in 2.0.0
 - Spherical Mirror is not included and no `SPHERICAL_MIRROR` enum value is
   exposed yet.
-- HDR render targets, IBL/PBR engine features, ambient occlusion, direct NDI
+- HDR environment loading, HDR render targets, IBL/PBR engine features, ambient occlusion, direct NDI
   RGBA readback, PBO/fence-based NDI transfer, and performance telemetry remain
   future work.
 - NDI still uses the safe Processing-thread `loadPixels()` readback boundary;

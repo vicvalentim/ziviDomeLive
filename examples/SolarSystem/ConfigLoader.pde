@@ -320,6 +320,15 @@ class ConfigLoader {
     }
   }
 
+  public PImage getSkyTexture() {
+    lock.readLock().lock();
+    try {
+      return skyTexture;
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+
   public void sendTexturesToShaderManager(ShaderManager shaderManager) {
     lock.readLock().lock();
     try {

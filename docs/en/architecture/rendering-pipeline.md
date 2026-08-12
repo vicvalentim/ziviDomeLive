@@ -16,7 +16,8 @@ Standard renders the scene directly through its perspective camera. It does not 
 ## Spherical Domain
 
 ```text
-Scene
+Optional environment background
+Scene.sceneRender(PGraphicsOpenGL)
   -> native GL_TEXTURE_CUBE_MAP capture
      -> CubemapViewRenderer -> skybox layout
      -> EquirectangularRenderer -> 2:1 map
@@ -24,6 +25,8 @@ Scene
 ```
 
 The native cubemap capture uses the stable `CubemapFace` orientation table (`+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`). The scene is emitted through one offscreen `PGraphicsOpenGL` command target and rendered into each face of a native cubemap framebuffer. `CameraManager` remains as the compatibility facade for direct renderer integrations, but the runtime cubemap capture uses the canonical `CubemapFace` table as its authoritative source. One shared `SphericalOrientation` quaternion is applied to every face for preview and output.
+
+When an LDR equirectangular environment background is configured, `EnvironmentBackgroundRenderer` fills each cubemap face first with depth testing disabled, then delegates to `Scene.sceneRender(PGraphicsOpenGL)`. This keeps sky and star-field maps out of scene geometry while preserving the same cubemap source for domemaster, equirectangular, and skybox projections.
 
 All spherical projections sample the native cubemap through `samplerCube`; domemaster/fisheye no longer depends on an intermediate equirectangular texture.
 
@@ -83,6 +86,10 @@ SamplerCube projection shader resources for cubemap, equirectangular,
 domemaster/fisheye, and skybox modes are staged under
 `data/shaders/samplercube/` in packaged artifacts. All spherical runtime
 renderers sample the native cubemap directly.
+
+LDR environment background shaders are staged under `data/shaders/environment/`.
+They are deliberately separate from future HDR, IBL, and ambient-occlusion
+passes.
 
 ## Resolution Ownership
 
