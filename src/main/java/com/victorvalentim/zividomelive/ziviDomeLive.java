@@ -94,7 +94,7 @@ public class ziviDomeLive implements PConstants {
 	private boolean resumeSyphonOutput;
 	private SplashScreen splash;
 	private SceneManager sceneManager;
-	private Scene fallbackScene;
+	private Scene bootstrapScene;
 
 	/**
 	 * Aspect policy used to compute Standard output dimensions.
@@ -195,11 +195,11 @@ public class ziviDomeLive implements PConstants {
 			LOGGER.warning("Cannot set a null scene.");
 			return;
 		}
-		if (fallbackScene != null
-				&& scene != fallbackScene
-				&& sceneManager.containsScene(fallbackScene)) {
+		if (bootstrapScene != null
+				&& scene != bootstrapScene
+				&& sceneManager.containsScene(bootstrapScene)) {
 			sceneManager.clearScenes();
-			fallbackScene = null;
+			bootstrapScene = null;
 		}
 		sceneManager.activateScene(scene);
 		syncCurrentSceneToRenderers();
@@ -263,8 +263,8 @@ public class ziviDomeLive implements PConstants {
 		// Load DefaultScene through SceneManager when no user scene was selected before setup.
 		if (getCurrentScene() == null) {
 			try {
-				fallbackScene = new com.victorvalentim.zividomelive.scene.DefaultScene(p);
-				sceneManager.registerScene(fallbackScene);
+				bootstrapScene = new com.victorvalentim.zividomelive.scene.DefaultScene(p);
+				sceneManager.registerScene(bootstrapScene);
 				LOGGER.info("DefaultScene loaded successfully as the initial scene.");
 			} catch (Exception e) {
 				LOGGER.severe("Error initializing DefaultScene: " + e.getMessage());
@@ -870,7 +870,8 @@ public class ziviDomeLive implements PConstants {
 	 * output passes that need it.</p>
 	 *
 	 * <p>Example: NDI requests equirectangular, Syphon requests fisheye →
-	 * one cubemap capture → one equirectangular pass → one fisheye pass.</p>
+	 * one cubemap capture → one equirectangular samplerCube pass and one fisheye
+	 * samplerCube pass.</p>
 	 *
 	 * <p>Returns immediately when {@code outputManager} is {@code null} or inactive.
 	 * Must be called from the Processing draw thread.</p>
@@ -1119,7 +1120,7 @@ public class ziviDomeLive implements PConstants {
 	 *
 	 * <p>Uses exclusively the preview fisheye FBO ({@code previewFisheyeDomemaster}).
 	 * If the FBO is not yet available the method returns safely without drawing anything.
-	 * The output fisheye FBO is never used as a fallback.</p>
+	 * The output fisheye FBO is never substituted for the preview target.</p>
 	 *
 	 * <p>{@code renderPreviewPipeline()} guarantees the fisheye FBO is populated before
 	 * this method is called whenever {@code showPreview} is {@code true}.</p>
@@ -1867,7 +1868,7 @@ public class ziviDomeLive implements PConstants {
 			}
 		}
 		this.sceneManager = sceneManager;
-		fallbackScene = null;
+		bootstrapScene = null;
 		syncCurrentSceneToRenderers();
 	}
 
@@ -2013,7 +2014,7 @@ public class ziviDomeLive implements PConstants {
 				LOGGER.warning("SceneManager disposal failed: " + error.getMessage());
 			}
 		}
-		fallbackScene = null;
+		bootstrapScene = null;
 		try {
 			releaseGraphicsResources();
 		} catch (RuntimeException | LinkageError error) {

@@ -29,10 +29,10 @@ class SphericalShaderResourcesTest {
 	}
 
 	@Test
-	void legacyProcessingShaderFallbackResourcesAreRemoved() {
+	void sixTextureProcessingShaderResourcesAreRemoved() {
 		Path activeShaderRoot = projectRoot().resolve("shaders");
 
-		assertAll("legacy Processing shader fallback removed",
+		assertAll("six-texture Processing shader resources removed",
 				() -> assertFalse(Files.exists(activeShaderRoot.resolve("equirectangular.frag"))),
 				() -> assertFalse(Files.exists(activeShaderRoot.resolve("equirectangular.vert"))),
 				() -> assertFalse(Files.exists(activeShaderRoot.resolve("domemaster.frag"))),

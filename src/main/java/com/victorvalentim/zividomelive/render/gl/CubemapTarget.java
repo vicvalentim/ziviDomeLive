@@ -16,10 +16,12 @@ import java.util.logging.Logger;
  *
  * <p>This target owns the {@code GL_TEXTURE_CUBE_MAP} allocation, a reusable direct-render
  * framebuffer, and a depth renderbuffer. Scene capture renders directly into cubemap face
- * attachments; no legacy six-face Processing texture bridge is present.</p>
+ * attachments without a six-texture Processing bridge.</p>
  */
 public final class CubemapTarget implements AutoCloseable {
 	private static final Logger LOGGER = LogManager.getLogger();
+	private static final int MAX_GL_ERROR_LOGS = 4;
+	private static final int MAX_GL_ERRORS_PER_CHECK = 2;
 	private static final int GL_TEXTURE_CUBE_MAP_SEAMLESS = 0x884F;
 	private static final int GL_ACTIVE_TEXTURE = 0x84E0;
 	private static final int GL_TEXTURE_BINDING_CUBE_MAP = 0x8514;
@@ -33,7 +35,7 @@ public final class CubemapTarget implements AutoCloseable {
 	private int depthRenderbufferId;
 	private int textureId;
 	private boolean mipmapsValid;
-	private int debugGlErrorsRemaining = 12;
+	private int glErrorLogsRemaining = MAX_GL_ERROR_LOGS;
 
 	private CubemapTarget(
 			PApplet parent,
@@ -52,7 +54,7 @@ public final class CubemapTarget implements AutoCloseable {
 	}
 
 	/**
-	 * Allocates a native OpenGL cubemap texture with conservative 2.0 defaults,
+	 * Allocates a native OpenGL cubemap texture with conservative defaults,
 	 * a reusable direct-render framebuffer, and a depth renderbuffer.
 	 *
 	 * @param parent Processing parent with an active OpenGL renderer
@@ -157,9 +159,6 @@ public final class CubemapTarget implements AutoCloseable {
 			return null;
 		});
 		mipmapsValid = true;
-		if (LogManager.isDebugEnabled()) {
-			LOGGER.finer("Native CubemapTarget mipmaps regenerated: textureId=" + textureId);
-		}
 	}
 
 	/**
@@ -385,13 +384,6 @@ public final class CubemapTarget implements AutoCloseable {
 		pgl.getIntegerv(PGL.VIEWPORT, savedViewport);
 
 		try {
-			if (LogManager.isDebugEnabled()) {
-				LOGGER.finer("Native cubemap FBO attach: textureId=" + textureId
-						+ ", renderFbo=" + renderFramebufferId
-						+ ", depthRbo=" + depthRenderbufferId
-						+ ", faceTarget=0x" + Integer.toHexString(cubemapFaceTarget)
-						+ ", resolution=" + resolution);
-			}
 			pgl.bindFramebuffer(PGL.FRAMEBUFFER, renderFramebufferId);
 			pgl.framebufferTexture2D(
 					PGL.FRAMEBUFFER,
@@ -436,22 +428,21 @@ public final class CubemapTarget implements AutoCloseable {
 	}
 
 	private void logGlErrorIfAny(PGL pgl, String label) {
-		if (!LogManager.isDebugEnabled() || debugGlErrorsRemaining <= 0) {
+		if (!LogManager.isDebugEnabled() || glErrorLogsRemaining <= 0) {
 			return;
 		}
-		for (int i = 0; i < 8; i++) {
+		for (int i = 0; i < MAX_GL_ERRORS_PER_CHECK; i++) {
 			int error = pgl.getError();
 			if (error == 0) {
 				return;
 			}
-			debugGlErrorsRemaining--;
+			glErrorLogsRemaining--;
 			LOGGER.warning(label + ": OpenGL error 0x" + Integer.toHexString(error));
-			if (debugGlErrorsRemaining <= 0) {
+			if (glErrorLogsRemaining <= 0) {
 				LOGGER.warning("Native cubemap GL error logging limit reached for textureId=" + textureId);
 				return;
 			}
 		}
-		LOGGER.warning(label + ": OpenGL error drain stopped after 8 errors.");
 	}
 
 	private static void ensureFramebufferComplete(PGL pgl, int target, String label) {

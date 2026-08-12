@@ -24,7 +24,7 @@ class CubemapViewRendererTest {
 	}
 
 	@Test
-	void legacyConstructorDoesNotLoadSamplerCubeShader() {
+	void compatibilityConstructorDoesNotLoadSamplerCubeShader() {
 		StubApplet applet = new StubApplet();
 
 		assertDoesNotThrow(() -> new CubemapViewRenderer(applet, 1024));

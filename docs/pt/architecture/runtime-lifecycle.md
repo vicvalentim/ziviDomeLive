@@ -17,7 +17,7 @@ Sequência típica:
 construtor
   -> registra hooks pre/draw/post/input/dispose
 setup()
-  -> frame rate, diagnóstico OpenGL, hints, OutputManager, splash, cena fallback
+  -> frame rate, diagnóstico OpenGL, hints, OutputManager, splash, cena bootstrap
 primeiro post()
   -> CameraManager, renderers de output/preview, preparação Syphon/Spout, ControlManager
   -> MANAGERS_READY
