@@ -4,6 +4,9 @@ import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
 import processing.opengl.PShader;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class FisheyeDomemasterTest {
@@ -13,8 +16,11 @@ class FisheyeDomemasterTest {
 	 * loadShader returns null so shader-dependent paths can be exercised safely.
 	 */
 	private static class StubApplet extends PApplet {
+		private final List<String> loadedShaders = new ArrayList<>();
+
 		@Override
 		public PShader loadShader(String fragFilename, String vertFilename) {
+			loadedShaders.add(fragFilename + "|" + vertFilename);
 			return null;
 		}
 	}
@@ -52,5 +58,23 @@ class FisheyeDomemasterTest {
 	void applyShaderWithNullInputsDoesNotThrow() {
 		FisheyeDomemaster fisheye = newFisheye();
 		assertDoesNotThrow(() -> fisheye.applyShader(null, 210f));
+		assertDoesNotThrow(() -> fisheye.applyShader(null, null, 210f));
+	}
+
+	@Test
+	void constructorLoadsSamplerCubeShaderWhenConfigured() {
+		StubApplet applet = new StubApplet();
+
+		new FisheyeDomemaster(
+				1024,
+				"legacy.frag",
+				"legacy.vert",
+				"samplercube.frag",
+				"samplercube.vert",
+				applet);
+
+		assertEquals(List.of(
+				"legacy.frag|legacy.vert",
+				"samplercube.frag|samplercube.vert"), applet.loadedShaders);
 	}
 }
