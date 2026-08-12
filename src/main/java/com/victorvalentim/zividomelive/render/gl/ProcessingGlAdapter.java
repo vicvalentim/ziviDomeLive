@@ -173,6 +173,41 @@ public final class ProcessingGlAdapter {
 	}
 
 	/**
+	 * Binds a native cubemap texture to the requested texture unit for samplerCube shaders.
+	 *
+	 * @param graphics active Processing graphics target
+	 * @param target native cubemap target to bind
+	 * @param textureUnit zero-based texture unit
+	 */
+	public void bindCubemapTexture(PGraphicsOpenGL graphics, CubemapTarget target, int textureUnit) {
+		Objects.requireNonNull(target, "target");
+		target.ensureAllocated();
+		validateTextureUnit(textureUnit);
+		withPgl(graphics, pgl -> {
+			pgl.activeTexture(PGL.TEXTURE0 + textureUnit);
+			pgl.bindTexture(PGL.TEXTURE_CUBE_MAP, target.textureId());
+			pgl.activeTexture(PGL.TEXTURE0);
+			return null;
+		});
+	}
+
+	/**
+	 * Unbinds any cubemap texture from the requested texture unit.
+	 *
+	 * @param graphics active Processing graphics target
+	 * @param textureUnit zero-based texture unit
+	 */
+	public void unbindCubemapTexture(PGraphicsOpenGL graphics, int textureUnit) {
+		validateTextureUnit(textureUnit);
+		withPgl(graphics, pgl -> {
+			pgl.activeTexture(PGL.TEXTURE0 + textureUnit);
+			pgl.bindTexture(PGL.TEXTURE_CUBE_MAP, 0);
+			pgl.activeTexture(PGL.TEXTURE0);
+			return null;
+		});
+	}
+
+	/**
 	 * Disposes a Processing graphics target when present.
 	 *
 	 * @param graphics graphics target to dispose, may be {@code null}
@@ -189,6 +224,27 @@ public final class ProcessingGlAdapter {
 		}
 		if (sourceWidth != targetResolution || sourceHeight != targetResolution) {
 			throw new IllegalArgumentException("Source face dimensions must match cubemap resolution.");
+		}
+	}
+
+	static void validateTextureUnit(int textureUnit) {
+		if (textureUnit < 0) {
+			throw new IllegalArgumentException("Texture unit must be non-negative.");
+		}
+	}
+
+	private <T> T withPgl(PGraphicsOpenGL graphics, PglOperation<T> operation) {
+		if (graphics == null) {
+			throw new IllegalStateException("Processing OpenGL graphics target is not available.");
+		}
+		PGL pgl = graphics.beginPGL();
+		try {
+			if (pgl == null) {
+				throw new IllegalStateException("Processing PGL context is not available.");
+			}
+			return operation.apply(pgl);
+		} finally {
+			graphics.endPGL();
 		}
 	}
 

@@ -1,5 +1,6 @@
 package com.victorvalentim.zividomelive.render.modes;
 
+import com.victorvalentim.zividomelive.render.gl.CubemapTarget;
 import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
 import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.*;
@@ -12,8 +13,10 @@ import java.util.logging.Logger;
  */
 public class EquirectangularRenderer {
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final int CUBEMAP_TEXTURE_UNIT = 1;
     private PGraphics equirectangular;
     private final PShader equirectangularShader;
+    private final PShader samplerCubeShader;
     private final PApplet parent;
     private final int resolution;
     private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
@@ -27,8 +30,31 @@ public class EquirectangularRenderer {
      * @param parent the parent PApplet instance
      */
     public EquirectangularRenderer(int resolution, String fragmentShaderPath, String vertexShaderPath, PApplet parent) {
+        this(resolution, fragmentShaderPath, vertexShaderPath, null, null, parent);
+    }
+
+    /**
+     * Constructs an EquirectangularRenderer with legacy and native samplerCube shader files.
+     *
+     * @param resolution the resolution of the equirectangular projection
+     * @param fragmentShaderPath the legacy fragment shader file (.frag)
+     * @param vertexShaderPath the legacy vertex shader file (.vert)
+     * @param samplerCubeFragmentShaderPath the samplerCube fragment shader file (.frag)
+     * @param samplerCubeVertexShaderPath the samplerCube vertex shader file (.vert)
+     * @param parent the parent PApplet instance
+     */
+    public EquirectangularRenderer(
+            int resolution,
+            String fragmentShaderPath,
+            String vertexShaderPath,
+            String samplerCubeFragmentShaderPath,
+            String samplerCubeVertexShaderPath,
+            PApplet parent) {
         this.resolution = resolution;
         this.equirectangularShader = parent.loadShader(fragmentShaderPath, vertexShaderPath);
+        this.samplerCubeShader = samplerCubeFragmentShaderPath != null && samplerCubeVertexShaderPath != null
+                ? parent.loadShader(samplerCubeFragmentShaderPath, samplerCubeVertexShaderPath)
+                : null;
         this.parent = parent;
     }
 
@@ -68,10 +94,60 @@ public class EquirectangularRenderer {
         equirectangularShader.set("negY", faces[3]);
         equirectangularShader.set("posZ", faces[4]);
         equirectangularShader.set("negZ", faces[5]);
-        equirectangularShader.set("resolution", new float[]{equirectangular.width, equirectangular.height});
+        equirectangularShader.set("resolution", equirectangular.width, equirectangular.height);
         equirectangular.shader(equirectangularShader);
         equirectangular.rect(0, 0, equirectangular.width, equirectangular.height);
         equirectangular.endDraw();
+    }
+
+    /**
+     * Renders the equirectangular projection from a native cubemap when available.
+     *
+     * <p>The Processing face array remains the fallback source until all spherical
+     * projection renderers have migrated to samplerCube.</p>
+     *
+     * @param nativeCubemap native cubemap populated by {@code CubemapRenderer}
+     * @param fallbackFaces legacy Processing face targets used when native sampling is unavailable
+     */
+    public void render(CubemapTarget nativeCubemap, PGraphicsOpenGL[] fallbackFaces) {
+        if (nativeCubemap == null || !nativeCubemap.isAllocated() || samplerCubeShader == null) {
+            render(fallbackFaces);
+            return;
+        }
+        try {
+            renderSamplerCube(nativeCubemap);
+        } catch (RuntimeException error) {
+            LOGGER.warning("Native equirectangular samplerCube render failed; falling back to Processing faces: "
+                    + error.getMessage());
+            render(fallbackFaces);
+        }
+    }
+
+    private void renderSamplerCube(CubemapTarget nativeCubemap) {
+        if (equirectangular == null) {
+            initializeEquirectangular();
+        }
+
+        PGraphicsOpenGL target = (PGraphicsOpenGL) equirectangular;
+        target.beginDraw();
+        boolean cubemapBound = false;
+        try {
+            target.background(0, 0);
+            samplerCubeShader.set("resolution", target.width, target.height);
+            samplerCubeShader.set("cubemap", CUBEMAP_TEXTURE_UNIT);
+            target.shader(samplerCubeShader);
+            glAdapter.bindCubemapTexture(target, nativeCubemap, CUBEMAP_TEXTURE_UNIT);
+            cubemapBound = true;
+            target.rect(0, 0, target.width, target.height);
+        } finally {
+            try {
+                if (cubemapBound) {
+                    glAdapter.unbindCubemapTexture(target, CUBEMAP_TEXTURE_UNIT);
+                }
+            } finally {
+                target.endDraw();
+            }
+        }
     }
 
     private boolean hasValidFaces(PGraphicsOpenGL[] faces) {

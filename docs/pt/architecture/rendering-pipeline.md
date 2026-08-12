@@ -77,13 +77,15 @@ conservadora de textura e framebuffers de cópia reutilizáveis. A captura em
 runtime ainda renderiza cada face da cena em targets `PGraphicsOpenGL` do
 Processing para preservar o contrato `Scene.sceneRender(PGraphicsOpenGL)`, e
 depois copia cada face concluída pelo caminho GPU para a face correspondente do
-cubemap nativo. Os renderers de projeção ainda não amostram esse cubemap nativo.
+cubemap nativo. `EquirectangularRenderer` amostra esse cubemap nativo
+diretamente quando ele está disponível, usando o shader legado de seis texturas
+como fallback.
 
 Os recursos de shader `samplerCube` para os modos cubemap, equiretangular,
 domemaster/fisheye e skybox ficam preparados em `data/shaders/samplercube/` nos
-artefatos empacotados. Eles já estão adaptados para a migração de cubemap
-nativo, mas o runtime ativo ainda carrega `data/shaders/equirectangular.*` e
-`data/shaders/domemaster.*`.
+artefatos empacotados. Equiretangular agora é selecionado em runtime para
+amostragem do cubemap nativo; domemaster/fisheye e skybox continuam preparados
+para PRs posteriores da migração.
 
 ## Ownership de Resolução
 
@@ -119,8 +121,8 @@ Estáveis na 1.5:
 Detalhes internos:
 
 - `PGraphicsOpenGL[]` como contrato das faces renderizadas pela Scene
-- `CubemapTarget` é preenchido a partir das faces capturadas, mas ainda não é a fonte das projeções
-- shaders de projeção `samplerCube` estão empacotados, mas ainda não são selecionados em runtime
+- `CubemapTarget` é preenchido a partir das faces capturadas e alimenta o output equiretangular quando disponível
+- shaders `samplerCube` de domemaster/fisheye e skybox estão empacotados, mas ainda não são selecionados em runtime
 - domemaster consumindo atualmente a saída equiretangular
 - estratégia exata de alocação e cópia entre renderers
 

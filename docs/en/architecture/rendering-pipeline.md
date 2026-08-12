@@ -76,14 +76,15 @@ paths explicitly.
 texture policy and reusable copy framebuffers. Runtime capture still renders
 each scene face into Processing-owned `PGraphicsOpenGL` targets to preserve the
 `Scene.sceneRender(PGraphicsOpenGL)` contract, then copies each completed face
-GPU-side into the matching native cubemap face. Projection renderers do not
-sample this native cubemap yet.
+GPU-side into the matching native cubemap face. `EquirectangularRenderer`
+samples this native cubemap directly when it is available, falling back to the
+legacy six-texture shader otherwise.
 
 SamplerCube projection shader resources for cubemap, equirectangular,
 domemaster/fisheye, and skybox modes are staged under
-`data/shaders/samplercube/` in packaged artifacts. They are adapted for the
-native cubemap migration, but the active runtime still loads
-`data/shaders/equirectangular.*` and `data/shaders/domemaster.*`.
+`data/shaders/samplercube/` in packaged artifacts. Equirectangular is now
+runtime-selected for native cubemap sampling; domemaster/fisheye and skybox
+remain staged for later migration PRs.
 
 ## Resolution Ownership
 
@@ -119,8 +120,8 @@ Stable for 1.5:
 Internal implementation details:
 
 - `PGraphicsOpenGL[]` as the scene-rendering face contract
-- `CubemapTarget` is populated from captured faces but is not yet the projection source
-- samplerCube projection shaders are packaged but not yet runtime-selected
+- `CubemapTarget` is populated from captured faces and feeds equirectangular output when available
+- domemaster/fisheye and skybox samplerCube shaders are packaged but not yet runtime-selected
 - domemaster currently consuming equirectangular output
 - exact renderer allocation/copy strategy
 
