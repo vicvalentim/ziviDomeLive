@@ -54,6 +54,8 @@ Switching disposes the leaving scene and sets up the arriving scene. `clearScene
 ## OutputManager
 
 The manager separates configured route, backend availability, native initialization, publication, and render requirements.
+Internally it delegates native ownership to concrete NDI, Syphon, and Spout services;
+those implementation classes are not part of the public API.
 
 ```java
 OutputManager output = dome.getOutputManager();

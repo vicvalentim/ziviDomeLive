@@ -8,8 +8,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assumptions;
 import processing.core.PApplet;
 
-import java.lang.reflect.Field;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 class OutputManagerTest {
@@ -105,41 +103,35 @@ class OutputManagerTest {
 	}
 
 	@Test
-	void ndiMetadataDefaultsToFacadeFrameRateAndProgressiveFrames() throws Exception {
+	void ndiMetadataDefaultsToFacadeFrameRateAndProgressiveFrames() {
 		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		lib.setTargetFrameRate(30);
 		OutputManager manager = new OutputManager(lib);
 
-		assertEquals(30, readIntField(manager, "ndiFrameRateNumerator"));
-		assertEquals(1, readIntField(manager, "ndiFrameRateDenominator"));
+		assertEquals(30, manager.ndiFrameRateNumerator());
+		assertEquals(1, manager.ndiFrameRateDenominator());
 		assertEquals(DevolayFrameFormatType.PROGRESSIVE, OutputManager.NDI_FRAME_FORMAT_TYPE);
 	}
 
 	@Test
-	void ndiFrameRateSupportsFractionalMetadataAndRejectsInvalidValues() throws Exception {
+	void ndiFrameRateSupportsFractionalMetadataAndRejectsInvalidValues() {
 		outputManager.setNdiFrameRate(60000, 1001);
 
-		assertEquals(60000, readIntField(outputManager, "ndiFrameRateNumerator"));
-		assertEquals(1001, readIntField(outputManager, "ndiFrameRateDenominator"));
+		assertEquals(60000, outputManager.ndiFrameRateNumerator());
+		assertEquals(1001, outputManager.ndiFrameRateDenominator());
 		assertThrows(IllegalArgumentException.class, () -> outputManager.setNdiFrameRate(0, 1));
 		assertThrows(IllegalArgumentException.class, () -> outputManager.setNdiFrameRate(60, 0));
 	}
 
 	@Test
-	void facadeFrameRateChangesUpdateNdiMetadataAfterSetup() throws Exception {
+	void facadeFrameRateChangesUpdateNdiMetadataAfterSetup() {
 		ziviDomeLive lib = new ziviDomeLive(new HeadlessApplet());
 		lib.setup();
 
 		lib.setTargetFrameRate(24);
 
-		assertEquals(24, readIntField(lib.getOutputManager(), "ndiFrameRateNumerator"));
-		assertEquals(1, readIntField(lib.getOutputManager(), "ndiFrameRateDenominator"));
-	}
-
-	private static int readIntField(OutputManager manager, String fieldName) throws Exception {
-		Field field = OutputManager.class.getDeclaredField(fieldName);
-		field.setAccessible(true);
-		return field.getInt(manager);
+		assertEquals(24, lib.getOutputManager().ndiFrameRateNumerator());
+		assertEquals(1, lib.getOutputManager().ndiFrameRateDenominator());
 	}
 
 	private static class HeadlessApplet extends PApplet {

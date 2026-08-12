@@ -77,6 +77,7 @@ A resolução de output não redefine a resolução de preview. A realocação o
 
 - `RenderPipeline` fornece targets completos pelo contrato mínimo `FrameViews`. `OutputManager` seleciona o `ViewType` lógico a publicar sem inspecionar o renderer concreto que o produziu.
 - Uma única fronteira `FrameViews` é reutilizada durante o runtime e resolve os targets atuais de forma lazy; o hot path não aloca um carrier por frame e resets adiados de renderers não deixam referências obsoletas.
+- `OutputManager` coordena o routing, enquanto os serviços concretos `NdiOutputBackend`, `SyphonOutputBackend` e `SpoutOutputBackend` controlam diretamente seus recursos nativos e lifecycle; não existe uma camada de factory de backends.
 - Syphon e Spout publicam texturas `PGraphicsOpenGL` completas no caminho Processing/GPU.
 - NDI chama `loadPixels()` na thread Processing, copia para um dos três slots CPU e envia RGBA progressivo empacotado por worker dedicado.
 - O worker NDI não faz chamadas OpenGL.
