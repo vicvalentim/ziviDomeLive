@@ -1,9 +1,11 @@
 package com.victorvalentim.zividomelive.render.modes;
 
+import com.victorvalentim.zividomelive.render.gl.CubemapTarget;
 import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
 import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.*;
 import processing.opengl.PGraphicsOpenGL;
+import processing.opengl.PShader;
 import java.util.logging.Logger;
 
 /**
@@ -11,8 +13,10 @@ import java.util.logging.Logger;
  */
 public class CubemapViewRenderer {
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final int CUBEMAP_TEXTURE_UNIT = 1;
     private int resolution;
     private PGraphicsOpenGL cubemap;
+    private final PShader samplerCubeShader;
     private final int[] faceRotations = {2, 2, 2, 2, 2, 2};
     private final boolean[] faceInversions = {true, true, true, true, true, true};
     private final PApplet parent;
@@ -22,11 +26,30 @@ public class CubemapViewRenderer {
      * Constructs a CubemapViewRenderer with the specified parent PApplet and resolution.
      *
      * @param parent the parent PApplet instance
-     * @param resolution the resolution of the cubemap
+	 * @param resolution the resolution of the cubemap
      */
 	public CubemapViewRenderer(PApplet parent, int resolution) {
+        this(parent, resolution, null, null);
+    }
+
+    /**
+     * Constructs a CubemapViewRenderer with optional native samplerCube shader files.
+     *
+     * @param parent the parent PApplet instance
+     * @param resolution the resolution of the cubemap
+     * @param samplerCubeFragmentShaderPath the samplerCube fragment shader file (.frag)
+     * @param samplerCubeVertexShaderPath the samplerCube vertex shader file (.vert)
+     */
+	public CubemapViewRenderer(
+            PApplet parent,
+            int resolution,
+            String samplerCubeFragmentShaderPath,
+            String samplerCubeVertexShaderPath) {
         this.parent = parent;
         this.resolution = resolution;
+        this.samplerCubeShader = samplerCubeFragmentShaderPath != null && samplerCubeVertexShaderPath != null
+                ? parent.loadShader(samplerCubeFragmentShaderPath, samplerCubeVertexShaderPath)
+                : null;
     }
 
     /**
@@ -87,6 +110,55 @@ public class CubemapViewRenderer {
         applyTransformations(cubemap, cubemapFaces[5], (float) (resolution * 3) / 2, (float) resolution / 2, (float) resolution / 2, (float) resolution / 2, faceRotations[5], faceInversions[5]);
         applyTransformations(cubemap, cubemapFaces[2], (float) resolution / 2, resolution, (float) resolution / 2, (float) resolution / 2, faceRotations[2], faceInversions[2]);
         cubemap.endDraw();
+    }
+
+    /**
+     * Draws the cubemap layout from a native cubemap when available.
+     *
+     * <p>The Processing face-array renderer remains the fallback so the view still works
+     * on OpenGL contexts where the native cubemap path is unavailable.</p>
+     *
+     * @param nativeCubemap native cubemap populated by {@code CubemapRenderer}
+     * @param fallbackFaces legacy Processing face targets used when native sampling is unavailable
+     */
+    public void drawCubemapToGraphics(CubemapTarget nativeCubemap, PGraphicsOpenGL[] fallbackFaces) {
+        if (nativeCubemap == null || !nativeCubemap.isAllocated() || samplerCubeShader == null) {
+            drawCubemapToGraphics(fallbackFaces);
+            return;
+        }
+        try {
+            drawSamplerCubeToGraphics(nativeCubemap);
+        } catch (RuntimeException error) {
+            LOGGER.warning("Native cubemap layout samplerCube render failed; falling back to Processing faces: "
+                    + error.getMessage());
+            drawCubemapToGraphics(fallbackFaces);
+        }
+    }
+
+    private void drawSamplerCubeToGraphics(CubemapTarget nativeCubemap) {
+        if (cubemap == null) {
+            initializeCubemap();
+        }
+
+        cubemap.beginDraw();
+        boolean cubemapBound = false;
+        try {
+            cubemap.background(0, 0);
+            samplerCubeShader.set("resolution", cubemap.width, cubemap.height);
+            samplerCubeShader.set("cubemap", CUBEMAP_TEXTURE_UNIT);
+            cubemap.shader(samplerCubeShader);
+            glAdapter.bindCubemapTexture(cubemap, nativeCubemap, CUBEMAP_TEXTURE_UNIT);
+            cubemapBound = true;
+            cubemap.rect(0, 0, cubemap.width, cubemap.height);
+        } finally {
+            try {
+                if (cubemapBound) {
+                    glAdapter.unbindCubemapTexture(cubemap, CUBEMAP_TEXTURE_UNIT);
+                }
+            } finally {
+                cubemap.endDraw();
+            }
+        }
     }
 
     /**

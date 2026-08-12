@@ -74,6 +74,25 @@ class SphericalShaderResourcesTest {
 	}
 
 	@Test
+	void samplerCubeSkyboxShaderPreservesLegacyCubemapLayout() throws IOException {
+		Path shaderRoot = projectRoot().resolve("shaders/samplercube");
+
+		String skybox = Files.readString(shaderRoot.resolve("skybox.frag"));
+
+		assertAll("samplerCube skybox layout",
+				() -> assertTrue(skybox.contains("legacyCubemapDirectionToSamplerCube")),
+				() -> assertTrue(skybox.contains("faceIndex = NEGATIVE_Y")),
+				() -> assertTrue(skybox.contains("faceIndex = NEGATIVE_X")),
+				() -> assertTrue(skybox.contains("faceIndex = POSITIVE_Z")),
+				() -> assertTrue(skybox.contains("faceIndex = POSITIVE_X")),
+				() -> assertTrue(skybox.contains("faceIndex = NEGATIVE_Z")),
+				() -> assertTrue(skybox.contains("faceIndex = POSITIVE_Y")),
+				() -> assertTrue(skybox.contains("vec2 sourceUV = vec2(faceUV.x, 1.0 - faceUV.y)")),
+				() -> assertTrue(skybox.contains("return vec3(dir.x, dir.y, -dir.z)")),
+				() -> assertTrue(skybox.contains("return vec3(dir.x, -dir.y, dir.z)")));
+	}
+
+	@Test
 	void packagedJarTaskIncludesNestedShaderResources() throws IOException {
 		String buildScript = Files.readString(projectRoot().resolve("build.gradle.kts"));
 
