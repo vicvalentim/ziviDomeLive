@@ -75,6 +75,8 @@ Output resolution does not redefine preview resolution. Reallocation happens on 
 
 ## Output Boundary
 
+- `RenderPipeline` supplies completed targets through the minimal `FrameViews` contract. `OutputManager` selects the logical `ViewType` to publish without inspecting the concrete renderer that produced it.
+- One `FrameViews` boundary is reused for the runtime lifetime and resolves current targets lazily, so the hot path does not allocate a carrier per frame and deferred renderer resets cannot leave stale references.
 - Syphon and Spout publish completed `PGraphicsOpenGL` textures on the Processing/GPU path.
 - NDI calls `loadPixels()` on the Processing thread, copies into one of three CPU slots, and sends packed progressive RGBA from a dedicated worker.
 - No OpenGL call is made by the NDI worker.

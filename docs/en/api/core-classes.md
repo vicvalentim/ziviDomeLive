@@ -79,6 +79,11 @@ Syphon and Spout receive the selected `PGraphicsOpenGL` directly. NDI performs
 pixel readback on the render thread and sends through a bounded three-slot
 worker pipeline.
 
+The automatic `RenderPipeline` supplies completed targets through `FrameViews`.
+`OutputManager` chooses the logical `ViewType` to publish and does not inspect
+the concrete renderer that produced it. Applications normally do not need to
+call the frame-aware `sendOutput(FrameViews)` overload directly.
+
 ## SphericalOrientation
 
 `SphericalOrientation` owns the shared attitude for every spherical projection.
