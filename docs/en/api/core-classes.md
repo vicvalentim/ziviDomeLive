@@ -121,9 +121,10 @@ RGBA8 face for each canonical `CubemapFace`. It applies conservative defaults:
 linear min/mag filtering, clamp-to-edge wrapping on all three axes, no mipmaps,
 and seamless cubemap sampling only when the active context advertises support.
 
-The class is intentionally not wired into the render pipeline yet. Current
-runtime capture still uses `PGraphicsOpenGL[]`; later migration PRs copy rendered
-faces into `CubemapTarget` and update projection shaders to sample it directly.
+`CubemapRenderer` keeps the 1.x `PGraphicsOpenGL[]` face targets as the scene
+rendering contract and copies each completed face into `CubemapTarget` via
+GPU-side framebuffer blit when the active context supports cubemap textures and
+FBOs. Later migration PRs update projection shaders to sample it directly.
 The adapted samplerCube shader resources are packaged under
 `data/shaders/samplercube/` for those later projection passes.
 

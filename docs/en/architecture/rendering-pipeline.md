@@ -72,10 +72,12 @@ reported capabilities include texture, FBO, cubemap, seamless cubemap, PBO, and
 sync fence support so later native cubemap and readback PRs can gate their GL
 paths explicitly.
 
-`CubemapTarget` introduces native `GL_TEXTURE_CUBE_MAP` storage as an isolated
-resource with conservative texture policy. It is not yet the master spherical
-source for frames; capture still produces `PGraphicsOpenGL[]` until the native
-capture PR copies rendered faces into this target.
+`CubemapTarget` owns native `GL_TEXTURE_CUBE_MAP` storage with conservative
+texture policy and reusable copy framebuffers. Runtime capture still renders
+each scene face into Processing-owned `PGraphicsOpenGL` targets to preserve the
+`Scene.sceneRender(PGraphicsOpenGL)` contract, then copies each completed face
+GPU-side into the matching native cubemap face. Projection renderers do not
+sample this native cubemap yet.
 
 SamplerCube projection shader resources for cubemap, equirectangular,
 domemaster/fisheye, and skybox modes are staged under
@@ -116,8 +118,8 @@ Stable for 1.5:
 
 Internal implementation details:
 
-- `PGraphicsOpenGL[]` as cubemap storage
-- `CubemapTarget` native storage exists but is not yet wired into frame capture
+- `PGraphicsOpenGL[]` as the scene-rendering face contract
+- `CubemapTarget` is populated from captured faces but is not yet the projection source
 - samplerCube projection shaders are packaged but not yet runtime-selected
 - domemaster currently consuming equirectangular output
 - exact renderer allocation/copy strategy
