@@ -60,6 +60,8 @@ public class ziviDomeLive implements PConstants {
 	// Shader resource paths (packaged under data/shaders by the build).
 	private static final String EQUIRECT_VERT = "data/shaders/equirectangular.vert";
 	private static final String EQUIRECT_FRAG = "data/shaders/equirectangular.frag";
+	private static final String EQUIRECT_SAMPLERCUBE_VERT = "data/shaders/samplercube/equirectangular.vert";
+	private static final String EQUIRECT_SAMPLERCUBE_FRAG = "data/shaders/samplercube/equirectangular.frag";
 	private static final String DOME_VERT = "data/shaders/domemaster.vert";
 	private static final String DOME_FRAG = "data/shaders/domemaster.frag";
 
@@ -461,7 +463,13 @@ public class ziviDomeLive implements PConstants {
 		}
 		cubemapRenderer = new CubemapRenderer(outputResolution, p);
 		LOGGER.info("CubemapRenderer (output) initialized at " + outputResolution + "px.");
-		equirectangularRenderer = new EquirectangularRenderer(outputResolution, EQUIRECT_FRAG, EQUIRECT_VERT, p);
+		equirectangularRenderer = new EquirectangularRenderer(
+				outputResolution,
+				EQUIRECT_FRAG,
+				EQUIRECT_VERT,
+				EQUIRECT_SAMPLERCUBE_FRAG,
+				EQUIRECT_SAMPLERCUBE_VERT,
+				p);
 		LOGGER.info("EquirectangularRenderer (output) initialized.");
 		fisheyeDomemaster = new FisheyeDomemaster(outputResolution, DOME_FRAG, DOME_VERT, p);
 		fisheyeDomemaster.setSizePercentage(fishSize);
@@ -672,7 +680,13 @@ public class ziviDomeLive implements PConstants {
 		previewResolution = computePreviewResolution();
 
 		previewCubemapRenderer = new CubemapRenderer(previewResolution, p);
-		previewEquirectangularRenderer = new EquirectangularRenderer(previewResolution, EQUIRECT_FRAG, EQUIRECT_VERT, p);
+		previewEquirectangularRenderer = new EquirectangularRenderer(
+				previewResolution,
+				EQUIRECT_FRAG,
+				EQUIRECT_VERT,
+				EQUIRECT_SAMPLERCUBE_FRAG,
+				EQUIRECT_SAMPLERCUBE_VERT,
+				p);
 		previewFisheyeDomemaster = new FisheyeDomemaster(previewResolution, DOME_FRAG, DOME_VERT, p);
 		previewFisheyeDomemaster.setSizePercentage(fishSize);
 		previewCubemapViewRenderer = new CubemapViewRenderer(p, previewResolution);
@@ -711,6 +725,13 @@ public class ziviDomeLive implements PConstants {
 			previewCubemapRenderer.captureCubemap(
 					sphericalOrientation.getQuaternion(), getCurrentScene());
 		}
+	}
+
+	private CubemapTarget resolveMasterNativeCubemap(RenderRequirementsPolicy.Requirements output) {
+		if (output != null && output.needsCubemapSource()) {
+			return cubemapRenderer != null ? cubemapRenderer.getNativeCubemapTarget() : null;
+		}
+		return previewCubemapRenderer != null ? previewCubemapRenderer.getNativeCubemapTarget() : null;
 	}
 
 	/**
@@ -798,7 +819,7 @@ public class ziviDomeLive implements PConstants {
 			if (output.needsEquirectangular() && output.needsCubemapSource()) {
 				copyToPreview(equirectangularRenderer.getEquirectangular(), previewEquirectangularRenderer.getEquirectangular());
 			} else {
-				previewEquirectangularRenderer.render(masterFaces);
+				previewEquirectangularRenderer.render(resolveMasterNativeCubemap(output), masterFaces);
 			}
 		}
 
@@ -847,7 +868,9 @@ public class ziviDomeLive implements PConstants {
 		}
 
 		if (output.needsEquirectangular()) {
-			equirectangularRenderer.render(masterFaces);
+			equirectangularRenderer.render(
+					cubemapRenderer != null ? cubemapRenderer.getNativeCubemapTarget() : null,
+					masterFaces);
 		}
 
 		if (output.needsFisheye()) {

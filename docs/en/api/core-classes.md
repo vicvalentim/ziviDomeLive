@@ -124,9 +124,9 @@ and seamless cubemap sampling only when the active context advertises support.
 `CubemapRenderer` keeps the 1.x `PGraphicsOpenGL[]` face targets as the scene
 rendering contract and copies each completed face into `CubemapTarget` via
 GPU-side framebuffer blit when the active context supports cubemap textures and
-FBOs. Later migration PRs update projection shaders to sample it directly.
-The adapted samplerCube shader resources are packaged under
-`data/shaders/samplercube/` for those later projection passes.
+FBOs. `EquirectangularRenderer` samples it directly when available; later
+migration PRs do the same for domemaster/fisheye and skybox. The adapted
+samplerCube shader resources are packaged under `data/shaders/samplercube/`.
 
 ## OrbitCamera
 

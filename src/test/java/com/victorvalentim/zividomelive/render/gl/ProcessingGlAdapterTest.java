@@ -59,6 +59,14 @@ class ProcessingGlAdapterTest {
 	}
 
 	@Test
+	void cubemapSamplerTextureUnitMustBeNonNegative() {
+		assertDoesNotThrow(() -> ProcessingGlAdapter.validateTextureUnit(0));
+		assertDoesNotThrow(() -> ProcessingGlAdapter.validateTextureUnit(1));
+		assertThrows(IllegalArgumentException.class,
+				() -> ProcessingGlAdapter.validateTextureUnit(-1));
+	}
+
+	@Test
 	void cubemapCopyRejectsNullInputsBeforeTouchingGl() {
 		ProcessingGlAdapter adapter = ProcessingGlAdapter.getDefault();
 

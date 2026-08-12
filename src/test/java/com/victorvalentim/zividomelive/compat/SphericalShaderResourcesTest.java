@@ -28,13 +28,13 @@ class SphericalShaderResourcesTest {
 	}
 
 	@Test
-	void activeProcessingShadersStillUseCurrentGraphicsTexturePipeline() throws IOException {
+	void legacyProcessingShaderFallbackStillUsesCurrentGraphicsTexturePipeline() throws IOException {
 		Path activeShaderRoot = projectRoot().resolve("shaders");
 
 		String equirectangular = Files.readString(activeShaderRoot.resolve("equirectangular.frag"));
 		String domemaster = Files.readString(activeShaderRoot.resolve("domemaster.frag"));
 
-		assertAll("active 1.x shader pipeline",
+		assertAll("legacy Processing shader fallback",
 				() -> assertTrue(equirectangular.contains("uniform sampler2D posX, negX, posY, negY, posZ, negZ")),
 				() -> assertTrue(equirectangular.contains("bilinearInterpolate(posX")),
 				() -> assertTrue(domemaster.contains("uniform sampler2D equirectangularMap")));

@@ -123,10 +123,10 @@ mipmaps, e seamless cubemap apenas quando o contexto ativo anuncia suporte.
 `CubemapRenderer` mantém os targets de face `PGraphicsOpenGL[]` da geração 1.x
 como contrato de renderização da cena e copia cada face concluída para
 `CubemapTarget` por blit GPU-side via framebuffer quando o contexto ativo
-suporta texturas cubemap e FBOs. PRs posteriores atualizarão os shaders de
-projeção para amostrá-lo diretamente.
-Os recursos de shader `samplerCube` adaptados são empacotados em
-`data/shaders/samplercube/` para esses passes de projeção posteriores.
+suporta texturas cubemap e FBOs. `EquirectangularRenderer` o amostra diretamente
+quando disponível; PRs posteriores farão o mesmo para domemaster/fisheye e
+skybox. Os recursos de shader `samplerCube` adaptados são empacotados em
+`data/shaders/samplercube/`.
 
 ## OrbitCamera
 
