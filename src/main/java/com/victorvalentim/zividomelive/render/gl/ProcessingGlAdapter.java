@@ -2,6 +2,7 @@ package com.victorvalentim.zividomelive.render.gl;
 
 import processing.core.PApplet;
 import processing.core.PGraphics;
+import processing.core.PConstants;
 import processing.opengl.PGL;
 import processing.opengl.PGraphicsOpenGL;
 
@@ -95,7 +96,13 @@ public final class ProcessingGlAdapter {
 		if (!(graphics instanceof PGraphicsOpenGL openGlGraphics)) {
 			throw new IllegalStateException("Processing did not create an OpenGL graphics target.");
 		}
-		return openGlGraphics;
+		/*
+                 * Processing's generic OpenGL reporter is intentionally disabled
+                 * for library-owned off-screen targets. ziviDomeLive performs
+                 * contextual GL diagnostics through LogManager when required.
+                 */
+                openGlGraphics.hint(PConstants.DISABLE_OPENGL_ERRORS);
+                return openGlGraphics;
 	}
 
 	/**
