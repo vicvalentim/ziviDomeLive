@@ -2,11 +2,15 @@ package com.victorvalentim.zividomelive.render.gl;
 
 import com.victorvalentim.zividomelive.render.camera.CubemapFace;
 import org.junit.jupiter.api.Test;
+import processing.core.PApplet;
 import processing.opengl.PGL;
+
+import java.lang.reflect.Constructor;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CubemapTargetTest {
 
@@ -37,4 +41,49 @@ class CubemapTargetTest {
 	void nullFaceIsRejected() {
 		assertThrows(NullPointerException.class, () -> CubemapTarget.glTargetFor(null));
 	}
+
+        @Test
+        void failedDisposeRetainsResourceOwnershipForRetry() throws Exception {
+                CubemapTarget target = targetWithResourceIds(
+                                512,
+                                101,
+                                102,
+                                103);
+
+                assertTrue(target.isAllocated());
+                assertDoesNotThrow(target::ensureAllocated);
+
+                assertThrows(IllegalStateException.class, target::dispose);
+
+                assertEquals(103, target.textureId());
+                assertTrue(target.isAllocated());
+                assertDoesNotThrow(target::ensureAllocated);
+        }
+
+        private static CubemapTarget targetWithResourceIds(
+                        int resolution,
+                        int framebufferId,
+                        int renderbufferId,
+                        int textureId) throws Exception {
+
+                Constructor<CubemapTarget> constructor =
+                                CubemapTarget.class.getDeclaredConstructor(
+                                                PApplet.class,
+                                                ProcessingGlAdapter.class,
+                                                int.class,
+                                                int.class,
+                                                int.class,
+                                                int.class);
+
+                constructor.setAccessible(true);
+
+                return constructor.newInstance(
+                                new PApplet(),
+                                ProcessingGlAdapter.getDefault(),
+                                resolution,
+                                framebufferId,
+                                renderbufferId,
+                                textureId);
+        }
+
 }
