@@ -9,9 +9,14 @@ import java.util.regex.Pattern;
  */
 public final class ProcessingGlCapabilities {
 	private static final Pattern VERSION_PATTERN = Pattern.compile("(\\d+)\\.(\\d+)");
+	private static final int REQUIRED_OPENGL_MAJOR = 4;
+	private static final int REQUIRED_OPENGL_MINOR = 1;
+	private static final int REQUIRED_GLSL_MAJOR = 4;
+	private static final int REQUIRED_GLSL_MINOR = 10;
 
 	private final boolean openGlRenderer;
 	private final String version;
+	private final String shadingLanguageVersion;
 	private final String vendor;
 	private final String renderer;
 	private final boolean textureSupported;
@@ -25,6 +30,7 @@ public final class ProcessingGlCapabilities {
 	private ProcessingGlCapabilities(
 			boolean openGlRenderer,
 			String version,
+			String shadingLanguageVersion,
 			String vendor,
 			String renderer,
 			boolean textureSupported,
@@ -36,6 +42,7 @@ public final class ProcessingGlCapabilities {
 			boolean syncFenceSupported) {
 		this.openGlRenderer = openGlRenderer;
 		this.version = normalize(version);
+		this.shadingLanguageVersion = normalize(shadingLanguageVersion);
 		this.vendor = normalize(vendor);
 		this.renderer = normalize(renderer);
 		this.textureSupported = textureSupported;
@@ -53,7 +60,7 @@ public final class ProcessingGlCapabilities {
 	 * @return unavailable capabilities snapshot
 	 */
 	public static ProcessingGlCapabilities unavailable() {
-		return new ProcessingGlCapabilities(false, "", "", "", false, false, false, false, false, false, false);
+		return new ProcessingGlCapabilities(false, "", "", "", "", false, false, false, false, false, false, false);
 	}
 
 	/**
@@ -94,6 +101,7 @@ public final class ProcessingGlCapabilities {
 		return new ProcessingGlCapabilities(
 				true,
 				version,
+				"",
 				vendor,
 				renderer,
 				true,
@@ -121,6 +129,27 @@ public final class ProcessingGlCapabilities {
 	 */
 	public String version() {
 		return version;
+	}
+
+	ProcessingGlCapabilities withShadingLanguageVersion(
+			String shadingLanguageVersion) {
+		return new ProcessingGlCapabilities(
+				openGlRenderer,
+				version,
+				shadingLanguageVersion,
+				vendor,
+				renderer,
+				textureSupported,
+				framebufferSupported,
+				cubemapSupported,
+				seamlessCubemapSupported,
+				anisotropicFilteringSupported,
+				pixelBufferObjectSupported,
+				syncFenceSupported);
+	}
+
+	String shadingLanguageVersion() {
+		return shadingLanguageVersion;
 	}
 
 	/**
@@ -202,6 +231,25 @@ public final class ProcessingGlCapabilities {
 	 */
 	public boolean supportsSyncFence() {
 		return syncFenceSupported;
+	}
+
+	boolean supportsRequiredSphericalShaderProfile() {
+		if (!openGlRenderer
+				|| normalize(version)
+						.toLowerCase(Locale.ROOT)
+						.contains("opengl es")) {
+			return false;
+		}
+
+		Version openGlVersion = parseVersion(version);
+		Version glslVersion = parseVersion(shadingLanguageVersion);
+
+		return openGlVersion.atLeast(
+					REQUIRED_OPENGL_MAJOR,
+					REQUIRED_OPENGL_MINOR)
+				&& glslVersion.atLeast(
+						REQUIRED_GLSL_MAJOR,
+						REQUIRED_GLSL_MINOR);
 	}
 
 	private static boolean hasExtension(String extensions, String extension) {
