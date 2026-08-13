@@ -21,8 +21,21 @@ vec4 sampleCubemapEAC(vec3 dir) {
 void main() {
     vec2 uv = gl_FragCoord.xy / resolution;
 
-    float theta = -(uv.x * 2.0 * PI - PI);
-    float phi = uv.y * PI - PI / 2.0;
+    /*
+     * Convenção esférica qualificada da 1.5:
+     *
+     * +Z = Front
+     * +Y = Top
+     *
+     * O centro horizontal da projeção equiretangular
+     * (u = 0.5) corresponde a +Z Front.
+     *
+     * Esta equação é a tradução direta para samplerCube
+     * da direção final usada pelo shader equirectangular
+     * legado após sua rotação de 180 graus em Y.
+     */
+    float theta = uv.x * 2.0 * PI;
+    float phi = uv.y * PI;
 
     float sinPhi = sin(phi);
     float cosPhi = cos(phi);
@@ -30,9 +43,9 @@ void main() {
     float cosTheta = cos(theta);
 
     vec3 dir = vec3(
-        -cosPhi * sinTheta,
-        sinPhi,
-        -cosPhi * cosTheta
+            -sinPhi * sinTheta,
+            cosPhi,
+            -sinPhi * cosTheta
     );
 
     FragColor = sampleCubemapEAC(dir);

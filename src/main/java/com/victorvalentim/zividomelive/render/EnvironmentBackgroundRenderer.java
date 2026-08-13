@@ -18,9 +18,10 @@ import java.util.logging.Logger;
  * Draws a library-owned equirectangular environment behind spherical scene capture.
  *
  * <p>This is a native background pass, not scene geometry. After Processing flushes the scene
- * into the active cubemap-face framebuffer, the renderer emits one fullscreen triangle at far
- * depth. It therefore survives scene-owned {@code background()} calls while leaving foreground
- * depth intact.</p>
+ * into its reusable scratch framebuffer, the renderer emits one fullscreen triangle at far
+ * depth. The completed scratch colour is then copied into the native cubemap face. The pass
+ * therefore survives scene-owned {@code background()} calls while leaving foreground depth
+ * intact.</p>
  */
 public final class EnvironmentBackgroundRenderer {
 	private static final Logger LOGGER = LogManager.getLogger();
@@ -31,6 +32,8 @@ public final class EnvironmentBackgroundRenderer {
 			"data/shaders/environment/equirectangular_background.frag";
 
 	private final NativeEnvironmentShader equirectangularShader;
+	private final IntBuffer savedDepthFunction = IntBuffer.allocate(1);
+	private final IntBuffer savedDepthMask = IntBuffer.allocate(1);
 	private PImage equirectangularImage;
 	private boolean visible = true;
 	private float intensity = 1.0f;
@@ -122,7 +125,7 @@ public final class EnvironmentBackgroundRenderer {
 	/**
 	 * Rotates the equirectangular environment around the vertical axis.
 	 *
-	 * @param yawOffset radians added to the source longitude lookup
+	 * @param yawOffset rotation offset, in radians, applied to the source longitude lookup
 	 */
 	public void setYawOffset(float yawOffset) {
 		this.yawOffset = yawOffset;
@@ -138,10 +141,10 @@ public final class EnvironmentBackgroundRenderer {
 	}
 
 	/**
-	 * Draws the configured equirectangular background into one native cubemap face.
+	 * Draws the configured equirectangular background into one qualified cubemap scratch face.
 	 *
-	 * @param target active Processing OpenGL command target
-	 * @param pgl already-active PGL context owning the cubemap-face framebuffer
+	 * @param target active Processing OpenGL scratch target
+	 * @param pgl already-active PGL context owning the scratch framebuffer
 	 * @param face target cubemap face
 	 * @param sphericalOrientation orientation shared by the spherical capture
 	 * @return {@code true} when a background pass was drawn
@@ -151,6 +154,44 @@ public final class EnvironmentBackgroundRenderer {
 			PGL pgl,
 			CubemapFace face,
 			Quaternion sphericalOrientation) {
+		PMatrix3D orientationMatrix = sphericalOrientation == null
+				? new PMatrix3D()
+				: sphericalOrientation.toMatrix();
+		return renderCubemapFace(target, pgl, face, orientationMatrix);
+	}
+
+	/**
+	 * Draws one qualified cubemap-face background into the active Processing scratch frame.
+	 * The caller owns {@code beginDraw()/endDraw()}; this method owns only the nested PGL scope.
+	 */
+	boolean renderScratchCubemapFace(
+			PGraphicsOpenGL target,
+			CubemapFace face,
+			PMatrix3D orientationMatrix) {
+		if (!visible || equirectangularImage == null) {
+			return false;
+		}
+		if (target == null || face == null || equirectangularShader == null) {
+			if (!unavailableWarningLogged) {
+				LOGGER.warning("Environment background unavailable; scratch face background skipped.");
+				unavailableWarningLogged = true;
+			}
+			return false;
+		}
+
+		PGL pgl = target.beginPGL();
+		try {
+			return renderCubemapFace(target, pgl, face, orientationMatrix);
+		} finally {
+			target.endPGL();
+		}
+	}
+
+	private boolean renderCubemapFace(
+			PGraphicsOpenGL target,
+			PGL pgl,
+			CubemapFace face,
+			PMatrix3D orientationMatrix) {
 		if (!visible || equirectangularImage == null) {
 			return false;
 		}
@@ -163,10 +204,11 @@ public final class EnvironmentBackgroundRenderer {
 		}
 
 		try {
-			PMatrix3D orientationMatrix = sphericalOrientation == null
-					? new PMatrix3D()
-					: sphericalOrientation.toMatrix();
-			renderFullscreenBackground(target, pgl, face, orientationMatrix);
+			renderFullscreenBackground(
+					target,
+					pgl,
+					face,
+					orientationMatrix == null ? new PMatrix3D() : orientationMatrix);
 			renderFailureWarningLogged = false;
 			unavailableWarningLogged = false;
 			return true;
@@ -194,8 +236,8 @@ public final class EnvironmentBackgroundRenderer {
 		boolean blendEnabled = pgl.isEnabled(PGL.BLEND);
 		boolean cullFaceEnabled = pgl.isEnabled(PGL.CULL_FACE);
 		boolean scissorTestEnabled = pgl.isEnabled(PGL.SCISSOR_TEST);
-		IntBuffer savedDepthFunction = IntBuffer.allocate(1);
-		IntBuffer savedDepthMask = IntBuffer.allocate(1);
+		savedDepthFunction.clear();
+		savedDepthMask.clear();
 		pgl.getIntegerv(GL_DEPTH_FUNC, savedDepthFunction);
 		pgl.getBooleanv(PGL.DEPTH_WRITEMASK, savedDepthMask);
 
@@ -246,6 +288,14 @@ public final class EnvironmentBackgroundRenderer {
 		}
 	}
 
+	/** Releases the native shader program owned by this renderer. */
+	void dispose() {
+		clear();
+		if (equirectangularShader != null) {
+			equirectangularShader.disposeResources();
+		}
+	}
+
 	/** Keeps Processing texture management while allowing a native draw call. */
 	private static final class NativeEnvironmentShader extends PShader {
 		private NativeEnvironmentShader(PApplet parent, String vertexPath, String fragmentPath) {
@@ -255,6 +305,10 @@ public final class EnvironmentBackgroundRenderer {
 		private void bindFor(PGraphicsOpenGL target) {
 			setRenderer(target);
 			bind();
+		}
+
+		private void disposeResources() {
+			super.dispose();
 		}
 	}
 }

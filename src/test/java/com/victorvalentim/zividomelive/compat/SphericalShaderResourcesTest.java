@@ -33,6 +33,8 @@ class SphericalShaderResourcesTest {
 		Path shaderRoot = projectRoot().resolve("shaders/environment");
 		String renderer = Files.readString(projectRoot().resolve(
 				"src/main/java/com/victorvalentim/zividomelive/render/EnvironmentBackgroundRenderer.java"));
+		String background = Files.readString(
+				shaderRoot.resolve("equirectangular_background.frag"));
 
 		assertAll("environment background shader resources",
 				() -> assertShader(shaderRoot, "equirectangular_background.vert", "gl_VertexID"),
@@ -44,9 +46,13 @@ class SphericalShaderResourcesTest {
 				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "environmentRotation"),
 				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "yawOffset"),
 				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "intensity"),
+				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "float theta = atan(-dir.x, -dir.z) - yawOffset"),
+				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "float v = acos(clamp(dir.y, -1.0, 1.0)) / PI"),
 				() -> assertTrue(renderer.contains("pgl.drawArrays(PGL.TRIANGLES, 0, 3)")),
 				() -> assertTrue(renderer.contains("pgl.depthFunc(PGL.LEQUAL)")),
 				() -> assertTrue(renderer.contains("pgl.depthMask(false)")),
+				() -> assertFalse(background.contains("faceUV.y = 1.0 - faceUV.y")),
+				() -> assertFalse(background.contains("dir.z = -dir.z")),
 				() -> assertFalse(renderer.contains("target.rect(")));
 	}
 
@@ -62,23 +68,25 @@ class SphericalShaderResourcesTest {
 	}
 
 	@Test
-	void samplerCubeEquirectangularShaderUsesNativeSampleCubeOrientation() throws IOException {
+	void samplerCubeEquirectangularShaderPreservesQualifiedLegacyOrientation() throws IOException {
 		Path shaderRoot = projectRoot().resolve("shaders/samplercube");
 
 		String equirectangular = Files.readString(shaderRoot.resolve("equirectangular.frag"));
 
 		assertAll("samplerCube equirectangular orientation",
-				() -> assertTrue(equirectangular.contains("float theta = -(uv.x * 2.0 * PI - PI)")),
-				() -> assertTrue(equirectangular.contains("float phi = uv.y * PI - PI / 2.0")),
-				() -> assertTrue(equirectangular.contains("-cosPhi * sinTheta")),
-				() -> assertTrue(equirectangular.contains("sinPhi")),
-				() -> assertTrue(equirectangular.contains("-cosPhi * cosTheta")),
+				() -> assertTrue(equirectangular.contains("float theta = uv.x * 2.0 * PI")),
+				() -> assertTrue(equirectangular.contains("float phi = uv.y * PI")),
+				() -> assertTrue(equirectangular.contains("-sinPhi * sinTheta")),
+				() -> assertTrue(equirectangular.contains("cosPhi")),
+				() -> assertTrue(equirectangular.contains("-sinPhi * cosTheta")),
+				() -> assertFalse(equirectangular.contains("float theta = -(uv.x * 2.0 * PI - PI)")),
+				() -> assertFalse(equirectangular.contains("float phi = uv.y * PI - PI / 2.0")),
 				() -> assertTrue(equirectangular.contains("vec4 sampleCubemapEAC(vec3 dir)")),
 				() -> assertTrue(equirectangular.contains("FragColor = sampleCubemapEAC(dir)")));
 	}
 
 	@Test
-	void samplerCubeFisheyeShaderUsesNativeSampleCubeOrientation() throws IOException {
+	void samplerCubeFisheyeShaderPreservesQualifiedLegacyOrientation() throws IOException {
 		Path shaderRoot = projectRoot().resolve("shaders/samplercube");
 
 		String fisheye = Files.readString(shaderRoot.resolve("fisheye.frag"));
@@ -86,9 +94,9 @@ class SphericalShaderResourcesTest {
 		assertAll("samplerCube fisheye orientation",
 				() -> assertTrue(fisheye.contains("uv.y *= resolution.y / resolution.x")),
 				() -> assertTrue(fisheye.contains("sin(theta) * cos(phi)")),
-				() -> assertTrue(fisheye.contains("sin(theta) * sin(phi)")),
+				() -> assertTrue(fisheye.contains("-sin(theta) * sin(phi)")),
 				() -> assertTrue(fisheye.contains("cos(theta)")),
-				() -> assertTrue(fisheye.contains("dir.z = -dir.z")),
+				() -> assertFalse(fisheye.contains("dir.z = -dir.z")),
 				() -> assertTrue(fisheye.contains("vec4 sampleCubemapEAC(vec3 dir)")),
 				() -> assertTrue(fisheye.contains("FragColor = sampleCubemapEAC(dir)")));
 	}
