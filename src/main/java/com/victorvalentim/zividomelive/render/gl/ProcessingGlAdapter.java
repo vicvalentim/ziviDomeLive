@@ -52,7 +52,9 @@ public final class ProcessingGlAdapter {
 					pgl.getString(PGL.VERSION),
 					pgl.getString(PGL.VENDOR),
 					pgl.getString(PGL.RENDERER),
-					pgl.getString(PGL.EXTENSIONS));
+					pgl.getString(PGL.EXTENSIONS))
+							.withShadingLanguageVersion(
+									pgl.getString(PGL.SHADING_LANGUAGE_VERSION));
 		} finally {
 			graphics.endPGL();
 		}
