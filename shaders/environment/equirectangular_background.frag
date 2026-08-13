@@ -40,19 +40,17 @@ vec3 directionForCanonicalFace(int face, vec2 faceUV) {
 
 vec2 equirectangularUv(vec3 dir) {
     dir = normalize(dir);
-    float theta = atan(-dir.x, -dir.z) + yawOffset;
-    float phi = asin(clamp(dir.y, -1.0, 1.0));
-    float u = fract((PI - theta) / (2.0 * PI));
-    float v = clamp((phi + PI * 0.5) / PI, 0.0, 1.0);
+    float theta = atan(-dir.x, -dir.z) - yawOffset;
+    float u = fract(theta / (2.0 * PI));
+    float v = acos(clamp(dir.y, -1.0, 1.0)) / PI;
     return vec2(u, v);
 }
 
 void main() {
     vec2 faceUV = gl_FragCoord.xy / faceResolution;
-    faceUV.y = 1.0 - faceUV.y;
 
+    // The later scratch-to-cubemap blit performs the framebuffer-origin flip.
     vec3 dir = directionForCanonicalFace(faceIndex, faceUV);
-    dir.z = -dir.z;
     dir = (environmentRotation * vec4(dir, 0.0)).xyz;
 
     vec2 environmentUV = equirectangularUv(dir);

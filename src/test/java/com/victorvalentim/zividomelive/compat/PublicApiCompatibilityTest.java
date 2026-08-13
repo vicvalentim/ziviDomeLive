@@ -235,9 +235,49 @@ class PublicApiCompatibilityTest {
 		assertTrue(Modifier.isAbstract(render.getModifiers()));
 	}
 
+	@Test
+	void cubemapCaptureCompatibilityOverloadsRemainAvailable() throws Exception {
+		assertPublicMethod(
+				CubemapRenderer.class,
+				"captureCubemap",
+				float.class,
+				float.class,
+				float.class,
+				CameraManager.class,
+				Scene.class);
+		assertPublicMethod(
+				CubemapRenderer.class,
+				"captureCubemap",
+				float.class,
+				float.class,
+				float.class,
+				Scene.class);
+		assertPublicMethod(
+				CubemapRenderer.class,
+				"captureCubemap",
+				Quaternion.class,
+				CameraManager.class,
+				Scene.class);
+		assertPublicMethod(
+				CubemapRenderer.class,
+				"captureCubemap",
+				Quaternion.class,
+				Scene.class);
+	}
+
 	private static void assertMethod(String name, Class<?>... parameterTypes) throws Exception {
 		Method method = ziviDomeLive.class.getMethod(name, parameterTypes);
 		assertTrue(Modifier.isPublic(method.getModifiers()), name + " must remain public");
+	}
+
+	private static void assertPublicMethod(
+			Class<?> owner,
+			String name,
+			Class<?>... parameterTypes) throws Exception {
+		Method method = owner.getMethod(name, parameterTypes);
+		assertTrue(
+				Modifier.isPublic(method.getModifiers()),
+				owner.getSimpleName() + "." + name + " must remain public");
 	}
 
 	private static void assertControlEventMethod() {
