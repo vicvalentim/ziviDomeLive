@@ -4,7 +4,7 @@
 
 ziviDomeLive is a Processing 4 library for fulldome, monoscopic VR, and immersive installation sketches. It provides scene lifecycle management, independent Standard and spherical rendering, native cubemap capture, domemaster calibration, equirectangular and skybox views, and optional NDI, Syphon, or Spout output routing.
 
-The public manual is available at [vicvalentim.github.io/ziviDomeLive](https://vicvalentim.github.io/ziviDomeLive/). Version 2.0.0 promotes the spherical renderer to a native OpenGL cubemap pipeline. Scenes keep the Processing-facing `sceneRender(PGraphicsOpenGL)` contract, while spherical capture writes directly into a `GL_TEXTURE_CUBE_MAP` and every spherical projection samples it through `samplerCube` shaders. See the [2.0.0 release notes](https://vicvalentim.github.io/ziviDomeLive/release-notes/2.0.0/) for migration and validation notes.
+The public manual is available at [vicvalentim.github.io/ziviDomeLive](https://vicvalentim.github.io/ziviDomeLive/). Version 2.0.0 promotes the spherical renderer to a native OpenGL cubemap pipeline. Scenes keep the Processing-facing `sceneRender(PGraphicsOpenGL)` contract, while spherical capture uses one reusable Processing scratch target and a GPU framebuffer blit to populate a `GL_TEXTURE_CUBE_MAP`. Every spherical projection samples that cubemap through `samplerCube` shaders. See the [2.0.0 release notes](https://vicvalentim.github.io/ziviDomeLive/release-notes/2.0.0/) for migration and validation notes.
 
 ## Requirements
 
@@ -25,9 +25,10 @@ The library keeps Standard and spherical rendering as separate domains:
 ```text
 Scene -> StandardRenderer -> Standard target
 
-Scene -> native GL_TEXTURE_CUBE_MAP -> equirectangular
-                                    \-> fisheye domemaster
-                                    \-> cubemap skybox layout
+Scene -> reusable PGraphicsOpenGL scratch -> GPU blit -> native GL_TEXTURE_CUBE_MAP
+                                                      \-> equirectangular
+                                                      \-> fisheye domemaster
+                                                      \-> cubemap skybox layout
 ```
 
 The spherical topology is an internal implementation detail. The stable contracts are the rendered content, cubemap orientation and layout, spherical pitch/yaw/roll behavior, domemaster FOV, and Size% calibration. The current implementation does not allocate six independent Processing face targets.
