@@ -60,6 +60,44 @@ class CubemapTargetTest {
                 assertDoesNotThrow(target::ensureAllocated);
         }
 
+	@Test
+	void sphericalShaderProfileGateAcceptsRequiredProfile() {
+		ProcessingGlCapabilities capabilities =
+				ProcessingGlCapabilities.fromOpenGlStrings(
+						"4.1",
+						"Test Vendor",
+						"Test Renderer",
+						"")
+						.withShadingLanguageVersion("4.10");
+
+		assertDoesNotThrow(
+				() -> CubemapTarget.validateSphericalShaderProfile(
+						capabilities));
+	}
+
+	@Test
+	void sphericalShaderProfileGateReportsDetectedVersions() {
+		ProcessingGlCapabilities capabilities =
+				ProcessingGlCapabilities.fromOpenGlStrings(
+						"4.0 TestGL",
+						"Test Vendor",
+						"Test Renderer",
+						"")
+						.withShadingLanguageVersion("4.00 TestGLSL");
+
+		IllegalStateException error = assertThrows(
+				IllegalStateException.class,
+				() -> CubemapTarget.validateSphericalShaderProfile(
+						capabilities));
+
+		assertTrue(error.getMessage().contains("desktop OpenGL 4.1"));
+		assertTrue(error.getMessage().contains("GLSL 4.10"));
+		assertTrue(error.getMessage().contains("OpenGL: 4.0 TestGL"));
+		assertTrue(error.getMessage().contains("GLSL: 4.00 TestGLSL"));
+		assertTrue(error.getMessage().contains("Vendor: Test Vendor"));
+		assertTrue(error.getMessage().contains("Renderer: Test Renderer"));
+	}
+
         private static CubemapTarget targetWithResourceIds(
                         int resolution,
                         int framebufferId,
