@@ -122,10 +122,11 @@ nos três eixos, mipmaps regenerados após a captura e seamless cubemap apenas
 quando o contexto ativo anuncia suporte.
 
 `CubemapRenderer` preserva o contrato `Scene.sceneRender(PGraphicsOpenGL)` com
-um único graphics Processing offscreen como emissor de comandos, mas liga cada
-face de `CubemapTarget` como framebuffer nativo ativo enquanto a cena desenha.
-Não existe mais array legado `PGraphicsOpenGL[]` de faces nem fallback de seis
-texturas. `EquirectangularRenderer`, `FisheyeDomemaster` e
+um único target scratch Processing offscreen reutilizável. Depois que a Scene e
+o ambiente opcional em far depth estão completos, um blit GPU de framebuffer
+copia a cor resolvida para a face correspondente de `CubemapTarget`. Não existe
+mais array legado `PGraphicsOpenGL[]` de faces nem fallback de seis texturas.
+`EquirectangularRenderer`, `FisheyeDomemaster` e
 `CubemapViewRenderer` amostram diretamente o cubemap nativo. Os recursos de
 shader `samplerCube` adaptados são empacotados em `data/shaders/samplercube/`.
 

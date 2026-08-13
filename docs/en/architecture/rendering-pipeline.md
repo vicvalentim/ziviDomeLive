@@ -16,17 +16,19 @@ Standard renders the scene directly through its perspective camera. It does not 
 ## Spherical Domain
 
 ```text
-Optional environment background
 Scene.sceneRender(PGraphicsOpenGL)
-  -> native GL_TEXTURE_CUBE_MAP capture
+  -> one reusable face scratch target
+  -> optional far-depth environment background in the same scratch target
+  -> GPU framebuffer resolve/blit
+  -> native GL_TEXTURE_CUBE_MAP
      -> CubemapViewRenderer -> skybox layout
      -> EquirectangularRenderer -> 2:1 map
      -> FisheyeDomemaster -> square domemaster + Size% scaling
 ```
 
-The native cubemap capture uses the stable `CubemapFace` orientation table (`+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`). The scene is emitted through one offscreen `PGraphicsOpenGL` command target and rendered into each face of a native cubemap framebuffer. `CameraManager` remains as the compatibility facade for direct renderer integrations, but the runtime cubemap capture uses the canonical `CubemapFace` table as its authoritative source. One shared `SphericalOrientation` quaternion is applied to every face for preview and output.
+The native cubemap capture uses the stable `CubemapFace` orientation table (`+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`). `CameraManager` exposes that table through the qualified 1.x camera contract. The scene is rendered into one reusable offscreen `PGraphicsOpenGL` scratch target, Processing's resolved color framebuffer is selected, and a vertically converted GPU framebuffer blit copies the result into the matching native cubemap face. One shared `SphericalOrientation` quaternion is applied to every face for preview and output.
 
-When an LDR equirectangular environment background is configured, `EnvironmentBackgroundRenderer` draws it after `Scene.sceneRender(PGraphicsOpenGL)` at far-plane depth. This makes the background behave like an infinite environment: scene-owned `background()` calls cannot erase it, foreground geometry stays in front, and domemaster, equirectangular, and skybox projections share the same cubemap source.
+When an LDR equirectangular environment background is configured, `EnvironmentBackgroundRenderer` draws it after `Scene.sceneRender(PGraphicsOpenGL)` at far-plane depth in that same scratch framebuffer, before its resolved color is copied. This makes the background behave like an infinite environment: scene-owned `background()` calls cannot erase it, foreground geometry stays in front, and domemaster, equirectangular, and skybox projections share the same cubemap source and orientation.
 
 All spherical projections sample the native cubemap through `samplerCube`; domemaster/fisheye no longer depends on an intermediate equirectangular texture.
 
@@ -76,11 +78,11 @@ sync fence support so native capture and readback paths can gate their GL usage
 explicitly.
 
 `CubemapTarget` owns native `GL_TEXTURE_CUBE_MAP` storage with conservative
-texture policy, a render framebuffer, and a depth renderbuffer. Runtime capture
-preserves the `Scene.sceneRender(PGraphicsOpenGL)` contract by using one
-offscreen Processing graphics object as the command emitter while binding each
-native cubemap face as the active framebuffer target. No legacy `PGraphicsOpenGL[]`
-face array or six-texture fallback path is kept.
+texture policy, a reusable face framebuffer, and a depth renderbuffer. Runtime
+capture preserves the `Scene.sceneRender(PGraphicsOpenGL)` contract by using one
+offscreen Processing scratch target, resolving it on the GPU when MSAA is
+enabled, and blitting its final color into each native cubemap face. No legacy
+`PGraphicsOpenGL[]` face array or six-texture fallback path is kept.
 
 SamplerCube projection shader resources for cubemap, equirectangular,
 domemaster/fisheye, and skybox modes are staged under
