@@ -229,32 +229,33 @@ public final class CubemapTarget implements AutoCloseable {
 				&& depthRenderbuffer == 0) {
 			return;
 		}
-		textureId = 0;
-		renderFramebufferId = 0;
-		depthRenderbufferId = 0;
+
 		glAdapter.withPgl(parent, pgl -> {
 			if (LogManager.isDebugEnabled()) {
 				LOGGER.fine("Disposing native CubemapTarget: textureId=" + texture
 						+ ", renderFbo=" + renderFramebuffer
 						+ ", depthRbo=" + depthRenderbuffer);
 			}
-			if (renderFramebuffer != 0) {
-				IntBuffer framebufferBuffer = IntBuffer.allocate(1);
-				framebufferBuffer.put(0, renderFramebuffer);
-				pgl.deleteFramebuffers(1, framebufferBuffer);
+
+			if (depthRenderbufferId != 0) {
+				deleteRenderbuffer(pgl, depthRenderbufferId);
+				depthRenderbufferId = 0;
 			}
-			if (depthRenderbuffer != 0) {
-				IntBuffer renderbufferBuffer = IntBuffer.allocate(1);
-				renderbufferBuffer.put(0, depthRenderbuffer);
-				pgl.deleteRenderbuffers(1, renderbufferBuffer);
+
+			if (renderFramebufferId != 0) {
+				deleteFramebuffer(pgl, renderFramebufferId);
+				renderFramebufferId = 0;
 			}
-			if (texture != 0) {
-				IntBuffer textureBuffer = IntBuffer.allocate(1);
-				textureBuffer.put(0, texture);
-				pgl.deleteTextures(1, textureBuffer);
+
+			if (textureId != 0) {
+				deleteTexture(pgl, textureId);
+				textureId = 0;
 			}
+
 			return null;
 		});
+
+		mipmapsValid = false;
 	}
 
 	void ensureAllocated() {
@@ -275,20 +276,59 @@ public final class CubemapTarget implements AutoCloseable {
 			PGL pgl,
 			int resolution,
 			ProcessingGlCapabilities capabilities) {
-		int textureId = allocateTexture(pgl, resolution, capabilities);
+		int textureId = 0;
+		int renderFramebufferId = 0;
+
 		try {
-			int renderFramebufferId = allocateFramebuffer(pgl);
+			textureId = allocateTexture(pgl, resolution, capabilities);
+			renderFramebufferId = allocateFramebuffer(pgl);
 			int depthRenderbufferId = allocateDepthRenderbuffer(pgl, resolution);
 			return new int[]{
 					textureId,
 					renderFramebufferId,
 					depthRenderbufferId};
 		} catch (RuntimeException error) {
-			IntBuffer textureBuffer = IntBuffer.allocate(1);
-			textureBuffer.put(0, textureId);
-			pgl.deleteTextures(1, textureBuffer);
+			try {
+				deleteFramebuffer(pgl, renderFramebufferId);
+			} catch (RuntimeException cleanupError) {
+				error.addSuppressed(cleanupError);
+			}
+
+			try {
+				deleteTexture(pgl, textureId);
+			} catch (RuntimeException cleanupError) {
+				error.addSuppressed(cleanupError);
+			}
+
 			throw error;
 		}
+	}
+
+	private static void deleteTexture(PGL pgl, int textureId) {
+		if (textureId == 0) {
+			return;
+		}
+		IntBuffer textureBuffer = IntBuffer.allocate(1);
+		textureBuffer.put(0, textureId);
+		pgl.deleteTextures(1, textureBuffer);
+	}
+
+	private static void deleteFramebuffer(PGL pgl, int framebufferId) {
+		if (framebufferId == 0) {
+			return;
+		}
+		IntBuffer framebufferBuffer = IntBuffer.allocate(1);
+		framebufferBuffer.put(0, framebufferId);
+		pgl.deleteFramebuffers(1, framebufferBuffer);
+	}
+
+	private static void deleteRenderbuffer(PGL pgl, int renderbufferId) {
+		if (renderbufferId == 0) {
+			return;
+		}
+		IntBuffer renderbufferBuffer = IntBuffer.allocate(1);
+		renderbufferBuffer.put(0, renderbufferId);
+		pgl.deleteRenderbuffers(1, renderbufferBuffer);
 	}
 
 	private static int allocateFramebuffer(PGL pgl) {
@@ -308,16 +348,36 @@ public final class CubemapTarget implements AutoCloseable {
 		if (renderbufferId == 0) {
 			throw new IllegalStateException("OpenGL did not allocate cubemap depth renderbuffer.");
 		}
+
+		RuntimeException failure = null;
+
 		try {
 			pgl.bindRenderbuffer(PGL.RENDERBUFFER, renderbufferId);
 			pgl.renderbufferStorage(PGL.RENDERBUFFER, PGL.DEPTH_COMPONENT24, resolution, resolution);
-			return renderbufferId;
 		} catch (RuntimeException error) {
-			pgl.deleteRenderbuffers(1, renderbufferBuffer);
-			throw error;
-		} finally {
-			pgl.bindRenderbuffer(PGL.RENDERBUFFER, 0);
+			failure = error;
 		}
+
+		try {
+			pgl.bindRenderbuffer(PGL.RENDERBUFFER, 0);
+		} catch (RuntimeException unbindError) {
+			if (failure == null) {
+				failure = unbindError;
+			} else {
+				failure.addSuppressed(unbindError);
+			}
+		}
+
+		if (failure != null) {
+			try {
+				deleteRenderbuffer(pgl, renderbufferId);
+			} catch (RuntimeException cleanupError) {
+				failure.addSuppressed(cleanupError);
+			}
+			throw failure;
+		}
+
+		return renderbufferId;
 	}
 
 	private static int allocateTexture(
@@ -355,8 +415,11 @@ public final class CubemapTarget implements AutoCloseable {
 			}
 			return textureId;
 		} catch (RuntimeException error) {
-			textureBuffer.put(0, textureId);
-			pgl.deleteTextures(1, textureBuffer);
+			try {
+				deleteTexture(pgl, textureId);
+			} catch (RuntimeException cleanupError) {
+				error.addSuppressed(cleanupError);
+			}
 			throw error;
 		}
 	}
