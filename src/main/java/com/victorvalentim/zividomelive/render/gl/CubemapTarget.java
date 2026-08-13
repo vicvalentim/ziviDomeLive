@@ -72,6 +72,8 @@ public final class CubemapTarget implements AutoCloseable {
 		if (!capabilities.isOpenGlRenderer()) {
 			throw new IllegalStateException("Processing OpenGL renderer is not available.");
 		}
+
+		validateSphericalShaderProfile(capabilities);
 		if (!capabilities.supportsCubemap()) {
 			throw new IllegalStateException("OpenGL cubemap textures are not supported.");
 		}
@@ -264,6 +266,29 @@ public final class CubemapTarget implements AutoCloseable {
 				|| depthRenderbufferId == 0) {
 			throw new IllegalStateException("Cubemap target has been disposed.");
 		}
+	}
+
+	static void validateSphericalShaderProfile(
+			ProcessingGlCapabilities capabilities) {
+		if (capabilities.supportsRequiredSphericalShaderProfile()) {
+			return;
+		}
+
+		throw new IllegalStateException(
+				"ziviDomeLive spherical pipeline requires desktop OpenGL 4.1 "
+						+ "and GLSL 4.10 or newer. Detected OpenGL: "
+						+ detectedValue(capabilities.version())
+						+ "; GLSL: "
+						+ detectedValue(capabilities.shadingLanguageVersion())
+						+ "; Vendor: "
+						+ detectedValue(capabilities.vendor())
+						+ "; Renderer: "
+						+ detectedValue(capabilities.renderer())
+						+ ".");
+	}
+
+	private static String detectedValue(String value) {
+		return value == null || value.isBlank() ? "<unavailable>" : value;
 	}
 
 	static void validateResolution(int resolution) {

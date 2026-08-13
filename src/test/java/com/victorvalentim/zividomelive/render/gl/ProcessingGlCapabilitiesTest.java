@@ -2,6 +2,7 @@ package com.victorvalentim.zividomelive.render.gl;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -83,5 +84,39 @@ class ProcessingGlCapabilitiesTest {
 				"");
 
 		assertFalse(capabilities.supportsSeamlessCubemap());
+	}
+
+	@Test
+	void sphericalShaderProfileRequiresDesktopOpenGl41AndGlsl410() {
+		ProcessingGlCapabilities minimum =
+				capabilities("4.1", "4.10");
+		ProcessingGlCapabilities newer =
+				capabilities("4.6", "4.60");
+
+		assertTrue(minimum.supportsRequiredSphericalShaderProfile());
+		assertTrue(newer.supportsRequiredSphericalShaderProfile());
+		assertEquals("4.10", minimum.shadingLanguageVersion());
+
+		assertFalse(capabilities("4.0", "4.10")
+				.supportsRequiredSphericalShaderProfile());
+		assertFalse(capabilities("4.1", "4.00")
+				.supportsRequiredSphericalShaderProfile());
+		assertFalse(capabilities("OpenGL ES 4.1", "4.10")
+				.supportsRequiredSphericalShaderProfile());
+		assertFalse(capabilities("4.1", "")
+				.supportsRequiredSphericalShaderProfile());
+		assertFalse(capabilities("4.1", "not-a-version")
+				.supportsRequiredSphericalShaderProfile());
+	}
+
+	private static ProcessingGlCapabilities capabilities(
+			String openGlVersion,
+			String glslVersion) {
+		return ProcessingGlCapabilities.fromOpenGlStrings(
+				openGlVersion,
+				"Vendor",
+				"Renderer",
+				"")
+				.withShadingLanguageVersion(glslVersion);
 	}
 }
