@@ -15,9 +15,9 @@ import java.util.logging.Logger;
 /**
  * Native OpenGL cubemap texture owned by the spherical rendering pipeline.
  *
- * <p>This target owns the {@code GL_TEXTURE_CUBE_MAP} allocation, a reusable direct-render
- * framebuffer, and a depth renderbuffer. Scene capture renders directly into cubemap face
- * attachments without a six-texture Processing bridge.</p>
+ * <p>This target owns the {@code GL_TEXTURE_CUBE_MAP} allocation, a reusable face framebuffer,
+ * and a depth renderbuffer. The qualified runtime attaches one canonical face at a time and
+ * copies the resolved Processing scratch colour into it entirely on the GPU.</p>
  */
 public final class CubemapTarget implements AutoCloseable {
 	private static final Logger LOGGER = LogManager.getLogger();
@@ -37,6 +37,11 @@ public final class CubemapTarget implements AutoCloseable {
 	private int textureId;
 	private boolean mipmapsValid;
 	private int glErrorLogsRemaining = MAX_GL_ERROR_LOGS;
+	private final IntBuffer savedActiveTexture = IntBuffer.allocate(1);
+	private final IntBuffer savedCubemapBinding = IntBuffer.allocate(1);
+	private final IntBuffer savedReadFramebuffer = IntBuffer.allocate(1);
+	private final IntBuffer savedDrawFramebuffer = IntBuffer.allocate(1);
+	private final IntBuffer savedViewport = IntBuffer.allocate(4);
 
 	private CubemapTarget(
 			PApplet parent,
@@ -56,7 +61,7 @@ public final class CubemapTarget implements AutoCloseable {
 
 	/**
 	 * Allocates a native OpenGL cubemap texture with conservative defaults,
-	 * a reusable direct-render framebuffer, and a depth renderbuffer.
+	 * a reusable face framebuffer, and a depth renderbuffer.
 	 *
 	 * @param parent Processing parent with an active OpenGL renderer
 	 * @param resolution square face size in pixels
@@ -127,16 +132,15 @@ public final class CubemapTarget implements AutoCloseable {
 	}
 
 	/**
-	 * Binds a cubemap face as the active draw framebuffer and runs the supplied render pass.
+	 * Binds a cubemap face as the active draw framebuffer and runs the supplied GPU operation.
 	 *
-	 * <p>This mirrors the native PGL sampleCube sketch: one framebuffer is reused while
-	 * {@code framebufferTexture2D} attaches each {@code GL_TEXTURE_CUBE_MAP_*} face directly.
-	 * The Processing draw callback runs while that framebuffer is active, so scene code can
-	 * keep using the current {@code PGraphicsOpenGL} contract.</p>
+	 * <p>One framebuffer is reused while {@code framebufferTexture2D} attaches each
+	 * {@code GL_TEXTURE_CUBE_MAP_*} face. The qualified capture uses the callback to blit from
+	 * the resolved Processing scratch framebuffer.</p>
 	 *
 	 * @param face target cubemap face
-	 * @param graphics Processing OpenGL target used to emit scene draw commands
-	 * @param renderOperation operation that emits Processing/OpenGL draw commands
+	 * @param graphics Processing OpenGL target providing the active context
+	 * @param renderOperation GPU operation executed while the face is attached
 	 */
 	public void renderFace(CubemapFace face, PGraphicsOpenGL graphics, Runnable renderOperation) {
 		renderFace(face, graphics, ignored -> renderOperation.run());
@@ -145,12 +149,12 @@ public final class CubemapTarget implements AutoCloseable {
 	/**
 	 * Binds a cubemap face and exposes the already-active PGL context to the render pass.
 	 *
-	 * <p>The overload is intended for native passes that must share the exact framebuffer and
-	 * context used by Processing scene capture. Callers must not invoke {@code beginPGL()} or
+	 * <p>The overload is intended for native transfers or passes that must share the exact face
+	 * framebuffer and Processing context. Callers must not invoke {@code beginPGL()} or
 	 * {@code endPGL()} from inside the operation.</p>
 	 *
 	 * @param face target cubemap face
-	 * @param graphics Processing OpenGL target used to emit scene draw commands
+	 * @param graphics Processing OpenGL target providing the active context
 	 * @param renderOperation operation receiving the active PGL context
 	 */
 	public void renderFace(
@@ -178,8 +182,12 @@ public final class CubemapTarget implements AutoCloseable {
 	public void generateMipmaps() {
 		ensureAllocated();
 		glAdapter.withPgl(parent, pgl -> {
-			withTextureUnitZeroCubemapBound(pgl, textureId, () ->
-					pgl.generateMipmap(PGL.TEXTURE_CUBE_MAP));
+			withTextureUnitZeroCubemapBound(
+					pgl,
+					textureId,
+					savedActiveTexture,
+					savedCubemapBinding,
+					() -> pgl.generateMipmap(PGL.TEXTURE_CUBE_MAP));
 			return null;
 		});
 		mipmapsValid = true;
@@ -417,23 +425,28 @@ public final class CubemapTarget implements AutoCloseable {
 		}
 
 		try {
-			withTextureUnitZeroCubemapBound(pgl, textureId, () -> {
-				configureSampling(pgl, capabilities);
+			withTextureUnitZeroCubemapBound(
+					pgl,
+					textureId,
+					IntBuffer.allocate(1),
+					IntBuffer.allocate(1),
+					() -> {
+						configureSampling(pgl, capabilities);
 
-				for (CubemapFace face : CubemapFace.values()) {
-					pgl.texImage2D(
-							glTargetFor(face),
-							0,
-							PGL.RGBA8,
-							resolution,
-							resolution,
-							0,
-							PGL.RGBA,
-							PGL.UNSIGNED_BYTE,
-							null);
-				}
-				pgl.generateMipmap(PGL.TEXTURE_CUBE_MAP);
-			});
+						for (CubemapFace face : CubemapFace.values()) {
+							pgl.texImage2D(
+									glTargetFor(face),
+									0,
+									PGL.RGBA8,
+									resolution,
+									resolution,
+									0,
+									PGL.RGBA,
+									PGL.UNSIGNED_BYTE,
+									null);
+						}
+						pgl.generateMipmap(PGL.TEXTURE_CUBE_MAP);
+					});
 
 			if (capabilities.supportsSeamlessCubemap()) {
 				pgl.enable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -470,9 +483,14 @@ public final class CubemapTarget implements AutoCloseable {
 		return Math.max(1.0f, maxAnisotropy.get(0));
 	}
 
-	private static void withTextureUnitZeroCubemapBound(PGL pgl, int textureId, GlStateOperation operation) {
-		IntBuffer savedActiveTexture = IntBuffer.allocate(1);
-		IntBuffer savedCubemapBinding = IntBuffer.allocate(1);
+	private static void withTextureUnitZeroCubemapBound(
+			PGL pgl,
+			int textureId,
+			IntBuffer savedActiveTexture,
+			IntBuffer savedCubemapBinding,
+			GlStateOperation operation) {
+		savedActiveTexture.clear();
+		savedCubemapBinding.clear();
 		pgl.getIntegerv(GL_ACTIVE_TEXTURE, savedActiveTexture);
 		pgl.activeTexture(PGL.TEXTURE0);
 		pgl.getIntegerv(GL_TEXTURE_BINDING_CUBE_MAP, savedCubemapBinding);
@@ -486,9 +504,9 @@ public final class CubemapTarget implements AutoCloseable {
 	}
 
 	private void withCubemapFaceFramebuffer(PGL pgl, int cubemapFaceTarget, Runnable renderOperation) {
-		IntBuffer savedReadFramebuffer = IntBuffer.allocate(1);
-		IntBuffer savedDrawFramebuffer = IntBuffer.allocate(1);
-		IntBuffer savedViewport = IntBuffer.allocate(4);
+		savedReadFramebuffer.clear();
+		savedDrawFramebuffer.clear();
+		savedViewport.clear();
 		pgl.getIntegerv(GL_READ_FRAMEBUFFER_BINDING, savedReadFramebuffer);
 		pgl.getIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, savedDrawFramebuffer);
 		pgl.getIntegerv(PGL.VIEWPORT, savedViewport);
@@ -518,7 +536,7 @@ public final class CubemapTarget implements AutoCloseable {
 			logGlErrorIfAny(pgl, "native cubemap framebuffer clear");
 
 			renderOperation.run();
-			logGlErrorIfAny(pgl, "native cubemap scene render");
+			logGlErrorIfAny(pgl, "native cubemap face operation");
 			pgl.flush();
 			logGlErrorIfAny(pgl, "native cubemap framebuffer flush");
 		} finally {
