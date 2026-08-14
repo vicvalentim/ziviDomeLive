@@ -1,9 +1,10 @@
 import com.victorvalentim.zividomelive.*;
+import com.victorvalentim.zividomelive.support.ThreadManager;
 import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;
 
-import java.util.concurrent.*;
+import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.ArrayList;
 
@@ -11,8 +12,6 @@ import java.util.ArrayList;
 ziviDomeLive ziviDome;      // Instância da biblioteca ziviDomeLive
 SceneManager sceneManager;  // Gerenciador de cenas
 
-// Gerenciamento de threads
-ExecutorService particleProcessors;  // ExecutorService para processamento paralelo
 ReentrantLock lock = new ReentrantLock();  // Lock para controle de acesso concorrente
 
 void settings() {
@@ -32,10 +31,7 @@ void setup() {
   // Vincula o SceneManager à biblioteca ziviDomeLive
   ziviDome.setSceneManager(sceneManager);
 
-  // Inicializa o ExecutorService para processamento de partículas
-  int numThreads = Runtime.getRuntime().availableProcessors();
-  println("Usando " + numThreads + " threads para processamento de partículas.");
-  particleProcessors = Executors.newFixedThreadPool(numThreads);
+  println("Simulação de partículas usando o ThreadManager compartilhado.");
 }
 
 void draw() {

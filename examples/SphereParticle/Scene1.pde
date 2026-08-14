@@ -10,6 +10,7 @@ class Scene1 implements Scene {
   ArrayList<Float> velocityY = new ArrayList<>();
   ArrayList<Float> velocityZ = new ArrayList<>();
   ArrayList<Long> birthTime = new ArrayList<>();
+  Future<Void> simulationTask;
 
   Scene1(ziviDomeLive parent) {
     this.parent = parent;
@@ -18,6 +19,16 @@ class Scene1 implements Scene {
   public void setupScene() {
     noStroke();
     fill(64, 255, 255, 192);
+  }
+
+  public void update() {
+    // No máximo uma simulação fica em voo; não há fila crescente por frame.
+    if (simulationTask == null || simulationTask.isDone()) {
+      simulationTask = ThreadManager.submitTask(() -> {
+        updateParticles();
+        return null;
+      });
+    }
   }
 
   public void sceneRender(PGraphicsOpenGL pg) {
@@ -31,15 +42,7 @@ class Scene1 implements Scene {
     pg.translate(0, 0, 250);
     pg.rotateX(-PI / 2 * (frameCount * 0.01));
 
-    // Inicia tarefas para cada chunk
-    int chunkSize = mass.size() / Runtime.getRuntime().availableProcessors();
-    for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
-      int start = i * chunkSize;
-      int end = (i == Runtime.getRuntime().availableProcessors() - 1) ? mass.size() : (i + 1) * chunkSize;
-      particleProcessors.submit(new ParticleProcessor(start, end));
-    }
-
-    // Renderiza partículas com posições atualizadas
+    // Renderiza um snapshot protegido das posições atualizadas.
     lock.lock();
     try {
       for (int particle = 0; particle < mass.size(); particle++) {
@@ -79,6 +82,26 @@ class Scene1 implements Scene {
   public String getName() {
       return "Scene1";
   }
+
+  public void dispose() {
+    if (simulationTask != null) {
+      simulationTask.cancel(true);
+      simulationTask = null;
+    }
+    lock.lock();
+    try {
+      mass.clear();
+      positionX.clear();
+      positionY.clear();
+      positionZ.clear();
+      velocityX.clear();
+      velocityY.clear();
+      velocityZ.clear();
+      birthTime.clear();
+    } finally {
+      lock.unlock();
+    }
+  }
   
   void addNewParticle(float x, float y) {
     lock.lock();
@@ -96,63 +119,58 @@ class Scene1 implements Scene {
     }
   }
 
-  // Processador de partículas com cálculos consistentes
-  class ParticleProcessor implements Runnable {
-    int start, end;
+  // Executa uma atualização completa no worker compartilhado.
+  void updateParticles() {
+    long currentTime = millis();
 
-    ParticleProcessor(int start, int end) {
-      this.start = start;
-      this.end = end;
-    }
-
-    public void run() {
-      long currentTime = millis();
-
-      lock.lock();
-      try {
-        for (int particleA = start; particleA < end; particleA++) {
-          if (particleA >= mass.size()) break;
-          if (currentTime - birthTime.get(particleA) > 10000) {
-            mass.remove(particleA);
-            positionX.remove(particleA);
-            positionY.remove(particleA);
-            positionZ.remove(particleA);
-            velocityX.remove(particleA);
-            velocityY.remove(particleA);
-            velocityZ.remove(particleA);
-            birthTime.remove(particleA);
-            continue;
-          }
-
-          float accelerationX = 0, accelerationY = 0, accelerationZ = 0;
-
-          for (int particleB = 0; particleB < mass.size(); particleB++) {
-            if (particleA != particleB) {
-              float distanceX = positionX.get(particleB) - positionX.get(particleA);
-              float distanceY = positionY.get(particleB) - positionY.get(particleA);
-              float distanceZ = positionZ.get(particleB) - positionZ.get(particleA);
-
-              float distance = PApplet.sqrt(distanceX * distanceX + distanceY * distanceY + distanceZ * distanceZ);
-              if (distance < 1) distance = 1;
-
-              float force = (distance - 320) * mass.get(particleB) / distance;
-              accelerationX += force * distanceX;
-              accelerationY += force * distanceY;
-              accelerationZ += force * distanceZ;
-            }
-          }
-
-          velocityX.set(particleA, velocityX.get(particleA) * 0.99f + accelerationX * mass.get(particleA));
-          velocityY.set(particleA, velocityY.get(particleA) * 0.99f + accelerationY * mass.get(particleA));
-          velocityZ.set(particleA, velocityZ.get(particleA) * 0.99f + accelerationZ * mass.get(particleA));
-
-          positionX.set(particleA, positionX.get(particleA) + velocityX.get(particleA));
-          positionY.set(particleA, positionY.get(particleA) + velocityY.get(particleA));
-          positionZ.set(particleA, positionZ.get(particleA) + velocityZ.get(particleA));
+    lock.lock();
+    try {
+      for (int particleA = mass.size() - 1; particleA >= 0; particleA--) {
+        if (Thread.currentThread().isInterrupted()) return;
+        if (currentTime - birthTime.get(particleA) > 10000) {
+          removeParticle(particleA);
+          continue;
         }
-      } finally {
-        lock.unlock();
+
+        float accelerationX = 0, accelerationY = 0, accelerationZ = 0;
+
+        for (int particleB = 0; particleB < mass.size(); particleB++) {
+          if (particleA != particleB) {
+            float distanceX = positionX.get(particleB) - positionX.get(particleA);
+            float distanceY = positionY.get(particleB) - positionY.get(particleA);
+            float distanceZ = positionZ.get(particleB) - positionZ.get(particleA);
+
+            float distance = PApplet.sqrt(distanceX * distanceX + distanceY * distanceY + distanceZ * distanceZ);
+            if (distance < 1) distance = 1;
+
+            float force = (distance - 320) * mass.get(particleB) / distance;
+            accelerationX += force * distanceX;
+            accelerationY += force * distanceY;
+            accelerationZ += force * distanceZ;
+          }
+        }
+
+        velocityX.set(particleA, velocityX.get(particleA) * 0.99f + accelerationX * mass.get(particleA));
+        velocityY.set(particleA, velocityY.get(particleA) * 0.99f + accelerationY * mass.get(particleA));
+        velocityZ.set(particleA, velocityZ.get(particleA) * 0.99f + accelerationZ * mass.get(particleA));
+
+        positionX.set(particleA, positionX.get(particleA) + velocityX.get(particleA));
+        positionY.set(particleA, positionY.get(particleA) + velocityY.get(particleA));
+        positionZ.set(particleA, positionZ.get(particleA) + velocityZ.get(particleA));
       }
+    } finally {
+      lock.unlock();
     }
+  }
+
+  void removeParticle(int index) {
+    mass.remove(index);
+    positionX.remove(index);
+    positionY.remove(index);
+    positionZ.remove(index);
+    velocityX.remove(index);
+    velocityY.remove(index);
+    velocityZ.remove(index);
+    birthTime.remove(index);
   }
 }
