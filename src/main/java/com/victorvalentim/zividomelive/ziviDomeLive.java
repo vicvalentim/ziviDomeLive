@@ -88,10 +88,7 @@ public class ziviDomeLive implements PConstants {
 	// Native scene-space orbit camera service (see OrbitCamera).
 	private final OrbitCamera sceneCamera = new OrbitCamera();
 	private boolean sceneCameraInputEnabled = false;
-	private PImage environmentBackgroundImage;
-	private boolean environmentBackgroundVisible = true;
-	private float environmentBackgroundIntensity = 1.0f;
-	private float environmentBackgroundYawOffset = 0.0f;
+	private final EnvironmentState environmentState = new EnvironmentState();
 	private OutputManager outputManager;
 	private boolean resumeNdiOutput;
 	private boolean resumeSpoutOutput;
@@ -467,8 +464,7 @@ public class ziviDomeLive implements PConstants {
 				&& standardRenderer != null) {
 			return;
 		}
-		cubemapRenderer = new CubemapRenderer(outputResolution, p);
-		applyEnvironmentBackgroundSettings(cubemapRenderer);
+		cubemapRenderer = new CubemapRenderer(outputResolution, p, environmentState);
 		LOGGER.info("CubemapRenderer (output) initialized at " + outputResolution + "px.");
 		equirectangularRenderer = new EquirectangularRenderer(
 				outputResolution,
@@ -494,7 +490,8 @@ public class ziviDomeLive implements PConstants {
 				p,
 				standardOutputDimensions[0],
 				standardOutputDimensions[1],
-				getCurrentScene()
+				getCurrentScene(),
+				environmentState
 		);
 		LOGGER.info("StandardRenderer (output) initialized at "
 				+ standardOutputDimensions[0] + "×" + standardOutputDimensions[1] + "px.");
@@ -692,8 +689,7 @@ public class ziviDomeLive implements PConstants {
 	private void initializePreviewRenderers() {
 		previewResolution = computePreviewResolution();
 
-		previewCubemapRenderer = new CubemapRenderer(previewResolution, p);
-		applyEnvironmentBackgroundSettings(previewCubemapRenderer);
+		previewCubemapRenderer = new CubemapRenderer(previewResolution, p, environmentState);
 		previewEquirectangularRenderer = new EquirectangularRenderer(
 				previewResolution,
 				EQUIRECT_SAMPLERCUBE_FRAG,
@@ -713,7 +709,8 @@ public class ziviDomeLive implements PConstants {
 
 		// Dynamic dimensions (0, 0) → renderer uses parent.width/parent.height each frame,
 		// preserving the window aspect ratio and handling window resize automatically.
-		standardRendererPreview = new StandardRenderer(p, 0, 0, getCurrentScene());
+		standardRendererPreview = new StandardRenderer(
+				p, 0, 0, getCurrentScene(), environmentState);
 
 		// Share camera so preview and output Standard views are always framing the same scene.
 		if (standardRenderer != null) {
@@ -1802,19 +1799,19 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Sets an LDR equirectangular environment background for spherical render modes.
+	 * Sets an LDR equirectangular environment background for all render modes.
 	 *
 	 * <p>The image is rendered by the library as an infinite far-depth background after the
 	 * active {@link Scene} is drawn. This keeps backgrounds out of scene geometry, survives
 	 * scene-owned {@code background()} calls, and makes the same environment available to
-	 * domemaster, equirectangular, and skybox projections. Passing {@code null} clears the
-	 * environment.</p>
+	 * domemaster, equirectangular, skybox, and Standard projections. In Standard view the
+	 * environment follows camera rotation but remains invariant under camera translation.
+	 * Passing {@code null} clears the environment.</p>
 	 *
 	 * @param image equirectangular Processing image, or {@code null} to clear
 	 */
 	public void setEquirectangularBackground(PImage image) {
-		environmentBackgroundImage = image;
-		syncEnvironmentBackgroundSettings();
+		environmentState.setLdrEquirectangularSource(image);
 	}
 
 	/**
@@ -1846,7 +1843,7 @@ public class ziviDomeLive implements PConstants {
 	 * @return {@code true} when an image is configured
 	 */
 	public boolean hasEnvironmentBackground() {
-		return environmentBackgroundImage != null;
+		return environmentState.hasSource();
 	}
 
 	/**
@@ -1855,8 +1852,7 @@ public class ziviDomeLive implements PConstants {
 	 * @param visible {@code true} to draw the environment background
 	 */
 	public void setEnvironmentBackgroundVisible(boolean visible) {
-		environmentBackgroundVisible = visible;
-		syncEnvironmentBackgroundSettings();
+		environmentState.setVisible(visible);
 	}
 
 	/**
@@ -1865,7 +1861,7 @@ public class ziviDomeLive implements PConstants {
 	 * @return {@code true} when visible
 	 */
 	public boolean isEnvironmentBackgroundVisible() {
-		return environmentBackgroundVisible;
+		return environmentState.isVisible();
 	}
 
 	/**
@@ -1874,8 +1870,7 @@ public class ziviDomeLive implements PConstants {
 	 * @param intensity non-negative colour multiplier
 	 */
 	public void setEnvironmentBackgroundIntensity(float intensity) {
-		environmentBackgroundIntensity = Math.max(0.0f, intensity);
-		syncEnvironmentBackgroundSettings();
+		environmentState.setIntensity(intensity);
 	}
 
 	/**
@@ -1884,7 +1879,7 @@ public class ziviDomeLive implements PConstants {
 	 * @return non-negative colour multiplier
 	 */
 	public float getEnvironmentBackgroundIntensity() {
-		return environmentBackgroundIntensity;
+		return environmentState.getIntensity();
 	}
 
 	/**
@@ -1893,8 +1888,7 @@ public class ziviDomeLive implements PConstants {
 	 * @param yawOffset radians added to the source longitude lookup
 	 */
 	public void setEnvironmentBackgroundYawOffset(float yawOffset) {
-		environmentBackgroundYawOffset = yawOffset;
-		syncEnvironmentBackgroundSettings();
+		environmentState.setYawOffset(yawOffset);
 	}
 
 	/**
@@ -1903,7 +1897,7 @@ public class ziviDomeLive implements PConstants {
 	 * @return yaw offset in radians
 	 */
 	public float getEnvironmentBackgroundYawOffset() {
-		return environmentBackgroundYawOffset;
+		return environmentState.getYawOffset();
 	}
 
 	/**
@@ -1936,19 +1930,8 @@ public class ziviDomeLive implements PConstants {
 		return p;
 	}
 
-	private void syncEnvironmentBackgroundSettings() {
-		applyEnvironmentBackgroundSettings(cubemapRenderer);
-		applyEnvironmentBackgroundSettings(previewCubemapRenderer);
-	}
-
-	private void applyEnvironmentBackgroundSettings(CubemapRenderer renderer) {
-		if (renderer == null) {
-			return;
-		}
-		renderer.setEquirectangularBackground(environmentBackgroundImage);
-		renderer.setEnvironmentBackgroundVisible(environmentBackgroundVisible);
-		renderer.setEnvironmentIntensity(environmentBackgroundIntensity);
-		renderer.setEnvironmentYawOffset(environmentBackgroundYawOffset);
+	EnvironmentState getEnvironmentState() {
+		return environmentState;
 	}
 
 	/**
@@ -2173,6 +2156,7 @@ public class ziviDomeLive implements PConstants {
 		} catch (RuntimeException | LinkageError error) {
 			LOGGER.warning("Renderer disposal failed: " + error.getMessage());
 		}
+		environmentState.clearSource();
 		if (cameraManager != null) {
 			try {
 				cameraManager.dispose();

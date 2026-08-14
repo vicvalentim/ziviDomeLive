@@ -35,6 +35,7 @@ public class CubemapRenderer implements PConstants {
     private PGraphicsOpenGL nativeCaptureGraphics;
     private CubemapTarget nativeCubemapTarget;
     private final EnvironmentBackgroundRenderer environmentBackgroundRenderer;
+    private final boolean ownsEnvironmentState;
     private int resolution;
     private final PApplet parent;
     private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
@@ -47,6 +48,7 @@ public class CubemapRenderer implements PConstants {
 
     private final SphericalOrientation angleOrientation = new SphericalOrientation();
     private final CameraManager defaultCameraManager = new CameraManager();
+    private final PMatrix3D captureOrientationMatrix = new PMatrix3D();
 
     /**
      * Constructs a CubemapRenderer with the specified initial resolution and parent PApplet.
@@ -55,9 +57,33 @@ public class CubemapRenderer implements PConstants {
      * @param parent the parent PApplet instance
      */
     public CubemapRenderer(int initialResolution, PApplet parent) {
+        this(initialResolution, parent, new EnvironmentState(), true);
+    }
+
+    /**
+     * Constructs a cubemap renderer consuming a shared Environment state.
+     *
+     * @param initialResolution initial face resolution
+     * @param parent Processing parent
+     * @param environmentState shared borrowed environment state
+     */
+    public CubemapRenderer(
+            int initialResolution,
+            PApplet parent,
+            EnvironmentState environmentState) {
+        this(initialResolution, parent, environmentState, false);
+    }
+
+    private CubemapRenderer(
+            int initialResolution,
+            PApplet parent,
+            EnvironmentState environmentState,
+            boolean ownsEnvironmentState) {
         this.parent = parent;
         this.resolution = initialResolution;
-        this.environmentBackgroundRenderer = new EnvironmentBackgroundRenderer(parent);
+        this.environmentBackgroundRenderer =
+                new EnvironmentBackgroundRenderer(parent, environmentState);
+        this.ownsEnvironmentState = ownsEnvironmentState;
         initializeNativeCubemapTarget();
         cachedNearPlane = DEFAULT_NEAR_PLANE;
         cachedFarPlane = DEFAULT_FAR_PLANE;
@@ -202,6 +228,14 @@ public class CubemapRenderer implements PConstants {
             Quaternion effectiveOrientation,
             CameraManager cameraManager,
             Scene currentScene) {
+        if (nativeCubemapTarget != null
+                && !nativeCubemapTarget.isValidInCurrentContext()) {
+            LOGGER.warning("OpenGL context changed; recreating native cubemap resources.");
+            nativeCubemapTarget.abandonAfterContextLoss();
+            nativeCubemapTarget = null;
+            disposeNativeCaptureGraphics();
+            initializeNativeCubemapTarget();
+        }
         if (nativeCubemapTarget == null) {
             if (!nativeCubemapUnavailableWarningLogged) {
                 LOGGER.warning(
@@ -222,7 +256,7 @@ public class CubemapRenderer implements PConstants {
                         : defaultCameraManager;
 
         float captureFieldOfView = cachedFieldOfView;
-        PMatrix3D captureOrientationMatrix = effectiveOrientation.toMatrix();
+        effectiveOrientation.toMatrix(captureOrientationMatrix);
 
         try {
             for (CubemapFace face : CubemapFace.values()) {
@@ -415,10 +449,21 @@ public class CubemapRenderer implements PConstants {
     }
 
     /**
+     * Returns the logical Environment state consumed by this renderer.
+     * @return logical Environment state
+     */
+    public EnvironmentState getEnvironmentState() {
+        return environmentBackgroundRenderer.getEnvironmentState();
+    }
+
+    /**
      * Disposes native cubemap capture resources.
      */
     public void dispose() {
         environmentBackgroundRenderer.dispose();
+        if (ownsEnvironmentState) {
+            environmentBackgroundRenderer.clear();
+        }
         disposeNativeCaptureGraphics();
         disposeNativeCubemapTarget();
     }

@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SphericalProjectionContractTest {
 	private static final double EPSILON = 1.0e-6;
@@ -37,6 +38,21 @@ class SphericalProjectionContractTest {
 				() -> assertEquals(0.0, environmentUv(new double[]{0.0, 1.0, 0.0}, 0.0)[1], EPSILON),
 				() -> assertEquals(1.0, environmentUv(new double[]{0.0, -1.0, 0.0}, 0.0)[1], EPSILON),
 				() -> assertUv(environmentUv(new double[]{0.0, 0.0, 1.0}, Math.PI * 0.5), 0.25, 0.50));
+	}
+
+	@Test
+	void directionsAcrossNegativeZAreAdjacentAcrossThePeriodicLongitudeSeam() {
+		double epsilon = 1.0e-5;
+		double leftU = environmentUv(new double[]{-epsilon, 0.0, -1.0}, 0.0)[0];
+		double rightU = environmentUv(new double[]{epsilon, 0.0, -1.0}, 0.0)[0];
+		double periodicDistance = Math.min(
+				Math.abs(leftU - rightU),
+				1.0 - Math.abs(leftU - rightU));
+
+		assertTrue(leftU < 0.01 || leftU > 0.99);
+		assertTrue(rightU < 0.01 || rightU > 0.99);
+		assertTrue(periodicDistance < epsilon,
+				"Longitude must wrap instead of clamping at the -Z seam");
 	}
 
 	private static double[] equirectangularDirection(double u, double v) {

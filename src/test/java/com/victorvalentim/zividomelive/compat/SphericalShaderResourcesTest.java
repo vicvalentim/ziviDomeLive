@@ -39,6 +39,16 @@ class SphericalShaderResourcesTest {
 		assertAll("environment background shader resources",
 				() -> assertShader(shaderRoot, "equirectangular_background.vert", "gl_VertexID"),
 				() -> assertShader(shaderRoot, "equirectangular_background.vert", "FULLSCREEN_TRIANGLE"),
+				() -> assertShader(shaderRoot, "standard_equirectangular_background.vert", "in vec4 vertex"),
+				() -> assertShader(shaderRoot, "standard_equirectangular_background.vert", "uniform mat4 transform"),
+				() -> assertShader(shaderRoot, "standard_equirectangular_background.vert", "environmentDirection = vertex.xyz"),
+				() -> assertShader(shaderRoot, "standard_equirectangular_background.vert", "gl_Position = transform * vertex"),
+				() -> assertShader(shaderRoot, "standard_equirectangular_background.frag", "uniform sampler2D environmentMap"),
+				() -> assertShader(shaderRoot, "standard_equirectangular_background.frag", "in vec3 environmentDirection"),
+				() -> assertShader(shaderRoot, "standard_equirectangular_background.frag", "uniform vec3 cameraRight"),
+				() -> assertShader(shaderRoot, "standard_equirectangular_background.frag", "uniform vec3 cameraUp"),
+				() -> assertShader(shaderRoot, "standard_equirectangular_background.frag", "uniform vec3 cameraBackward"),
+				() -> assertShader(shaderRoot, "standard_equirectangular_background.frag", "equirectangularUv(worldDirection)"),
 				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "uniform sampler2D environmentMap"),
 				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "faceResolution"),
 				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "directionForCanonicalFace"),
@@ -53,7 +63,7 @@ class SphericalShaderResourcesTest {
 				() -> assertTrue(renderer.contains("pgl.depthMask(false)")),
 				() -> assertFalse(background.contains("faceUV.y = 1.0 - faceUV.y")),
 				() -> assertFalse(background.contains("dir.z = -dir.z")),
-				() -> assertFalse(renderer.contains("target.rect(")));
+				() -> assertTrue(renderer.contains("target.sphere(")));
 	}
 
 	@Test

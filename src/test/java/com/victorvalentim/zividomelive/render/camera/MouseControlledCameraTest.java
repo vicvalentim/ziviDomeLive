@@ -2,6 +2,7 @@ package com.victorvalentim.zividomelive.render.camera;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import processing.core.PMatrix3D;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -40,6 +41,20 @@ class MouseControlledCameraTest {
         assertDoesNotThrow(() -> cam.update(null));
         assertEquals(1500f, cam.getDistance(), EPS);
     }
+
+	@Test
+	void copiedEnvironmentRotationContainsNoOrbitTranslation() {
+		cam.setDistance(9000.0f);
+		cam.update(null);
+		PMatrix3D rotation = new PMatrix3D();
+
+		cam.copyRotationMatrix(rotation);
+
+		assertEquals(0.0f, rotation.m03, EPS);
+		assertEquals(0.0f, rotation.m13, EPS);
+		assertEquals(0.0f, rotation.m23, EPS);
+		assertEquals(1.0f, rotation.m33, EPS);
+	}
 
     // -----------------------------------------------------------------------
     // resetRotation
@@ -200,5 +215,4 @@ class MouseControlledCameraTest {
         cam.mouseEvent(e);
     }
 }
-
 
