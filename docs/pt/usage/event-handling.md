@@ -22,6 +22,6 @@ Atalhos globais executam antes de o evento chegar à cena.
 
 ## Entrada de Câmera
 
-Com `setSceneCameraInputEnabled(true)`, eventos de mouse também chegam ao `OrbitCamera` em scene space. A câmera perspectiva Standard permanece um serviço separado.
+Com `setSceneCameraInputEnabled(true)`, gestos de navegação chegam ao `OrbitCamera` em scene space em vez da câmera perspectiva Standard independente. Isso impede que um único drag ou evento da roda mova duas câmeras ao mesmo tempo.
 
 Todos os callbacks registrados são removidos no descarte terminal.

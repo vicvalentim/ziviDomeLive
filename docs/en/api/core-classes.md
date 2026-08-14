@@ -138,10 +138,11 @@ targets so Standard and spherical views see the same scene attitude.
 
 Configure distance limits, collapse guard, interpolation, drag sensitivity,
 and wheel steps through its setters. `setTarget()`, `setDistance()`,
-`setOrientation()`, `snapTo()`, and `reset()` update its desired state. Callers
+`setOrientation()`, `goTo()`, `snapTo()`, the explicit immediate setters, and
+`reset()` update its pose. `PVector` overloads are available for scene-friendly targets and axes. Callers
 normally retrieve the shared instance with `getSceneCamera()` and let the
 facade forward mouse input only while `setSceneCameraInputEnabled(true)` is
-active.
+active. The facade also copies its quaternion into the shared Environment state each frame.
 
 ## Renderers
 

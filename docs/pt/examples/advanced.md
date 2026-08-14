@@ -13,6 +13,6 @@ Demonstra geometria `PShape` retida, shader GLSL 4.10 metallic-roughness, fallba
 
 ## SolarSystem
 
-Aplicação em múltiplos arquivos com modelos de domínio, tempo de simulação, shaders, texturas, controle de câmera e integração com `Scene`.
+Aplicação em múltiplos arquivos com modelos de domínio, tempo de simulação, shaders, texturas e integração com `Scene`. Ela usa o `OrbitCamera` da biblioteca para acompanhar alvos, reset, drag, zoom pela roda e orientação quaternion; a mesma orientação controla o Environment infinito sem sky sphere pertencente à cena.
 
 Exemplos avançados seguem a mesma regra de ownership: `sceneRender(PGraphicsOpenGL)` desenha em um target já aberto e não chama `beginDraw()` nem `endDraw()`.

@@ -22,6 +22,6 @@ Global shortcuts run before the event reaches the scene.
 
 ## Camera Input
 
-When `setSceneCameraInputEnabled(true)` is active, mouse events also reach the scene-space `OrbitCamera`. Standard perspective-camera input remains a separate service.
+When `setSceneCameraInputEnabled(true)` is active, navigation gestures reach the scene-space `OrbitCamera` instead of the independent Standard perspective camera. This prevents one drag or wheel event from moving two cameras at once.
 
 All registered callbacks are removed during terminal disposal.

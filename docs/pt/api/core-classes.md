@@ -137,10 +137,11 @@ todos os targets para que Standard e vistas esféricas observem a mesma atitude.
 
 Configure limites de distância, collapse guard, interpolação, sensibilidade do
 drag e passos da roda pelos setters. `setTarget()`, `setDistance()`,
-`setOrientation()`, `snapTo()` e `reset()` alteram o estado desejado. Em geral,
+`setOrientation()`, `goTo()`, `snapTo()`, os setters imediatos explícitos e
+`reset()` alteram a pose. Overloads com `PVector` facilitam alvos e eixos de cena. Em geral,
 obtenha a instância compartilhada com `getSceneCamera()` e deixe a fachada
 encaminhar o mouse apenas enquanto `setSceneCameraInputEnabled(true)` estiver
-ativo.
+ativo. A fachada também copia seu quaternion para o estado Environment compartilhado a cada frame.
 
 ## Renderers
 

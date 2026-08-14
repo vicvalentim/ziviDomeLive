@@ -29,11 +29,11 @@ primeiro post()
 
 | Hook | Responsabilidade |
 |---|---|
-| `pre()` | Atualizar `OrbitCamera` compartilhado e chamar `Scene.update()` ativa uma vez |
+| `pre()` | Chamar `Scene.update()`, avançar o `OrbitCamera` compartilhado e sincronizar sua orientação no Environment |
 | `draw()` | Delegar a ordem do frame ao `RenderPipeline` e depois tratar o splash |
 | `post()` | Inicializar managers uma vez depois do setup Processing |
 | `keyEvent()` | Atalhos globais e encaminhamento à cena ativa |
-| `mouseEvent()` | Câmera da cena opcional, câmera Standard e cena ativa |
+| `mouseEvent()` | Encaminhar à cena ativa e rotear navegação para a câmera da cena ou para a câmera Standard |
 | `controlEvent()` | Tratamento do painel e depois cena ativa |
 | `dispose()` / `stop()` | Limpeza terminal |
 

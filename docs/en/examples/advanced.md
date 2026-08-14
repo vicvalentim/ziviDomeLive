@@ -13,6 +13,6 @@ Demonstrates retained `PShape` geometry, GLSL 4.10 metallic-roughness shading, f
 
 ## SolarSystem
 
-A multi-file application showing domain models, simulation time, shaders, textures, camera control, and scene integration.
+A multi-file application showing domain models, simulation time, shaders, textures, and scene integration. It uses the library-owned `OrbitCamera` for target tracking, reset, drag, wheel zoom, and quaternion orientation; the same orientation drives its infinite Environment background without a scene-owned sky sphere.
 
 Advanced examples still follow the same ownership rule: `sceneRender(PGraphicsOpenGL)` draws into an already-open target and does not call `beginDraw()` or `endDraw()`.

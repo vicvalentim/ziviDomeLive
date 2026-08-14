@@ -29,11 +29,11 @@ first post()
 
 | Hook | Responsibility |
 |---|---|
-| `pre()` | Update shared `OrbitCamera`, then call active `Scene.update()` once |
+| `pre()` | Call active `Scene.update()`, advance the shared `OrbitCamera`, then synchronize its Environment orientation |
 | `draw()` | Delegate frame ordering to `RenderPipeline`, then handle splash state |
 | `post()` | Lazily initialize managers once after Processing setup |
 | `keyEvent()` | Global shortcuts, then active-scene forwarding |
-| `mouseEvent()` | Optional scene camera, Standard camera, then active scene |
+| `mouseEvent()` | Forward to the active scene, then route navigation to either the scene camera or Standard camera |
 | `controlEvent()` | Internal panel handling, then active scene |
 | `dispose()` / `stop()` | Terminal cleanup |
 
