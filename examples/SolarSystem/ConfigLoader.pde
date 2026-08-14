@@ -315,20 +315,6 @@ class ConfigLoader {
     }
   }
 
-  public void sendTexturesToShaderManager(ShaderManager shaderManager) {
-    lock.readLock().lock();
-    try {
-      for (String key : textureByName.keySet()) {
-        PImage tex = textureManager.getTexture(textureByName.get(key));
-        if (tex != null) shaderManager.setTexture("planet", tex);
-      }
-      PImage ring = textureManager.getTexture("2k_saturn_ring_alpha.png");
-      if (ring != null) shaderManager.setTexture("rings", ring);
-    } finally {
-      lock.readLock().unlock();
-    }
-  }
-
   public void dispose() {
     lock.writeLock().lock();
     try {

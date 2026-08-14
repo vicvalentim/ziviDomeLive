@@ -8,18 +8,15 @@ class Renderer {
   private Sun sun;
 
   private final ShapeManager shapeManager;
-  private final ShaderManager shaderManager;
 
   private int renderingMode = 2;
 
   public Renderer(PApplet pApplet,
                   List<Planet> planets,
-                  ShapeManager shapeManager,
-                  ShaderManager shaderManager) {
+                  ShapeManager shapeManager) {
     this.pApplet       = pApplet;
     this.planets       = planets;
     this.shapeManager  = shapeManager;
-    this.shaderManager = shaderManager;
 
     // logo após planets estarem definidos:
     buildPlanetOrbitShapesUniform();
@@ -108,7 +105,7 @@ class Renderer {
       for (Planet p : planets) {
           pg.pushMatrix();
               p.display(pg, showLabels, false,
-                        renderingMode, shapeManager, shaderManager);
+                        renderingMode, shapeManager);
           pg.popMatrix();
       }
   }
@@ -133,8 +130,7 @@ class Renderer {
               m.display(pg,
                         showLabels,
                         renderingMode,
-                        shapeManager,
-                        shaderManager);
+                        shapeManager);
           }
       }
   }

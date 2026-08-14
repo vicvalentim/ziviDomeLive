@@ -21,7 +21,6 @@ class Scene1 implements Scene {
   // Managers
   // ————————————————————————————————
   private TextureManager textureManager;
-  private ShaderManager shaderManager;
   private ShapeManager shapeManager;
   private ConfigLoader configLoader;
   private PhysicsEngine physicsEngine;
@@ -40,6 +39,8 @@ class Scene1 implements Scene {
 
   private SimulatedClock clock; // Novo relógio em dias
   private boolean needsReload = false;
+  private boolean debugClockPrint = false;
+  private boolean initialized = false;
 
  
   // ————————————————————————————————
@@ -48,19 +49,21 @@ class Scene1 implements Scene {
   Scene1(ziviDomeLive parent, PApplet pApplet) {
     this.parent  = parent;
     this.pApplet = pApplet;
+  }
 
-    // 1) Inicializa managers e params...
+  /** Constrói todos os recursos pertencentes à ativação atual da cena. */
+  private void initializeSceneResources(boolean resetCamera) {
+    // 1) Managers gráficos são criados no Processing thread.
     textureManager = new TextureManager(pApplet);
     shapeManager   = new ShapeManager(pApplet);
-    shaderManager  = new ShaderManager(pApplet);
-    loadAllShaders();
 
     // 2) Carrega Sol e planetas
     configLoader = new ConfigLoader(pApplet, textureManager);
-    configLoader.sendTexturesToShaderManager(shaderManager);
-
     sun     = configLoader.loadSun();
     planets = configLoader.loadConfiguration();
+    if (sun == null || planets == null) {
+      throw new IllegalStateException("Não foi possível carregar a configuração do Sistema Solar.");
+    }
     configureEnvironmentBackground();
 
     // configura central bodies
@@ -71,23 +74,20 @@ class Scene1 implements Scene {
       }
     }
 
-    // 3) Monta lista de corpos (Sol + planetas + luas) e PhysicsEngine
+    // 3) Monta lista de corpos (Sol + planetas + luas) e PhysicsEngine.
     planetaryBodies = new ArrayList<>();
     planetaryBodies.add(sun);
-      for (Planet p : planets) {
-        planetaryBodies.add(p);
-        // aqui é ESSENCIAL:
-        planetaryBodies.addAll(p.getMoons());
-      }
+    for (Planet p : planets) {
+      planetaryBodies.add(p);
+      planetaryBodies.addAll(p.getMoons());
+    }
     physicsEngine = new PhysicsEngine(planetaryBodies);
 
-
-    // 4) Agora sim: cria o renderer com a lista de planetas já carregada
+    // 4) Renderer e shapes pertencem à ativação atual.
     renderer = new Renderer(
       pApplet,
       planets,
-      shapeManager,
-      shaderManager
+      shapeManager
     );
     renderer.setSun(sun);
     
@@ -99,12 +99,12 @@ class Scene1 implements Scene {
       }
     }
 
-    // 5) Inicializa o relógio absoluto e propaga até “hoje”…
+    // 5) Inicializa o relógio absoluto e propaga até hoje.
     clock = new SimulatedClock();
     setClockToNowUTC();
     propagateSinceJ2000();
 
-    // 6) Usa o serviço de OrbitCamera compartilhado da biblioteca.
+    // 6) Configura o serviço de OrbitCamera compartilhado da biblioteca.
     sceneCamera = parent.getSceneCamera();
     sceneCamera.setDistanceLimits(-1e6f, 1e6f);
     sceneCamera.setLerpFactor(0.1f);
@@ -112,75 +112,42 @@ class Scene1 implements Scene {
     sceneCamera.setWheelSteps(80f, 0.001f);
     parent.setSceneCameraInputEnabled(true);
 
-    resetView();
-  }
-
-
-  /** centraliza todo o loadSun()/loadConfiguration()/montagem de corpos + physics + renderer */
-  private void initializeScene() {
-      // 1) recarrega JSON se for reload
-      // *** só há JSON fresco se veio de setupScene() ***
-      sun     = configLoader.loadSun();
-      planets = configLoader.loadConfiguration();
-      configureEnvironmentBackground();
-
-      // 2) fixa central bodies
-      for (Planet p : planets) {
-        p.setCentralBody(sun);
-        for (Moon m : p.getMoons()) {
-          m.setCentralBody(p);
-        }
-      }
-
-      // 3) monta lista e physicsEngine
-      planetaryBodies = new ArrayList<>();
-      planetaryBodies.add(sun);
-        for (Planet p : planets) {
-          planetaryBodies.add(p);
-          // aqui é ESSENCIAL:
-          planetaryBodies.addAll(p.getMoons());
-        }
-      physicsEngine = new PhysicsEngine(planetaryBodies);
-
-      // 4) passa ao renderer
-      renderer.setSun(sun);
-      renderer.setPlanets(planets);
-
-      // 5) rebuild shapes e escalas
-      sun.buildShape(pApplet, shapeManager);
-      for (Planet p : planets) {
-        p.buildShape(pApplet, shapeManager);
-        for (Moon m : p.getMoons()) {
-          m.buildShape(pApplet, shapeManager);
-        }
-      }
-      applyScalingFactors();
-  }
-
-  private void loadAllShaders() {
-    pApplet.println("[Scene1] Iniciando carregamento de shaders...");
-
-    boolean allShadersOk = true;
-
-    //allShadersOk &= tryLoadShader("planet", "planet.frag", "common.vert");
-    //allShadersOk &= tryLoadShader("sun", "sun.frag", "common.vert");
-    //allShadersOk &= tryLoadShader("rings", "rings.frag", "common.vert");
-    if (allShadersOk) {
-      pApplet.println("[Scene1] Todos os shaders carregados com sucesso.");
-    } else {
-      pApplet.println("[Scene1] ⚠️ Nem todos os shaders foram carregados corretamente. Verifique o log acima.");
+    if (resetCamera) {
+      resetView();
     }
+    selectedPlanet = -1;
+    initialized = true;
   }
 
-  // Função auxiliar com tratamento de exceções
-  private boolean tryLoadShader(String name, String fragFile, String vertFile) {
-    try {
-      shaderManager.loadShader(name, fragFile, vertFile);
-      pApplet.println("[Shader] ✔ '" + name + "' carregado.");
-      return true;
-    } catch (Exception e) {
-      pApplet.println("[Shader] ❌ Falha ao carregar '" + name + "': " + e.getMessage());
-      return false;
+  /** Libera recursos da ativação atual sem encerrar serviços globais da biblioteca. */
+  private void releaseSceneResources(boolean resetCamera) {
+    parent.clearEnvironmentBackground();
+
+    if (renderer != null) renderer.dispose();
+    if (physicsEngine != null) physicsEngine.dispose();
+    if (planets != null) {
+      for (Planet planet : planets) planet.dispose();
+    }
+    if (sun != null) sun.dispose();
+    if (configLoader != null) configLoader.dispose();
+    if (shapeManager != null) shapeManager.dispose();
+    if (textureManager != null) textureManager.clear();
+
+    renderer = null;
+    physicsEngine = null;
+    planets = null;
+    sun = null;
+    configLoader = null;
+    shapeManager = null;
+    textureManager = null;
+    clock = null;
+    if (planetaryBodies != null) planetaryBodies.clear();
+    planetaryBodies = null;
+    initialized = false;
+
+    if (resetCamera && sceneCamera != null) {
+      parent.setSceneCameraInputEnabled(false);
+      sceneCamera.reset(1500f);
     }
   }
 
@@ -219,17 +186,23 @@ class Scene1 implements Scene {
   }
 
   public void setupScene() {
-    if (!needsReload) return;
-    needsReload = false;
-
     rwLock.writeLock().lock();
     try {
-      // 1) recarrega o JSON
-      configLoader.reloadJson();
-      // 2) faz todo o initializeScene de novo
-      initializeScene();
-      // 3) reajusta o relógio (opcional)
-      propagateSinceJ2000();
+      if (!initialized) {
+        initializeSceneResources(true);
+      }
+    } finally {
+      rwLock.writeLock().unlock();
+    }
+  }
+
+  private void reloadScene() {
+    rwLock.writeLock().lock();
+    try {
+      releaseSceneResources(false);
+      initializeSceneResources(false);
+      needsReload = false;
+      pApplet.println("[Scene1] Recursos recarregados com sucesso.");
     } finally {
       rwLock.writeLock().unlock();
     }
@@ -240,11 +213,13 @@ class Scene1 implements Scene {
   // ————————————————————————————————
   @Override
   public void update() {
-    // 0) Se foi pedido reload, reinicializa tudo
-    setupScene();
+    if (needsReload) {
+      reloadScene();
+    }
 
     rwLock.writeLock().lock();
     try {
+      if (!initialized) return;
       // 1) Δt em dias simulados desde o último frame
       double totalDt = clock.update();
       if (totalDt > 0.0) {
@@ -295,19 +270,21 @@ class Scene1 implements Scene {
   public void sceneRender(PGraphicsOpenGL pg) {
     rwLock.readLock().lock();
     try {
+      if (!initialized) return;
       pg.background(0, 10, 20);
-      pg.fill(255);
-      pg.textSize(12);
-      pg.text(clock.getCalendarUTCString(), 10, 20);
+      if (debugClockPrint) {
+        println(clock.getCalendarUTCString());
+      }
       pg.pushMatrix();
       sceneCamera.apply(pg);
 
         // 1) Sol
+        pg.noLights();
         PVector sunPx = sun.getPositionAU().copy()
                           .mult(pxPerAU());
         pg.pushMatrix();
           pg.translate(sunPx.x, sunPx.y, sunPx.z);
-          sun.display(pg, showLabels, shaderManager);
+          sun.display(pg, showLabels);
         pg.popMatrix();
 
         // 2) iluminação
@@ -334,7 +311,7 @@ class Scene1 implements Scene {
     PImage environmentTexture = configLoader.getSkyTexture();
     parent.setEquirectangularBackground(environmentTexture);
     if (environmentTexture != null) {
-      parent.setEnvironmentBackgroundIntensity(1.0f);
+      parent.setEnvironmentBackgroundIntensity(1.5f);
     }
   }
 
@@ -386,6 +363,7 @@ class Scene1 implements Scene {
    */ 
   public void keyEvent(processing.event.KeyEvent event) {
     if (event.getAction() != processing.event.KeyEvent.PRESS) return;
+    if (!initialized) return;
     char key = event.getKey();
     switch (key) {
       case ' ': resetView(); break;
@@ -405,6 +383,10 @@ class Scene1 implements Scene {
       case 'o': showOrbits = !showOrbits; break;
       case 'l': showLabels = !showLabels; break;
       case 'p': showMoonOrbits = !showMoonOrbits; break;
+      case 'n':
+        debugClockPrint = !debugClockPrint;
+        pApplet.println("[Scene1] Debug do relógio UTC " + (debugClockPrint ? "ativado" : "desativado") + ".");
+        break;
       case 'D': String input = JOptionPane.showInputDialog(
       "Data UTC (AAAA-MM-DD HH:MM:SS):"
     );
@@ -477,16 +459,14 @@ class Scene1 implements Scene {
    * Limpa todos os recursos utilizados pela cena.
    */
   public void dispose() {
-    parent.setSceneCameraInputEnabled(false);
-    sceneCamera.reset(1500f);
-    parent.clearEnvironmentBackground();
-    textureManager.clear();
-    configLoader.dispose();
-    for (Planet p:planets) p.dispose();
-    sun.dispose();
-    physicsEngine.dispose();
-    renderer.dispose();
-    System.out.println("Disposed Scene1");
+    rwLock.writeLock().lock();
+    try {
+      releaseSceneResources(true);
+      needsReload = false;
+      pApplet.println("[Scene1] Recursos liberados.");
+    } finally {
+      rwLock.writeLock().unlock();
+    }
   }
 
   /**

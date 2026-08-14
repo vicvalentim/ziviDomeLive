@@ -220,8 +220,7 @@ public class Moon implements CelestialBody {
     public void display(PGraphicsOpenGL pg,
                         boolean showLabel,
                         int renderingMode,
-                        ShapeManager shapeManager,
-                        ShaderManager shaderManager) {
+                        ShapeManager shapeManager) {
 
         // 1) recalcule radiusPx relativo ao pai
         applyScalingFactors();
@@ -258,15 +257,10 @@ public class Moon implements CelestialBody {
             pg.fill(col);
         } else {
             pg.noStroke();
-            if (texture != null && shaderManager.getShader("planet") != null) {
-                pg.shader(shaderManager.getShader("planet"));
-            } else {
-                pg.fill(col);
-            }
+            pg.fill(texture != null ? 255 : col);
         }
 
         pg.shape(getCachedShape(shapeManager));
-        pg.resetShader();
         pg.popMatrix();
 
         if (showLabel) {

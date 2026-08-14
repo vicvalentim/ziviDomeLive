@@ -1,21 +1,16 @@
 import processing.core.PVector;
 import java.util.*;
-import java.util.concurrent.*;
 
 /**
  * PhysicsEngine — cálculo híbrido em unidades físicas (AU, dias, M☉),
- * usando solver Kepleriano + perturbações, tudo em paralelo.
+ * usando solver Kepleriano + perturbações determinísticas.
  */
 public class PhysicsEngine {
     private final List<CelestialBody> bodies;
-    private final ExecutorService executor;
     private boolean enablePerturbations = true;
-    private static final int PARALLEL_THRESHOLD = 32;
 
     public PhysicsEngine(List<CelestialBody> bodies) {
         this.bodies = Objects.requireNonNull(bodies, "bodies must not be null");
-        int threads = Runtime.getRuntime().availableProcessors();
-        this.executor = Executors.newFixedThreadPool(threads);
     }
 
     public void setEnablePerturbations(boolean enable) { this.enablePerturbations = enable; }
@@ -23,71 +18,50 @@ public class PhysicsEngine {
     public void update(float dtDays) {
         if (dtDays <= 0f || bodies.isEmpty()) return;
 
-        // Fase 1: calcula novos estados em buffers temporários
+        // Fase 1: propaga todos os corpos antes de calcular perturbações.
+        // A ordem da lista preserva a hierarquia Sol -> planetas -> luas.
         int n = bodies.size();
-        PVector[] nextPos = new PVector[n];
-        PVector[] nextVel = new PVector[n];
-
-        // Decide entre paralelo ou seqüencial
-        if (n >= PARALLEL_THRESHOLD) {
-            List<Callable<Void>> tasks = new ArrayList<>();
-            for (int i = 0; i < n; i++) {
-                final int idx = i;
-                tasks.add(() -> {
-                    CelestialBody body = bodies.get(idx);
-                    // 1) Kepler puro
-                    body.propagateKepler(dtDays);
-
-                    // 2) cálculo de perturbação (com estado antigo)
-                    PVector aPert = enablePerturbations
-                        ? computePerturbations(body)
-                        : new PVector(0,0,0);
-
-                    // 3) monta estado futuro
-                    PVector vNew = PVector.add(body.getVelocityAU(), PVector.mult(aPert, dtDays));
-                    PVector pNew = PVector.add(body.getPositionAU(),
-                                               PVector.mult(aPert, 0.5f * dtDays * dtDays));
-                    nextVel[idx] = vNew;
-                    nextPos[idx] = pNew;
-                    return null;
-                });
-            }
-            try {
-                executor.invokeAll(tasks);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                System.err.println("[PhysicsEngine] Interrupted: " + e.getMessage());
-            }
-        } else {
-            // Seqüencial
-            for (int i = 0; i < n; i++) {
-                CelestialBody body = bodies.get(i);
-                body.propagateKepler(dtDays);
-                PVector aPert = enablePerturbations
-                    ? computePerturbations(body)
-                    : new PVector(0,0,0);
-                nextVel[i] = PVector.add(body.getVelocityAU(), PVector.mult(aPert, dtDays));
-                nextPos[i] = PVector.add(body.getPositionAU(),
-                                         PVector.mult(aPert, 0.5f * dtDays * dtDays));
-            }
+        for (CelestialBody body : bodies) {
+            body.propagateKepler(dtDays);
         }
 
-        // Fase 2: atualiza de verdade
+        // Fase 2: captura um snapshot coerente do estado propagado.
+        PVector[] propagatedPositions = new PVector[n];
+        for (int i = 0; i < n; i++) {
+            propagatedPositions[i] = bodies.get(i).getPositionAU().copy();
+        }
+
+        // Fase 3: calcula os estados futuros sem modificar o snapshot.
+        PVector[] nextPos = new PVector[n];
+        PVector[] nextVel = new PVector[n];
+        for (int i = 0; i < n; i++) {
+            CelestialBody body = bodies.get(i);
+            PVector aPert = enablePerturbations
+                ? computePerturbations(i, propagatedPositions)
+                : new PVector();
+            nextVel[i] = PVector.add(body.getVelocityAU(), PVector.mult(aPert, dtDays));
+            nextPos[i] = PVector.add(propagatedPositions[i],
+                                     PVector.mult(aPert, 0.5f * dtDays * dtDays));
+        }
+
+        // Fase 4: publica o frame simulado de uma só vez.
         for (int i = 0; i < n; i++) {
             bodies.get(i).getVelocityAU().set(nextVel[i]);
             bodies.get(i).getPositionAU().set(nextPos[i]);
         }
     }
 
-    private PVector computePerturbations(CelestialBody self) {
+    private PVector computePerturbations(int selfIndex, PVector[] positions) {
+        CelestialBody self = bodies.get(selfIndex);
         PVector aTotal = new PVector();
         PVector dr     = new PVector();
-        PVector selfPos= self.getPositionAU();
+        PVector selfPos= positions[selfIndex];
         CelestialBody central = self.getCentralBody();
 
-        for (CelestialBody other : bodies) {
+        for (int i = 0; i < bodies.size(); i++) {
+            CelestialBody other = bodies.get(i);
             if (other == self || other == central) continue;
-            dr.set(other.getPositionAU()).sub(selfPos);
+            dr.set(positions[i]).sub(selfPos);
             float r2 = dr.magSq();
             if (r2 < 1e-12f) continue;
             float invR3 = 1.0f / (r2 * sqrt(r2));
@@ -98,15 +72,6 @@ public class PhysicsEngine {
     }
 
     public void dispose() {
-        executor.shutdown();
-        try {
-            if (!executor.awaitTermination(2, TimeUnit.SECONDS)) {
-                executor.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            executor.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
+        // O engine não possui threads nem recursos gráficos.
     }
 }
-

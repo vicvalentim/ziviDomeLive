@@ -58,8 +58,7 @@ public class Sun implements CelestialBody {
 
     // ——————————————— Renderização ———————————————
     public void display(PGraphicsOpenGL pg,
-                        boolean showLabel,
-                        ShaderManager shaderManager) {
+                        boolean showLabel) {
         pg.pushMatrix();
             pg.translate(position.x, position.y, position.z);
             pg.rotateY(rotationAngle);
@@ -70,13 +69,7 @@ public class Sun implements CelestialBody {
                 pg.stroke(WIREFRAME_COLOR);
                 pg.strokeWeight(WIREFRAME_STROKE_WEIGHT);
             } else if (renderingMode == 2) {
-                PShader shader = shaderManager.getShader("sun");
-                if (shader != null && texture != null) {
-                    shader.set("texSampler", texture);
-                    pg.shader(shader);
-                } else {
-                    pg.fill(col);
-                }
+                pg.fill(texture != null ? 255 : col);
                 pg.noStroke();
             } else {
                 pg.fill(col);
@@ -86,7 +79,6 @@ public class Sun implements CelestialBody {
             if (shape != null) {
                 pg.shape(shape);
             }
-            pg.resetShader();
         pg.popMatrix();
 
         if (showLabel) {

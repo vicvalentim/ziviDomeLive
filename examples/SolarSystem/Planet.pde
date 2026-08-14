@@ -189,8 +189,7 @@ public class Planet implements CelestialBody {
                         boolean showLabel,
                         boolean drawMoonOrbits,
                         int renderingMode,
-                        ShapeManager shapeManager,
-                        ShaderManager shaderManager) {
+                        ShapeManager shapeManager) {
 
         float scale = pxPerAU();
         PVector posPx = positionAU.copy().mult(scale);
@@ -215,15 +214,10 @@ public class Planet implements CelestialBody {
                 pg.fill(col);
             } else {
                 pg.noStroke();
-                PShader shader = (texture != null)
-                               ? shaderManager.getShader("planet")
-                               : null;
-                if (shader != null) pg.shader(shader);
-                else              pg.fill(col);
+                pg.fill(texture != null ? 255 : col);
             }
 
             pg.shape(getCachedShape(shapeManager));
-            pg.resetShader();
         pg.popMatrix();
 
         if (showLabel) {

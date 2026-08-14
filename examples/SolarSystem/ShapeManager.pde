@@ -132,4 +132,10 @@ public class ShapeManager {
     this.mediumDetail = medium;
     this.highDetail = high;
   }
+
+  public void dispose() {
+    wireShapes.clear();
+    solidShapes.clear();
+    texturedShapes.clear();
+  }
 }
