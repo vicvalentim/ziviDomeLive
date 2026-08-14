@@ -9,7 +9,6 @@ import java.io.File;
 class ConfigLoader {
   private final PApplet pApplet;
   private final TextureManager textureManager;
-  private PShape skySphere;
   private PImage skyTexture;
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final HashMap<String,String> textureByName = new HashMap<>();
@@ -294,10 +293,6 @@ class ConfigLoader {
       ArrayList<Planet> planets = loadPlanets();
       loadMoons(planets);
       skyTexture = textureManager.getTexture("8k_stars_milky_way.jpg");
-      skySphere  = pApplet.createShape(SPHERE, 1);
-      skySphere.setTexture(skyTexture);
-      skySphere.setStroke(false);
-      skySphere.setFill(pApplet.color(255));
       return planets;
     } finally {
       lock.writeLock().unlock();
@@ -309,15 +304,6 @@ class ConfigLoader {
       if (p.getName().equalsIgnoreCase(name)) return p;
     }
     return null;
-  }
-
-  public PShape getSkySphere() {
-    lock.readLock().lock();
-    try {
-      return skySphere;
-    } finally {
-      lock.readLock().unlock();
-    }
   }
 
   public PImage getSkyTexture() {
@@ -332,7 +318,6 @@ class ConfigLoader {
   public void sendTexturesToShaderManager(ShaderManager shaderManager) {
     lock.readLock().lock();
     try {
-      if (skyTexture != null) shaderManager.setTexture("sky_hdri", skyTexture);
       for (String key : textureByName.keySet()) {
         PImage tex = textureManager.getTexture(textureByName.get(key));
         if (tex != null) shaderManager.setTexture("planet", tex);
@@ -347,7 +332,6 @@ class ConfigLoader {
   public void dispose() {
     lock.writeLock().lock();
     try {
-      skySphere = null;
       skyTexture = null;
     } finally {
       lock.writeLock().unlock();

@@ -62,10 +62,7 @@ class Scene1 implements Scene {
 
     sun     = configLoader.loadSun();
     planets = configLoader.loadConfiguration();
-    if (configLoader.getSkyTexture() != null) {
-      parent.setEquirectangularBackground(configLoader.getSkyTexture());
-      parent.setEnvironmentBackgroundIntensity(1.0f);
-    }
+    configureEnvironmentBackground();
 
     // configura central bodies
     for (Planet p : planets) {
@@ -90,7 +87,6 @@ class Scene1 implements Scene {
     renderer = new Renderer(
       pApplet,
       planets,
-      configLoader.getSkySphere(),
       shapeManager,
       shaderManager
     );
@@ -131,6 +127,7 @@ class Scene1 implements Scene {
       // *** só há JSON fresco se veio de setupScene() ***
       sun     = configLoader.loadSun();
       planets = configLoader.loadConfiguration();
+      configureEnvironmentBackground();
 
       // 2) fixa central bodies
       for (Planet p : planets) {
@@ -173,8 +170,6 @@ class Scene1 implements Scene {
     //allShadersOk &= tryLoadShader("planet", "planet.frag", "common.vert");
     //allShadersOk &= tryLoadShader("sun", "sun.frag", "common.vert");
     //allShadersOk &= tryLoadShader("rings", "rings.frag", "common.vert");
-    //allShadersOk &= tryLoadShader("sky_hdri", "sky_hdri.frag", "sky_hdri.vert");
-
     if (allShadersOk) {
       pApplet.println("[Scene1] Todos os shaders carregados com sucesso.");
     } else {
@@ -336,13 +331,6 @@ class Scene1 implements Scene {
         // 4) Planetas + luas (com órbitas de luas via m.displayOrbit())
         renderer.drawPlanetsAndMoons(pg, showLabels, showMoonOrbits);
 
-        // 5) Céu legado do exemplo: somente para Standard.
-        // Nos modos esféricos, o fundo é desenhado pela API de environment da biblioteca
-        // como background infinito da captura cubemap, sem geometria de esfera.
-        if (shouldDrawLegacySkySphere()) {
-          renderer.drawSkySphere(pg);
-        }
-
       pg.popMatrix();
     } finally {
       rwLock.readLock().unlock();
@@ -352,8 +340,12 @@ class Scene1 implements Scene {
   // ————————————————————————————————
   // Funções auxiliares
   // ————————————————————————————————
-  private boolean shouldDrawLegacySkySphere() {
-    return !(parent.hasEnvironmentBackground() && parent.isSphericalCaptureActive());
+  private void configureEnvironmentBackground() {
+    PImage environmentTexture = configLoader.getSkyTexture();
+    parent.setEquirectangularBackground(environmentTexture);
+    if (environmentTexture != null) {
+      parent.setEnvironmentBackgroundIntensity(1.0f);
+    }
   }
 
   private void changeRenderingMode(int mode) {

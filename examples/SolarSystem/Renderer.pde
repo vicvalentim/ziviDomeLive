@@ -6,7 +6,6 @@ class Renderer {
   private List<Planet> planets;
   private List<PShape> planetOrbitShapesUniform;
   private Sun sun;
-  private final PShape skySphere;
 
   private final ShapeManager shapeManager;
   private final ShaderManager shaderManager;
@@ -15,12 +14,10 @@ class Renderer {
 
   public Renderer(PApplet pApplet,
                   List<Planet> planets,
-                  PShape skySphere,
                   ShapeManager shapeManager,
                   ShaderManager shaderManager) {
     this.pApplet       = pApplet;
     this.planets       = planets;
-    this.skySphere     = skySphere;
     this.shapeManager  = shapeManager;
     this.shaderManager = shaderManager;
 
@@ -150,47 +147,6 @@ class Renderer {
                                   boolean showMoonOrbits) {
     drawPlanets(pg, showLabels);
     drawMoons  (pg, showLabels, showMoonOrbits);
-  }
-
-  public void drawSkySphere(PGraphicsOpenGL pg) {
-    if (renderingMode != 2) return;
-    pg.pushMatrix();
-      if (sun != null) {
-        PVector sunPx = sun.getPositionAU().copy()
-                           .mult(pxPerAU());
-        pg.translate(sunPx.x, sunPx.y, sunPx.z);
-        //pg.rotateY(cameraRotationY * 0.5f);
-      }
-
-      PGL pgl = pg.beginPGL();
-      pgl.disable(PGL.CULL_FACE);
-      pg.endPGL();
-
-      boolean shaderApplied = false;
-      PShader skyShader = shaderManager.getShader("sky_hdri");
-      if (skyShader != null) {
-        try {
-          shaderManager.applyShader(pg, "sky_hdri");
-          shaderApplied = true;
-        } catch (Exception e) {
-          // fallback
-        }
-      }
-      if (!shaderApplied) {
-        pg.noLights();
-        pg.textureMode(NORMAL);
-        pg.fill(255);
-      }
-
-      float skyScale = -NEPTUNE_DIST * pxPerAU() * 2f;
-      pg.scale(skyScale);
-      pg.shape(skySphere);
-      pg.resetShader();
-
-      pgl = pg.beginPGL();
-      pgl.enable(PGL.CULL_FACE);
-      pg.endPGL();
-    pg.popMatrix();
   }
 
   public void dispose() {
