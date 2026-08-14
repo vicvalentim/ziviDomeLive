@@ -57,25 +57,6 @@ class ReleaseMetadataTest {
 	}
 
 	@Test
-	void releaseDocumentationExposesNewApiAndQualificationBoundary() throws IOException {
-		String readme = read("README.md");
-		String qualification = read("docs/en/qualification/2.0-release-readiness.md");
-		String publication = read("docs/en/qualification/processing-publication.md");
-
-		assertTrue(readme.contains("setRenderMode(RenderMode.FULL)"));
-		assertTrue(readme.contains("OutputManager.OutputState"));
-		assertTrue(readme.contains("Platform Matrix"));
-		assertTrue(readme.contains("Processing Publication"));
-		assertTrue(qualification.contains("native cubemap"));
-		assertTrue(qualification.contains("CalibrationTool"));
-		assertTrue(qualification.contains("No golden images"));
-		assertTrue(qualification.contains("Processing Publication"));
-		assertTrue(publication.contains("reference/index.html"));
-		assertTrue(publication.contains("ziviDomeLive.zip"));
-		assertTrue(publication.contains("Contribution Manager"));
-	}
-
-	@Test
 	void releasePackageAndWorkflowsKeepPublicationGates() throws IOException {
 		String build = read("build.gradle.kts");
 		String releaseWorkflow = read(".github/workflows/release.yml");

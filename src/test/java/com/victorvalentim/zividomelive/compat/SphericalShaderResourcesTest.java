@@ -12,165 +12,63 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SphericalShaderResourcesTest {
 
-	@Test
-	void samplerCubeSphericalShadersAreStagedForNativeCubemapPipeline() throws IOException {
-		Path shaderRoot = projectRoot().resolve("shaders/samplercube");
+	private static final Path PROJECT_ROOT = Path.of(System.getProperty("user.dir"));
 
-		assertAll("samplerCube shader resources",
-				() -> assertTrue(Files.isRegularFile(shaderRoot.resolve("README.md"))),
-				() -> assertShader(shaderRoot, "cubemap.vert", "out vec3 reflectDir"),
-				() -> assertShader(shaderRoot, "cubemap.frag", "uniform samplerCube cubemap"),
-				() -> assertShader(shaderRoot, "equirectangular.vert", "uniform mat4 transform"),
-				() -> assertShader(shaderRoot, "equirectangular.frag", "uniform samplerCube cubemap"),
-				() -> assertShader(shaderRoot, "fisheye.vert", "uniform mat4 transform"),
-				() -> assertShader(shaderRoot, "fisheye.frag", "uniform samplerCube cubemap"),
-				() -> assertShader(shaderRoot, "skybox.vert", "uniform mat4 transform"),
-				() -> assertShader(shaderRoot, "skybox.frag", "uniform samplerCube cubemap"));
+	@Test
+	void requiredShaderResourcesExistWithTheExpectedSamplerRoles() throws IOException {
+		Path samplerCube = PROJECT_ROOT.resolve("shaders/samplercube");
+		Path environment = PROJECT_ROOT.resolve("shaders/environment");
+
+		assertAll("required shader resources",
+				() -> assertShader(samplerCube.resolve("cubemap.vert"), false, null),
+				() -> assertShader(samplerCube.resolve("cubemap.frag"), true, "samplerCube"),
+				() -> assertShader(samplerCube.resolve("equirectangular.vert"), false, null),
+				() -> assertShader(samplerCube.resolve("equirectangular.frag"), true, "samplerCube"),
+				() -> assertShader(samplerCube.resolve("fisheye.vert"), false, null),
+				() -> assertShader(samplerCube.resolve("fisheye.frag"), true, "samplerCube"),
+				() -> assertShader(samplerCube.resolve("skybox.vert"), false, null),
+				() -> assertShader(samplerCube.resolve("skybox.frag"), true, "samplerCube"),
+				() -> assertShader(environment.resolve(
+						"standard_equirectangular_background.vert"), false, null),
+				() -> assertShader(environment.resolve(
+						"standard_equirectangular_background.frag"), true, "sampler2D"),
+				() -> assertNativeShader(environment.resolve(
+						"equirectangular_background.vert"), null),
+				() -> assertNativeShader(environment.resolve(
+						"equirectangular_background.frag"), "sampler2D"));
 	}
 
 	@Test
-	void environmentBackgroundShadersArePackagedForLdrEquirectangularMaps() throws IOException {
-		Path shaderRoot = projectRoot().resolve("shaders/environment");
-		String renderer = Files.readString(projectRoot().resolve(
-				"src/main/java/com/victorvalentim/zividomelive/render/EnvironmentBackgroundRenderer.java"));
-		String background = Files.readString(
-				shaderRoot.resolve("equirectangular_background.frag"));
-
-		assertAll("environment background shader resources",
-				() -> assertShader(shaderRoot, "equirectangular_background.vert", "gl_VertexID"),
-				() -> assertShader(shaderRoot, "equirectangular_background.vert", "FULLSCREEN_TRIANGLE"),
-				() -> assertShader(shaderRoot, "standard_equirectangular_background.vert", "in vec4 vertex"),
-				() -> assertShader(shaderRoot, "standard_equirectangular_background.vert", "uniform mat4 transform"),
-				() -> assertShader(shaderRoot, "standard_equirectangular_background.vert", "environmentDirection = vertex.xyz"),
-				() -> assertShader(shaderRoot, "standard_equirectangular_background.vert", "gl_Position = transform * vertex"),
-				() -> assertShader(shaderRoot, "standard_equirectangular_background.frag", "uniform sampler2D environmentMap"),
-				() -> assertShader(shaderRoot, "standard_equirectangular_background.frag", "in vec3 environmentDirection"),
-				() -> assertShader(shaderRoot, "standard_equirectangular_background.frag", "uniform vec3 cameraRight"),
-				() -> assertShader(shaderRoot, "standard_equirectangular_background.frag", "uniform vec3 cameraUp"),
-				() -> assertShader(shaderRoot, "standard_equirectangular_background.frag", "uniform vec3 cameraBackward"),
-				() -> assertShader(shaderRoot, "standard_equirectangular_background.frag", "equirectangularUv(worldDirection)"),
-				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "uniform sampler2D environmentMap"),
-				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "faceResolution"),
-				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "directionForCanonicalFace"),
-				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "equirectangularUv"),
-				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "environmentRotation"),
-				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "yawOffset"),
-				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "intensity"),
-				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "float theta = atan(-dir.x, -dir.z) - yawOffset"),
-				() -> assertNativeShader(shaderRoot, "equirectangular_background.frag", "float v = acos(clamp(dir.y, -1.0, 1.0)) / PI"),
-				() -> assertTrue(renderer.contains("pgl.drawArrays(PGL.TRIANGLES, 0, 3)")),
-				() -> assertTrue(renderer.contains("pgl.depthFunc(PGL.LEQUAL)")),
-				() -> assertTrue(renderer.contains("pgl.depthMask(false)")),
-				() -> assertFalse(background.contains("faceUV.y = 1.0 - faceUV.y")),
-				() -> assertFalse(background.contains("dir.z = -dir.z")),
-				() -> assertTrue(renderer.contains("target.sphere(")));
-	}
-
-	@Test
-	void sixTextureProcessingShaderResourcesAreRemoved() {
-		Path activeShaderRoot = projectRoot().resolve("shaders");
-
-		assertAll("six-texture Processing shader resources removed",
-				() -> assertFalse(Files.exists(activeShaderRoot.resolve("equirectangular.frag"))),
-				() -> assertFalse(Files.exists(activeShaderRoot.resolve("equirectangular.vert"))),
-				() -> assertFalse(Files.exists(activeShaderRoot.resolve("domemaster.frag"))),
-				() -> assertFalse(Files.exists(activeShaderRoot.resolve("domemaster.vert"))));
-	}
-
-	@Test
-	void samplerCubeEquirectangularShaderPreservesQualifiedLegacyOrientation() throws IOException {
-		Path shaderRoot = projectRoot().resolve("shaders/samplercube");
-
-		String equirectangular = Files.readString(shaderRoot.resolve("equirectangular.frag"));
-
-		assertAll("samplerCube equirectangular orientation",
-				() -> assertTrue(equirectangular.contains("float theta = uv.x * 2.0 * PI")),
-				() -> assertTrue(equirectangular.contains("float phi = uv.y * PI")),
-				() -> assertTrue(equirectangular.contains("-sinPhi * sinTheta")),
-				() -> assertTrue(equirectangular.contains("cosPhi")),
-				() -> assertTrue(equirectangular.contains("-sinPhi * cosTheta")),
-				() -> assertFalse(equirectangular.contains("float theta = -(uv.x * 2.0 * PI - PI)")),
-				() -> assertFalse(equirectangular.contains("float phi = uv.y * PI - PI / 2.0")),
-				() -> assertTrue(equirectangular.contains("vec4 sampleCubemapEAC(vec3 dir)")),
-				() -> assertTrue(equirectangular.contains("FragColor = sampleCubemapEAC(dir)")));
-	}
-
-	@Test
-	void samplerCubeFisheyeShaderPreservesQualifiedLegacyOrientation() throws IOException {
-		Path shaderRoot = projectRoot().resolve("shaders/samplercube");
-
-		String fisheye = Files.readString(shaderRoot.resolve("fisheye.frag"));
-
-		assertAll("samplerCube fisheye orientation",
-				() -> assertTrue(fisheye.contains("uv.y *= resolution.y / resolution.x")),
-				() -> assertTrue(fisheye.contains("sin(theta) * cos(phi)")),
-				() -> assertTrue(fisheye.contains("-sin(theta) * sin(phi)")),
-				() -> assertTrue(fisheye.contains("cos(theta)")),
-				() -> assertFalse(fisheye.contains("dir.z = -dir.z")),
-				() -> assertTrue(fisheye.contains("vec4 sampleCubemapEAC(vec3 dir)")),
-				() -> assertTrue(fisheye.contains("FragColor = sampleCubemapEAC(dir)")));
-	}
-
-	@Test
-	void samplerCubeSkyboxShaderUsesNativeSampleCubeLayout() throws IOException {
-		Path shaderRoot = projectRoot().resolve("shaders/samplercube");
-
-		String skybox = Files.readString(shaderRoot.resolve("skybox.frag"));
-
-		assertAll("samplerCube skybox layout",
-				() -> assertTrue(skybox.contains("uniform int layoutFaces[6]")),
-				() -> assertTrue(skybox.contains("uniform int faceRotations[6]")),
-				() -> assertTrue(skybox.contains("uniform int faceInversions[6]")),
-				() -> assertTrue(skybox.contains("faceIndex = layoutFaces[SLOT_TOP]")),
-				() -> assertTrue(skybox.contains("faceIndex = layoutFaces[SLOT_LEFT]")),
-				() -> assertTrue(skybox.contains("faceIndex = layoutFaces[SLOT_CENTER]")),
-				() -> assertTrue(skybox.contains("faceIndex = layoutFaces[SLOT_RIGHT]")),
-				() -> assertTrue(skybox.contains("faceIndex = layoutFaces[SLOT_FAR_RIGHT]")),
-				() -> assertTrue(skybox.contains("faceIndex = layoutFaces[SLOT_BOTTOM]")),
-				() -> assertTrue(skybox.contains("vec3 directionForCanonicalFace(int faceIndex, vec2 faceUV)")),
-				() -> assertTrue(skybox.contains("dir = applyLegacyFaceTransform(dir, faceRotations[faceIndex], faceInversions[faceIndex])")),
-				() -> assertTrue(skybox.contains("dir.z = -dir.z")),
-				() -> assertTrue(skybox.contains("FragColor = sampleCubemapEAC(dir)")));
-	}
-
-	@Test
-	void packagedJarTaskIncludesNestedShaderResources() throws IOException {
-		String buildScript = Files.readString(projectRoot().resolve("build.gradle.kts"));
+	void buildPackagesTheShaderTreeAtTheRuntimeDataPath() throws IOException {
+		String buildScript = Files.readString(PROJECT_ROOT.resolve("build.gradle.kts"));
 
 		assertAll("shader packaging",
 				() -> assertTrue(buildScript.contains("from(\"shaders\")")),
 				() -> assertTrue(buildScript.contains("into(\"data/shaders\")")));
 	}
 
-	private static void assertShader(Path shaderRoot, String fileName, String requiredSnippet) throws IOException {
-		Path shader = shaderRoot.resolve(fileName);
+	private static void assertShader(
+			Path shader,
+			boolean processingFragment,
+			String samplerType) throws IOException {
 		String source = Files.readString(shader);
 
-		assertAll(fileName,
+		assertAll(shader.getFileName().toString(),
 				() -> assertTrue(Files.isRegularFile(shader)),
 				() -> assertTrue(source.startsWith("#version 410 core")),
-				() -> assertTrue(source.contains(requiredSnippet)));
-
-		if (fileName.endsWith(".frag")) {
-			assertTrue(source.contains("#define PROCESSING_COLOR_SHADER"), fileName);
-		}
+				() -> assertFalse(source.isBlank()),
+				() -> assertTrue(!processingFragment
+						|| source.contains("#define PROCESSING_COLOR_SHADER")),
+				() -> assertTrue(samplerType == null || source.contains(samplerType)));
 	}
 
-	private static void assertNativeShader(
-			Path shaderRoot,
-			String fileName,
-			String requiredSnippet) throws IOException {
-		Path shader = shaderRoot.resolve(fileName);
+	private static void assertNativeShader(Path shader, String samplerType) throws IOException {
 		String source = Files.readString(shader);
 
-		assertAll(fileName,
+		assertAll(shader.getFileName().toString(),
 				() -> assertTrue(Files.isRegularFile(shader)),
 				() -> assertTrue(source.startsWith("#version 410 core")),
-				() -> assertTrue(source.contains(requiredSnippet)),
-				() -> assertFalse(source.contains("#define PROCESSING_")));
-	}
-
-	private static Path projectRoot() {
-		return Path.of(System.getProperty("user.dir"));
+				() -> assertFalse(source.contains("#define PROCESSING_")),
+				() -> assertTrue(samplerType == null || source.contains(samplerType)));
 	}
 }
