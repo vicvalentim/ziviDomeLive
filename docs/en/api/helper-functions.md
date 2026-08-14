@@ -42,11 +42,14 @@ inherit drag or wheel interaction unintentionally.
 ```java
 PImage stars = loadImage("textures/8k_stars_milky_way.jpg");
 dome.setEquirectangularBackground(stars);
+dome.setEnvironmentBackgroundVisible(true);
 dome.setEnvironmentBackgroundIntensity(1.0f);
 dome.setEnvironmentBackgroundYawOffset(0.0f);
 ```
 
-The environment background is an LDR `PImage` service owned by the library. It is drawn as an infinite far-depth background after `sceneRender()`, so scene-owned `background()` calls do not erase it and foreground geometry remains in front. Domemaster, equirectangular, and skybox projections receive the same background without requiring a scene-owned sky sphere. Use `clearEnvironmentBackground()` when the owning scene is disposed.
+The public LDR source is a borrowed `PImage`; the library resolves its Processing-managed GPU texture and samples it as an equirectangular map. One logical source and one set of `visible`, visual `intensity`, and longitude `yawOffset` values feed Standard, domemaster, equirectangular, and skybox preview/output passes. The far-depth pass runs after `sceneRender()`, so scene-owned `background()` calls do not erase it and foreground geometry remains in front.
+
+Standard uses only its perspective camera rotation: drag rotates the panorama, while orbit-distance changes do not translate it. Spherical modes use the shared spherical Pitch/Yaw/Roll orientation. Use `clearEnvironmentBackground()` when the owning scene is disposed; the borrowed `PImage` itself is never disposed by ziviDomeLive.
 
 HDR loading, IBL maps, and ambient occlusion are not enabled by this helper yet.
 
