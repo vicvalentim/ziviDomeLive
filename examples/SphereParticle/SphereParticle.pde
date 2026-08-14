@@ -1,16 +1,13 @@
 import com.victorvalentim.zividomelive.*;
-import com.victorvalentim.zividomelive.support.ThreadManager;
 import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;
 
-import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.ArrayList;
 
 // Instâncias principais
 ziviDomeLive ziviDome;      // Instância da biblioteca ziviDomeLive
-SceneManager sceneManager;  // Gerenciador de cenas
 
 ReentrantLock lock = new ReentrantLock();  // Lock para controle de acesso concorrente
 
@@ -24,14 +21,9 @@ void setup() {
   ziviDome = new ziviDomeLive(this);
   ziviDome.setup();
 
-  // Criação e configuração do SceneManager
-  sceneManager = new SceneManager();
-  sceneManager.registerScene(new Scene1(ziviDome)); // Registra apenas Scene1
+  ziviDome.setScene(new Scene1());
 
-  // Vincula o SceneManager à biblioteca ziviDomeLive
-  ziviDome.setSceneManager(sceneManager);
-
-  println("Simulação de partículas usando o ThreadManager compartilhado.");
+  println("Simulação de partículas usando SceneServices.tasks().");
 }
 
 void draw() {

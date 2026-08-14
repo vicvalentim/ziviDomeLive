@@ -1,6 +1,6 @@
 // Implementação da cena otimizando o cálculo e renderização de partículas
 class Scene1 implements Scene {
-  ziviDomeLive parent;
+  SceneServices services;
   PGraphics pg;
   ArrayList<Float> mass = new ArrayList<>();
   ArrayList<Float> positionX = new ArrayList<>();
@@ -10,10 +10,9 @@ class Scene1 implements Scene {
   ArrayList<Float> velocityY = new ArrayList<>();
   ArrayList<Float> velocityZ = new ArrayList<>();
   ArrayList<Long> birthTime = new ArrayList<>();
-  Future<Void> simulationTask;
 
-  Scene1(ziviDomeLive parent) {
-    this.parent = parent;
+  public void configure(SceneServices services) {
+    this.services = services;
   }
 
   public void setupScene() {
@@ -22,13 +21,8 @@ class Scene1 implements Scene {
   }
 
   public void update() {
-    // No máximo uma simulação fica em voo; não há fila crescente por frame.
-    if (simulationTask == null || simulationTask.isDone()) {
-      simulationTask = ThreadManager.submitTask(() -> {
-        updateParticles();
-        return null;
-      });
-    }
+    // A API rejeita outra tarefa com a mesma chave enquanto esta estiver em voo.
+    services.tasks().submitIfIdle("particle-simulation", this::updateParticles);
   }
 
   public void sceneRender(PGraphicsOpenGL pg) {
@@ -84,10 +78,7 @@ class Scene1 implements Scene {
   }
 
   public void dispose() {
-    if (simulationTask != null) {
-      simulationTask.cancel(true);
-      simulationTask = null;
-    }
+    // SceneServices cancela tarefas antes deste cleanup de domínio.
     lock.lock();
     try {
       mass.clear();

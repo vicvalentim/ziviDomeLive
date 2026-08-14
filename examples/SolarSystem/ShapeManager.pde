@@ -1,13 +1,9 @@
 import processing.core.*;
 import processing.opengl.*;
-import java.util.HashMap;
 
 public class ShapeManager {
-  private PApplet pApplet;
-
-  private final HashMap<String, PShape> wireShapes = new HashMap<>();
-  private final HashMap<String, PShape> solidShapes = new HashMap<>();
-  private final HashMap<String, PShape> texturedShapes = new HashMap<>();
+  private final PApplet pApplet;
+  private final SceneAssets assets;
 
   // Detalhes configuráveis
   private int lowDetail = 32;
@@ -18,36 +14,37 @@ public class ShapeManager {
   private static final float WIREFRAME_STROKE_WEIGHT = 1.5f;
   private static final int WIREFRAME_COLOR = 0xFFCCCCCC; // Exemplo: cinza claro
 
-  public ShapeManager(PApplet pApplet) {
+  public ShapeManager(PApplet pApplet, SceneAssets assets) {
     this.pApplet = pApplet;
+    this.assets = assets;
   }
 
   public PShape getShape(String name, int mode, PImage texture) {
-    String key = name + ":" + mode;
+    String key = shapeKey(name, mode);
     int detail = getDetailLevelByName(name);
 
     switch (mode) {
       case 0:  // Wireframe – use PShape padrão
-        return wireShapes.computeIfAbsent(key, k -> 
+        return assets.getOrCreateShape(key, () ->
           createSphereShape(detail, false, true, null, false)
         );
       case 1:  // Solid – usa PShapeOpenGL se possível
-        return solidShapes.computeIfAbsent(key, k -> 
+        return assets.getOrCreateShape(key, () ->
           createSphereShape(detail, true, false, null, true)
         );
       case 2:  // Textured – usa PShapeOpenGL se possível
-        return texturedShapes.computeIfAbsent(key, k -> 
+        return assets.getOrCreateShape(key, () ->
           createSphereShape(detail, true, false, texture, true)
         );
       default:
-        return solidShapes.computeIfAbsent(key, k -> 
+        return assets.getOrCreateShape(key, () ->
           createSphereShape(detail, true, false, null, true)
         );
     }
   }
 
   public void buildShape(String name, int mode, PImage texture) {
-    String key = name + ":" + mode;
+    String key = shapeKey(name, mode);
     int detail = getDetailLevelByName(name);
 
     PShape shape = createSphereShape(
@@ -58,14 +55,7 @@ public class ShapeManager {
       (mode != 0)           // Use OpenGL para modos sólidos e texturizados; wireframe usa o padrão
     );
 
-    switch (mode) {
-      case 0: // Wireframe
-        wireShapes.put(key, shape); break;
-      case 1: // Solid
-        solidShapes.put(key, shape); break;
-      case 2: // Textured
-        texturedShapes.put(key, shape); break;
-    }
+    assets.shapes().putBorrowed(key, shape);
   }
 
   /**
@@ -114,28 +104,27 @@ public class ShapeManager {
   }
 
   public void clearCache(int mode) {
-    switch (mode) {
-      case 0: wireShapes.clear(); break;
-      case 1: solidShapes.clear(); break;
-      case 2: texturedShapes.clear(); break;
-    }
+    assets.shapes().removeByPrefix("solar:shape:" + mode + ":");
   }
 
   public void clearUnused(boolean keepWire, boolean keepSolid, boolean keepTextured) {
-    if (!keepWire) wireShapes.clear();
-    if (!keepSolid) solidShapes.clear();
-    if (!keepTextured) texturedShapes.clear();
+    if (!keepWire) clearCache(0);
+    if (!keepSolid) clearCache(1);
+    if (!keepTextured) clearCache(2);
   }
 
   public void setDetailLevels(int low, int medium, int high) {
     this.lowDetail = low;
     this.mediumDetail = medium;
     this.highDetail = high;
+    assets.shapes().removeByPrefix("solar:shape:");
   }
 
   public void dispose() {
-    wireShapes.clear();
-    solidShapes.clear();
-    texturedShapes.clear();
+    // SceneAssets libera todas as referências no fechamento da ativação.
+  }
+
+  private String shapeKey(String name, int mode) {
+    return "solar:shape:" + mode + ":" + name;
   }
 }

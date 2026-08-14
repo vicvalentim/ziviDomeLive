@@ -8,7 +8,7 @@ import java.io.File;
 
 class ConfigLoader {
   private final PApplet pApplet;
-  private final TextureManager textureManager;
+  private final SceneAssets assets;
   private PImage skyTexture;
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final HashMap<String,String> textureByName = new HashMap<>();
@@ -22,9 +22,9 @@ class ConfigLoader {
   private JSONArray  jsonPlanets;    
   private JSONArray  jsonMoons;      
 
-  ConfigLoader(PApplet pApplet, TextureManager textureManager) {
+  ConfigLoader(PApplet pApplet, SceneAssets assets) {
     this.pApplet        = pApplet;
-    this.textureManager = textureManager;
+    this.assets          = assets;
 
 
     scanTextureFolder("textures");
@@ -68,8 +68,8 @@ class ConfigLoader {
   private PImage lookupTexture(String bodyName) {
     String key      = bodyName.toLowerCase();
     String filename = textureByName.get(key);
-    // o TextureManager por baixo usa algo como loadImage(TEXTURE_PATH + filename)
-    return (filename != null) ? textureManager.getTexture(filename) : null;
+    // SceneAssets resolve e mantém uma única referência por caminho.
+    return (filename != null) ? assets.loadImage("textures/" + filename) : null;
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -292,7 +292,7 @@ class ConfigLoader {
     try {
       ArrayList<Planet> planets = loadPlanets();
       loadMoons(planets);
-      skyTexture = textureManager.getTexture("8k_stars_milky_way.jpg");
+      skyTexture = assets.loadImage("textures/8k_stars_milky_way.jpg");
       return planets;
     } finally {
       lock.writeLock().unlock();

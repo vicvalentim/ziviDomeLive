@@ -6,7 +6,6 @@ import codeanticode.syphon.*;
 
 // Main instances
 ziviDomeLive ziviDome;      // Instance of the ziviDomeLive library
-SceneManager sceneManager;  // SceneManager to manage multiple scenes
 
 void settings() {
   pixelDensity(1);  // Library default policy
@@ -18,12 +17,8 @@ void setup() {
   ziviDome = new ziviDomeLive(this);
   ziviDome.setup();  // Initial setup of the library
 
-  // Create and configure the SceneManager
-  sceneManager = new SceneManager();
-  sceneManager.registerScene(new Scene1(ziviDome, this)); 
-  
-  // Link the SceneManager to the library
-  ziviDome.setSceneManager(sceneManager);
+  // setScene configura SceneServices antes de setupScene().
+  ziviDome.setScene(new Scene1());
 }
 
 void draw() {
