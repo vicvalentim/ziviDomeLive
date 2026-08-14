@@ -29,7 +29,7 @@ first post()
 
 | Hook | Responsibility |
 |---|---|
-| `pre()` | Call active `Scene.update()`, advance the shared `OrbitCamera`, then synchronize its Environment orientation |
+| `pre()` | Drain the scene render queue, tick its clock, handle deferred reload or call `Scene.update()`, track the camera target, advance `OrbitCamera`, then synchronize Environment orientation |
 | `draw()` | Delegate frame ordering to `RenderPipeline`, then handle splash state |
 | `post()` | Lazily initialize managers once after Processing setup |
 | `keyEvent()` | Global shortcuts, then active-scene forwarding |
@@ -43,12 +43,18 @@ Do not call or forward these hooks manually from a sketch.
 
 `SceneManager` is the active-scene authority:
 
-- the first registered scene is activated and receives `setupScene()`;
+- the first facade-registered scene is activated, receives a fresh `SceneServices` context through `configure()`, then receives `setupScene()`;
 - activating a different scene disposes the leaving scene before setting up the arriving scene;
 - selecting the active scene again is a no-op;
 - inactive scenes that were never activated have not entered setup/dispose ownership;
 - `clearScenes()` disposes the active scene and clears registrations;
 - replacing a manager preserves a transferred active instance and otherwise disposes old ownership.
+
+`setScene()` and facade `registerScene()` are the preferred service-aware paths.
+For every activation the context owns frame timing, fixed-step simulation, a
+render-thread queue, bounded tasks, assets, actions, camera tracking, and
+Environment configuration. A deferred reload closes the old context and creates
+a new one without mutating scene ownership inside an input callback.
 
 `StandardRenderer` instances are synchronized with the current scene after ownership changes.
 
@@ -68,7 +74,7 @@ Backend restoration can fail independently. Query `OutputState` and `getOutputFa
 4. disposes preview and output render targets;
 5. clears scene ownership;
 6. disposes camera state;
-7. shuts down the shared `ThreadManager`;
+7. cancels scene task groups while leaving the process-wide shared `ThreadManager` available to other library instances;
 8. unregisters Processing callbacks.
 
 After disposal, setup, scene changes, rendering, and manager initialization are ignored.
@@ -78,7 +84,8 @@ After disposal, setup, scene changes, rendering, and manager initialization are 
 - Processing and OpenGL work remains on the Processing thread.
 - `Scene.sceneRender()` must not create its own draw lifecycle around the provided target.
 - NDI CPU conversion and sending use a dedicated worker with bounded shutdown.
-- Library background tasks and maintained examples should use the shared `ThreadManager`; scene-owned futures must be bounded and cancelled during disposal.
+- Scene background work should use `SceneServices.tasks()`; Processing/OpenGL handoff should use `renderQueue()`.
+- The runtime cancels each scene task group before `Scene.dispose()` and clears asset/Environment ownership afterward.
 
 ## Error Recovery
 
@@ -86,4 +93,4 @@ Partial manager initialization rolls back allocated resources and returns to `SE
 
 Syphon/Spout publication errors disable publication without immediately destroying their prepared backend. NDI initialization failure marks the backend unavailable; another explicit enable request retries.
 
-See [Scene Management](../usage/scene-management.md), [Event Handling](../usage/event-handling.md), and [External Integration](../usage/external-integration.md).
+See [Scene Services](../api/scene-services.md), [Scene Management](../usage/scene-management.md), [Event Handling](../usage/event-handling.md), and [External Integration](../usage/external-integration.md).

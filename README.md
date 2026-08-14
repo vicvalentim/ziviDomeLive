@@ -119,17 +119,16 @@ The constructor registers Processing lifecycle and input hooks automatically. Ca
 
 ## Scene Contract
 
-`SceneManager` is the authority for the active scene. The first registered scene is activated automatically; scene changes dispose the leaving scene and call `setupScene()` on the arriving scene.
+`SceneManager` is the authority for the active scene. Register through the facade when a scene uses lifecycle-aware services; the first registered scene is activated automatically, and scene changes dispose the leaving scene before configuring and setting up the arriving scene.
 
 ```java
-SceneManager scenes = new SceneManager();
-scenes.registerScene(new IntroScene());
-scenes.registerScene(new LiveScene());
-ziviDome.setSceneManager(scenes);
+ziviDome.setScene(new IntroScene());
+ziviDome.registerScene(new LiveScene());
 ```
 
 A scene may implement:
 
+- `configure(SceneServices)` to receive a fresh activation-scoped service context
 - `setupScene()` when it becomes active
 - `update()` once before rendering each frame
 - `sceneRender(PGraphicsOpenGL pg)` for drawing only
@@ -138,6 +137,36 @@ A scene may implement:
 - `getName()` for diagnostics
 
 Never call `beginDraw()` or `endDraw()` inside `sceneRender()`.
+
+## Scene Services
+
+`SceneServices` incorporates the reusable infrastructure proven by `SolarSystem`
+into the library API. Each scene activation receives a clamped `FrameClock`, a
+bounded fixed-step `SimulationTimeline`, deferred reload, render-thread handoff,
+keyed worker tasks, typed asset caches, named input actions, `OrbitCamera` target
+tracking, scene-scoped Environment configuration, and deterministic cleanup.
+
+```java
+public void configure(SceneServices services) {
+  this.services = services;
+}
+
+public void setupScene() {
+  services.actions().bindKeyPressed("reload", 'R', services::requestReload);
+  services.camera().setInputEnabled(true);
+}
+
+public void update() {
+  services.timeline().advance(
+      services.frameClock().getDeltaSeconds(), this::simulate);
+}
+```
+
+Processing/OpenGL work stays on the render thread through `renderQueue()` and
+`assets()`. `tasks().submitIfIdle(key, work)` prevents frame-driven backlog and is
+cancelled automatically before scene disposal. Astronomy models, Julian Date
+conversion, and orbital propagation remain application-domain code in the example.
+See the [Scene Services guide](https://zivito.github.io/ziviDomeLive/api/scene-services/).
 
 ## Environment Background
 

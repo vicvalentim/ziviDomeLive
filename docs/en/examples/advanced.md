@@ -17,6 +17,6 @@ Qualifies the shared LDR Environment background with real and synthetic equirect
 
 ## SolarSystem
 
-A multi-file application showing domain models, simulation time, textured geometry, lighting, and scene integration. It uses the library-owned `OrbitCamera` for target tracking, reset, drag, wheel zoom, and quaternion orientation; the same orientation drives its infinite Environment background without a scene-owned sky sphere. Press `n` to toggle UTC clock diagnostics without printing every frame by default.
+A multi-file application and reference consumer for `SceneServices`. It uses the library-owned frame clock, bounded fixed-step timeline, typed assets, named actions, deferred reload, cleanup, `OrbitCamera` target tracking, and scene-scoped Environment. The camera supports reset, drag, wheel zoom, and quaternion orientation; the same orientation drives the infinite background without a scene-owned sky sphere. Julian Date and orbital propagation remain application-domain adapters. Press `n` to toggle UTC clock diagnostics without printing every frame by default.
 
 Advanced examples still follow the same ownership rule: `sceneRender(PGraphicsOpenGL)` draws into an already-open target and does not call `beginDraw()` or `endDraw()`.

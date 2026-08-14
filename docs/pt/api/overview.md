@@ -10,6 +10,8 @@
 | `FrameViews` | Targets finais completos expostos por view lógica sem acoplamento a renderers |
 | `Scene` | Contrato de desenho e eventos do usuário |
 | `SceneManager` | Registro, ownership ativo, troca e descarte de cenas |
+| `SceneServices` | Tempo, tarefas, assets, ações, câmera, Environment e cleanup por ativação |
+| `FrameClock` / `SimulationTimeline` | Tempo de frame limitado e simulação fixed-step limitada |
 | `OutputManager` | Roteamento e lifecycle de NDI, Syphon e Spout |
 | `OrbitCamera` | Câmera opcional em scene space compartilhada pelos targets |
 | `SphericalOrientation` | Acumulação cíclica de pitch/yaw/roll em um quaternion unitário |
@@ -57,4 +59,5 @@ Os Javadocs gerados no pacote de release e no GitHub Pages são a referência de
 Consulte [Javadocs Gerados](javadocs.md) para assinaturas diretas,
 [Classes Principais](core-classes.md) para ownership e estados,
 [Funções Operacionais](helper-functions.md) para controles de runtime e
-[Interface Scene](scene-interface.md) para o contrato de desenho.
+[Interface Scene](scene-interface.md) para o contrato de desenho. O guia de
+[Serviços de Cena](scene-services.md) cobre infraestrutura reutilizável de aplicações.

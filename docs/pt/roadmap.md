@@ -1,22 +1,25 @@
 # Planejamento
 
-## Scene Services Runtime (pós-2.0)
+## Scene Services Runtime (entregue na 2.0)
 
-A versão 2.0 permanece concentrada nos contratos qualificados de cubemap nativo,
-projeções, Environment, lifecycle de cenas, câmera e outputs. Uma versão posterior
-poderá transformar infraestrutura comprovada pelos exemplos maiores em serviços da
-API vinculados ao lifecycle:
+A infraestrutura comprovada pelo exemplo mantido `SolarSystem` agora está disponível
+por serviços da API vinculados ao lifecycle:
 
-- `SceneServices` ou `SceneContext` como ponto de acesso estável;
+- `SceneServices` como ponto de acesso estável no escopo de cada ativação;
 - `FrameClock`, `SimulationTimeline` e avanço fixed-step limitado;
-- reload diferido de cenas e cleanup no escopo da cena;
-- fila da render thread para criação de recursos Processing/OpenGL;
-- grupos de tarefas da cena apoiados pelo `ThreadManager` compartilhado;
-- caches tipados de imagens, shaders e primitivas com ownership explícito;
-- mapeamento de input por ações e tracking opcional de alvo no `OrbitCamera`.
+- reload diferido e cleanup em ordem inversa;
+- fila da render thread para transferência Processing/OpenGL;
+- grupos de tarefas limitados e identificados por chave, apoiados pelo
+  `ThreadManager` compartilhado;
+- caches tipados de imagem, shader e shape com ownership explícito;
+- mapeamento de input por ações, tracking de alvo do `OrbitCamera` e configuração
+  Environment no escopo da cena.
+
+O próximo trabalho de API será guiado pela adoção: refinar esses contratos somente
+a partir de vários consumidores mantidos, preservar compatibilidade de fonte e
+manter ownership GPU explícito. Diagnósticos/telemetria reutilizáveis e políticas
+opcionais de preload são candidatos, mas não compromissos de release.
 
 Modelos astronômicos, conversão Julian Date, propagação de Kepler e desenho orbital
 permanecem fora do núcleo. Eles só deverão virar um módulo opcional de domínio depois
 que mais de um consumidor mantido comprovar um contrato estável.
-
-Esses serviços não fazem parte da 2.0.0 e não bloqueiam sua publicação.

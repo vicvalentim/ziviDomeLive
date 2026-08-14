@@ -4,6 +4,10 @@ Somente `sceneRender(PGraphicsOpenGL)` é abstrato. Todos os métodos de lifecyc
 
 ```java
 class ExampleScene implements Scene {
+  public void configure(SceneServices services) {
+    // Guarde os serviços da biblioteca no escopo desta ativação.
+  }
+
   public void setupScene() {
     // Aloque ou reinicie estado pertencente à cena.
   }
@@ -33,8 +37,13 @@ class ExampleScene implements Scene {
 ## Regras de Ownership
 
 - A biblioteca controla o lifecycle de desenho de cada target.
+- `configure()` executa antes de `setupScene()` e recebe um novo contexto a cada ativação.
 - `update()` concentra mutação que deve ocorrer uma vez por frame.
 - `sceneRender()` pode executar para Standard e várias faces cubemap no mesmo frame.
 - `setupScene()` pode executar novamente após uma cena ser desativada e reativada.
 - `dispose()` deve liberar recursos que `setupScene()` recriará.
 - Callbacks de entrada são encaminhados automaticamente; o sketch principal não deve repeti-los.
+
+Cenas com serviços devem ser registradas por `setScene()` ou `registerScene()` na
+fachada. Consulte [Serviços de Cena](scene-services.md) para tempo, tarefas, assets,
+ações de input, tracking da câmera, ownership do Environment e reload diferido.

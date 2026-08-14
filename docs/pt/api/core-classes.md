@@ -19,7 +19,7 @@ são aspectos separados do lifecycle, não valores adicionais de `InitState`.
 
 | Grupo | Métodos |
 |---|---|
-| Cena | `setScene()`, `setSceneManager()`, `getSceneManager()` |
+| Cena | `setScene()`, `registerScene()`, `setSceneManager()`, `getSceneManager()`, `getCurrentSceneServices()` |
 | Renderização | `setRenderMode()`, `getRenderMode()`, `setCurrentView()` |
 | Calibração | `setFov()`, `setFishSize()`, `setPitch()`, `setYaw()`, `setRoll()`, `resetOrientation()` |
 | Preview | `setShowPreview()`, `setStandardOutputAspectMode()` |
@@ -46,8 +46,13 @@ A troca descarta a cena anterior e configura a nova. `clearScenes()` descarta a 
 | `activateScene(scene)` | Ativa uma cena registrada por identidade |
 | `nextScene()` / `previousScene()` | Percorre a ordem de registro de forma circular |
 | `setCurrentSceneIndex(index)` | Seleciona um índice válido baseado em zero |
+| `reloadCurrentScene()` | Executa um ciclo completo de dispose/setup da cena ativa |
 | `containsScene()` / `getSceneCount()` | Consulta o estado do registro |
 | `clearScenes()` | Descarta a cena ativa e limpa todos os registros |
+
+Prefira `setScene()` ou `registerScene()` na fachada quando a cena usar
+`SceneServices`, pois a fachada precisa fornecer o contexto de ativação antes de
+`setupScene()`. Consulte [Serviços de Cena](scene-services.md).
 
 ## OutputManager
 

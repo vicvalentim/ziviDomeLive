@@ -1,21 +1,24 @@
 # Roadmap
 
-## Scene Services Runtime (post-2.0)
+## Scene Services Runtime (delivered in 2.0)
 
-The 2.0 release remains focused on the qualified native cubemap, projection,
-Environment, scene lifecycle, camera, and output contracts. A later release may
-turn infrastructure proven by larger examples into lifecycle-aware API services:
+Infrastructure proven by the maintained `SolarSystem` example is now available
+through lifecycle-aware API services:
 
-- `SceneServices` or `SceneContext` as one stable access point;
+- `SceneServices` as the stable activation-scoped access point;
 - `FrameClock`, `SimulationTimeline`, and bounded fixed-step advancement;
-- deferred scene reload and scene-scoped cleanup;
-- a render-thread queue for Processing/OpenGL resource creation;
-- scene task groups backed by the shared `ThreadManager`;
-- typed image, shader, and primitive caches with explicit ownership;
-- action-based input mapping and optional `OrbitCamera` target tracking.
+- deferred scene reload and last-in/first-out cleanup;
+- a render-thread queue for Processing/OpenGL handoff;
+- bounded, keyed scene task groups backed by the shared `ThreadManager`;
+- typed image, shader, and shape caches with explicit ownership;
+- action-based input mapping, `OrbitCamera` target tracking, and scene-scoped
+  Environment configuration.
+
+The next API work is adoption-driven: refine these contracts only from multiple
+maintained consumers, preserve source compatibility, and keep GPU ownership
+explicit. Candidate additions include reusable diagnostics/telemetry and optional
+asset preloading policies, but neither is a release commitment.
 
 Astronomy-specific models, Julian Date conversion, Kepler propagation, and orbital
 rendering remain outside the core. They may become an optional domain module only
 after more than one maintained consumer establishes a stable contract.
-
-These services are intentionally not part of 2.0.0 and do not block its release.

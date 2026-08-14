@@ -49,7 +49,7 @@ dome.setEnvironmentBackgroundYawOffset(0.0f);
 
 The public LDR source is a borrowed `PImage`; the library resolves its Processing-managed GPU texture and samples it as an equirectangular map. One logical source and one set of `visible`, visual `intensity`, and longitude `yawOffset` values feed Standard, domemaster, equirectangular, and skybox preview/output passes. The far-depth pass runs after `sceneRender()`, so scene-owned `background()` calls do not erase it and foreground geometry remains in front.
 
-Standard combines its perspective basis with the shared scene-camera quaternion. Spherical modes compose shared Pitch/Yaw/Roll followed by that same scene-camera quaternion. Orbit target and distance never translate the panorama. Use `clearEnvironmentBackground()` when the owning scene is disposed; the borrowed `PImage` itself is never disposed by ziviDomeLive.
+Standard combines its perspective basis with the shared scene-camera quaternion. Spherical modes compose shared Pitch/Yaw/Roll followed by that same scene-camera quaternion. Orbit target and distance never translate the panorama. Direct facade users call `clearEnvironmentBackground()` when ownership ends. Service-aware scenes can use `services.environment()`, which restores the state it replaced automatically; the borrowed `PImage` itself is never disposed by ziviDomeLive.
 
 HDR loading, IBL maps, and ambient occlusion are not enabled by this helper yet.
 

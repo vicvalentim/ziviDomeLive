@@ -21,7 +21,7 @@ Key method groups:
 
 | Group | Methods |
 |---|---|
-| Scene | `setScene()`, `setSceneManager()`, `getSceneManager()` |
+| Scene | `setScene()`, `registerScene()`, `setSceneManager()`, `getSceneManager()`, `getCurrentSceneServices()` |
 | Render behavior | `setRenderMode()`, `getRenderMode()`, `setCurrentView()` |
 | Calibration | `setFov()`, `setFishSize()`, `setPitch()`, `setYaw()`, `setRoll()`, `resetOrientation()` |
 | Preview | `setShowPreview()`, `setStandardOutputAspectMode()` |
@@ -48,8 +48,13 @@ Switching disposes the leaving scene and sets up the arriving scene. `clearScene
 | `activateScene(scene)` | Activates a registered scene by identity |
 | `nextScene()` / `previousScene()` | Wraps through the registration order |
 | `setCurrentSceneIndex(index)` | Selects a valid zero-based index |
+| `reloadCurrentScene()` | Runs a complete dispose/setup cycle for the active scene |
 | `containsScene()` / `getSceneCount()` | Inspects registration state |
 | `clearScenes()` | Disposes the active scene and clears all registrations |
+
+Prefer facade `setScene()` or `registerScene()` when a scene uses
+`SceneServices`, because the facade must provide its activation context before
+`setupScene()`. See [Scene Services](scene-services.md).
 
 ## OutputManager
 

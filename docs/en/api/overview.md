@@ -10,6 +10,8 @@
 | `FrameViews` | Completed final targets exposed by logical view without renderer coupling |
 | `Scene` | User drawing and event contract |
 | `SceneManager` | Scene registration, active ownership, switching, and disposal |
+| `SceneServices` | Activation-scoped time, tasks, assets, actions, camera, Environment, and cleanup |
+| `FrameClock` / `SimulationTimeline` | Clamped frame time and bounded fixed-step simulation |
 | `OutputManager` | NDI, Syphon, and Spout routing and lifecycle |
 | `OrbitCamera` | Optional scene-space camera shared by all rendered targets |
 | `SphericalOrientation` | Cyclic pitch/yaw/roll accumulation on a unit quaternion |
@@ -55,6 +57,7 @@ not resize the Processing preview window.
 
 Generated Javadocs in the release package and on GitHub Pages are the signature-level reference.
 Use [Generated Javadocs](javadocs.md) for direct API signatures,
-Use [Core Classes](core-classes.md) for ownership and state semantics,
+[Core Classes](core-classes.md) for ownership and state semantics,
 [Operational Helpers](helper-functions.md) for runtime controls, and the
-[Scene Interface](scene-interface.md) for the drawing contract.
+[Scene Interface](scene-interface.md) for the drawing contract. The
+[Scene Services](scene-services.md) guide covers reusable application infrastructure.

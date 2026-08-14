@@ -107,6 +107,7 @@ plugins:
             Overview: Visão Geral
             Core Classes: Classes Principais
             Scene Interface: Interface de Cena
+            Scene Services: Serviços de Cena
             Helper Functions: Funções Auxiliares
             Generated Javadocs: Javadocs Gerados
             Examples: Exemplos
@@ -198,6 +199,7 @@ nav:
       - Overview: api/overview.md
       - Core Classes: api/core-classes.md
       - Scene Interface: api/scene-interface.md
+      - Scene Services: api/scene-services.md
       - Helper Functions: api/helper-functions.md
       - Generated Javadocs: api/javadocs.md
   - Examples:

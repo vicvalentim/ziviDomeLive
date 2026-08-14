@@ -41,6 +41,16 @@ shaders.
   sampled as a GPU texture in Standard and every spherical projection.
 - Processing-friendly `OrbitCamera` pose operations, including `PVector` overloads,
   atomic smooth `goTo(...)`, explicit immediate setters, and immediate rotation.
+- Lifecycle-aware `SceneServices`, delivered through optional
+  `Scene.configure(SceneServices)` before every activation setup.
+- `FrameClock` and bounded fixed-step `SimulationTimeline` with configurable rate,
+  pause, maximum substeps, and dropped-time telemetry.
+- Deferred scene reload, scene-scoped LIFO cleanup, and `RenderThreadQueue` for safe
+  Processing/OpenGL handoff at frame boundaries.
+- Bounded keyed `SceneTaskGroup` work on the shared `ThreadManager`, typed
+  `SceneAssets` caches, and generic `SceneResourceCache` borrowed/owned semantics.
+- Named `SceneActionMap` input bindings, dynamic `OrbitCamera` target tracking, and
+  scene-scoped Environment configuration with automatic cleanup.
 - Publication-focused documentation, including Processing Contribution Manager
   metadata guidance, release packaging checks, generated Javadocs links, and
   bilingual MkDocs navigation.
@@ -55,8 +65,9 @@ shaders.
 - Synchronized the shared scene-camera quaternion with Environment orientation while
   keeping target and distance translation-invariant, and routed mouse navigation to
   exactly one camera at a time.
-- Migrated `SolarSystem` to the library-owned `OrbitCamera` and Environment background,
-  removing its duplicate quaternion camera and scene-owned sky sphere.
+- Migrated `SolarSystem` to the complete Scene Services API, including fixed-step
+  time, assets, input actions, deferred reload, target tracking, and scene-scoped
+  Environment; removed its duplicate camera, texture cache, reload lock, and sky sphere.
 - Bound `SolarSystem` and `SphereParticle` simulation/resource work to the scene
   lifecycle and removed unmanaged per-example executor behavior.
 - Kept `STANDARD` rendering independent from spherical cubemap capture.
@@ -86,6 +97,9 @@ shaders.
   and to describe platform-specific output dependencies.
 
 ### Fixed
+- Rebound each scene render queue at the authoritative `pre()` frame boundary so
+  Processing setups that move from the sketch thread to JOGL's `FPSAnimator` thread
+  no longer fail their first frame with a render-thread affinity exception.
 - Corrected native equirectangular orientation against the `sampleCube`
   reference path.
 - Preserved skybox face positions and rotations from the original

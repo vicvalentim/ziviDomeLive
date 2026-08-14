@@ -17,6 +17,6 @@ Qualifica o Environment LDR compartilhado com fontes equiretangulares real e sin
 
 ## SolarSystem
 
-Aplicação em múltiplos arquivos com modelos de domínio, tempo de simulação, geometria texturizada, iluminação e integração com `Scene`. Ela usa o `OrbitCamera` da biblioteca para acompanhar alvos, reset, drag, zoom pela roda e orientação quaternion; a mesma orientação controla o Environment infinito sem sky sphere pertencente à cena. Pressione `n` para alternar o diagnóstico do relógio UTC, desabilitado por padrão para não imprimir a cada frame.
+Aplicação em múltiplos arquivos e consumidor de referência de `SceneServices`. Ela usa relógio da biblioteca, timeline fixed-step limitada, assets tipados, ações nomeadas, reload diferido, cleanup, tracking do `OrbitCamera` e Environment no escopo da cena. A câmera oferece reset, drag, zoom pela roda e orientação quaternion; a mesma orientação controla o fundo infinito sem sky sphere pertencente à cena. Julian Date e propagação orbital continuam como adaptadores do domínio da aplicação. Pressione `n` para alternar o diagnóstico UTC, desabilitado por padrão.
 
 Exemplos avançados seguem a mesma regra de ownership: `sceneRender(PGraphicsOpenGL)` desenha em um target já aberto e não chama `beginDraw()` nem `endDraw()`.
