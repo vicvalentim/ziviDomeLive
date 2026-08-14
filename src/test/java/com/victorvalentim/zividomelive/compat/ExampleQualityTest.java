@@ -154,9 +154,9 @@ class ExampleQualityTest {
 		String sketch = read("InfiniteBackground/InfiniteBackground.pde");
 		String scene = read("InfiniteBackground/InfiniteBackgroundScene.pde");
 
-		assertTrue(sketch.contains("../SolarSystem/data/textures/8k_stars_milky_way.jpg"));
-		assertTrue(sketch.contains("createCalibrationEnvironment(2048, 1024)"));
-		assertTrue(sketch.contains("setEquirectangularBackground(calibrationEnvironment)"));
+		assertTrue(scene.contains("../SolarSystem/data/textures/8k_stars_milky_way.jpg"));
+		assertTrue(scene.contains("createCalibrationEnvironment(2048, 1024)"));
+		assertTrue(scene.contains("setEquirectangularBackground(calibrationEnvironment)"));
 		assertTrue(scene.contains("RenderMode.STANDARD"));
 		assertTrue(scene.contains("RenderMode.DOMEMASTER"));
 		assertTrue(scene.contains("RenderMode.EQUIRECTANGULAR"));

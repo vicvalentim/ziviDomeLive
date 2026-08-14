@@ -139,6 +139,22 @@ class InfiniteBackgroundScene implements Scene {
       case 'R':
         dome.setRoll(dome.getRoll() + HALF_PI);
         break;
+      case '1':
+        dome.setRenderMode(RenderMode.STANDARD);
+        println("[InfiniteBackground] mode=STANDARD");
+        break;
+      case '2':
+        dome.setRenderMode(RenderMode.DOMEMASTER);
+        println("[InfiniteBackground] mode=DOMEMASTER");
+        break;
+      case '3':
+        dome.setRenderMode(RenderMode.EQUIRECTANGULAR);
+        println("[InfiniteBackground] mode=EQUIRECTANGULAR");
+        break;
+      case '4':
+        dome.setRenderMode(RenderMode.SKYBOX);
+        println("[InfiniteBackground] mode=SKYBOX");
+        break;
       case 'c':
       case 'C':
         dome.setPitch(0);
