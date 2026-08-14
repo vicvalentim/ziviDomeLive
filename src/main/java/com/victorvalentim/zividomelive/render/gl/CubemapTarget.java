@@ -23,7 +23,6 @@ public final class CubemapTarget implements AutoCloseable {
 	private static final Logger LOGGER = LogManager.getLogger();
 	private static final int MAX_GL_ERROR_LOGS = 4;
 	private static final int MAX_GL_ERRORS_PER_CHECK = 2;
-	private static final int GL_TEXTURE_CUBE_MAP_SEAMLESS = 0x884F;
 	private static final int GL_ACTIVE_TEXTURE = 0x84E0;
 	private static final int GL_TEXTURE_BINDING_CUBE_MAP = 0x8514;
 	private static final int GL_READ_FRAMEBUFFER_BINDING = 0x8CAA;
@@ -129,6 +128,34 @@ public final class CubemapTarget implements AutoCloseable {
 	 */
 	public boolean isAllocated() {
 		return textureId != 0;
+	}
+
+	/**
+	 * Reports whether every native name still belongs to the active OpenGL context.
+	 *
+	 * <p>Processing recreates its own targets after context loss, but this class owns native
+	 * names directly and must detect when those names became stale.</p>
+	 *
+	 * @return {@code true} when texture, framebuffer, and renderbuffer are valid now
+	 */
+	public boolean isValidInCurrentContext() {
+		if (!isAllocated() || renderFramebufferId == 0 || depthRenderbufferId == 0) {
+			return false;
+		}
+		return glAdapter.withPgl(parent, pgl ->
+				pgl.isTexture(textureId)
+						&& pgl.isFramebuffer(renderFramebufferId)
+						&& pgl.isRenderbuffer(depthRenderbufferId));
+	}
+
+	/**
+	 * Forgets native names invalidated by context loss without deleting them in the new context.
+	 */
+	public void abandonAfterContextLoss() {
+		textureId = 0;
+		renderFramebufferId = 0;
+		depthRenderbufferId = 0;
+		mipmapsValid = false;
 	}
 
 	/**
@@ -371,6 +398,16 @@ public final class CubemapTarget implements AutoCloseable {
 		if (renderFramebufferId == 0) {
 			throw new IllegalStateException("OpenGL did not allocate cubemap framebuffer.");
 		}
+
+		// glGenFramebuffers reserves a name; the first bind establishes the object so that
+		// glIsFramebuffer can later distinguish context loss before the first captured face.
+		IntBuffer previousReadFramebuffer = IntBuffer.allocate(1);
+		IntBuffer previousDrawFramebuffer = IntBuffer.allocate(1);
+		pgl.getIntegerv(GL_READ_FRAMEBUFFER_BINDING, previousReadFramebuffer);
+		pgl.getIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, previousDrawFramebuffer);
+		pgl.bindFramebuffer(PGL.FRAMEBUFFER, renderFramebufferId);
+		pgl.bindFramebuffer(PGL.READ_FRAMEBUFFER, previousReadFramebuffer.get(0));
+		pgl.bindFramebuffer(PGL.DRAW_FRAMEBUFFER, previousDrawFramebuffer.get(0));
 		return renderFramebufferId;
 	}
 
@@ -447,10 +484,6 @@ public final class CubemapTarget implements AutoCloseable {
 						}
 						pgl.generateMipmap(PGL.TEXTURE_CUBE_MAP);
 					});
-
-			if (capabilities.supportsSeamlessCubemap()) {
-				pgl.enable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-			}
 			return textureId;
 		} catch (RuntimeException error) {
 			try {

@@ -26,6 +26,8 @@ public class CubemapViewRenderer {
     private final PShader samplerCubeShader;
     private final PApplet parent;
     private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
+    private final ProcessingGlAdapter.CubemapBindingState cubemapBindingState =
+            new ProcessingGlAdapter.CubemapBindingState();
     private boolean unavailableWarningLogged;
     private boolean renderFailureWarningLogged;
 
@@ -134,13 +136,14 @@ public class CubemapViewRenderer {
             samplerCubeShader.set("faceRotations", FACE_ROTATIONS);
             samplerCubeShader.set("faceInversions", FACE_INVERSIONS);
             cubemap.shader(samplerCubeShader);
-            glAdapter.bindCubemapTexture(cubemap, nativeCubemap, CUBEMAP_TEXTURE_UNIT);
+            glAdapter.bindCubemapTextureScoped(
+                    cubemap, nativeCubemap, CUBEMAP_TEXTURE_UNIT, cubemapBindingState);
             cubemapBound = true;
             cubemap.rect(0, 0, cubemap.width, cubemap.height);
         } finally {
             try {
                 if (cubemapBound) {
-                    glAdapter.unbindCubemapTexture(cubemap, CUBEMAP_TEXTURE_UNIT);
+                    glAdapter.restoreCubemapTexture(cubemap, cubemapBindingState);
                 }
             } finally {
                 cubemap.endDraw();

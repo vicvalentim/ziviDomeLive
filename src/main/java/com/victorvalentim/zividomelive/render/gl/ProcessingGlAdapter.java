@@ -20,6 +20,22 @@ import java.util.Objects;
 public final class ProcessingGlAdapter {
 	private static final ProcessingGlAdapter DEFAULT = new ProcessingGlAdapter();
 	private static final int GL_ACTIVE_TEXTURE = 0x84E0;
+	private static final int GL_TEXTURE_BINDING_CUBE_MAP = 0x8514;
+	private static final int GL_TEXTURE_CUBE_MAP_SEAMLESS = 0x884F;
+
+	/**
+	 * Reusable snapshot for one scoped native cubemap sampler binding.
+	 *
+	 * <p>The snapshot avoids per-frame buffer allocation and restores the caller's cubemap
+	 * binding, active texture unit, and seamless-cubemap capability after the draw pass.</p>
+	 */
+	public static final class CubemapBindingState {
+		private final IntBuffer savedActiveTexture = IntBuffer.allocate(1);
+		private final IntBuffer savedCubemapBinding = IntBuffer.allocate(1);
+		private int textureUnit;
+		private boolean seamlessEnabled;
+		private boolean bound;
+	}
 
 	private ProcessingGlAdapter() {
 	}
@@ -154,6 +170,105 @@ public final class ProcessingGlAdapter {
 			pgl.activeTexture(savedActiveTexture.get(0));
 			return null;
 		});
+	}
+
+	/**
+	 * Binds a cubemap for a draw pass while snapshotting all GL state changed by the binding.
+	 * The matching {@link #restoreCubemapTexture(PGraphicsOpenGL, CubemapBindingState)} call must
+	 * run in a {@code finally} block on the same Processing target.
+	 *
+	 * @param graphics active Processing graphics target
+	 * @param target native cubemap target to bind
+	 * @param textureUnit zero-based texture unit
+	 * @param state caller-owned reusable snapshot
+	 */
+	public void bindCubemapTextureScoped(
+			PGraphicsOpenGL graphics,
+			CubemapTarget target,
+			int textureUnit,
+			CubemapBindingState state) {
+		Objects.requireNonNull(target, "target");
+		Objects.requireNonNull(state, "state");
+		target.ensureAllocated();
+		validateTextureUnit(textureUnit);
+		if (state.bound) {
+			throw new IllegalStateException("Cubemap binding state is already active.");
+		}
+
+		withPgl(graphics, pgl -> {
+			state.textureUnit = textureUnit;
+			state.savedActiveTexture.clear();
+			state.savedCubemapBinding.clear();
+			pgl.getIntegerv(GL_ACTIVE_TEXTURE, state.savedActiveTexture);
+			boolean snapshotComplete = false;
+			try {
+				pgl.activeTexture(PGL.TEXTURE0 + textureUnit);
+				pgl.getIntegerv(GL_TEXTURE_BINDING_CUBE_MAP, state.savedCubemapBinding);
+				state.seamlessEnabled = pgl.isEnabled(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+				snapshotComplete = true;
+				pgl.enable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+				pgl.bindTexture(PGL.TEXTURE_CUBE_MAP, target.textureId());
+				state.bound = true;
+			} catch (RuntimeException error) {
+				if (snapshotComplete) {
+					try {
+						pgl.bindTexture(
+								PGL.TEXTURE_CUBE_MAP,
+								state.savedCubemapBinding.get(0));
+						restoreCapability(
+								pgl,
+								GL_TEXTURE_CUBE_MAP_SEAMLESS,
+								state.seamlessEnabled);
+					} catch (RuntimeException restoreError) {
+						error.addSuppressed(restoreError);
+					}
+				}
+				throw error;
+			} finally {
+				pgl.activeTexture(state.savedActiveTexture.get(0));
+			}
+			return null;
+		});
+	}
+
+	/**
+	 * Restores a cubemap sampler binding created by {@link #bindCubemapTextureScoped}.
+	 * @param graphics active Processing graphics target
+	 * @param state reusable snapshot populated by the scoped bind
+	 */
+	public void restoreCubemapTexture(
+			PGraphicsOpenGL graphics,
+			CubemapBindingState state) {
+		Objects.requireNonNull(state, "state");
+		if (!state.bound) {
+			return;
+		}
+
+		try {
+			withPgl(graphics, pgl -> {
+				pgl.activeTexture(PGL.TEXTURE0 + state.textureUnit);
+				try {
+					pgl.bindTexture(PGL.TEXTURE_CUBE_MAP, state.savedCubemapBinding.get(0));
+					restoreCapability(
+							pgl,
+							GL_TEXTURE_CUBE_MAP_SEAMLESS,
+							state.seamlessEnabled);
+				} finally {
+					pgl.activeTexture(state.savedActiveTexture.get(0));
+				}
+				return null;
+			});
+		} finally {
+			state.bound = false;
+		}
+	}
+
+	private static void restoreCapability(PGL pgl, int capability, boolean enabled) {
+		if (enabled) {
+			pgl.enable(capability);
+		} else {
+			pgl.disable(capability);
+		}
 	}
 
 	/**
