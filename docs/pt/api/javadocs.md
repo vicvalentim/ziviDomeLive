@@ -6,7 +6,7 @@ A referência Java gerada é publicada junto com o site MkDocs.
 <div class="zd-card" markdown>
 ### Referência pública da API
 
-[Abrir Javadocs gerados](../../reference/){ .zd-button }
+<a class="zd-button" href="../../reference/">Abrir Javadocs gerados</a>
 
 Use esta página para assinaturas de classes, métodos, enums, herança e detalhes Java por pacote.
 </div>

@@ -21,7 +21,7 @@ Template inicial mínimo em múltiplos arquivos com uma `Scene`, um `SceneManage
 
 ## SphereParticle
 
-Exemplo de cena maior que utiliza um executor para a simulação de partículas e mantém as chamadas gráficas na render thread. Clique ou arraste para adicionar partículas.
+Exemplo de cena maior que executa no máximo uma tarefa de simulação pelo `ThreadManager` compartilhado, cancela o trabalho pertencente à cena no descarte e mantém as chamadas gráficas na render thread. Clique ou arraste para adicionar partículas.
 
 Todos os exemplos preservam `sceneRender(PGraphicsOpenGL)` e nunca chamam `ziviDome.draw()` manualmente.
 

@@ -213,6 +213,7 @@ nav:
       - Version 1.5.0: release-notes/1.5.0.md
   - Project:
       - Contributing: contributing.md
+      - Roadmap: roadmap.md
       - Known Issues: known-issues.md
       - Author: author.md
       - License: license.md

@@ -78,7 +78,7 @@ Depois do descarte, setup, troca de cena, renderização e inicialização de ma
 - Trabalho Processing e OpenGL permanece na thread Processing.
 - `Scene.sceneRender()` não deve criar outro draw lifecycle ao redor do target recebido.
 - Conversão CPU e envio NDI usam worker dedicado com shutdown limitado.
-- Tarefas internas devem usar `ThreadManager`; exemplos podem controlar executors somente quando também controlam e liberam seu lifecycle.
+- Tarefas internas e exemplos mantidos devem usar o `ThreadManager` compartilhado; futures pertencentes à cena devem ser limitados e cancelados no descarte.
 
 ## Recuperação de Erros
 

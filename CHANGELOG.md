@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## [2.0.0] - 2026-08-12
+## [2.0.0] - 2026-08-14
 
 Version 2.0.0 is the native-cubemap major release. It keeps the Processing
 scene contract and the Standard/spherical rendering split, but replaces the
@@ -39,6 +39,8 @@ shaders.
   and skybox inspection.
 - Shared LDR equirectangular Environment state whose borrowed `PImage` source is
   sampled as a GPU texture in Standard and every spherical projection.
+- Processing-friendly `OrbitCamera` pose operations, including `PVector` overloads,
+  atomic smooth `goTo(...)`, explicit immediate setters, and immediate rotation.
 - Publication-focused documentation, including Processing Contribution Manager
   metadata guidance, release packaging checks, generated Javadocs links, and
   bilingual MkDocs navigation.
@@ -50,6 +52,13 @@ shaders.
   contract. The library continues to own `beginDraw()` and `endDraw()`.
 - Moved sky/star-field background composition for Standard and spherical modes
   into the render pipeline through `setEquirectangularBackground(PImage)`.
+- Synchronized the shared scene-camera quaternion with Environment orientation while
+  keeping target and distance translation-invariant, and routed mouse navigation to
+  exactly one camera at a time.
+- Migrated `SolarSystem` to the library-owned `OrbitCamera` and Environment background,
+  removing its duplicate quaternion camera and scene-owned sky sphere.
+- Bound `SolarSystem` and `SphereParticle` simulation/resource work to the scene
+  lifecycle and removed unmanaged per-example executor behavior.
 - Kept `STANDARD` rendering independent from spherical cubemap capture.
 - Rendered equirectangular output directly from the native cubemap with a
   `samplerCube` shader.
@@ -87,6 +96,10 @@ shaders.
   failures during validation.
 - Kept the known Processing/OpenGL `1282` teardown diagnostic documented as a
   non-fatal runtime note unless paired with visible rendering failure.
+- Prevented `SphereParticle` from submitting an unbounded task backlog from
+  `sceneRender()` and made its shared-worker task cancellable on scene disposal.
+- Made `SolarSystem` reload and reactivation release and rebuild scene-owned resources
+  deterministically, with coherent physics snapshots and render-thread asset loading.
 
 ### Removed
 - Removed the `PGraphicsOpenGL[]` spherical fallback path from the runtime
@@ -110,6 +123,8 @@ shaders.
   trees.
 - GPU image quality, projector/lens behavior, and NDI/Syphon/Spout receiver
   interoperability remain manual qualification tasks on target hardware.
+- Added explicit manual qualification for shared `OrbitCamera` plus Environment
+  orientation in Standard and every spherical representation.
 
 ### Not Included in 2.0.0
 - Spherical Mirror is not included and no `SPHERICAL_MIRROR` enum value is

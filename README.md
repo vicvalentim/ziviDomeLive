@@ -231,6 +231,7 @@ See the [examples catalog](examples/README.md) for controls and lifecycle conven
 - `EmptyProject`: intentionally empty one-scene starter template
 - `CalibrationTool`: two-scene GLSL focus/color chart and 360-degree spherical reference
 - `FulldomePBR`: retained geometry, PBR shaders, and scene-space orbit camera
+- `InfiniteBackground`: qualified LDR Environment background across every view
 - `SolarSystem`: larger multi-file application
 - `SphereParticle`: threaded scene simulation
 

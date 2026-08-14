@@ -9,7 +9,8 @@ Open each sketch from Processing after installing ziviDomeLive and its declared 
 | `SphereParticle` | Threaded particle simulation | Click/drag |
 | `CalibrationTool` | Cube-face focus/color tests and a 360-degree Paul Bourke spherical reference | Left/Right, `1..4`, brackets, `+`/`-`, `P`, `Y`, `R`, `F`, `Space`, `,`/`.`, `C`, `0` |
 | `FulldomePBR` | Retained geometry, PBR shader fallback, and scene-space camera | Drag, wheel, `P`, `V`, brackets, `+`/`-`, `R` |
-| `SolarSystem` | Large multi-file application | See the sketch's own source and configuration |
+| `InfiniteBackground` | Qualified LDR Environment background in Standard and spherical views | `1..4`, `E`, `B`, `I`/`K`, `Y`/`U`, `0` |
+| `SolarSystem` | Large multi-file application using the shared scene camera and Environment | Drag, wheel, `1..9`, `w`/`s`/`t`, `+`/`-`, `o`, `p`, `l`, `n`, `R` |
 
 ## Example Contract
 

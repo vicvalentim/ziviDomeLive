@@ -48,7 +48,8 @@ The public documentation site should remain available at a stable URL and includ
 3. Confirm `release/ziviDomeLive.zip`, `release/ziviDomeLive.pdex`, and `release/ziviDomeLive.txt` share the same base name and directory.
 4. Install the package through `./gradlew deployToProcessingSketchbook --console=plain` or by manual extraction.
 5. Restart Processing and open **File > Examples > Contributed Libraries > ziviDomeLive**.
-6. Open `EmptyProject`, `Basic`, and `CalibrationTool`.
+6. Open every maintained example: `EmptyProject`, `Basic`, `SphereParticle`,
+   `CalibrationTool`, `FulldomePBR`, `InfiniteBackground`, and `SolarSystem`.
 7. Record tested Processing version, OS, CPU architecture, GPU, driver, output backend, and any OpenGL warning that appears.
 8. Complete the [2.0 Release Readiness](2.0-release-readiness.md) checklist for GPU and native-output evidence.
 

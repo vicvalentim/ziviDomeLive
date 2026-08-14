@@ -78,7 +78,7 @@ After disposal, setup, scene changes, rendering, and manager initialization are 
 - Processing and OpenGL work remains on the Processing thread.
 - `Scene.sceneRender()` must not create its own draw lifecycle around the provided target.
 - NDI CPU conversion and sending use a dedicated worker with bounded shutdown.
-- Library background tasks should use `ThreadManager`; examples may own executors only when they also own and release their lifecycle.
+- Library background tasks and maintained examples should use the shared `ThreadManager`; scene-owned futures must be bounded and cancelled during disposal.
 
 ## Error Recovery
 

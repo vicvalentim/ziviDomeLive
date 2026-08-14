@@ -6,7 +6,7 @@ The generated Java API reference is published beside the MkDocs site.
 <div class="zd-card" markdown>
 ### Public API reference
 
-[Open generated Javadocs](../../reference/){ .zd-button }
+<a class="zd-button" href="../../reference/">Open generated Javadocs</a>
 
 Use this for class signatures, methods, enums, inheritance, and package-level Java details.
 </div>

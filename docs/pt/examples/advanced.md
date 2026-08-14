@@ -11,8 +11,12 @@ ao usar este exemplo como evidência de release.
 
 Demonstra geometria `PShape` retida, shader GLSL 4.10 metallic-roughness, fallback fixed-function e `OrbitCamera` compartilhado em scene space. A câmera transforma o conteúdo sem alterar pitch/yaw/roll esféricos, e a cena libera o input de câmera ao ser descartada.
 
+## InfiniteBackground
+
+Qualifica o Environment LDR compartilhado com fontes equiretangulares real e sintética. O exemplo exercita visibilidade, intensidade, offset de longitude, oclusão em far depth e orientação Standard/esférica sem geometria sky pertencente à cena.
+
 ## SolarSystem
 
-Aplicação em múltiplos arquivos com modelos de domínio, tempo de simulação, shaders, texturas e integração com `Scene`. Ela usa o `OrbitCamera` da biblioteca para acompanhar alvos, reset, drag, zoom pela roda e orientação quaternion; a mesma orientação controla o Environment infinito sem sky sphere pertencente à cena.
+Aplicação em múltiplos arquivos com modelos de domínio, tempo de simulação, geometria texturizada, iluminação e integração com `Scene`. Ela usa o `OrbitCamera` da biblioteca para acompanhar alvos, reset, drag, zoom pela roda e orientação quaternion; a mesma orientação controla o Environment infinito sem sky sphere pertencente à cena. Pressione `n` para alternar o diagnóstico do relógio UTC, desabilitado por padrão para não imprimir a cada frame.
 
 Exemplos avançados seguem a mesma regra de ownership: `sceneRender(PGraphicsOpenGL)` desenha em um target já aberto e não chama `beginDraw()` nem `endDraw()`.

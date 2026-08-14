@@ -48,7 +48,8 @@ O site público da documentação deve permanecer em uma URL estável e incluir:
 3. Confirme que `release/ziviDomeLive.zip`, `release/ziviDomeLive.pdex` e `release/ziviDomeLive.txt` usam o mesmo nome base e o mesmo diretório.
 4. Instale o pacote por `./gradlew deployToProcessingSketchbook --console=plain` ou por extração manual.
 5. Reinicie o Processing e abra **File > Examples > Contributed Libraries > ziviDomeLive**.
-6. Abra `EmptyProject`, `Basic` e `CalibrationTool`.
+6. Abra todos os exemplos mantidos: `EmptyProject`, `Basic`, `SphereParticle`,
+   `CalibrationTool`, `FulldomePBR`, `InfiniteBackground` e `SolarSystem`.
 7. Registre versão do Processing, sistema operacional, arquitetura de CPU, GPU, driver, backend de output e qualquer aviso OpenGL observado.
 8. Complete o checklist de [Prontidão da Release 2.0](2.0-release-readiness.md) para evidências GPU e outputs nativos.
 

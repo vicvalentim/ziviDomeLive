@@ -21,7 +21,7 @@ A minimal multi-file starter template with one `Scene`, one `SceneManager`, auto
 
 ## SphereParticle
 
-A larger scene example that uses an executor for particle simulation and keeps graphics calls on the render thread. Click or drag to add particles.
+A larger scene example that runs at most one simulation task through the shared `ThreadManager`, cancels scene-owned work during disposal, and keeps graphics calls on the render thread. Click or drag to add particles.
 
 All examples preserve `sceneRender(PGraphicsOpenGL)` and never call `ziviDome.draw()` manually.
 

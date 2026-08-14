@@ -11,8 +11,12 @@ when using this example as release evidence.
 
 Demonstrates retained `PShape` geometry, GLSL 4.10 metallic-roughness shading, fixed-function fallback, and the shared scene-space `OrbitCamera`. The camera transforms scene content consistently without mutating spherical pitch/yaw/roll, and the scene releases camera input when disposed.
 
+## InfiniteBackground
+
+Qualifies the shared LDR Environment background with real and synthetic equirectangular sources. It exercises visibility, intensity, longitude offset, far-depth occlusion, and Standard/spherical orientation without scene-owned sky geometry.
+
 ## SolarSystem
 
-A multi-file application showing domain models, simulation time, shaders, textures, and scene integration. It uses the library-owned `OrbitCamera` for target tracking, reset, drag, wheel zoom, and quaternion orientation; the same orientation drives its infinite Environment background without a scene-owned sky sphere.
+A multi-file application showing domain models, simulation time, textured geometry, lighting, and scene integration. It uses the library-owned `OrbitCamera` for target tracking, reset, drag, wheel zoom, and quaternion orientation; the same orientation drives its infinite Environment background without a scene-owned sky sphere. Press `n` to toggle UTC clock diagnostics without printing every frame by default.
 
 Advanced examples still follow the same ownership rule: `sceneRender(PGraphicsOpenGL)` draws into an already-open target and does not call `beginDraw()` or `endDraw()`.
