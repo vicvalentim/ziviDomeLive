@@ -1455,12 +1455,10 @@ public class ziviDomeLive implements PConstants {
 			activeScene.mouseEvent(event);
 		}
 
-		// Forward to the native scene-space orbit camera when enabled.
+		// Route navigation to exactly one camera to avoid double orbit/zoom in Standard view.
 		if (sceneCameraInputEnabled) {
 			sceneCamera.mouseEvent(event);
-		}
-
-		if (standardRenderer != null) {
+		} else if (standardRenderer != null) {
 			standardRenderer.getCam().mouseEvent(event);
 		}
 	}
@@ -1774,7 +1772,9 @@ public class ziviDomeLive implements PConstants {
 	 * <p>Scenes drive space navigation by calling {@code getSceneCamera().apply(pg)}
 	 * inside {@code sceneRender} (between {@code pushMatrix}/{@code popMatrix}). The
 	 * camera transforms the scene modelview directly, so it works across every
-	 * projection without touching the dome parameters (yaw/pitch/roll/fov).</p>
+	 * projection without touching the dome parameters (yaw/pitch/roll/fov). Its current
+	 * rotational quaternion is synchronized with the shared Environment every frame;
+	 * target and distance remain scene-only so the background stays infinite.</p>
 	 *
 	 * @return the shared {@link OrbitCamera} instance
 	 */
@@ -1903,7 +1903,8 @@ public class ziviDomeLive implements PConstants {
 	/**
 	 * Enables or disables built-in mouse handling for the scene camera.
 	 * When enabled, the library forwards mouse drag/wheel events to
-	 * {@link #getSceneCamera()} automatically.
+	 * {@link #getSceneCamera()} automatically and suspends the independent Standard-view
+	 * camera input, preventing the same gesture from rotating two cameras at once.
 	 *
 	 * @param enabled true to let the library drive the scene camera from mouse input
 	 */
@@ -2037,6 +2038,7 @@ public class ziviDomeLive implements PConstants {
 
 		// Advance the native scene camera smoothing once per frame.
 		sceneCamera.update();
+		environmentState.setSceneCameraOrientation(sceneCamera.getOrientation());
 	}
 
 	/**

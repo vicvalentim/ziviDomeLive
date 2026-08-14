@@ -7,7 +7,9 @@ import processing.core.PImage;
  *
  * <p>The {@link PImage} is a borrowed Processing-friendly source. Render passes resolve its
  * Processing-managed OpenGL texture when needed and never take ownership of, or dispose, that
- * texture. This state deliberately contains no lighting, exposure, HDR, IBL, PBR, or AO data.</p>
+ * texture. The shared scene-camera quaternion is visual orientation state only; orbit target
+ * and distance are deliberately excluded. This state contains no lighting, exposure, HDR,
+ * IBL, PBR, or AO data.</p>
  *
  * @since 2.0.0
  */
@@ -16,6 +18,7 @@ public final class EnvironmentState {
 	private boolean visible = true;
 	private float intensity = 1.0f;
 	private float yawOffset;
+	private Quaternion sceneCameraOrientation = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
 
 	/**
 	 * Sets the borrowed LDR equirectangular source, or {@code null} to clear it.
@@ -92,5 +95,37 @@ public final class EnvironmentState {
 	 */
 	public float getYawOffset() {
 		return yawOffset;
+	}
+
+	/**
+	 * Sets the rotational component of the shared scene camera used by the Environment lookup.
+	 * Target and distance deliberately remain outside the Environment state so the background
+	 * stays infinite and translation-invariant.
+	 *
+	 * @param orientation scene-camera orientation, or {@code null} for identity
+	 */
+	public void setSceneCameraOrientation(Quaternion orientation) {
+		if (orientation == null) {
+			sceneCameraOrientation = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+			return;
+		}
+		sceneCameraOrientation = new Quaternion(
+				orientation.x,
+				orientation.y,
+				orientation.z,
+				orientation.w).normalize();
+	}
+
+	/**
+	 * Returns a defensive copy of the scene-camera orientation used by the Environment lookup.
+	 *
+	 * @return current unit orientation quaternion
+	 */
+	public Quaternion getSceneCameraOrientation() {
+		return new Quaternion(
+				sceneCameraOrientation.x,
+				sceneCameraOrientation.y,
+				sceneCameraOrientation.z,
+				sceneCameraOrientation.w);
 	}
 }

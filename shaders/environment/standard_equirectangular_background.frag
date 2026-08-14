@@ -6,6 +6,7 @@ uniform vec2 environmentUvOffset;
 uniform vec3 cameraRight;
 uniform vec3 cameraUp;
 uniform vec3 cameraBackward;
+uniform mat4 environmentRotation;
 uniform float yawOffset;
 uniform float intensity;
 
@@ -54,6 +55,7 @@ void main() {
 			environmentDirection.x * cameraRight
 			+ environmentDirection.y * cameraUp
 			+ environmentDirection.z * cameraBackward);
+	worldDirection = (environmentRotation * vec4(worldDirection, 0.0)).xyz;
 	vec2 environmentUV = equirectangularUv(worldDirection);
 	environmentUV = environmentUV * environmentUvScale + environmentUvOffset;
 	vec4 color = sampleEnvironmentLinear(environmentUV);

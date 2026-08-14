@@ -45,6 +45,7 @@ public final class EnvironmentBackgroundRenderer {
 	private boolean standardShaderLoadAttempted;
 	private boolean unavailableWarningLogged;
 	private boolean renderFailureWarningLogged;
+	private final PMatrix3D standardEnvironmentRotation = new PMatrix3D();
 
 	/**
 	 * Creates a renderer with an independent environment state for compatibility.
@@ -157,9 +158,13 @@ public final class EnvironmentBackgroundRenderer {
 			PGL pgl,
 			CubemapFace face,
 			Quaternion sphericalOrientation) {
-		PMatrix3D orientationMatrix = sphericalOrientation == null
-				? new PMatrix3D()
-				: sphericalOrientation.toMatrix();
+		Quaternion spherical = sphericalOrientation == null
+				? new Quaternion(0.0f, 0.0f, 0.0f, 1.0f)
+				: sphericalOrientation;
+		Quaternion environmentOrientation = spherical
+				.multiply(state.getSceneCameraOrientation())
+				.normalize();
+		PMatrix3D orientationMatrix = environmentOrientation.toMatrix();
 		return renderCubemapFace(target, pgl, face, orientationMatrix);
 	}
 
@@ -255,6 +260,8 @@ public final class EnvironmentBackgroundRenderer {
 		shader.set("cameraRight", target.cameraInv.m00, target.cameraInv.m10, target.cameraInv.m20);
 		shader.set("cameraUp", target.cameraInv.m01, target.cameraInv.m11, target.cameraInv.m21);
 		shader.set("cameraBackward", target.cameraInv.m02, target.cameraInv.m12, target.cameraInv.m22);
+		state.getSceneCameraOrientation().toMatrix(standardEnvironmentRotation);
+		shader.set("environmentRotation", standardEnvironmentRotation);
 
 		PGL pgl = target.beginPGL();
 		try {

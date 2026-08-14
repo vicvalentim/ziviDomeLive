@@ -35,6 +35,7 @@ public class CubemapRenderer implements PConstants {
     private PGraphicsOpenGL nativeCaptureGraphics;
     private CubemapTarget nativeCubemapTarget;
     private final EnvironmentBackgroundRenderer environmentBackgroundRenderer;
+    private final EnvironmentState environmentState;
     private final boolean ownsEnvironmentState;
     private int resolution;
     private final PApplet parent;
@@ -49,6 +50,7 @@ public class CubemapRenderer implements PConstants {
     private final SphericalOrientation angleOrientation = new SphericalOrientation();
     private final CameraManager defaultCameraManager = new CameraManager();
     private final PMatrix3D captureOrientationMatrix = new PMatrix3D();
+    private final PMatrix3D environmentOrientationMatrix = new PMatrix3D();
 
     /**
      * Constructs a CubemapRenderer with the specified initial resolution and parent PApplet.
@@ -81,6 +83,7 @@ public class CubemapRenderer implements PConstants {
             boolean ownsEnvironmentState) {
         this.parent = parent;
         this.resolution = initialResolution;
+        this.environmentState = environmentState;
         this.environmentBackgroundRenderer =
                 new EnvironmentBackgroundRenderer(parent, environmentState);
         this.ownsEnvironmentState = ownsEnvironmentState;
@@ -257,6 +260,10 @@ public class CubemapRenderer implements PConstants {
 
         float captureFieldOfView = cachedFieldOfView;
         effectiveOrientation.toMatrix(captureOrientationMatrix);
+        composeEnvironmentOrientation(
+                effectiveOrientation,
+                environmentState.getSceneCameraOrientation())
+                .toMatrix(environmentOrientationMatrix);
 
         try {
             for (CubemapFace face : CubemapFace.values()) {
@@ -284,7 +291,7 @@ public class CubemapRenderer implements PConstants {
                     environmentBackgroundRenderer.renderScratchCubemapFace(
                             captureGraphics,
                             face,
-                            captureOrientationMatrix);
+                            environmentOrientationMatrix);
 
                     /*
                      * Force Processing's resolved offscreen color framebuffer to contain
@@ -454,6 +461,18 @@ public class CubemapRenderer implements PConstants {
      */
     public EnvironmentState getEnvironmentState() {
         return environmentBackgroundRenderer.getEnvironmentState();
+    }
+
+    static Quaternion composeEnvironmentOrientation(
+            Quaternion sphericalOrientation,
+            Quaternion sceneCameraOrientation) {
+        Quaternion spherical = sphericalOrientation == null
+                ? new Quaternion(0.0f, 0.0f, 0.0f, 1.0f)
+                : sphericalOrientation;
+        Quaternion sceneCamera = sceneCameraOrientation == null
+                ? new Quaternion(0.0f, 0.0f, 0.0f, 1.0f)
+                : sceneCameraOrientation;
+        return spherical.multiply(sceneCamera).normalize();
     }
 
     /**
