@@ -26,7 +26,7 @@ class Scene1 implements Scene {
   private ConfigLoader configLoader;
   private PhysicsEngine physicsEngine;
   private Renderer renderer;
-  private CameraController cameraController;
+  private OrbitCamera sceneCamera;
 
   // ————————————————————————————————
   // Parâmetros de visualização
@@ -36,7 +36,6 @@ class Scene1 implements Scene {
   private boolean showLabels     = false;
   private int     selectedPlanet = -1;
 
-  private int prevMouseX, prevMouseY;
   private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
   private SimulatedClock clock; // Novo relógio em dias
@@ -105,17 +104,13 @@ class Scene1 implements Scene {
     setClockToNowUTC();
     propagateSinceJ2000();
 
-    // 6) Inicializa o controlador de câmera
-    // *** distância inicial é 1.2x a distância de Netuno ***
-
-    // distância inicial
-    float initDist = NEPTUNE_DIST * pxPerAU() * 1.2f;
-
-    // instanciamos o controlador de câmera
-    cameraController = new CameraController(
-      new PVector(0, 0, 0),  // alvo inicial no (0,0,0)
-      initDist               // distância inicial
-    );
+    // 6) Usa o serviço de OrbitCamera compartilhado da biblioteca.
+    sceneCamera = parent.getSceneCamera();
+    sceneCamera.setDistanceLimits(-1e6f, 1e6f);
+    sceneCamera.setLerpFactor(0.1f);
+    sceneCamera.setDragSensitivity(0.01f);
+    sceneCamera.setWheelSteps(80f, 0.001f);
+    parent.setSceneCameraInputEnabled(true);
 
     resetView();
   }
@@ -285,13 +280,8 @@ class Scene1 implements Scene {
         newTarget = new PVector(0, 0, 0);
       }
 
-      // 3) Atualiza meta e interpola suavemente
-      cameraController.goTo(
-        newTarget,
-        cameraController.getOrientation(),
-        cameraController.getDistance()
-      );
-      cameraController.update();
+      // 3) Atualiza somente o alvo. Orientação, distância e suavização pertencem à API.
+      sceneCamera.setTarget(newTarget);
 
     } finally {
       rwLock.writeLock().unlock();
@@ -310,7 +300,7 @@ class Scene1 implements Scene {
       pg.textSize(12);
       pg.text(clock.getCalendarUTCString(), 10, 20);
       pg.pushMatrix();
-      cameraController.apply(pg);
+      sceneCamera.apply(pg);
 
         // 1) Sol
         PVector sunPx = sun.getPositionAU().copy()
@@ -471,64 +461,24 @@ class Scene1 implements Scene {
   }
 
   /**
-   * Função de callback para eventos do mouse.
-   * @param event Evento do mouse
-   */
-  public void mouseEvent(processing.event.MouseEvent event) {
-    switch (event.getAction()) {
-      case MouseEvent.PRESS:
-        prevMouseX = event.getX();
-        prevMouseY = event.getY();
-        break;
-
-      case MouseEvent.DRAG:
-        float dx = (event.getX() - prevMouseX) * 0.01f;
-        float dy = (event.getY() - prevMouseY) * 0.01f;
-        // Rotaciona a câmera usando o CameraController (quaternions)
-        cameraController.rotateAround(new PVector(0, 1, 0), dx);
-        cameraController.rotateAround(new PVector(1, 0, 0), dy);
-        prevMouseX = event.getX();
-        prevMouseY = event.getY();
-        break;
-
-      case MouseEvent.WHEEL:
-        float scroll = event.getCount();
-        boolean isPad = Math.abs(scroll) < 1;
-        float zoom   = isPad ? scroll * 0.001f : scroll * 80f;
-        // Ajusta distância da câmera com limites
-        cameraController.setDistance(
-          PApplet.constrain(
-            cameraController.getDistance() + zoom,
-            -1e6f,      // distância mínima
-            1e6f      // distância máxima
-          )
-        );
-        break;
-    }
-  }
-
-  /**
   * Reseta a câmera para a posição inicial, olhar para o Sol
   * mas mais afastado, usando NEPTUNE_DIST.
   */
   private void resetView() {
-      // 1) alvo: centro do Sol
-      cameraController.setTarget(new PVector(0, 0, 0));
-
-      // 2) pitch suave de PI/16
-      Quaternion q = new Quaternion(1, 0, 0, 0)
-                        .fromAxisAngle(new PVector(1, 0, 0), PI/16);
-      cameraController.setOrientation(q);
-
-      // 3) distância: igual ao initDist do construtor
+      Quaternion orientation = Quaternion.fromAxisAngle(
+        new PVector(1, 0, 0),
+        PI / 16f
+      );
       float dist = -NEPTUNE_DIST * pxPerAU();
-      cameraController.setDistance(dist);
+      sceneCamera.snapTo(new PVector(0, 0, 0), orientation, dist);
   }
 
   /**
    * Limpa todos os recursos utilizados pela cena.
    */
   public void dispose() {
+    parent.setSceneCameraInputEnabled(false);
+    sceneCamera.reset(1500f);
     parent.clearEnvironmentBackground();
     textureManager.clear();
     configLoader.dispose();

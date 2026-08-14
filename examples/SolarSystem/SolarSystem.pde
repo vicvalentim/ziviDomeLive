@@ -1,4 +1,6 @@
 import com.victorvalentim.zividomelive.*;
+import com.victorvalentim.zividomelive.render.Quaternion;
+import com.victorvalentim.zividomelive.render.camera.OrbitCamera;
 import controlP5.*;
 import codeanticode.syphon.*;
 
