@@ -11,8 +11,15 @@ import java.util.logging.Logger;
  */
 public class SceneManager {
 
+	interface LifecycleListener {
+		void beforeSetup(Scene scene);
+		void beforeDispose(Scene scene);
+		void afterDispose(Scene scene);
+	}
+
 	private final List<Scene> scenes; // List of registered scenes
 	private int currentSceneIndex = -1; // Index of the current scene (-1 when no scene is active)
+	private LifecycleListener lifecycleListener;
 	private static final Logger LOGGER = LogManager.getLogger();
 	/**
 	 * Constructs a SceneManager.
@@ -41,7 +48,7 @@ public class SceneManager {
 		if (currentSceneIndex == -1) {
 			// Automatically set the first scene as current if none is active
 			currentSceneIndex = 0;
-			scene.setupScene();
+			setupScene(scene);
 			LOGGER.info("First scene registered and set as current: " + scene.getName());
 		} else {
 			LOGGER.info("Scene registered: " + scene.getName());
@@ -75,7 +82,7 @@ public class SceneManager {
 		currentSceneIndex = index;
 		disposeScene(previousIndex);
 		Scene activeScene = scenes.get(currentSceneIndex);
-		activeScene.setupScene();
+		setupScene(activeScene);
 		LOGGER.info("Scene activated: " + activeScene.getName());
 	}
 
@@ -113,7 +120,7 @@ public class SceneManager {
 		if (previousIndex != currentSceneIndex) {
 			disposeScene(previousIndex);
 			Scene newScene = getCurrentScene();
-			newScene.setupScene();
+			setupScene(newScene);
 			LOGGER.info("Switched to the next scene: " + newScene.getName());
 		}
 	}
@@ -133,7 +140,7 @@ public class SceneManager {
 		if (previousIndex != currentSceneIndex) {
 			disposeScene(previousIndex);
 			Scene newScene = getCurrentScene();
-			newScene.setupScene();
+			setupScene(newScene);
 			LOGGER.info("Switched to the previous scene: " + newScene.getName());
 		} else {
 			LOGGER.info("No change in scene: still on " + getCurrentScene().getName());
@@ -172,7 +179,7 @@ public class SceneManager {
 		disposeScene(previousIndex);
 		Scene newScene = getCurrentScene();
 		if (newScene != null) {
-			newScene.setupScene();
+			setupScene(newScene);
 			LOGGER.info("Scene set to index " + index + ": " + newScene.getName());
 		}
 	}
@@ -186,11 +193,36 @@ public class SceneManager {
 		if (index < 0 || index >= scenes.size()) {
 			return;
 		}
-		try {
-			scenes.get(index).dispose();
-		} catch (RuntimeException e) {
-			LOGGER.warning("Error disposing scene " + scenes.get(index).getName() + ": " + e.getMessage());
+		Scene scene = scenes.get(index);
+		if (lifecycleListener != null) {
+			lifecycleListener.beforeDispose(scene);
 		}
+		try {
+			scene.dispose();
+		} catch (RuntimeException e) {
+			LOGGER.warning("Error disposing scene " + scene.getName() + ": " + e.getMessage());
+		} finally {
+			if (lifecycleListener != null) {
+				lifecycleListener.afterDispose(scene);
+			}
+		}
+	}
+
+	/**
+	 * Defers no work itself: callers invoke this method at a safe frame boundary to perform
+	 * one complete dispose/setup cycle of the active scene.
+	 *
+	 * @return true when an active scene was reloaded
+	 */
+	public boolean reloadCurrentScene() {
+		if (currentSceneIndex < 0 || currentSceneIndex >= scenes.size()) {
+			return false;
+		}
+		Scene scene = scenes.get(currentSceneIndex);
+		disposeScene(currentSceneIndex);
+		setupScene(scene);
+		LOGGER.info("Scene reloaded: " + scene.getName());
+		return true;
 	}
 
 	/**
@@ -209,5 +241,16 @@ public class SceneManager {
 	void detachScenes() {
 		scenes.clear();
 		currentSceneIndex = -1;
+	}
+
+	void setLifecycleListener(LifecycleListener lifecycleListener) {
+		this.lifecycleListener = lifecycleListener;
+	}
+
+	private void setupScene(Scene scene) {
+		if (lifecycleListener != null) {
+			lifecycleListener.beforeSetup(scene);
+		}
+		scene.setupScene();
 	}
 }

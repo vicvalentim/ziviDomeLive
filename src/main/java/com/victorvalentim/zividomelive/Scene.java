@@ -15,6 +15,17 @@ public interface Scene {
 	Logger LOGGER = LogManager.getLogger();
 
 	/**
+	 * Supplies lifecycle-aware API services before this scene is set up.
+	 *
+	 * <p>The default implementation preserves existing sketches. Service-aware scenes may
+	 * retain the provided context until their matching {@link #dispose()} call.</p>
+	 *
+	 * @param services services owned by this scene activation
+	 */
+	default void configure(SceneServices services) {
+	}
+
+	/**
 	 * Sets up the scene when it becomes active.
 	 *
 	 * <p>A scene may be activated more than once. Each activation after a switch follows a

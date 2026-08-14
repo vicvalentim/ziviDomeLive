@@ -11,6 +11,8 @@ import processing.event.*;
 import processing.opengl.*;
 import controlP5.*;
 import java.util.LinkedHashSet;
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -96,6 +98,24 @@ public class ziviDomeLive implements PConstants {
 	private SplashScreen splash;
 	private SceneManager sceneManager;
 	private Scene bootstrapScene;
+	private final Map<Scene, SceneServices> sceneServices = new IdentityHashMap<>();
+	private Thread renderThread;
+	private final SceneManager.LifecycleListener sceneLifecycle = new SceneManager.LifecycleListener() {
+		@Override
+		public void beforeSetup(Scene scene) {
+			prepareSceneServices(scene);
+		}
+
+		@Override
+		public void beforeDispose(Scene scene) {
+			prepareSceneServicesForDisposal(scene);
+		}
+
+		@Override
+		public void afterDispose(Scene scene) {
+			releaseSceneServices(scene);
+		}
+	};
 
 	/**
 	 * Aspect policy used to compute Standard output dimensions.
@@ -136,6 +156,8 @@ public class ziviDomeLive implements PConstants {
 		this.p = p;
 		this.renderPipeline = new RenderPipeline(this);
 		this.sceneManager = new SceneManager();
+		this.sceneManager.setLifecycleListener(sceneLifecycle);
+		this.renderThread = Thread.currentThread();
 
 		welcome();
 		registerEventHandlers();
@@ -208,6 +230,32 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
+	 * Registers a scene with the facade-owned manager without activating it when another user
+	 * scene is already active. The first registered user scene replaces the bootstrap fallback.
+	 *
+	 * <p>Unlike constructing a detached {@link SceneManager}, this path guarantees that
+	 * {@link Scene#configure(SceneServices)} runs before the first setup.</p>
+	 *
+	 * @param scene scene to register
+	 */
+	public void registerScene(Scene scene) {
+		if (disposed) {
+			LOGGER.warning("Cannot register a scene after disposal.");
+			return;
+		}
+		if (scene == null) {
+			LOGGER.warning("Cannot register a null scene.");
+			return;
+		}
+		if (bootstrapScene != null && sceneManager.containsScene(bootstrapScene)) {
+			sceneManager.clearScenes();
+			bootstrapScene = null;
+		}
+		sceneManager.registerScene(scene);
+		syncCurrentSceneToRenderers();
+	}
+
+	/**
 	 * Sets up the rendering environment, including frame rate, OpenGL info, texture hints,
 	 * output configuration, and mouse event registration.
 	 *
@@ -227,6 +275,7 @@ public class ziviDomeLive implements PConstants {
 		}
 
 		LOGGER.info("Starting setup...");
+		renderThread = Thread.currentThread();
 
 		try {
 			p.frameRate(targetFrameRate);
@@ -1289,6 +1338,72 @@ public class ziviDomeLive implements PConstants {
 		return sceneManager != null ? sceneManager.getCurrentScene() : null;
 	}
 
+	/**
+	 * Returns lifecycle-aware services for a scene owned by this facade.
+	 *
+	 * <p>Normally scenes retain the value supplied through
+	 * {@link Scene#configure(SceneServices)}. This accessor is also convenient for
+	 * Processing sketches that already keep a facade reference.</p>
+	 *
+	 * @param scene scene whose current activation owns the services
+	 * @return services for the scene's current activation, or {@code null} when inactive
+	 */
+	public synchronized SceneServices getSceneServices(Scene scene) {
+		if (disposed) {
+			throw new IllegalStateException("Cannot access scene services after facade disposal.");
+		}
+		if (scene == null) {
+			throw new IllegalArgumentException("Scene cannot be null.");
+		}
+		return sceneServices.get(scene);
+	}
+
+	/**
+	 * Returns services for the active scene.
+	 *
+	 * @return current activation services, or {@code null} when no scene is active
+	 */
+	public synchronized SceneServices getCurrentSceneServices() {
+		Scene current = getCurrentScene();
+		return current != null ? getSceneServices(current) : null;
+	}
+
+	private synchronized void prepareSceneServices(Scene scene) {
+		SceneServices services = getOrCreateSceneServices(scene);
+		scene.configure(services);
+	}
+
+	private synchronized SceneServices getOrCreateSceneServices(Scene scene) {
+		return sceneServices.computeIfAbsent(
+				scene,
+				ignored -> new SceneServices(this, scene, resolveRenderThread()));
+	}
+
+	private synchronized void releaseSceneServices(Scene scene) {
+		SceneServices services = sceneServices.remove(scene);
+		if (services != null) {
+			services.close();
+		}
+	}
+
+	private synchronized void prepareSceneServicesForDisposal(Scene scene) {
+		SceneServices services = sceneServices.get(scene);
+		if (services != null) {
+			services.prepareForDispose();
+		}
+	}
+
+	private synchronized void releaseAllSceneServices() {
+		for (SceneServices services : sceneServices.values().toArray(new SceneServices[0])) {
+			services.close();
+		}
+		sceneServices.clear();
+	}
+
+	private Thread resolveRenderThread() {
+		return renderThread != null ? renderThread : Thread.currentThread();
+	}
+
 	/** Keeps stateful Standard renderers aligned with the authoritative SceneManager. */
 	void syncCurrentSceneToRenderers() {
 		Scene activeScene = getCurrentScene();
@@ -1373,6 +1488,7 @@ public class ziviDomeLive implements PConstants {
 		if (controlManager == null) {
 			Scene activeScene = getCurrentScene();
 			if (activeScene != null) {
+				dispatchSceneAction(activeScene, event);
 				activeScene.keyEvent(event);
 			}
 			return;
@@ -1431,6 +1547,7 @@ public class ziviDomeLive implements PConstants {
 		// Encaminha o evento para a cena atual
 		Scene activeScene = getCurrentScene();
 		if (activeScene != null) {
+			dispatchSceneAction(activeScene, event);
 			activeScene.keyEvent(event);
 		}
 	}
@@ -1452,6 +1569,7 @@ public class ziviDomeLive implements PConstants {
 
 		Scene activeScene = getCurrentScene();
 		if (activeScene != null) {
+			dispatchSceneAction(activeScene, event);
 			activeScene.mouseEvent(event);
 		}
 
@@ -1460,6 +1578,20 @@ public class ziviDomeLive implements PConstants {
 			sceneCamera.mouseEvent(event);
 		} else if (standardRenderer != null) {
 			standardRenderer.getCam().mouseEvent(event);
+		}
+	}
+
+	private synchronized void dispatchSceneAction(Scene scene, KeyEvent event) {
+		SceneServices services = sceneServices.get(scene);
+		if (services != null && !services.isClosed()) {
+			services.actions().dispatch(event);
+		}
+	}
+
+	private synchronized void dispatchSceneAction(Scene scene, MouseEvent event) {
+		SceneServices services = sceneServices.get(scene);
+		if (services != null && !services.isClosed()) {
+			services.actions().dispatch(event);
 		}
 	}
 
@@ -1837,6 +1969,11 @@ public class ziviDomeLive implements PConstants {
 		setEquirectangularBackground((PImage) null);
 	}
 
+	/** Returns the borrowed source for scene-scoped ownership bookkeeping. */
+	PImage getEnvironmentBackgroundSource() {
+		return environmentState.getLdrEquirectangularSource();
+	}
+
 	/**
 	 * Reports whether an environment background image is currently configured.
 	 *
@@ -2005,7 +2142,12 @@ public class ziviDomeLive implements PConstants {
 			}
 		}
 		this.sceneManager = sceneManager;
+		this.sceneManager.setLifecycleListener(sceneLifecycle);
 		bootstrapScene = null;
+		Scene adoptedScene = this.sceneManager.getCurrentScene();
+		if (adoptedScene != null) {
+			prepareSceneServices(adoptedScene);
+		}
 		syncCurrentSceneToRenderers();
 	}
 
@@ -2033,7 +2175,15 @@ public class ziviDomeLive implements PConstants {
 		syncCurrentSceneToRenderers();
 		Scene activeScene = getCurrentScene();
 		if (activeScene != null) {
-			activeScene.update();
+			SceneServices services = getOrCreateSceneServices(activeScene);
+			services.beginFrame();
+			if (services.consumeReloadRequest()) {
+				sceneManager.reloadCurrentScene();
+				syncCurrentSceneToRenderers();
+			} else {
+				activeScene.update();
+				services.endFrame();
+			}
 		}
 
 		// Advance the native scene camera smoothing once per frame.
@@ -2152,6 +2302,7 @@ public class ziviDomeLive implements PConstants {
 				LOGGER.warning("SceneManager disposal failed: " + error.getMessage());
 			}
 		}
+		releaseAllSceneServices();
 		bootstrapScene = null;
 		try {
 			releaseGraphicsResources();

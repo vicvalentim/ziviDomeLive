@@ -1,6 +1,7 @@
 package com.victorvalentim.zividomelive.compat;
 
 import com.victorvalentim.zividomelive.Scene;
+import com.victorvalentim.zividomelive.SceneServices;
 import org.junit.jupiter.api.Test;
 import processing.event.KeyEvent;
 import processing.event.MouseEvent;
@@ -19,6 +20,7 @@ class SceneContractTest {
 		assertTrue(Modifier.isAbstract(sceneRender.getModifiers()));
 
 		assertDefaultMethod("setupScene");
+		assertDefaultMethod("configure", SceneServices.class);
 		assertDefaultMethod("update");
 		assertDefaultMethod("keyEvent", KeyEvent.class);
 		assertDefaultMethod("mouseEvent", MouseEvent.class);

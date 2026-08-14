@@ -316,6 +316,23 @@ class SceneManagerTest {
         assertEquals(1, second.disposeCount);
     }
 
+    @Test
+    void reloadCurrentScenePerformsOneCompleteLifecycleCycle() {
+        FakeScene scene = new FakeScene("Reloadable");
+        manager.registerScene(scene);
+
+        assertTrue(manager.reloadCurrentScene());
+
+        assertSame(scene, manager.getCurrentScene());
+        assertEquals(2, scene.setupCount);
+        assertEquals(1, scene.disposeCount);
+    }
+
+    @Test
+    void reloadWithoutActiveSceneIsIgnored() {
+        assertFalse(manager.reloadCurrentScene());
+    }
+
     // -----------------------------------------------------------------------
     // Minimal Scene stub — no OpenGL context needed
     // -----------------------------------------------------------------------

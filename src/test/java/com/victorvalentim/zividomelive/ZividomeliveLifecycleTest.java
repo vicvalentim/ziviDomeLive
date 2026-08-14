@@ -300,6 +300,130 @@ class ZividomeliveLifecycleTest {
 		assertEquals(applet.registeredMethods, applet.unregisteredMethods);
 	}
 
+	@Test
+	void serviceAwareSceneIsConfiguredBeforeSetupAndClosedAfterDispose() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		ServiceAwareScene scene = new ServiceAwareScene();
+
+		lib.setScene(scene);
+
+		assertEquals(1, scene.configureCount);
+		assertEquals(1, scene.setupCount);
+		assertNotNull(scene.servicesSeenDuringSetup);
+		SceneServices activation = scene.servicesSeenDuringSetup;
+
+		lib.dispose();
+
+		assertEquals(1, scene.disposeCount);
+		assertTrue(activation.isClosed());
+	}
+
+	@Test
+	void inactiveRegisteredSceneDoesNotOwnAnActivationContext() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		ServiceAwareScene active = new ServiceAwareScene();
+		ServiceAwareScene inactive = new ServiceAwareScene();
+
+		lib.setScene(active);
+		lib.registerScene(inactive);
+
+		assertSame(active.services, lib.getSceneServices(active));
+		assertNull(lib.getSceneServices(inactive));
+		lib.dispose();
+	}
+
+	@Test
+	void untouchedSceneEnvironmentServicePreservesFacadeOwnedBackground() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		PImage facadeSource = new PImage(4, 2);
+		lib.setEquirectangularBackground(facadeSource);
+		ServiceAwareScene first = new ServiceAwareScene();
+		ServiceAwareScene second = new ServiceAwareScene();
+
+		lib.setScene(first);
+		lib.registerScene(second);
+		lib.getSceneManager().nextScene();
+
+		assertSame(facadeSource, lib.getEnvironmentBackgroundSource());
+		lib.dispose();
+	}
+
+	@Test
+	void sceneEnvironmentServiceRestoresTheStateItTemporarilyOwned() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		PImage facadeSource = new PImage(4, 2);
+		PImage sceneSource = new PImage(8, 4);
+		lib.setEquirectangularBackground(facadeSource);
+		lib.setEnvironmentBackgroundVisible(false);
+		lib.setEnvironmentBackgroundIntensity(0.75f);
+		lib.setEnvironmentBackgroundYawOffset(0.25f);
+		ServiceAwareScene scene = new ServiceAwareScene();
+		ServiceAwareScene next = new ServiceAwareScene();
+		lib.setScene(scene);
+		lib.registerScene(next);
+
+		scene.services.environment().setEquirectangular(sceneSource);
+		scene.services.environment().setVisible(true);
+		scene.services.environment().setIntensity(1.5f);
+		scene.services.environment().setYawOffset(0.5f);
+		lib.getSceneManager().nextScene();
+
+		assertSame(facadeSource, lib.getEnvironmentBackgroundSource());
+		assertFalse(lib.isEnvironmentBackgroundVisible());
+		assertEquals(0.75f, lib.getEnvironmentBackgroundIntensity(), 1e-6f);
+		assertEquals(0.25f, lib.getEnvironmentBackgroundYawOffset(), 1e-6f);
+		lib.dispose();
+	}
+
+	@Test
+	void requestedReloadIsExecutedAtFrameBoundaryWithFreshServices() throws Exception {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		ServiceAwareScene scene = new ServiceAwareScene();
+		lib.setScene(scene);
+		SceneServices firstActivation = scene.services;
+		setInitState(lib, ziviDomeLive.InitState.MANAGERS_READY);
+
+		firstActivation.requestReload();
+		lib.pre();
+
+		assertEquals(1, scene.disposeCount);
+		assertEquals(2, scene.setupCount);
+		assertEquals(2, scene.configureCount);
+		assertTrue(firstActivation.isClosed());
+		assertNotSame(firstActivation, scene.services);
+		assertFalse(scene.services.isClosed());
+		lib.dispose();
+	}
+
+	@Test
+	void facadeDispatchesSceneActionsWithoutReplacingRawCallbacks() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		ServiceAwareScene scene = new ServiceAwareScene();
+		lib.setScene(scene);
+		scene.services.actions().bindKeyPressed("test", 'x', () -> scene.actionCount++);
+
+		lib.keyEvent(new processing.event.KeyEvent(
+				null, 0, processing.event.KeyEvent.PRESS, 0, 'x', 0));
+
+		assertEquals(1, scene.actionCount);
+		assertEquals(1, scene.rawKeyCount);
+		lib.dispose();
+	}
+
+	@Test
+	void cameraTargetTrackingRunsAfterSceneUpdate() throws Exception {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		ServiceAwareScene scene = new ServiceAwareScene();
+		lib.setScene(scene);
+		scene.services.camera().trackTarget(() -> new processing.core.PVector(100, 20, -5));
+		setInitState(lib, ziviDomeLive.InitState.MANAGERS_READY);
+
+		lib.pre();
+
+		assertTrue(lib.getSceneCamera().getTarget().x > 0f);
+		lib.dispose();
+	}
+
 	private record OutputManagerState(boolean anyEnabled) {}
 
 	private static void setOutputManager(ziviDomeLive lib, OutputManager outputManager) throws Exception {
@@ -395,6 +519,42 @@ class ZividomeliveLifecycleTest {
 		@Override
 		public String getName() {
 			return name;
+		}
+	}
+
+	private static class ServiceAwareScene implements Scene {
+		private SceneServices services;
+		private SceneServices servicesSeenDuringSetup;
+		private int configureCount;
+		private int setupCount;
+		private int disposeCount;
+		private int actionCount;
+		private int rawKeyCount;
+
+		@Override
+		public void configure(SceneServices services) {
+			this.services = services;
+			configureCount++;
+		}
+
+		@Override
+		public void setupScene() {
+			servicesSeenDuringSetup = services;
+			setupCount++;
+		}
+
+		@Override
+		public void sceneRender(PGraphicsOpenGL graphics) {
+		}
+
+		@Override
+		public void keyEvent(processing.event.KeyEvent event) {
+			rawKeyCount++;
+		}
+
+		@Override
+		public void dispose() {
+			disposeCount++;
 		}
 	}
 

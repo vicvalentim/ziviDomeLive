@@ -54,6 +54,21 @@ public class ThreadManager {
 	}
 
 	/**
+	 * Executes a managed runnable without allocating a second Future wrapper.
+	 * Intended for lifecycle-aware task abstractions such as scene task groups.
+	 *
+	 * @param task runnable to execute on the shared pool
+	 */
+	public static void execute(Runnable task) {
+		try {
+			executor.execute(task);
+		} catch (Exception e) {
+			LOGGER.log(Level.SEVERE, "Error executing managed runnable", e);
+			throw e;
+		}
+	}
+
+	/**
 	 * Shuts down the ExecutorService, allowing previously submitted tasks to complete execution.
 	 * This should be called when the application is stopping to release resources.
 	 */

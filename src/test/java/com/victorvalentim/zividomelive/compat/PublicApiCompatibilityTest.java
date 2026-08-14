@@ -1,8 +1,18 @@
 package com.victorvalentim.zividomelive.compat;
 
 import com.victorvalentim.zividomelive.FrameViews;
+import com.victorvalentim.zividomelive.FrameClock;
+import com.victorvalentim.zividomelive.RenderThreadQueue;
 import com.victorvalentim.zividomelive.Scene;
+import com.victorvalentim.zividomelive.SceneActionMap;
+import com.victorvalentim.zividomelive.SceneAssets;
+import com.victorvalentim.zividomelive.SceneCameraService;
+import com.victorvalentim.zividomelive.SceneEnvironmentService;
 import com.victorvalentim.zividomelive.SceneManager;
+import com.victorvalentim.zividomelive.SceneResourceCache;
+import com.victorvalentim.zividomelive.SceneServices;
+import com.victorvalentim.zividomelive.SceneTaskGroup;
+import com.victorvalentim.zividomelive.SimulationTimeline;
 import com.victorvalentim.zividomelive.RenderMode;
 import com.victorvalentim.zividomelive.ViewType;
 import com.victorvalentim.zividomelive.manager.OutputManager;
@@ -133,7 +143,17 @@ class PublicApiCompatibilityTest {
 				RenderMode.class,
 				ViewType.class,
 				FrameViews.class,
+				FrameClock.class,
+				SimulationTimeline.class,
+				RenderThreadQueue.class,
 				Scene.class,
+				SceneServices.class,
+				SceneTaskGroup.class,
+				SceneResourceCache.class,
+				SceneAssets.class,
+				SceneActionMap.class,
+				SceneCameraService.class,
+				SceneEnvironmentService.class,
 				SceneManager.class,
 				OutputManager.class,
 				CubemapRenderer.class,
@@ -172,8 +192,11 @@ class PublicApiCompatibilityTest {
 		assertMethod("stop");
 		assertMethod("dispose");
 		assertMethod("setScene", Scene.class);
+		assertMethod("registerScene", Scene.class);
 		assertMethod("setCurrentScene", Scene.class);
 		assertMethod("setSceneManager", SceneManager.class);
+		assertMethod("getSceneServices", Scene.class);
+		assertMethod("getCurrentSceneServices");
 		assertMethod("getRenderMode");
 		assertMethod("setRenderMode", RenderMode.class);
 		assertMethod("resetOrientation");
