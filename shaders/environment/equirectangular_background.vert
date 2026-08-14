@@ -7,5 +7,5 @@ const vec2 FULLSCREEN_TRIANGLE[3] = vec2[](
 );
 
 void main() {
-    gl_Position = vec4(FULLSCREEN_TRIANGLE[gl_VertexID], 1.0, 1.0);
+	gl_Position = vec4(FULLSCREEN_TRIANGLE[gl_VertexID], 1.0, 1.0);
 }

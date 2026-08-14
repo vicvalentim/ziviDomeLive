@@ -1,6 +1,8 @@
 package com.victorvalentim.zividomelive.render.modes;
 
 import com.victorvalentim.zividomelive.Scene;
+import com.victorvalentim.zividomelive.render.EnvironmentBackgroundRenderer;
+import com.victorvalentim.zividomelive.render.EnvironmentState;
 import com.victorvalentim.zividomelive.render.camera.MouseControlledCamera;
 import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
 import processing.core.*;
@@ -37,6 +39,9 @@ public class StandardRenderer {
     private MouseControlledCamera cam;
     private final PApplet parent;
     private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
+    private final EnvironmentBackgroundRenderer environmentBackgroundRenderer;
+    private final boolean ownsEnvironmentState;
+    private static final float VERTICAL_FOV_RADIANS = PApplet.radians(60.0f);
 
     /**
      * Fixed buffer width. Zero signals dynamic mode ({@code parent.width} is used each frame).
@@ -79,10 +84,41 @@ public class StandardRenderer {
      * @param currentScene the initial scene to render; may be {@code null}
      */
     public StandardRenderer(PApplet parent, int width, int height, Scene currentScene) {
+        this(parent, width, height, currentScene, new EnvironmentState(), true);
+    }
+
+    /**
+     * Constructs a Standard renderer consuming a shared logical Environment state.
+     *
+     * @param parent Processing parent
+     * @param width fixed width, or zero for dynamic preview sizing
+     * @param height fixed height, or zero for dynamic preview sizing
+     * @param currentScene initial scene
+     * @param environmentState shared borrowed environment state
+     */
+    public StandardRenderer(
+            PApplet parent,
+            int width,
+            int height,
+            Scene currentScene,
+            EnvironmentState environmentState) {
+        this(parent, width, height, currentScene, environmentState, false);
+    }
+
+    private StandardRenderer(
+            PApplet parent,
+            int width,
+            int height,
+            Scene currentScene,
+            EnvironmentState environmentState,
+            boolean ownsEnvironmentState) {
         this.parent       = parent;
         this.currentScene = currentScene;
         this.fixedWidth   = Math.max(0, width);
         this.fixedHeight  = Math.max(0, height);
+        this.environmentBackgroundRenderer =
+                new EnvironmentBackgroundRenderer(parent, environmentState);
+        this.ownsEnvironmentState = ownsEnvironmentState;
         setCam(new MouseControlledCamera());
 
         // Pre-allocate when fixed dimensions are provided so that the FBO exists before
@@ -190,7 +226,7 @@ public class StandardRenderer {
         float near   = Math.max(0.1f, dist * nearFactor);
         float far    = dist * farFactor;
         float aspect = (float) standardView.width / standardView.height;
-        standardView.perspective(PApplet.radians(60), aspect, near, far);
+        standardView.perspective(VERTICAL_FOV_RADIANS, aspect, near, far);
         standardView.background(skyR, skyG, skyB);
         getCam().apply(standardView);
 
@@ -198,7 +234,91 @@ public class StandardRenderer {
             currentScene.sceneRender(standardView);
         }
 
+        if (environmentBackgroundRenderer.isVisible()
+                && environmentBackgroundRenderer.hasEquirectangularImage()) {
+            standardView.noLights();
+            standardView.flush();
+            environmentBackgroundRenderer.renderStandard(standardView);
+        }
+
         standardView.endDraw();
+    }
+
+    /**
+     * Sets the borrowed LDR Environment source for direct renderer integrations.
+     * @param image borrowed source, or {@code null}
+     */
+    public void setEquirectangularBackground(PImage image) {
+        environmentBackgroundRenderer.setEquirectangularImage(image);
+    }
+
+    /** Clears the borrowed Environment source. */
+    public void clearEnvironmentBackground() {
+        environmentBackgroundRenderer.clear();
+    }
+
+    /**
+     * Returns whether an Environment source is configured.
+     * @return {@code true} when a source is configured
+     */
+    public boolean hasEnvironmentBackground() {
+        return environmentBackgroundRenderer.hasEquirectangularImage();
+    }
+
+    /**
+     * Shows or hides the Environment background.
+     * @param visible {@code true} to draw the Environment
+     */
+    public void setEnvironmentBackgroundVisible(boolean visible) {
+        environmentBackgroundRenderer.setVisible(visible);
+    }
+
+    /**
+     * Returns whether the Environment background is visible.
+     * @return {@code true} when visible
+     */
+    public boolean isEnvironmentBackgroundVisible() {
+        return environmentBackgroundRenderer.isVisible();
+    }
+
+    /**
+     * Sets the non-negative visual Environment multiplier.
+     * @param intensity visual colour multiplier
+     */
+    public void setEnvironmentIntensity(float intensity) {
+        environmentBackgroundRenderer.setIntensity(intensity);
+    }
+
+    /**
+     * Returns the visual Environment multiplier.
+     * @return visual colour multiplier
+     */
+    public float getEnvironmentIntensity() {
+        return environmentBackgroundRenderer.getIntensity();
+    }
+
+    /**
+     * Sets the Environment source-longitude offset in radians.
+     * @param yawOffset source-longitude offset in radians
+     */
+    public void setEnvironmentYawOffset(float yawOffset) {
+        environmentBackgroundRenderer.setYawOffset(yawOffset);
+    }
+
+    /**
+     * Returns the Environment source-longitude offset in radians.
+     * @return source-longitude offset in radians
+     */
+    public float getEnvironmentYawOffset() {
+        return environmentBackgroundRenderer.getYawOffset();
+    }
+
+    /**
+     * Returns the shared logical Environment state.
+     * @return logical Environment state
+     */
+    public EnvironmentState getEnvironmentState() {
+        return environmentBackgroundRenderer.getEnvironmentState();
     }
 
     /**
@@ -248,9 +368,14 @@ public class StandardRenderer {
      * <p>After disposal {@link #getStandardView()} will allocate a fresh buffer on demand.</p>
      */
     public void dispose() {
+        environmentBackgroundRenderer.dispose();
+        if (ownsEnvironmentState) {
+            environmentBackgroundRenderer.clear();
+        }
         if (standardView != null) {
             glAdapter.dispose(standardView);
             standardView = null;
         }
     }
+
 }

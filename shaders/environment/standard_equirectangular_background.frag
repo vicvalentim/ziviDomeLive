@@ -1,42 +1,18 @@
 #version 410 core
+#define PROCESSING_COLOR_SHADER
 uniform sampler2D environmentMap;
-uniform vec2 faceResolution;
 uniform vec2 environmentUvScale;
 uniform vec2 environmentUvOffset;
-uniform int faceIndex;
-uniform mat4 environmentRotation;
+uniform vec3 cameraRight;
+uniform vec3 cameraUp;
+uniform vec3 cameraBackward;
 uniform float yawOffset;
 uniform float intensity;
 
+in vec3 environmentDirection;
 out vec4 FragColor;
 
 const float PI = 3.1415926535897932384626433832795;
-
-const int FACE_POSITIVE_X = 0;
-const int FACE_NEGATIVE_X = 1;
-const int FACE_POSITIVE_Y = 2;
-const int FACE_NEGATIVE_Y = 3;
-const int FACE_POSITIVE_Z = 4;
-const int FACE_NEGATIVE_Z = 5;
-
-vec3 directionForCanonicalFace(int face, vec2 faceUV) {
-    if (face == FACE_POSITIVE_X) {
-        return vec3(0.5, faceUV.y - 0.5, 0.5 - faceUV.x);
-    }
-    if (face == FACE_NEGATIVE_X) {
-        return vec3(-0.5, faceUV.y - 0.5, faceUV.x - 0.5);
-    }
-    if (face == FACE_POSITIVE_Y) {
-        return vec3(faceUV.x - 0.5, 0.5, 0.5 - faceUV.y);
-    }
-    if (face == FACE_NEGATIVE_Y) {
-        return vec3(faceUV.x - 0.5, -0.5, faceUV.y - 0.5);
-    }
-    if (face == FACE_POSITIVE_Z) {
-        return vec3(faceUV.x - 0.5, faceUV.y - 0.5, 0.5);
-    }
-    return vec3(0.5 - faceUV.x, faceUV.y - 0.5, -0.5);
-}
 
 vec2 equirectangularUv(vec3 dir) {
     dir = normalize(dir);
@@ -74,14 +50,12 @@ vec4 sampleEnvironmentLinear(vec2 uv) {
 }
 
 void main() {
-    vec2 faceUV = gl_FragCoord.xy / faceResolution;
-
-    // The later scratch-to-cubemap blit performs the framebuffer-origin flip.
-    vec3 dir = directionForCanonicalFace(faceIndex, faceUV);
-    dir = (environmentRotation * vec4(dir, 0.0)).xyz;
-
-    vec2 environmentUV = equirectangularUv(dir);
-    environmentUV = environmentUV * environmentUvScale + environmentUvOffset;
-    vec4 color = sampleEnvironmentLinear(environmentUV);
+	vec3 worldDirection = normalize(
+			environmentDirection.x * cameraRight
+			+ environmentDirection.y * cameraUp
+			+ environmentDirection.z * cameraBackward);
+	vec2 environmentUV = equirectangularUv(worldDirection);
+	environmentUV = environmentUV * environmentUvScale + environmentUvOffset;
+	vec4 color = sampleEnvironmentLinear(environmentUV);
     FragColor = vec4(color.rgb * max(intensity, 0.0), color.a);
 }

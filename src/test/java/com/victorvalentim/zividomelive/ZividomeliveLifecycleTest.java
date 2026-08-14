@@ -110,6 +110,16 @@ class ZividomeliveLifecycleTest {
 	}
 
 	@Test
+	void terminalDisposeReleasesTheFacadeBorrowedSourceReference() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		lib.setEquirectangularBackground(new PImage(4, 2));
+
+		lib.dispose();
+
+		assertFalse(lib.hasEnvironmentBackground());
+	}
+
+	@Test
 	void targetFrameRateDoesNotRestartAppletWhenValueIsUnchanged() throws Exception {
 		FrameRateTrackingApplet applet = new FrameRateTrackingApplet();
 		ziviDomeLive lib = new ziviDomeLive(applet);
