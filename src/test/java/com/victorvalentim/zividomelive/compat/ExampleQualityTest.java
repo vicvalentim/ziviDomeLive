@@ -155,7 +155,18 @@ class ExampleQualityTest {
 		String scene = read("InfiniteBackground/InfiniteBackgroundScene.pde");
 
 		assertTrue(sketch.contains("../SolarSystem/data/textures/8k_stars_milky_way.jpg"));
-		assertTrue(sketch.contains("setEquirectangularBackground(environment)"));
+		assertTrue(sketch.contains("createCalibrationEnvironment(2048, 1024)"));
+		assertTrue(sketch.contains("setEquirectangularBackground(calibrationEnvironment)"));
+		assertTrue(scene.contains("RenderMode.STANDARD"));
+		assertTrue(scene.contains("RenderMode.DOMEMASTER"));
+		assertTrue(scene.contains("RenderMode.EQUIRECTANGULAR"));
+		assertTrue(scene.contains("RenderMode.SKYBOX"));
+		assertTrue(scene.contains("setEnvironmentBackgroundVisible"));
+		assertTrue(scene.contains("setEnvironmentBackgroundIntensity"));
+		assertTrue(scene.contains("setEnvironmentBackgroundYawOffset"));
+		assertTrue(scene.contains("setPitch"));
+		assertTrue(scene.contains("setYaw"));
+		assertTrue(scene.contains("setRoll"));
 		assertTrue(scene.contains("pg.background(0, 0, 0, 0)"));
 		assertFalse(sketch.contains("createShape(SPHERE"));
 		assertFalse(scene.contains("createShape(SPHERE"));

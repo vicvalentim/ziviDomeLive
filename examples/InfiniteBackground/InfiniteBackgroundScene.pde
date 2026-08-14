@@ -1,14 +1,26 @@
 class InfiniteBackgroundScene implements Scene {
   private final ziviDomeLive dome;
+  private final PImage realEnvironment;
+  private final PImage calibrationEnvironment;
   private float t;
+  private boolean calibrationSource = true;
 
-  InfiniteBackgroundScene(ziviDomeLive dome) {
+  InfiniteBackgroundScene(
+      ziviDomeLive dome,
+      PImage realEnvironment,
+      PImage calibrationEnvironment) {
     this.dome = dome;
+    this.realEnvironment = realEnvironment;
+    this.calibrationEnvironment = calibrationEnvironment;
   }
 
   public void setupScene() {
     println("[InfiniteBackground] Scene ready.");
-    println("[InfiniteBackground] Keys: 1 Standard, 2 Domemaster, 3 Equirectangular, 4 Skybox, [/] yaw, -/+ intensity.");
+    println("[InfiniteBackground] 1 Standard, 2 Domemaster, 3 Equirectangular, 4 Skybox.");
+    println("[InfiniteBackground] E source, V visible, [/] Environment yaw, -/+ intensity.");
+    println("[InfiniteBackground] P/Y/R spherical +90 degrees, C resets spherical orientation.");
+    println("[InfiniteBackground] Standard: drag rotates; mouse wheel changes orbit distance only.");
+    println("[InfiniteBackground] Calibration: -Z seam magenta, -X cyan, +Z yellow, +X red, +Y green, -Y violet.");
   }
 
   public void update() {
@@ -33,12 +45,18 @@ class InfiniteBackgroundScene implements Scene {
 
     pg.stroke(255, 80, 80);
     pg.line(0, 0, 0, 800, 0, 0);
+    pg.stroke(140, 20, 20);
+    pg.line(0, 0, 0, -800, 0, 0);
 
     pg.stroke(80, 255, 80);
     pg.line(0, 0, 0, 0, 800, 0);
+    pg.stroke(20, 130, 20);
+    pg.line(0, 0, 0, 0, -800, 0);
 
     pg.stroke(80, 150, 255);
     pg.line(0, 0, 0, 0, 0, 800);
+    pg.stroke(30, 60, 150);
+    pg.line(0, 0, 0, 0, 0, -800);
 
     pg.strokeWeight(1);
     pg.stroke(255, 255, 255, 80);
@@ -89,6 +107,15 @@ class InfiniteBackgroundScene implements Scene {
       case '4':
         dome.setRenderMode(RenderMode.SKYBOX);
         break;
+      case 'e':
+      case 'E':
+        toggleEnvironmentSource();
+        break;
+      case 'v':
+      case 'V':
+        dome.setEnvironmentBackgroundVisible(!dome.isEnvironmentBackgroundVisible());
+        println("[InfiniteBackground] visible=" + dome.isEnvironmentBackgroundVisible());
+        break;
       case '[':
         dome.setEnvironmentBackgroundYawOffset(dome.getEnvironmentBackgroundYawOffset() - 0.1);
         break;
@@ -102,7 +129,36 @@ class InfiniteBackgroundScene implements Scene {
       case '=':
         dome.setEnvironmentBackgroundIntensity(dome.getEnvironmentBackgroundIntensity() + 0.1);
         break;
+      case 'p':
+      case 'P':
+        dome.setPitch(dome.getPitch() + HALF_PI);
+        break;
+      case 'y':
+      case 'Y':
+        dome.setYaw(dome.getYaw() + HALF_PI);
+        break;
+      case 'r':
+      case 'R':
+        dome.setRoll(dome.getRoll() + HALF_PI);
+        break;
+      case 'c':
+      case 'C':
+        dome.setPitch(0);
+        dome.setYaw(0);
+        dome.setRoll(0);
+        break;
     }
+  }
+
+  private void toggleEnvironmentSource() {
+    if (calibrationSource && realEnvironment == null) {
+      println("[InfiniteBackground] Real panorama is unavailable; keeping calibration source.");
+      return;
+    }
+    calibrationSource = !calibrationSource;
+    dome.setEquirectangularBackground(
+      calibrationSource ? calibrationEnvironment : realEnvironment);
+    println("[InfiniteBackground] source=" + (calibrationSource ? "calibration" : "real"));
   }
 
   public void mouseEvent(processing.event.MouseEvent event) {
