@@ -2172,6 +2172,9 @@ public class ziviDomeLive implements PConstants {
 			return;
 		}
 
+		// Processing can execute setup() and JOGL frame callbacks on different threads.
+		// pre() is the authoritative Processing/OpenGL frame boundary.
+		renderThread = Thread.currentThread();
 		syncCurrentSceneToRenderers();
 		Scene activeScene = getCurrentScene();
 		if (activeScene != null) {

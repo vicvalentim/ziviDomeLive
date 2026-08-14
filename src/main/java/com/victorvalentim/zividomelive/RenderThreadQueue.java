@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public final class RenderThreadQueue implements AutoCloseable {
 
     private final Queue<Runnable> pending = new ConcurrentLinkedQueue<>();
-    private final Thread renderThread;
+    private volatile Thread renderThread;
     private volatile boolean closed;
 
     /** Binds a standalone queue to the thread that constructs it. */
@@ -20,6 +20,15 @@ public final class RenderThreadQueue implements AutoCloseable {
 
     RenderThreadQueue(Thread renderThread) {
         this.renderThread = Objects.requireNonNull(renderThread, "renderThread");
+    }
+
+    /**
+     * Rebinds scene-owned work to the thread executing the Processing frame boundary.
+     * Processing may run {@code setup()} and its JOGL animator callbacks on different threads.
+     */
+    void bindToCurrentThread() {
+        ensureOpen();
+        renderThread = Thread.currentThread();
     }
 
     /**
@@ -76,7 +85,7 @@ public final class RenderThreadQueue implements AutoCloseable {
         }
     }
 
-    /** @return whether the caller is the thread bound at construction */
+    /** @return whether the caller is the currently bound render thread */
     public boolean isRenderThread() {
         return Thread.currentThread() == renderThread;
     }

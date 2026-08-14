@@ -13,6 +13,7 @@ import processing.opengl.PGraphicsOpenGL;
 import java.lang.reflect.Field;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -421,6 +422,29 @@ class ZividomeliveLifecycleTest {
 		lib.pre();
 
 		assertTrue(lib.getSceneCamera().getTarget().x > 0f);
+		lib.dispose();
+	}
+
+	@Test
+	void firstPreRebindsSceneServicesFromSetupThreadToProcessingAnimatorThread() throws Exception {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		TrackingScene scene = new TrackingScene("Animator");
+		lib.setScene(scene);
+		setInitState(lib, ziviDomeLive.InitState.MANAGERS_READY);
+		AtomicReference<Throwable> failure = new AtomicReference<>();
+
+		Thread animator = new Thread(() -> {
+			try {
+				lib.pre();
+			} catch (Throwable error) {
+				failure.set(error);
+			}
+		}, "test-processing-animator");
+		animator.start();
+		animator.join();
+
+		assertNull(failure.get());
+		assertEquals(1, scene.updateCount);
 		lib.dispose();
 	}
 

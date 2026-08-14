@@ -131,6 +131,7 @@ public final class SceneServices implements AutoCloseable {
 
     void beginFrame() {
         ensureOpen();
+        renderQueue.bindToCurrentThread();
         renderQueue.drain();
         frameClock.tick();
     }

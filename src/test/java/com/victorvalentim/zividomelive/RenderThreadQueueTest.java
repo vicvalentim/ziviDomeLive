@@ -59,4 +59,22 @@ class RenderThreadQueueTest {
         assertEquals(0, queue.getPendingCount());
         assertThrows(IllegalStateException.class, () -> queue.enqueue(() -> {}));
     }
+
+    @Test
+    void sceneFrameBoundaryCanRebindFromSetupThreadToAnimatorThread() throws Exception {
+        RenderThreadQueue queue = new RenderThreadQueue();
+        AtomicInteger calls = new AtomicInteger();
+        queue.enqueue(calls::incrementAndGet);
+
+        Thread animator = new Thread(() -> {
+            queue.bindToCurrentThread();
+            assertEquals(1, queue.drain());
+        }, "test-processing-animator");
+        animator.start();
+        animator.join();
+
+        assertEquals(1, calls.get());
+        assertThrows(IllegalStateException.class, queue::requireRenderThread,
+                "the old setup thread must no longer be treated as the render thread");
+    }
 }
