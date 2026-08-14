@@ -141,16 +141,21 @@ Never call `beginDraw()` or `endDraw()` inside `sceneRender()`.
 
 ## Environment Background
 
-Use a library-owned equirectangular background when a sky, star field, or LDR environment map should appear in spherical render modes without drawing a giant sphere inside the scene:
+Use one equirectangular LDR background in Standard, domemaster, equirectangular, and skybox views without drawing a giant sphere inside the scene:
 
 ```java
 PImage stars = loadImage("textures/8k_stars_milky_way.jpg");
 ziviDome.setEquirectangularBackground(stars);
+ziviDome.setEnvironmentBackgroundVisible(true);
 ziviDome.setEnvironmentBackgroundIntensity(1.0f);
 ziviDome.setEnvironmentBackgroundYawOffset(0.0f);
 ```
 
-The current environment pass is LDR (`PImage`) and is rendered as an infinite far-depth background after `sceneRender()`. This survives scene-owned `background()` calls while keeping foreground geometry in front. Domemaster, equirectangular, and skybox projections then sample the same cubemap as usual. HDR textures, IBL prefiltering, and AO remain future rendering stages.
+`PImage` is the friendly borrowed LDR source; render passes resolve its Processing-managed GPU texture and sample it through `sampler2D`. The same logical source, visibility, visual intensity multiplier, and longitude `yawOffset` feed Standard preview/output and spherical preview/output. Each pass is composed at far depth after `sceneRender()`, so scene-owned `background()` calls remain valid and foreground geometry stays in front.
+
+Standard draws an observer-centred sky sphere in camera space and converts its directions back to world space through the inverse camera basis. It therefore follows perspective-camera rotation while ignoring orbit distance/translation. Spherical modes use `SphericalOrientation` during canonical cubemap capture. The shaders perform base-level bilinear sampling with horizontal longitude repeat and vertical pole clamp, leaving the borrowed Processing texture state untouched.
+
+The 2.0 boundary is deliberately visual LDR background only. A future pipeline may add floating-point HDR sources, environment cubemaps, diffuse irradiance, specular prefiltering, a BRDF LUT, IBL, PBR, and AO integration without making `EnvironmentState` responsible for lighting.
 
 ## Spherical Calibration
 

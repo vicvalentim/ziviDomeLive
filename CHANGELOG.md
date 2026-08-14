@@ -37,8 +37,8 @@ shaders.
 - GLSL 4.10 `samplerCube` shader set under `data/shaders/samplercube/` for
   cubemap layout, equirectangular projection, fisheye/domemaster projection,
   and skybox inspection.
-- LDR equirectangular environment background service that paints a `PImage`
-  as an infinite far-depth background after scene rendering.
+- Shared LDR equirectangular Environment state whose borrowed `PImage` source is
+  sampled as a GPU texture in Standard and every spherical projection.
 - Publication-focused documentation, including Processing Contribution Manager
   metadata guidance, release packaging checks, generated Javadocs links, and
   bilingual MkDocs navigation.
@@ -48,8 +48,8 @@ shaders.
   cubemap face capture through a reusable framebuffer.
 - Kept `Scene.sceneRender(PGraphicsOpenGL)` as the Processing-facing scene
   contract. The library continues to own `beginDraw()` and `endDraw()`.
-- Moved sky/star-field background ownership for spherical modes into the
-  render pipeline through `setEquirectangularBackground(PImage)`.
+- Moved sky/star-field background composition for Standard and spherical modes
+  into the render pipeline through `setEquirectangularBackground(PImage)`.
 - Kept `STANDARD` rendering independent from spherical cubemap capture.
 - Rendered equirectangular output directly from the native cubemap with a
   `samplerCube` shader.

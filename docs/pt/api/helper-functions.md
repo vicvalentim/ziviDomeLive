@@ -42,11 +42,14 @@ seguintes não herdem drag ou roda do mouse sem intenção.
 ```java
 PImage stars = loadImage("textures/8k_stars_milky_way.jpg");
 dome.setEquirectangularBackground(stars);
+dome.setEnvironmentBackgroundVisible(true);
 dome.setEnvironmentBackgroundIntensity(1.0f);
 dome.setEnvironmentBackgroundYawOffset(0.0f);
 ```
 
-O background de ambiente é um serviço LDR com `PImage` controlado pela biblioteca. Ele é desenhado como fundo infinito em profundidade de far plane depois de `sceneRender()`, então chamadas `background()` da cena não o apagam e a geometria em primeiro plano permanece na frente. Domemaster, equiretangular e skybox recebem o mesmo fundo sem exigir uma sky sphere dentro da cena. Use `clearEnvironmentBackground()` quando a cena proprietária for descartada.
+A fonte LDR pública é uma `PImage` emprestada; a biblioteca resolve sua textura GPU gerenciada pelo Processing e a amostra como mapa equiretangular. Uma única fonte lógica e um único conjunto de `visible`, `intensity` visual e `yawOffset` de longitude alimentam os passes de preview/output Standard, domemaster, equiretangular e skybox. O passe em far depth roda depois de `sceneRender()`, então chamadas `background()` da cena não o apagam e a geometria em primeiro plano permanece na frente.
+
+Standard usa somente a rotação de sua câmera perspectiva: drag gira o panorama, enquanto mudanças de distância orbital não o transladam. Os modos esféricos usam a orientação Pitch/Yaw/Roll esférica compartilhada. Use `clearEnvironmentBackground()` quando a cena proprietária for descartada; a `PImage` emprestada nunca é descartada pela ziviDomeLive.
 
 Carregamento HDR, mapas IBL e ambient occlusion ainda não são habilitados por este helper.
 

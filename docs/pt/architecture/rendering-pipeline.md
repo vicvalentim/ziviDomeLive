@@ -7,11 +7,12 @@ ziviDomeLive mantém dois domínios de renderização. `RenderMode` seleciona co
 ```text
 Scene
   -> StandardRenderer
+  -> passe Environment opcional em far depth por rays da câmera perspectiva
   -> target PGraphicsOpenGL perspectiva
   -> preview da janela ou output habilitado
 ```
 
-Standard renderiza a cena diretamente por sua câmera perspectiva. Ele não captura faces cubemap e não é derivado de conteúdo equiretangular ou fisheye. Os renderers Standard de preview e output compartilham estado de câmera para manter o enquadramento consistente entre targets de tamanhos diferentes.
+Standard renderiza a cena diretamente por sua câmera perspectiva. Ele não captura faces cubemap e não é derivado de conteúdo equiretangular ou fisheye. Os renderers Standard de preview e output compartilham estado de câmera para manter o enquadramento consistente entre targets de tamanhos diferentes. Seu passe de Environment desenha uma sky sphere no espaço da câmera logo antes do far plane e converte cada direção da esfera de volta para o espaço do mundo pela base inversa da câmera antes de amostrar a fonte equiretangular. Assim, o panorama acompanha a rotação da câmera, enquanto a esfera centralizada no observador impede que translação e distância orbital introduzam paralaxe.
 
 ## Domínio Esférico
 
@@ -29,6 +30,14 @@ Scene.sceneRender(PGraphicsOpenGL)
 A captura nativa cubemap usa a tabela estável de orientação `CubemapFace` (`+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`). `CameraManager` expõe essa tabela pelo contrato qualificado de câmeras da 1.x. A cena é renderizada em um único target scratch offscreen `PGraphicsOpenGL` reutilizável, o framebuffer de cor resolvido pelo Processing é selecionado e um blit GPU com conversão vertical copia o resultado para a face nativa correspondente. Um único quaternion `SphericalOrientation` é aplicado a todas as faces de preview e output.
 
 Quando um background equiretangular LDR é configurado, `EnvironmentBackgroundRenderer` o desenha depois de `Scene.sceneRender(PGraphicsOpenGL)` com profundidade de far plane no mesmo framebuffer scratch, antes da cópia da cor resolvida. Isso faz o fundo se comportar como um ambiente infinito: chamadas `background()` da cena não o apagam, a geometria em primeiro plano continua na frente e domemaster, equiretangular e skybox compartilham a mesma fonte e orientação cubemap.
+
+## Fronteira e Ownership do Environment
+
+Um único `EnvironmentState` controlado pela fachada é compartilhado por Standard output, Standard preview, esférico output e esférico preview. Ele contém a fonte LDR emprestada mais `visible`, `intensity` visual e `yawOffset` de longitude; os renderers não copiam esses valores. `PImage` continua sendo a entrada amigável do Processing, enquanto sua `Texture` gerenciada pelo Processing é o recurso operacional dos shaders. A ziviDomeLive controla seus shaders e targets cubemap nativos, mas nunca controla nem descarta a imagem/textura fonte.
+
+Os shaders de Environment implementam diretamente filtragem bilinear no nível base: os índices de longitude repetem e os de latitude são limitados nos polos, sem alterar os parâmetros da textura emprestada do Processing. Consumidores samplerCube salvam, habilitam e restauram sampling seamless entre faces e o binding cubemap anterior. Estados de depth, blend, cull e scissor alterados por um passe Environment têm escopo e são restaurados.
+
+A fronteira atual é intencionalmente `fonte equiretangular LDR -> textura GPU -> background visual`. Um futuro processador de iluminação poderá adicionar de forma independente `fonte HDR -> textura floating-point -> environment cubemap -> diffuse irradiance + specular prefilter + BRDF LUT -> IBL/PBR -> integração AO`. Nenhuma responsabilidade de iluminação pertence ao `EnvironmentBackgroundRenderer`.
 
 Todas as projeções esféricas amostram o cubemap nativo via `samplerCube`; domemaster/fisheye não depende mais de uma textura equiretangular intermediária.
 
