@@ -2,6 +2,7 @@ package com.victorvalentim.zividomelive.render;
 
 import org.junit.jupiter.api.Test;
 import processing.core.PMatrix3D;
+import processing.core.PVector;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -67,6 +68,18 @@ class QuaternionTest {
         assertEquals(0f, q.y, DELTA);
         assertEquals(halfSqrt2, q.z, DELTA);
         assertEquals(halfSqrt2, q.w, DELTA);
+    }
+
+    @Test
+    void fromAxisAngle_acceptsProcessingVector() {
+        Quaternion q = Quaternion.fromAxisAngle(
+                new PVector(0f, 1f, 0f),
+                (float) Math.PI);
+
+        assertEquals(0f, q.x, DELTA);
+        assertEquals(1f, q.y, DELTA);
+        assertEquals(0f, q.z, DELTA);
+        assertEquals(0f, q.w, 1e-4f);
     }
 
     // -----------------------------------------------------------------------

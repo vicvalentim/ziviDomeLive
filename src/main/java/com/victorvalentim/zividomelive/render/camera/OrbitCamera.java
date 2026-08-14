@@ -85,6 +85,19 @@ public class OrbitCamera implements PConstants {
     }
 
     /**
+     * Creates an orbit camera looking at an initial target from the given distance.
+     *
+     * @param initialTarget initial look-at target; must not be {@code null}
+     * @param initialDistance initial distance from the target
+     */
+    public OrbitCamera(PVector initialTarget, float initialDistance) {
+        this(initialDistance);
+        requireVector(initialTarget, "Initial target");
+        target.set(initialTarget);
+        goalTarget.set(initialTarget);
+    }
+
+    /**
      * Creates an orbit camera with a default distance of 1500 units.
      */
     public OrbitCamera() {
@@ -124,6 +137,42 @@ public class OrbitCamera implements PConstants {
     public void rotateAround(float ax, float ay, float az, float angle) {
         Quaternion delta = Quaternion.fromAxisAngle(ax, ay, az, angle);
         goalOrientation = delta.multiply(goalOrientation).normalize();
+    }
+
+    /**
+     * Orbits the camera around a world-space Processing vector (eases smoothly).
+     *
+     * @param axis world-space axis; must not be {@code null}
+     * @param angle rotation angle in radians
+     */
+    public void rotateAround(PVector axis, float angle) {
+        requireVector(axis, "Rotation axis");
+        rotateAround(axis.x, axis.y, axis.z, angle);
+    }
+
+    /**
+     * Applies an orbit rotation immediately, keeping the interpolation goal synchronized.
+     *
+     * @param ax axis x component
+     * @param ay axis y component
+     * @param az axis z component
+     * @param angle rotation angle in radians
+     */
+    public void rotateAroundImmediate(float ax, float ay, float az, float angle) {
+        Quaternion delta = Quaternion.fromAxisAngle(ax, ay, az, angle);
+        orientation = delta.multiply(orientation).normalize();
+        goalOrientation = copyOf(orientation);
+    }
+
+    /**
+     * Applies an orbit rotation around a Processing vector immediately.
+     *
+     * @param axis world-space axis; must not be {@code null}
+     * @param angle rotation angle in radians
+     */
+    public void rotateAroundImmediate(PVector axis, float angle) {
+        requireVector(axis, "Rotation axis");
+        rotateAroundImmediate(axis.x, axis.y, axis.z, angle);
     }
 
     /**
@@ -197,6 +246,16 @@ public class OrbitCamera implements PConstants {
     }
 
     /**
+     * Sets the goal look-at target from a Processing vector (eased smoothly).
+     *
+     * @param target desired target; must not be {@code null}
+     */
+    public void setTarget(PVector target) {
+        requireVector(target, "Target");
+        setTarget(target.x, target.y, target.z);
+    }
+
+    /**
      * Sets the goal orbit distance (clamped, eased smoothly).
      *
      * @param d desired distance
@@ -211,7 +270,21 @@ public class OrbitCamera implements PConstants {
      * @param q desired orientation quaternion
      */
     public void setOrientation(Quaternion q) {
-        goalOrientation = q.normalize();
+        goalOrientation = normalizedCopyOf(q);
+    }
+
+    /**
+     * Changes target, orientation, and distance as one smoothly interpolated pose.
+     *
+     * @param target desired look-at target; must not be {@code null}
+     * @param orientation desired orientation; must not be {@code null}
+     * @param distance desired orbit distance
+     */
+    public void goTo(PVector target, Quaternion orientation, float distance) {
+        requireVector(target, "Target");
+        goalTarget.set(target);
+        goalOrientation = normalizedCopyOf(orientation);
+        goalDistance = guardDistance(distance, distance);
     }
 
     /**
@@ -226,10 +299,53 @@ public class OrbitCamera implements PConstants {
     public void snapTo(float tx, float ty, float tz, Quaternion q, float d) {
         target.set(tx, ty, tz);
         goalTarget.set(tx, ty, tz);
-        orientation = q.normalize();
-        goalOrientation = new Quaternion(orientation.x, orientation.y, orientation.z, orientation.w);
+        orientation = normalizedCopyOf(q);
+        goalOrientation = copyOf(orientation);
         distance = guardDistance(d, d);
         goalDistance = distance;
+    }
+
+    /**
+     * Immediately snaps the camera to a pose described with a Processing target vector.
+     *
+     * @param target look-at target; must not be {@code null}
+     * @param orientation orientation quaternion; must not be {@code null}
+     * @param distance orbit distance
+     */
+    public void snapTo(PVector target, Quaternion orientation, float distance) {
+        requireVector(target, "Target");
+        snapTo(target.x, target.y, target.z, orientation, distance);
+    }
+
+    /**
+     * Immediately changes only the look-at target and synchronizes its interpolation goal.
+     *
+     * @param target desired target; must not be {@code null}
+     */
+    public void setTargetImmediate(PVector target) {
+        requireVector(target, "Target");
+        this.target.set(target);
+        goalTarget.set(target);
+    }
+
+    /**
+     * Immediately changes only the orientation and synchronizes its interpolation goal.
+     *
+     * @param orientation desired orientation; must not be {@code null}
+     */
+    public void setOrientationImmediate(Quaternion orientation) {
+        this.orientation = normalizedCopyOf(orientation);
+        goalOrientation = copyOf(this.orientation);
+    }
+
+    /**
+     * Immediately changes only the distance and synchronizes its interpolation goal.
+     *
+     * @param distance desired orbit distance
+     */
+    public void setDistanceImmediate(float distance) {
+        this.distance = guardDistance(distance, distance);
+        goalDistance = this.distance;
     }
 
     /**
@@ -355,5 +471,21 @@ public class OrbitCamera implements PConstants {
     public Quaternion getOrientation() {
         return orientation;
     }
-}
 
+    private static Quaternion copyOf(Quaternion quaternion) {
+        if (quaternion == null) {
+            throw new IllegalArgumentException("Orientation cannot be null.");
+        }
+        return new Quaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+    }
+
+    private static Quaternion normalizedCopyOf(Quaternion quaternion) {
+        return copyOf(quaternion).normalize();
+    }
+
+    private static void requireVector(PVector vector, String label) {
+        if (vector == null) {
+            throw new IllegalArgumentException(label + " cannot be null.");
+        }
+    }
+}

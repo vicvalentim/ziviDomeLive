@@ -2,6 +2,7 @@ package com.victorvalentim.zividomelive.render;
 
 import processing.core.PMatrix3D;
 import processing.core.PApplet;
+import processing.core.PVector;
 
 
 /**
@@ -61,6 +62,20 @@ public class Quaternion {
         float sin = PApplet.sin(half);
         float cos = PApplet.cos(half);
         return new Quaternion(ax * sin, ay * sin, az * sin, cos);
+    }
+
+    /**
+     * Creates a quaternion from a Processing axis vector and angle.
+     *
+     * @param axis rotation axis; must not be {@code null}
+     * @param angle rotation angle in radians
+     * @return quaternion representing the rotation
+     */
+    public static Quaternion fromAxisAngle(PVector axis, float angle) {
+        if (axis == null) {
+            throw new IllegalArgumentException("Rotation axis cannot be null.");
+        }
+        return fromAxisAngle(axis.x, axis.y, axis.z, angle);
     }
 
    /**
