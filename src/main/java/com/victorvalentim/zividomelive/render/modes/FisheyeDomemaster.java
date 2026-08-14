@@ -23,6 +23,8 @@ public class FisheyeDomemaster {
     private float sizePercentage;
     private final PApplet parent;
     private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
+    private final ProcessingGlAdapter.CubemapBindingState cubemapBindingState =
+            new ProcessingGlAdapter.CubemapBindingState();
     private boolean unavailableWarningLogged;
     private boolean renderFailureWarningLogged;
 
@@ -122,16 +124,17 @@ public class FisheyeDomemaster {
         try {
             target.background(0, 0); // Set transparent background
             samplerCubeShader.set("fov", fov);
-            samplerCubeShader.set("resolution", new float[]{target.width, target.height});
+            samplerCubeShader.set("resolution", target.width, target.height);
             samplerCubeShader.set("cubemap", CUBEMAP_TEXTURE_UNIT);
             target.shader(samplerCubeShader);
-            glAdapter.bindCubemapTexture(target, nativeCubemap, CUBEMAP_TEXTURE_UNIT);
+            glAdapter.bindCubemapTextureScoped(
+                    target, nativeCubemap, CUBEMAP_TEXTURE_UNIT, cubemapBindingState);
             cubemapBound = true;
             target.rect(0, 0, target.width, target.height);
         } finally {
             try {
                 if (cubemapBound) {
-                    glAdapter.unbindCubemapTexture(target, CUBEMAP_TEXTURE_UNIT);
+                    glAdapter.restoreCubemapTexture(target, cubemapBindingState);
                 }
             } finally {
                 target.endDraw();

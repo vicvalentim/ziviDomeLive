@@ -54,4 +54,13 @@ class ProcessingGlAdapterTest {
 				() -> ProcessingGlAdapter.validateTextureUnit(-1));
 	}
 
+	@Test
+	void restoringAnInactiveScopedBindingIsAHeadlessSafeNoOp() {
+		ProcessingGlAdapter adapter = ProcessingGlAdapter.getDefault();
+		ProcessingGlAdapter.CubemapBindingState state =
+				new ProcessingGlAdapter.CubemapBindingState();
+
+		assertDoesNotThrow(() -> adapter.restoreCubemapTexture(null, state));
+	}
+
 }
