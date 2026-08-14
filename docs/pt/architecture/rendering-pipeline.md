@@ -1,31 +1,45 @@
 # Pipeline de Renderização
 
-ziviDomeLive 1.5 mantém dois domínios de renderização. `RenderMode` seleciona comportamento, mas não os reduz a um único backend.
+ziviDomeLive mantém dois domínios de renderização. `RenderMode` seleciona comportamento, mas não os reduz a um único backend.
 
 ## Domínio Standard
 
 ```text
 Scene
   -> StandardRenderer
+  -> passe Environment opcional em far depth por rays da câmera perspectiva
   -> target PGraphicsOpenGL perspectiva
   -> preview da janela ou output habilitado
 ```
 
-Standard renderiza a cena diretamente por sua câmera perspectiva. Ele não captura faces cubemap e não é derivado de conteúdo equiretangular ou fisheye. Os renderers Standard de preview e output compartilham estado de câmera para manter o enquadramento consistente entre targets de tamanhos diferentes.
+Standard renderiza a cena diretamente por sua câmera perspectiva. Ele não captura faces cubemap e não é derivado de conteúdo equiretangular ou fisheye. Os renderers Standard de preview e output compartilham estado de câmera para manter o enquadramento consistente entre targets de tamanhos diferentes. Seu passe de Environment desenha uma sky sphere no espaço da câmera logo antes do far plane e converte cada direção da esfera de volta para o espaço do mundo pela base inversa da câmera antes de amostrar a fonte equiretangular. Assim, o panorama acompanha a rotação da câmera, enquanto a esfera centralizada no observador impede que translação e distância orbital introduzam paralaxe.
 
 ## Domínio Esférico
 
 ```text
-Scene
-  -> seis faces cubemap de 90 graus
+Scene.sceneRender(PGraphicsOpenGL)
+  -> um único scratch reutilizável por face
+  -> background de ambiente opcional em far depth no mesmo scratch
+  -> resolve/blit GPU de framebuffer
+  -> GL_TEXTURE_CUBE_MAP nativo
      -> CubemapViewRenderer -> layout skybox
      -> EquirectangularRenderer -> mapa 2:1
-        -> FisheyeDomemaster -> domemaster quadrado + escala Size%
+     -> FisheyeDomemaster -> domemaster quadrado + escala Size%
 ```
 
-As seis faces usam a tabela estável de orientação do `CameraManager`. Um único quaternion `SphericalOrientation` é aplicado a todas as faces de preview e output.
+A captura nativa cubemap usa a tabela estável de orientação `CubemapFace` (`+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`). `CameraManager` expõe essa tabela pelo contrato qualificado de câmeras da 1.x. A cena é renderizada em um único target scratch offscreen `PGraphicsOpenGL` reutilizável, o framebuffer de cor resolvido pelo Processing é selecionado e um blit GPU com conversão vertical copia o resultado para a face nativa correspondente. Um único quaternion `SphericalOrientation` é aplicado a todas as faces de preview e output.
 
-Essa topologia descreve a implementação 1.x, não um contrato permanente de backend. Uma futura versão major pode trocar texturas ou projeções internas preservando o comportamento visual qualificado.
+Quando um background equiretangular LDR é configurado, `EnvironmentBackgroundRenderer` o desenha depois de `Scene.sceneRender(PGraphicsOpenGL)` com profundidade de far plane no mesmo framebuffer scratch, antes da cópia da cor resolvida. Isso faz o fundo se comportar como um ambiente infinito: chamadas `background()` da cena não o apagam, a geometria em primeiro plano continua na frente e domemaster, equiretangular e skybox compartilham a mesma fonte e orientação cubemap.
+
+## Fronteira e Ownership do Environment
+
+Um único `EnvironmentState` controlado pela fachada é compartilhado por Standard output, Standard preview, esférico output e esférico preview. Ele contém a fonte LDR emprestada mais `visible`, `intensity` visual e `yawOffset` de longitude; os renderers não copiam esses valores. `PImage` continua sendo a entrada amigável do Processing, enquanto sua `Texture` gerenciada pelo Processing é o recurso operacional dos shaders. A ziviDomeLive controla seus shaders e targets cubemap nativos, mas nunca controla nem descarta a imagem/textura fonte.
+
+Os shaders de Environment implementam diretamente filtragem bilinear no nível base: os índices de longitude repetem e os de latitude são limitados nos polos, sem alterar os parâmetros da textura emprestada do Processing. Consumidores samplerCube salvam, habilitam e restauram sampling seamless entre faces e o binding cubemap anterior. Estados de depth, blend, cull e scissor alterados por um passe Environment têm escopo e são restaurados.
+
+A fronteira atual é intencionalmente `fonte equiretangular LDR -> textura GPU -> background visual`. Um futuro processador de iluminação poderá adicionar de forma independente `fonte HDR -> textura floating-point -> environment cubemap -> diffuse irradiance + specular prefilter + BRDF LUT -> IBL/PBR -> integração AO`. Nenhuma responsabilidade de iluminação pertence ao `EnvironmentBackgroundRenderer`.
+
+Todas as projeções esféricas amostram o cubemap nativo via `samplerCube`; domemaster/fisheye não depende mais de uma textura equiretangular intermediária.
 
 ## Fechamento de Requisitos
 
@@ -36,7 +50,7 @@ Essa topologia descreve a implementação 1.x, não um contrato permanente de ba
 | Standard | Sim | Não | Não | Não | Não |
 | Skybox | Não | Sim | Não | Não | Sim |
 | Equirectangular | Não | Sim | Sim | Não | Não |
-| Domemaster | Não | Sim | Sim | Sim | Não |
+| Domemaster | Não | Sim | Não | Sim | Não |
 
 O requisito de preview, domemaster flutuante e todos os outputs habilitados é resolvido independentemente e compartilhado quando possível.
 
@@ -63,6 +77,31 @@ Quando um output habilitado exige dados esféricos, seu cubemap na resolução d
 
 Isso evita captura duplicada da cena mantendo janela Processing e outputs externos em domínios de target separados.
 
+## Fronteira Processing GL
+
+`ProcessingGlAdapter` é a fronteira estreita para as chamadas Processing/OpenGL
+atuais: alocação de targets, verificação de textura, readback `loadPixels()` do
+NDI, descarte de targets e descoberta de capabilities pelo contexto PGL ativo.
+As capabilities reportadas incluem suporte a textura, FBO, cubemap, seamless
+cubemap, PBO e sync fence para que os caminhos nativos de captura e readback
+possam condicionar seu uso de GL explicitamente.
+
+`CubemapTarget` controla armazenamento nativo `GL_TEXTURE_CUBE_MAP` com política
+conservadora de textura, um framebuffer reutilizável por face e um renderbuffer
+de profundidade. A captura em runtime preserva o contrato
+`Scene.sceneRender(PGraphicsOpenGL)` usando um único scratch Processing
+offscreen, resolvendo-o na GPU quando MSAA está habilitado e fazendo blit da cor
+final para cada face cubemap nativa. Nenhum array legado `PGraphicsOpenGL[]` de
+faces ou fallback de seis texturas é mantido.
+
+Os recursos de shader `samplerCube` para os modos cubemap, equiretangular,
+domemaster/fisheye e skybox ficam em `data/shaders/samplercube/` nos artefatos
+empacotados. Todos os renderers esféricos de runtime amostram o cubemap nativo
+diretamente.
+
+Os shaders LDR de background de ambiente ficam em `data/shaders/environment/`.
+Eles são separados de futuros passes HDR, IBL e ambient occlusion.
+
 ## Ownership de Resolução
 
 | Target | Política de dimensão | Recriado quando |
@@ -75,6 +114,9 @@ A resolução de output não redefine a resolução de preview. A realocação o
 
 ## Fronteira de Output
 
+- `RenderPipeline` fornece targets completos pelo contrato mínimo `FrameViews`. `OutputManager` seleciona o `ViewType` lógico a publicar sem inspecionar o renderer concreto que o produziu.
+- Uma única fronteira `FrameViews` é reutilizada durante o runtime e resolve os targets atuais de forma lazy; o hot path não aloca um carrier por frame e resets adiados de renderers não deixam referências obsoletas.
+- `OutputManager` coordena o routing, enquanto os serviços concretos `NdiOutputBackend`, `SyphonOutputBackend` e `SpoutOutputBackend` controlam diretamente seus recursos nativos e lifecycle; não existe uma camada de factory de backends.
 - Syphon e Spout publicam texturas `PGraphicsOpenGL` completas no caminho Processing/GPU.
 - NDI chama `loadPixels()` na thread Processing, copia para um dos três slots CPU e envia RGBA progressivo empacotado por worker dedicado.
 - O worker NDI não faz chamadas OpenGL.
@@ -82,7 +124,7 @@ A resolução de output não redefine a resolução de preview. A realocação o
 
 ## Contratos Estáveis e Internos
 
-Estáveis na 1.5:
+Estáveis:
 
 - separação comportamental Standard/esférico
 - orientação das faces cubemap e layout skybox
@@ -93,8 +135,8 @@ Estáveis na 1.5:
 
 Detalhes internos:
 
-- `PGraphicsOpenGL[]` como armazenamento cubemap
-- domemaster consumindo atualmente a saída equiretangular
-- estratégia exata de alocação e cópia entre renderers
+- um graphics Processing offscreen como emissor de comandos alimentando FBOs de face cubemap nativos
+- política de alocação e framebuffer de `CubemapTarget`
+- estratégia exata de alocação de renderers e mipmaps
 
-Consulte [Lifecycle de Runtime](runtime-lifecycle.md) e [Prontidão da Release](../qualification/1.5-release-readiness.md).
+Consulte [Lifecycle de Runtime](runtime-lifecycle.md) e [Prontidão da Release](../qualification/2.0-release-readiness.md).

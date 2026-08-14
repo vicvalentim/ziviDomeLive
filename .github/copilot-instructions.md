@@ -4,7 +4,7 @@ Read `AGENTS.md` first. Source code is authoritative when this document and impl
 
 ## Project State
 
-ziviDomeLive 1.5.0 is the final consolidation of the Processing 4 / Java 17 architecture. The public lowercase facade `zividomelive` and compatibility-sensitive `ViewType` order remain unchanged. Do not add experimental 2.0 renderer infrastructure to the 1.x line.
+ziviDomeLive 2.0.0 is the native cubemap consolidation of the Processing 4 / Java 17 architecture. The Processing-facing scene contract and compatibility-sensitive `ViewType` order remain unchanged while spherical rendering now uses native `GL_TEXTURE_CUBE_MAP` capture and `samplerCube` projection shaders.
 
 ## Rendering Domains
 
@@ -15,11 +15,12 @@ STANDARD
 Scene -> StandardRenderer -> Standard target
 
 SPHERICAL
-Scene -> CubemapRenderer -> EquirectangularRenderer -> FisheyeDomemaster
-                         \-> CubemapViewRenderer
+Scene -> CubemapRenderer -> native GL_TEXTURE_CUBE_MAP -> EquirectangularRenderer
+                                                       \-> FisheyeDomemaster
+                                                       \-> CubemapViewRenderer
 ```
 
-The spherical chain is an internal 1.x topology, not a permanent public contract. Preserve visual orientation, face content/layout, FOV, Size%, and pitch/yaw/roll behavior without creating APIs that require future versions to keep `PGraphicsOpenGL[]` or the same pass chain.
+The spherical chain is an internal topology, not a permanent public contract. Preserve visual orientation, face content/layout, FOV, Size%, and pitch/yaw/roll behavior without reintroducing independent `PGraphicsOpenGL[]` face targets or six-texture projection fallbacks.
 
 `RenderRequirementsPolicy` computes the minimum passes required by:
 
@@ -35,9 +36,9 @@ The Processing window always composites preview-resolution targets. High-resolut
 
 ```text
 STANDARD       -> ViewType.STANDARD
-DOMEMASTER     -> ViewType.FISHEYE_DOMEMASTER
+DOMEMASTER     -> ViewType.DOMEMASTER
 EQUIRECTANGULAR-> ViewType.EQUIRECTANGULAR
-SKYBOX         -> ViewType.CUBEMAP
+SKYBOX         -> ViewType.SKYBOX
 ```
 
 The floating domemaster may add a spherical requirement while the global mode is Standard.
@@ -101,8 +102,8 @@ Do not reintroduce nested scene draw ownership, texture-bound `glReadPixels`, PB
 - Use `LogManager.getLogger()` for library logging.
 - Use `ThreadManager` for shared background tasks.
 - Keep shader paths under `data/shaders/`; Gradle packages `shaders/` there.
-- Keep changes scoped to the current 1.x architecture.
-- Do not add native cube-map backends, `samplerCube`, PBO, OpenGL fences, HDR/PBR architecture, SphericalMirror, or placeholder `future`/`v2` packages.
+- Keep changes scoped to the current 2.0 native cubemap architecture.
+- Do not reintroduce `PGraphicsOpenGL[]` spherical capture, six-texture projection fallbacks, or placeholder `future`/`v2` packages.
 
 ## Validation
 
@@ -113,4 +114,4 @@ Do not reintroduce nested scene draw ownership, texture-bound `glReadPixels`, PB
 mkdocs build --strict
 ```
 
-Automated tests do not prove GPU visual parity or NDI/Syphon/Spout interoperability. Use `examples/CalibrationTool/` and `docs/qualification/1.5-release-readiness.md` on qualified hardware.
+Automated tests do not prove GPU visual parity or NDI/Syphon/Spout interoperability. Use `examples/CalibrationTool/` and `docs/qualification/2.0-release-readiness.md` on qualified hardware.

@@ -1,10 +1,10 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15671506.svg)](https://doi.org/10.5281/zenodo.15671506)
 
-# ziviDomeLive 1.5.0
+# ziviDomeLive 2.0.0
 
-ziviDomeLive is a Processing 4 library for real-time fulldome, monoscopic VR, and immersive installation graphics. It provides scene lifecycle management, independent Standard and spherical rendering, fisheye domemaster calibration, equirectangular and cubemap views, and optional NDI, Syphon, or Spout output routing.
+ziviDomeLive is a Processing 4 library for fulldome, monoscopic VR, and immersive installation sketches. It provides scene lifecycle management, independent Standard and spherical rendering, native cubemap capture, domemaster calibration, equirectangular and skybox views, and optional NDI, Syphon, or Spout output routing.
 
-Version 1.5.0 is the final consolidation of the 1.x architecture. It adds an operational `RenderMode` API and stronger lifecycle, routing, output, testing, and documentation contracts without introducing the experimental renderer planned for 2.0. See the [1.5.0 release notes](https://vicvalentim.github.io/ziviDomeLive/release-notes/1.5.0/) for the upgrade summary and compatibility notes.
+The public manual is available at [vicvalentim.github.io/ziviDomeLive](https://vicvalentim.github.io/ziviDomeLive/). Version 2.0.0 promotes the spherical renderer to a native OpenGL cubemap pipeline. Scenes keep the Processing-facing `sceneRender(PGraphicsOpenGL)` contract, while spherical capture uses one reusable Processing scratch target and a GPU framebuffer blit to populate a `GL_TEXTURE_CUBE_MAP`. Every spherical projection samples that cubemap through `samplerCube` shaders. See the [2.0.0 release notes](https://vicvalentim.github.io/ziviDomeLive/release-notes/2.0.0/) for migration and validation notes.
 
 ## Requirements
 
@@ -25,11 +25,13 @@ The library keeps Standard and spherical rendering as separate domains:
 ```text
 Scene -> StandardRenderer -> Standard target
 
-Scene -> six cubemap faces -> equirectangular -> fisheye domemaster
-                          \-> cubemap skybox layout
+Scene -> reusable PGraphicsOpenGL scratch -> GPU blit -> native GL_TEXTURE_CUBE_MAP
+                                                      \-> equirectangular
+                                                      \-> fisheye domemaster
+                                                      \-> cubemap skybox layout
 ```
 
-The 1.x spherical topology is an internal implementation detail. The stable contracts are the rendered content, cubemap orientation and layout, spherical pitch/yaw/roll behavior, domemaster FOV, and Size% calibration.
+The spherical topology is an internal implementation detail. The stable contracts are the rendered content, cubemap orientation and layout, spherical pitch/yaw/roll behavior, domemaster FOV, and Size% calibration. The current implementation does not allocate six independent Processing face targets.
 
 ### RenderMode
 
@@ -66,14 +68,14 @@ Output resolution and publication toggles remain available in every mode. Pitch,
 
 ## Installation
 
-Install the published package through Processing's Contribution Manager when available, or install a release artifact manually:
+Install the published package through Processing's Contribution Manager when available. For manual installation, use the packaged release artifact rather than the repository source archive:
 
 1. Download `ziviDomeLive.zip` or `ziviDomeLive.pdex` from the matching release.
 2. Extract the `ziviDomeLive` folder into the Processing sketchbook `libraries` directory.
 3. Install ControlP5 and the platform-local sharing library required by the sketch.
 4. Restart Processing and open an example from **File > Examples > Contributed Libraries > ziviDomeLive**.
 
-Cloning the source repository is intended for development. Use `./gradlew buildReleaseArtifacts` to produce the installable package layout.
+Cloning the source repository is intended for development. Use `./gradlew buildReleaseArtifacts` to produce the installable package layout, including `library.properties`, examples, generated reference documentation, and release metadata.
 
 ## Quickstart
 
@@ -86,7 +88,7 @@ import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;
 
-zividomelive ziviDome;
+ziviDomeLive ziviDome;
 
 void settings() {
   size(1280, 720, P3D);
@@ -94,7 +96,7 @@ void settings() {
 }
 
 void setup() {
-  ziviDome = new zividomelive(this);
+  ziviDome = new ziviDomeLive(this);
   ziviDome.setup();
   ziviDome.setScene(new Scene1());
 }
@@ -137,6 +139,24 @@ A scene may implement:
 
 Never call `beginDraw()` or `endDraw()` inside `sceneRender()`.
 
+## Environment Background
+
+Use one equirectangular LDR background in Standard, domemaster, equirectangular, and skybox views without drawing a giant sphere inside the scene:
+
+```java
+PImage stars = loadImage("textures/8k_stars_milky_way.jpg");
+ziviDome.setEquirectangularBackground(stars);
+ziviDome.setEnvironmentBackgroundVisible(true);
+ziviDome.setEnvironmentBackgroundIntensity(1.0f);
+ziviDome.setEnvironmentBackgroundYawOffset(0.0f);
+```
+
+`PImage` is the friendly borrowed LDR source; render passes resolve its Processing-managed GPU texture and sample it through `sampler2D`. The same logical source, visibility, visual intensity multiplier, and longitude `yawOffset` feed Standard preview/output and spherical preview/output. Each pass is composed at far depth after `sceneRender()`, so scene-owned `background()` calls remain valid and foreground geometry stays in front.
+
+Standard draws an observer-centred sky sphere in camera space and converts its directions back to world space through the inverse camera basis. It therefore follows perspective-camera rotation while ignoring orbit distance/translation. Spherical modes use `SphericalOrientation` during canonical cubemap capture. The shaders perform base-level bilinear sampling with horizontal longitude repeat and vertical pole clamp, leaving the borrowed Processing texture state untouched.
+
+The 2.0 boundary is deliberately visual LDR background only. A future pipeline may add floating-point HDR sources, environment cubemaps, diffuse irradiance, specular prefiltering, a BRDF LUT, IBL, PBR, and AO integration without making `EnvironmentState` responsible for lighting.
+
 ## Spherical Calibration
 
 - FOV range: `0..360`, default `210`
@@ -160,7 +180,7 @@ All external outputs are opt-in. Syphon and Spout remain GPU-native and receive 
 
 ```java
 OutputManager outputs = ziviDome.getOutputManager();
-outputs.setNdiView(zividomelive.ViewType.EQUIRECTANGULAR);
+outputs.setNdiView(ViewType.EQUIRECTANGULAR);
 outputs.toggleOutput("ndi");
 
 println(outputs.getOutputState(OutputManager.OutputType.NDI));
@@ -182,12 +202,12 @@ Backend availability, native initialization, publication, and render requirement
 | Syphon | Supported platform; Intel/Rosetta may be required on Apple Silicon | Not available | Not available |
 | Spout | Not available | Supported platform | Not available |
 
-Automated tests do not replace GPU, receiver, or native-sharing qualification. See [the 1.5 release-readiness protocol](https://vicvalentim.github.io/ziviDomeLive/qualification/1.5-release-readiness/).
+Automated tests do not replace GPU, receiver, or native-sharing qualification. See [the 2.0 release-readiness protocol](https://vicvalentim.github.io/ziviDomeLive/qualification/2.0-release-readiness/).
 
 ## Built-in Controls
 
 - `h`: show or hide the ControlP5 panel
-- `m`: cycle the configured legacy preview `ViewType`
+- `m`: cycle the configured preview `ViewType`
 - Left/Right arrows: switch scenes
 
 The panel groups global status, spherical calibration, view selection, and output controls. Per-output routing is independently editable in `FULL`; dedicated modes preserve those stored routes while hiding selectors that cannot affect the active representation.
@@ -197,11 +217,11 @@ The panel groups global status, spherical calibration, view selection, and outpu
 Release logging is the default. Enable diagnostics before creating the instance:
 
 ```java
-zividomelive.enableDebugLogging();
-// Equivalent: zividomelive.setLogMode(LogManager.Mode.DEBUG);
+ziviDomeLive.enableDebugLogging();
+// Equivalent: ziviDomeLive.setLogMode(LogManager.Mode.DEBUG);
 ```
 
-Return to release mode with `zividomelive.enableReleaseLogging()`.
+Return to release mode with `ziviDomeLive.enableReleaseLogging()`.
 
 ## Examples
 
@@ -223,6 +243,8 @@ mkdocs build --strict
 ```
 
 Release output is written to `release/ziviDomeLive.zip`, `release/ziviDomeLive.pdex`, and `release/ziviDomeLive.txt`. The package includes project and bundled-dependency notices, while test sources and local compile-only helper JARs are excluded from both the Processing package and sketchbook deployment. Automated qualification results are written under `build/reports/qualification/` and `build/test-results/qualification/`. GPU and native-output checks remain manual and must use real hardware; no golden images are fabricated by the automated suite.
+
+Before submitting a release to the Processing Contribution Manager, review the [Processing Publication checklist](https://vicvalentim.github.io/ziviDomeLive/qualification/processing-publication/) and confirm that the ZIP, PDEX, TXT metadata file, examples, `reference/index.html`, source repository, and license notices are all present.
 
 ## Known Issues
 

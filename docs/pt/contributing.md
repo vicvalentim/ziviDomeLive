@@ -20,7 +20,7 @@ mkdocs build --strict
 - Use `LogManager` para logging da biblioteca.
 - Use `ThreadManager` para tarefas compartilhadas em background.
 - Mantenha Syphon/Spout no caminho `PGraphicsOpenGL`.
-- Não adicione backends experimentais da 2.0 à linha 1.x.
+- Não reintroduza o caminho removido de captura esférica `PGraphicsOpenGL[]`.
 
 Mudanças de GPU ou output exigem o protocolo visual CalibrationTool e evidência no hardware da plataforma, além dos testes unitários.
 

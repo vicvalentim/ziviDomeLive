@@ -1,7 +1,8 @@
 package com.victorvalentim.zividomelive.manager;
 
 import com.victorvalentim.zividomelive.RenderMode;
-import com.victorvalentim.zividomelive.zividomelive;
+import com.victorvalentim.zividomelive.ViewType;
+import com.victorvalentim.zividomelive.ziviDomeLive;
 import org.junit.jupiter.api.Test;
 import processing.awt.PGraphicsJava2D;
 import processing.core.PApplet;
@@ -24,13 +25,13 @@ class ControlManagerScopeTest {
 		graphics.setParent(applet);
 		graphics.setSize(640, 640);
 		applet.g = graphics;
-		zividomelive dome = new zividomelive(applet);
+		ziviDomeLive dome = new ziviDomeLive(applet);
 		OutputManager outputs = new OutputManager(dome);
-		outputs.setNdiView(zividomelive.ViewType.EQUIRECTANGULAR);
-		outputs.setSpoutView(zividomelive.ViewType.STANDARD);
-		outputs.setSyphonView(zividomelive.ViewType.CUBEMAP);
+		outputs.setNdiView(ViewType.EQUIRECTANGULAR);
+		outputs.setSpoutView(ViewType.STANDARD);
+		outputs.setSyphonView(ViewType.SKYBOX);
 		setOutputManager(dome, outputs);
-		dome.setCurrentView(zividomelive.ViewType.CUBEMAP);
+		dome.setCurrentView(ViewType.SKYBOX);
 
 		ControlManager controls = new ControlManager(applet, dome, 3072);
 		try {
@@ -51,10 +52,10 @@ class ControlManagerScopeTest {
 				assertEquals(ControlPanelLayout.yFor(controlName), getPosition(controller)[1], controlName);
 			}
 
-			assertEquals(zividomelive.ViewType.CUBEMAP.ordinal(),
+			assertEquals(ViewType.SKYBOX.ordinal(),
 					getValue(getController(cp5, "View Mode")));
 			assertEquals(2, getValue(getController(cp5, "Output Resolution")));
-			assertEquals(zividomelive.ViewType.EQUIRECTANGULAR.ordinal(),
+			assertEquals(ViewType.EQUIRECTANGULAR.ordinal(),
 					getValue(getController(cp5, "NDI View")));
 			assertLocalOutputControls(cp5);
 		} finally {
@@ -66,7 +67,7 @@ class ControlManagerScopeTest {
 	@Test
 	void panelVisibilityTracksRenderModeCapabilities() throws Exception {
 		PApplet applet = configuredApplet();
-		zividomelive dome = new zividomelive(applet);
+		ziviDomeLive dome = new ziviDomeLive(applet);
 		setOutputManager(dome, new OutputManager(dome));
 		ControlManager controls = new ControlManager(applet, dome, 1024);
 		try {
@@ -117,7 +118,7 @@ class ControlManagerScopeTest {
 	@Test
 	void pitchYawAndRollSlidersScrollCyclically() throws Exception {
 		PApplet applet = configuredApplet();
-		zividomelive dome = new zividomelive(applet);
+		ziviDomeLive dome = new ziviDomeLive(applet);
 		setOutputManager(dome, new OutputManager(dome));
 		ControlManager controls = new ControlManager(applet, dome, 1024);
 		try {
@@ -157,7 +158,7 @@ class ControlManagerScopeTest {
 			assertNotNull(dropdown);
 			assertEquals(ControlPanelLayout.yFor("spoutToggle"), getPosition(toggle)[1]);
 			assertEquals(ControlPanelLayout.yFor("Spout View"), getPosition(dropdown)[1]);
-			assertEquals(zividomelive.ViewType.STANDARD.ordinal(), getValue(dropdown));
+			assertEquals(ViewType.STANDARD.ordinal(), getValue(dropdown));
 			assertNull(getController(cp5, "syphonToggle"));
 			assertNull(getController(cp5, "Syphon View"));
 		} else if (localOutput == ControlPanelLayout.LocalOutput.SYPHON) {
@@ -167,7 +168,7 @@ class ControlManagerScopeTest {
 			assertNotNull(dropdown);
 			assertEquals(ControlPanelLayout.yFor("syphonToggle"), getPosition(toggle)[1]);
 			assertEquals(ControlPanelLayout.yFor("Syphon View"), getPosition(dropdown)[1]);
-			assertEquals(zividomelive.ViewType.CUBEMAP.ordinal(), getValue(dropdown));
+			assertEquals(ViewType.SKYBOX.ordinal(), getValue(dropdown));
 			assertNull(getController(cp5, "spoutToggle"));
 			assertNull(getController(cp5, "Spout View"));
 		} else {
@@ -229,7 +230,7 @@ class ControlManagerScopeTest {
 		return applet;
 	}
 
-	private static float parentAngle(zividomelive dome, String controlName) {
+	private static float parentAngle(ziviDomeLive dome, String controlName) {
 		return switch (controlName) {
 			case "pitch" -> dome.getPitch();
 			case "yaw" -> dome.getYaw();
@@ -238,8 +239,8 @@ class ControlManagerScopeTest {
 		};
 	}
 
-	private static void setOutputManager(zividomelive dome, OutputManager outputManager) throws Exception {
-		Field field = zividomelive.class.getDeclaredField("outputManager");
+	private static void setOutputManager(ziviDomeLive dome, OutputManager outputManager) throws Exception {
+		Field field = ziviDomeLive.class.getDeclaredField("outputManager");
 		field.setAccessible(true);
 		field.set(dome, outputManager);
 	}

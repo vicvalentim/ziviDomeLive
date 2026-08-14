@@ -4,7 +4,7 @@ package com.victorvalentim.zividomelive;
  * Internal policy that expands requested views into the render passes needed to produce them.
  *
  * <p>The policy is deliberately independent from renderer instances and output backends. This
- * keeps view selection separate from the 1.x rendering topology while providing one place for
+ * keeps view selection separate from the concrete rendering topology while providing one place for
  * dependency closure. Results are cached because the policy runs once per frame.</p>
  */
 final class RenderRequirementsPolicy {
@@ -29,7 +29,7 @@ final class RenderRequirementsPolicy {
 	 */
 	static Requirements forPreview(
 			RenderMode renderMode,
-			zividomelive.ViewType selectedView,
+			ViewType selectedView,
 			boolean floatingFisheye) {
 		int requestedViews = maskFor(resolveView(renderMode, selectedView));
 		if (floatingFisheye) {
@@ -39,28 +39,28 @@ final class RenderRequirementsPolicy {
 	}
 
 	/**
-	 * Resolves a configured legacy view under the active global render mode.
+	 * Resolves a configured view under the active global render mode.
 	 *
 	 * @param renderMode active global mode
-	 * @param configuredView independently configured legacy view
+	 * @param configuredView independently configured view
 	 * @return configured view in FULL, otherwise the dedicated mode's representation
 	 */
-	static zividomelive.ViewType resolveView(
+	static ViewType resolveView(
 			RenderMode renderMode,
-			zividomelive.ViewType configuredView) {
+			ViewType configuredView) {
 		if (renderMode == null || renderMode == RenderMode.FULL) {
 			return configuredView;
 		}
 
 		switch (renderMode) {
 			case STANDARD:
-				return zividomelive.ViewType.STANDARD;
+				return ViewType.STANDARD;
 			case DOMEMASTER:
-				return zividomelive.ViewType.FISHEYE_DOMEMASTER;
+				return ViewType.DOMEMASTER;
 			case EQUIRECTANGULAR:
-				return zividomelive.ViewType.EQUIRECTANGULAR;
+				return ViewType.EQUIRECTANGULAR;
 			case SKYBOX:
-				return zividomelive.ViewType.CUBEMAP;
+				return ViewType.SKYBOX;
 			case FULL:
 			default:
 				return configuredView;
@@ -103,17 +103,17 @@ final class RenderRequirementsPolicy {
 		return REQUIREMENTS[requestedViews];
 	}
 
-	private static int maskFor(zividomelive.ViewType view) {
+	private static int maskFor(ViewType view) {
 		if (view == null) {
 			return 0;
 		}
 
 		switch (view) {
-			case FISHEYE_DOMEMASTER:
+			case DOMEMASTER:
 				return FISHEYE;
 			case EQUIRECTANGULAR:
 				return EQUIRECTANGULAR;
-			case CUBEMAP:
+			case SKYBOX:
 				return CUBEMAP_LAYOUT;
 			case STANDARD:
 				return STANDARD;
@@ -140,10 +140,10 @@ final class RenderRequirementsPolicy {
 
 		private Requirements(int requestedViews) {
 			needsFisheye = (requestedViews & FISHEYE) != 0;
-			needsEquirectangular = (requestedViews & EQUIRECTANGULAR) != 0 || needsFisheye;
+			needsEquirectangular = (requestedViews & EQUIRECTANGULAR) != 0;
 			needsCubemapLayout = (requestedViews & CUBEMAP_LAYOUT) != 0;
 			needsStandard = (requestedViews & STANDARD) != 0;
-			needsCubemapSource = needsEquirectangular || needsCubemapLayout;
+			needsCubemapSource = needsFisheye || needsEquirectangular || needsCubemapLayout;
 		}
 
 		boolean needsFisheye() {

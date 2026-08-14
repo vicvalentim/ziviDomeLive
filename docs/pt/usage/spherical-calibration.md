@@ -70,4 +70,4 @@ dome.resetControls();    // Orientação mais FOV=210 e Size%=100.
 
 Testes automatizados de matemática verificam normalização, composição em ordem de evento, continuidade na borda cíclica, compatibilidade com acumuladores de múltiplas voltas e independência dos eixos em Pitch de 90 graus. Eles não verificam sampling de GPU, mirroring, seams, foco do projetor ou cor no receiver.
 
-Use o [protocolo do CalibrationTool](../qualification/1.5-calibration-tool.md) para essas verificações e registre evidências com o [checklist de prontidão](../qualification/1.5-release-readiness.md).
+Use o [protocolo do CalibrationTool](../qualification/1.5-calibration-tool.md) para essas verificações e registre evidências com o [checklist de prontidão 2.0](../qualification/2.0-release-readiness.md).

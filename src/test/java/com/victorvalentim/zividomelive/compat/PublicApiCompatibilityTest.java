@@ -1,15 +1,22 @@
 package com.victorvalentim.zividomelive.compat;
 
+import com.victorvalentim.zividomelive.FrameViews;
 import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.SceneManager;
 import com.victorvalentim.zividomelive.RenderMode;
+import com.victorvalentim.zividomelive.ViewType;
 import com.victorvalentim.zividomelive.manager.OutputManager;
 import com.victorvalentim.zividomelive.render.CubemapRenderer;
+import com.victorvalentim.zividomelive.render.EnvironmentBackgroundRenderer;
 import com.victorvalentim.zividomelive.render.Quaternion;
 import com.victorvalentim.zividomelive.render.SphericalOrientation;
 import com.victorvalentim.zividomelive.render.camera.CameraManager;
+import com.victorvalentim.zividomelive.render.camera.CubemapFace;
 import com.victorvalentim.zividomelive.render.camera.MouseControlledCamera;
 import com.victorvalentim.zividomelive.render.camera.OrbitCamera;
+import com.victorvalentim.zividomelive.render.gl.CubemapTarget;
+import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
+import com.victorvalentim.zividomelive.render.gl.ProcessingGlCapabilities;
 import com.victorvalentim.zividomelive.render.modes.CubemapViewRenderer;
 import com.victorvalentim.zividomelive.render.modes.EquirectangularRenderer;
 import com.victorvalentim.zividomelive.render.modes.FisheyeDomemaster;
@@ -17,9 +24,10 @@ import com.victorvalentim.zividomelive.render.modes.StandardRenderer;
 import com.victorvalentim.zividomelive.support.LibraryMetadata;
 import com.victorvalentim.zividomelive.support.LogManager;
 import com.victorvalentim.zividomelive.support.ThreadManager;
-import com.victorvalentim.zividomelive.zividomelive;
+import com.victorvalentim.zividomelive.ziviDomeLive;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
+import processing.core.PImage;
 import processing.event.KeyEvent;
 import processing.event.MouseEvent;
 import processing.opengl.PGraphicsOpenGL;
@@ -34,19 +42,49 @@ class PublicApiCompatibilityTest {
 
 	@Test
 	void publicFacadeClassNameAndConstructorRemainStable() throws Exception {
-		assertEquals("com.victorvalentim.zividomelive.zividomelive", zividomelive.class.getName());
-		assertTrue(Modifier.isPublic(zividomelive.class.getModifiers()));
-		assertNotNull(zividomelive.class.getConstructor(PApplet.class));
+		assertEquals("com.victorvalentim.zividomelive.ziviDomeLive", ziviDomeLive.class.getName());
+		assertTrue(Modifier.isPublic(ziviDomeLive.class.getModifiers()));
+		assertNotNull(ziviDomeLive.class.getConstructor(PApplet.class));
 	}
 
 	@Test
-	void viewTypeOrderRemainsIndexCompatibleWithControlDropdowns() {
-		assertArrayEquals(new zividomelive.ViewType[]{
-				zividomelive.ViewType.FISHEYE_DOMEMASTER,
-				zividomelive.ViewType.EQUIRECTANGULAR,
-				zividomelive.ViewType.CUBEMAP,
-				zividomelive.ViewType.STANDARD
-		}, zividomelive.ViewType.values());
+	void viewTypeIsTopLevelWithFinalNamesAndOrder() {
+		assertEquals("com.victorvalentim.zividomelive.ViewType", ViewType.class.getName());
+		assertTrue(Modifier.isPublic(ViewType.class.getModifiers()));
+		assertArrayEquals(new ViewType[]{
+				ViewType.STANDARD,
+				ViewType.DOMEMASTER,
+				ViewType.EQUIRECTANGULAR,
+				ViewType.SKYBOX
+		}, ViewType.values());
+		assertFalse(Arrays.stream(ziviDomeLive.class.getDeclaredClasses())
+				.anyMatch(type -> type.getSimpleName().equals("ViewType")));
+	}
+
+	@Test
+	void viewRoutingMethodsUseTopLevelViewType() throws Exception {
+		assertEquals(ViewType.class, ziviDomeLive.class.getMethod("getCurrentView").getReturnType());
+		assertNotNull(ziviDomeLive.class.getMethod("setCurrentView", ViewType.class));
+		assertEquals(ViewType.class, OutputManager.class
+				.getMethod("getViewForOutput", OutputManager.OutputType.class)
+				.getReturnType());
+		assertNotNull(OutputManager.class.getMethod(
+				"setViewForOutput", OutputManager.OutputType.class, ViewType.class));
+		assertNotNull(OutputManager.class.getMethod("setNdiView", ViewType.class));
+		assertNotNull(OutputManager.class.getMethod("setSpoutView", ViewType.class));
+		assertNotNull(OutputManager.class.getMethod("setSyphonView", ViewType.class));
+		assertNotNull(OutputManager.class.getMethod("setLocalTextureView", ViewType.class));
+		assertNotNull(OutputManager.class.getMethod("requiresView", ViewType.class));
+	}
+
+	@Test
+	void frameViewsExposeOnlyCompletedTargetsByLogicalView() throws Exception {
+		assertTrue(Modifier.isPublic(FrameViews.class.getModifiers()));
+		assertTrue(FrameViews.class.isInterface());
+		assertEquals(PGraphicsOpenGL.class,
+				FrameViews.class.getMethod("getFrame", ViewType.class).getReturnType());
+		assertNotNull(OutputManager.class.getMethod("sendOutput", FrameViews.class));
+		assertNotNull(OutputManager.class.getMethod("sendOutput"));
 	}
 
 	@Test
@@ -58,19 +96,19 @@ class PublicApiCompatibilityTest {
 				RenderMode.EQUIRECTANGULAR,
 				RenderMode.SKYBOX
 		}, RenderMode.values());
-		assertArrayEquals(new zividomelive.InitState[]{
-				zividomelive.InitState.NOT_INITIALIZED,
-				zividomelive.InitState.SETUP_COMPLETE,
-				zividomelive.InitState.MANAGERS_READY,
-				zividomelive.InitState.READY
-		}, zividomelive.InitState.values());
-		assertArrayEquals(new zividomelive.StandardOutputAspectMode[]{
-				zividomelive.StandardOutputAspectMode.AUTO,
-				zividomelive.StandardOutputAspectMode.ASPECT_16_9,
-				zividomelive.StandardOutputAspectMode.ASPECT_16_10,
-				zividomelive.StandardOutputAspectMode.ASPECT_4_3,
-				zividomelive.StandardOutputAspectMode.ASPECT_1_1
-		}, zividomelive.StandardOutputAspectMode.values());
+		assertArrayEquals(new ziviDomeLive.InitState[]{
+				ziviDomeLive.InitState.NOT_INITIALIZED,
+				ziviDomeLive.InitState.SETUP_COMPLETE,
+				ziviDomeLive.InitState.MANAGERS_READY,
+				ziviDomeLive.InitState.READY
+		}, ziviDomeLive.InitState.values());
+		assertArrayEquals(new ziviDomeLive.StandardOutputAspectMode[]{
+				ziviDomeLive.StandardOutputAspectMode.AUTO,
+				ziviDomeLive.StandardOutputAspectMode.ASPECT_16_9,
+				ziviDomeLive.StandardOutputAspectMode.ASPECT_16_10,
+				ziviDomeLive.StandardOutputAspectMode.ASPECT_4_3,
+				ziviDomeLive.StandardOutputAspectMode.ASPECT_1_1
+		}, ziviDomeLive.StandardOutputAspectMode.values());
 		assertArrayEquals(new OutputManager.OutputType[]{
 				OutputManager.OutputType.NDI,
 				OutputManager.OutputType.SPOUT,
@@ -93,13 +131,20 @@ class PublicApiCompatibilityTest {
 	void primaryPublicTypesRemainAvailable() {
 		Class<?>[] publicTypes = {
 				RenderMode.class,
+				ViewType.class,
+				FrameViews.class,
 				Scene.class,
 				SceneManager.class,
 				OutputManager.class,
 				CubemapRenderer.class,
+				EnvironmentBackgroundRenderer.class,
 				Quaternion.class,
 				SphericalOrientation.class,
 				CameraManager.class,
+				CubemapFace.class,
+				CubemapTarget.class,
+				ProcessingGlAdapter.class,
+				ProcessingGlCapabilities.class,
 				MouseControlledCamera.class,
 				OrbitCamera.class,
 				CubemapViewRenderer.class,
@@ -147,6 +192,16 @@ class PublicApiCompatibilityTest {
 		assertMethod("getSceneCamera");
 		assertMethod("setSceneCameraInputEnabled", boolean.class);
 		assertMethod("isSceneCameraInputEnabled");
+		assertMethod("setEquirectangularBackground", PImage.class);
+		assertMethod("setEquirectangularBackground", String.class);
+		assertMethod("clearEnvironmentBackground");
+		assertMethod("hasEnvironmentBackground");
+		assertMethod("setEnvironmentBackgroundVisible", boolean.class);
+		assertMethod("isEnvironmentBackgroundVisible");
+		assertMethod("setEnvironmentBackgroundIntensity", float.class);
+		assertMethod("getEnvironmentBackgroundIntensity");
+		assertMethod("setEnvironmentBackgroundYawOffset", float.class);
+		assertMethod("getEnvironmentBackgroundYawOffset");
 	}
 
 	@Test
@@ -168,7 +223,7 @@ class PublicApiCompatibilityTest {
 				"renderEquirectangular",
 				"renderCubemap",
 				"renderStandard")) {
-			Method method = zividomelive.class.getMethod(name);
+			Method method = ziviDomeLive.class.getMethod(name);
 			assertTrue(method.isAnnotationPresent(Deprecated.class), name + " must remain deprecated");
 		}
 	}
@@ -180,13 +235,53 @@ class PublicApiCompatibilityTest {
 		assertTrue(Modifier.isAbstract(render.getModifiers()));
 	}
 
+	@Test
+	void cubemapCaptureCompatibilityOverloadsRemainAvailable() throws Exception {
+		assertPublicMethod(
+				CubemapRenderer.class,
+				"captureCubemap",
+				float.class,
+				float.class,
+				float.class,
+				CameraManager.class,
+				Scene.class);
+		assertPublicMethod(
+				CubemapRenderer.class,
+				"captureCubemap",
+				float.class,
+				float.class,
+				float.class,
+				Scene.class);
+		assertPublicMethod(
+				CubemapRenderer.class,
+				"captureCubemap",
+				Quaternion.class,
+				CameraManager.class,
+				Scene.class);
+		assertPublicMethod(
+				CubemapRenderer.class,
+				"captureCubemap",
+				Quaternion.class,
+				Scene.class);
+	}
+
 	private static void assertMethod(String name, Class<?>... parameterTypes) throws Exception {
-		Method method = zividomelive.class.getMethod(name, parameterTypes);
+		Method method = ziviDomeLive.class.getMethod(name, parameterTypes);
 		assertTrue(Modifier.isPublic(method.getModifiers()), name + " must remain public");
 	}
 
+	private static void assertPublicMethod(
+			Class<?> owner,
+			String name,
+			Class<?>... parameterTypes) throws Exception {
+		Method method = owner.getMethod(name, parameterTypes);
+		assertTrue(
+				Modifier.isPublic(method.getModifiers()),
+				owner.getSimpleName() + "." + name + " must remain public");
+	}
+
 	private static void assertControlEventMethod() {
-		boolean found = Arrays.stream(zividomelive.class.getMethods())
+		boolean found = Arrays.stream(ziviDomeLive.class.getMethods())
 				.anyMatch(method -> method.getName().equals("controlEvent")
 						&& Modifier.isPublic(method.getModifiers())
 						&& method.getParameterCount() == 1

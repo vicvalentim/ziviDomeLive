@@ -1,6 +1,8 @@
 package com.victorvalentim.zividomelive.render.modes;
 
 
+import com.victorvalentim.zividomelive.render.gl.CubemapTarget;
+import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
 import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.PApplet;
 import processing.core.PGraphics;
@@ -9,30 +11,38 @@ import processing.opengl.PShader;
 import java.util.logging.Logger;
 
 /**
- * The FisheyeDomemaster class handles the rendering of fisheye domemaster projections from equirectangular maps.
+ * Renders fisheye domemaster projections directly from a native samplerCube cubemap.
  */
 public class FisheyeDomemaster {
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final int CUBEMAP_TEXTURE_UNIT = 1;
     private PGraphics domemaster;
     private PGraphics domemasterSize;
-    private final PShader domemasterShader;
+    private final PShader samplerCubeShader;
     private final int resolution;
     private float sizePercentage;
     private final PApplet parent;
+    private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
+    private final ProcessingGlAdapter.CubemapBindingState cubemapBindingState =
+            new ProcessingGlAdapter.CubemapBindingState();
+    private boolean unavailableWarningLogged;
+    private boolean renderFailureWarningLogged;
 
     /**
-     * Constructs a FisheyeDomemaster with the specified resolution, shader files, and parent PApplet.
+     * Constructs a FisheyeDomemaster with the specified resolution, samplerCube shader files, and parent PApplet.
      *
      * @param resolution the resolution of the domemaster projection
-     * @param fragmentShaderPath the path to the fragment shader file (.frag)
-     * @param vertexShaderPath the path to the vertex shader file (.vert)
+     * @param fragmentShaderPath the samplerCube fragment shader file (.frag)
+     * @param vertexShaderPath the samplerCube vertex shader file (.vert)
      * @param parent the parent PApplet instance
      */
     public FisheyeDomemaster(int resolution,String fragmentShaderPath, String vertexShaderPath, PApplet parent) {
         this.resolution = resolution;
         this.sizePercentage = 100.0f;
         this.parent = parent;
-        this.domemasterShader = parent.loadShader(fragmentShaderPath, vertexShaderPath);
+        this.samplerCubeShader = fragmentShaderPath != null && vertexShaderPath != null
+                ? parent.loadShader(fragmentShaderPath, vertexShaderPath)
+                : null;
     }
 
     /**
@@ -40,9 +50,9 @@ public class FisheyeDomemaster {
      */
     private void initializeDomemaster() {
         if (domemaster != null) {
-            domemaster.dispose();
+            glAdapter.dispose(domemaster);
         }
-        domemaster = (PGraphicsOpenGL) parent.createGraphics(resolution, resolution, PApplet.P2D);
+        domemaster = glAdapter.createGraphics(parent, resolution, resolution, PApplet.P2D);
     }
 
     /**
@@ -50,22 +60,9 @@ public class FisheyeDomemaster {
      */
     private void initializeDomemasterSize() {
         if (domemasterSize != null) {
-            domemasterSize.dispose();
+            glAdapter.dispose(domemasterSize);
         }
-        domemasterSize = (PGraphicsOpenGL) parent.createGraphics(resolution, resolution, PApplet.P2D);
-    }
-
-    /**
-     * Sets the field of view (FOV) for the domemaster shader.
-     *
-     * @param fov the field of view to set
-     */
-    void setFOV(float fov) {
-        if (domemasterShader == null) {
-            LOGGER.warning("Domemaster shader not initialized; skipping FOV update.");
-            return;
-        }
-        domemasterShader.set("fov", fov);
+        domemasterSize = glAdapter.createGraphics(parent, resolution, resolution, PApplet.P2D);
     }
 
     /**
@@ -87,21 +84,33 @@ public class FisheyeDomemaster {
     }
 
     /**
-     * Applies the shader to the equirectangular map and renders the domemaster projection.
+     * Applies the domemaster shader directly to a native cubemap.
      *
-     * @param equirectangular the PGraphics object representing the equirectangular map
+     * @param nativeCubemap native cubemap populated by {@code CubemapRenderer}
      * @param fov the field of view to use for the shader
      */
-    public void applyShader(PGraphicsOpenGL equirectangular, float fov) {
-        if (equirectangular == null) {
-            LOGGER.warning("Equirectangular PGraphics is null.");
+    public void applyShader(CubemapTarget nativeCubemap, float fov) {
+        if (nativeCubemap == null || !nativeCubemap.isAllocated() || samplerCubeShader == null) {
+            if (!unavailableWarningLogged) {
+                LOGGER.warning("Native cubemap or fisheye samplerCube shader unavailable; skipping shader pass.");
+                unavailableWarningLogged = true;
+            }
             return;
         }
-        if (domemasterShader == null) {
-            LOGGER.warning("Domemaster shader not initialized; skipping shader pass.");
-            return;
+        try {
+            applySamplerCubeShader(nativeCubemap, fov);
+            unavailableWarningLogged = false;
+            renderFailureWarningLogged = false;
+        } catch (RuntimeException error) {
+            if (!renderFailureWarningLogged) {
+                LOGGER.warning("Native fisheye samplerCube render failed: "
+                        + error.getMessage());
+                renderFailureWarningLogged = true;
+            }
         }
+    }
 
+    private void applySamplerCubeShader(CubemapTarget nativeCubemap, float fov) {
         if (domemaster == null) {
             initializeDomemaster();
         }
@@ -109,16 +118,33 @@ public class FisheyeDomemaster {
             initializeDomemasterSize();
         }
 
-        setFOV(fov);
+        PGraphicsOpenGL target = (PGraphicsOpenGL) domemaster;
+        target.beginDraw();
+        boolean cubemapBound = false;
+        try {
+            target.background(0, 0); // Set transparent background
+            samplerCubeShader.set("fov", fov);
+            samplerCubeShader.set("resolution", target.width, target.height);
+            samplerCubeShader.set("cubemap", CUBEMAP_TEXTURE_UNIT);
+            target.shader(samplerCubeShader);
+            glAdapter.bindCubemapTextureScoped(
+                    target, nativeCubemap, CUBEMAP_TEXTURE_UNIT, cubemapBindingState);
+            cubemapBound = true;
+            target.rect(0, 0, target.width, target.height);
+        } finally {
+            try {
+                if (cubemapBound) {
+                    glAdapter.restoreCubemapTexture(target, cubemapBindingState);
+                }
+            } finally {
+                target.endDraw();
+            }
+        }
 
-        domemaster.beginDraw();
-        domemaster.background(0, 0); // Set transparent background
-        domemasterShader.set("equirectangularMap", equirectangular);
-        domemasterShader.set("resolution", new float[]{domemaster.width, domemaster.height});
-        domemaster.shader(domemasterShader);
-        domemaster.rect(0, 0, domemaster.width, domemaster.height);
-        domemaster.endDraw();
+        applySizePass();
+    }
 
+    private void applySizePass() {
         float adjustedSize = resolution * (sizePercentage / 100.0f);
         domemasterSize.beginDraw();
         domemasterSize.background(0, 0); // Set transparent background
@@ -143,11 +169,11 @@ public class FisheyeDomemaster {
      */
     public void dispose() {
         if (domemaster != null) {
-            domemaster.dispose();
+            glAdapter.dispose(domemaster);
             domemaster = null;
         }
         if (domemasterSize != null) {
-            domemasterSize.dispose();
+            glAdapter.dispose(domemasterSize);
             domemasterSize = null;
         }
     }

@@ -1,11 +1,11 @@
 # Core Classes
 
-## zividomelive
+## ziviDomeLive
 
 Create one instance with the active `PApplet`, then call `setup()` once:
 
 ```java
-zividomelive dome = new zividomelive(this);
+ziviDomeLive dome = new ziviDomeLive(this);
 dome.setup();
 ```
 
@@ -54,12 +54,14 @@ Switching disposes the leaving scene and sets up the arriving scene. `clearScene
 ## OutputManager
 
 The manager separates configured route, backend availability, native initialization, publication, and render requirements.
+Internally it delegates native ownership to concrete NDI, Syphon, and Spout services;
+those implementation classes are not part of the public API.
 
 ```java
 OutputManager output = dome.getOutputManager();
 output.setViewForOutput(
     OutputManager.OutputType.NDI,
-    zividomelive.ViewType.EQUIRECTANGULAR);
+    ViewType.EQUIRECTANGULAR);
 output.toggleOutput("ndi");
 ```
 
@@ -79,6 +81,11 @@ Syphon and Spout receive the selected `PGraphicsOpenGL` directly. NDI performs
 pixel readback on the render thread and sends through a bounded three-slot
 worker pipeline.
 
+The automatic `RenderPipeline` supplies completed targets through `FrameViews`.
+`OutputManager` chooses the logical `ViewType` to publish and does not inspect
+the concrete renderer that produced it. Applications normally do not need to
+call the frame-aware `sendOutput(FrameViews)` overload directly.
+
 ## SphericalOrientation
 
 `SphericalOrientation` owns the shared attitude for every spherical projection.
@@ -92,6 +99,37 @@ therefore significant. `reset()` restores identity and zero accumulators.
 
 Applications usually access this behavior through the facade's calibration
 methods rather than constructing a separate orientation object.
+
+## CubemapFace And CameraManager
+
+`CubemapFace` defines the qualified cubemap face order and camera vectors:
+`+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`. `CameraManager` remains available for
+1.x compatibility and initializes its orientations from that canonical table.
+
+## ProcessingGlAdapter
+
+`ProcessingGlAdapter` centralizes the Processing/OpenGL operations currently
+needed by the render pipeline and output backends: graphics target allocation,
+texture checks, `loadPixels()` copy, disposal, and PGL capability discovery.
+`ProcessingGlCapabilities` records whether the active context advertises
+texture, FBO, cubemap, seamless cubemap, PBO, and sync fence support.
+
+## CubemapTarget
+
+`CubemapTarget` owns a native `GL_TEXTURE_CUBE_MAP` allocation with one square
+RGBA8 face for each canonical `CubemapFace`. It applies conservative defaults:
+linear mipmapped min filtering, linear mag filtering, clamp-to-edge wrapping on
+all three axes, regenerated mipmaps after capture, and seamless cubemap sampling
+only when the active context advertises support.
+
+`CubemapRenderer` preserves the `Scene.sceneRender(PGraphicsOpenGL)` contract
+with one reusable offscreen Processing scratch target. After the Scene and
+optional far-depth environment are complete, a GPU framebuffer blit copies the
+resolved color into the matching `CubemapTarget` face. There is no legacy
+`PGraphicsOpenGL[]` face array and no six-texture fallback.
+`EquirectangularRenderer`, `FisheyeDomemaster`, and `CubemapViewRenderer` all
+sample the native cubemap directly. The adapted samplerCube shader resources
+are packaged under `data/shaders/samplercube/`.
 
 ## OrbitCamera
 
@@ -107,7 +145,7 @@ active.
 
 ## Renderers
 
-The public 1.x renderer classes remain available for compatibility:
+The public renderer classes remain available for advanced integrations:
 
 - `StandardRenderer`
 - `CubemapRenderer`
@@ -115,7 +153,7 @@ The public 1.x renderer classes remain available for compatibility:
 - `FisheyeDomemaster`
 - `CubemapViewRenderer`
 
-Applications should prefer the facade and `RenderMode`. Direct renderer ownership is advanced 1.x integration and may not transfer unchanged to 2.0.
+Applications should prefer the facade and `RenderMode`. Direct renderer ownership is advanced integration and should not rely on internal allocation details.
 
 Do not retain a renderer target across `resetGraphics()`: resolution changes
 are deferred to the render loop and can replace high-resolution renderer

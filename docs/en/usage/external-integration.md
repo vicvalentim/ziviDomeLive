@@ -10,9 +10,9 @@ setup before enabling it.
 
 ```java
 OutputManager output = dome.getOutputManager();
-output.setNdiView(zividomelive.ViewType.EQUIRECTANGULAR);
-output.setSyphonView(zividomelive.ViewType.FISHEYE_DOMEMASTER);
-output.setSpoutView(zividomelive.ViewType.STANDARD);
+output.setNdiView(ViewType.EQUIRECTANGULAR);
+output.setSyphonView(ViewType.DOMEMASTER);
+output.setSpoutView(ViewType.STANDARD);
 ```
 
 Only the platform-valid local texture backend is available: Syphon on macOS or Spout on Windows.

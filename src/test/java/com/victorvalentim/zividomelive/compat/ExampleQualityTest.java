@@ -28,7 +28,8 @@ class ExampleQualityTest {
 				"EmptyProject/EmptyProject.pde",
 				"SphereParticle/SphereParticle.pde",
 				"CalibrationTool/CalibrationTool.pde",
-				"FulldomePBR/FulldomePBR.pde")) {
+				"FulldomePBR/FulldomePBR.pde",
+				"InfiniteBackground/InfiniteBackground.pde")) {
 			String source = read(relativePath);
 			assertTrue(source.matches("(?s).*size\\([^;]*P3D\\s*\\);.*"), relativePath);
 			assertTrue(source.contains("pixelDensity(1)"), relativePath);
@@ -44,7 +45,8 @@ class ExampleQualityTest {
 				"EmptyProject/EmptyProject.pde",
 				"SphereParticle/SphereParticle.pde",
 				"CalibrationTool/CalibrationTool.pde",
-				"FulldomePBR/FulldomePBR.pde")) {
+				"FulldomePBR/FulldomePBR.pde",
+				"InfiniteBackground/InfiniteBackground.pde")) {
 			String source = read(relativePath);
 			assertTrue(source.contains("import controlP5.*;"), relativePath);
 			assertTrue(source.contains("import codeanticode.syphon.*;"), relativePath);
@@ -145,6 +147,31 @@ class ExampleQualityTest {
 		assertTrue(thirdPartyNotice.contains("not modified"));
 		assertTrue(thirdPartyNotice.contains("license notice remains included"));
 		assertFalse(Files.exists(EXAMPLES.resolve("CompatibilityLock")));
+	}
+
+	@Test
+	void infiniteBackgroundExampleUsesLibraryEnvironmentWithoutSkyGeometry() throws IOException {
+		String sketch = read("InfiniteBackground/InfiniteBackground.pde");
+		String scene = read("InfiniteBackground/InfiniteBackgroundScene.pde");
+
+		assertTrue(sketch.contains("../SolarSystem/data/textures/8k_stars_milky_way.jpg"));
+		assertTrue(sketch.contains("createCalibrationEnvironment(2048, 1024)"));
+		assertTrue(sketch.contains("setEquirectangularBackground(calibrationEnvironment)"));
+		assertTrue(scene.contains("RenderMode.STANDARD"));
+		assertTrue(scene.contains("RenderMode.DOMEMASTER"));
+		assertTrue(scene.contains("RenderMode.EQUIRECTANGULAR"));
+		assertTrue(scene.contains("RenderMode.SKYBOX"));
+		assertTrue(scene.contains("setEnvironmentBackgroundVisible"));
+		assertTrue(scene.contains("setEnvironmentBackgroundIntensity"));
+		assertTrue(scene.contains("setEnvironmentBackgroundYawOffset"));
+		assertTrue(scene.contains("setPitch"));
+		assertTrue(scene.contains("setYaw"));
+		assertTrue(scene.contains("setRoll"));
+		assertTrue(scene.contains("pg.background(0, 0, 0, 0)"));
+		assertFalse(sketch.contains("createShape(SPHERE"));
+		assertFalse(scene.contains("createShape(SPHERE"));
+		assertFalse(sketch.contains("drawSkySphere"));
+		assertFalse(scene.contains("drawSkySphere"));
 	}
 
 	private record BourkeImage(String name, int width, int height, String sha256) {

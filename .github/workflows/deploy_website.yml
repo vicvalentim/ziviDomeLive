@@ -14,6 +14,12 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -24,8 +30,17 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-docs.txt
 
+      - name: Build Javadocs
+        run: ./gradlew javadoc --console=plain
+
       - name: Build website
         run: mkdocs build --strict
+
+      - name: Attach Javadocs to website
+        run: |
+          cp -R build/docs/javadoc site/reference
+          mkdir -p site/pt
+          cp -R build/docs/javadoc site/pt/reference
 
       - name: Deploy website
         uses: JamesIves/github-pages-deploy-action@v4

@@ -3,9 +3,9 @@
 ## Logging
 
 ```java
-zividomelive.enableDebugLogging();
-zividomelive.enableReleaseLogging();
-zividomelive.setLogMode(LogManager.Mode.DEBUG);
+ziviDomeLive.enableDebugLogging();
+ziviDomeLive.enableReleaseLogging();
+ziviDomeLive.setLogMode(LogManager.Mode.DEBUG);
 ```
 
 Configure logging before constructing the facade when startup diagnostics are needed.
@@ -32,10 +32,26 @@ camera.setDistanceLimits(100, 5000);
 camera.setCollapseGuard(20);
 ```
 
-The scene camera transforms scene space and is distinct from spherical pitch/yaw/roll, the six-face `CameraManager`, and the Standard perspective camera.
+The scene camera transforms scene space and is distinct from spherical pitch/yaw/roll, the canonical six-face `CubemapFace` table, and the Standard perspective camera.
 
 Disable camera input when the owning scene is disposed so later scenes do not
 inherit drag or wheel interaction unintentionally.
+
+## Environment Background
+
+```java
+PImage stars = loadImage("textures/8k_stars_milky_way.jpg");
+dome.setEquirectangularBackground(stars);
+dome.setEnvironmentBackgroundVisible(true);
+dome.setEnvironmentBackgroundIntensity(1.0f);
+dome.setEnvironmentBackgroundYawOffset(0.0f);
+```
+
+The public LDR source is a borrowed `PImage`; the library resolves its Processing-managed GPU texture and samples it as an equirectangular map. One logical source and one set of `visible`, visual `intensity`, and longitude `yawOffset` values feed Standard, domemaster, equirectangular, and skybox preview/output passes. The far-depth pass runs after `sceneRender()`, so scene-owned `background()` calls do not erase it and foreground geometry remains in front.
+
+Standard uses only its perspective camera rotation: drag rotates the panorama, while orbit-distance changes do not translate it. Spherical modes use the shared spherical Pitch/Yaw/Roll orientation. Use `clearEnvironmentBackground()` when the owning scene is disposed; the borrowed `PImage` itself is never disposed by ziviDomeLive.
+
+HDR loading, IBL maps, and ambient occlusion are not enabled by this helper yet.
 
 ## Output Diagnostics
 

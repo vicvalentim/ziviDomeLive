@@ -6,7 +6,7 @@ import codeanticode.syphon.*;
 import spout.*;
 import processing.opengl.PGraphicsOpenGL;
 
-zividomelive ziviDome;
+ziviDomeLive ziviDome;
 
 void settings() {
   pixelDensity(1);
@@ -16,9 +16,9 @@ void settings() {
 void setup() {
   surface.setTitle("ziviDomeLive - Fulldome PBR Example");
 
-  // Uncomment while diagnosing a sketch: zividomelive.enableDebugLogging();
+  // Uncomment while diagnosing a sketch: ziviDomeLive.enableDebugLogging();
 
-  ziviDome = new zividomelive(this);
+  ziviDome = new ziviDomeLive(this);
   ziviDome.setup();
   ziviDome.setRenderMode(RenderMode.FULL);
   ziviDome.setScene(new FulldomePbrScene(ziviDome));

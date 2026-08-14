@@ -1,7 +1,7 @@
 package com.victorvalentim.zividomelive.manager;
 
 import com.victorvalentim.zividomelive.RenderMode;
-import com.victorvalentim.zividomelive.zividomelive;
+import com.victorvalentim.zividomelive.ViewType;
 
 import java.util.List;
 import java.util.Locale;
@@ -48,10 +48,10 @@ final class ControlPanelLayout {
     );
 
     private static final List<String> VIEW_LABELS = List.of(
-            "Fisheye Domemaster",
+            "Standard",
+            "Domemaster",
             "Equirectangular",
-            "Cubemap Skybox",
-            "Standard"
+            "Skybox"
     );
 
     private static final List<Integer> OUTPUT_RESOLUTIONS = List.of(1024, 2048, 3072, 4096);
@@ -121,12 +121,12 @@ final class ControlPanelLayout {
         return VIEW_LABELS;
     }
 
-    static zividomelive.ViewType viewForIndex(int index) {
-        return zividomelive.ViewType.values()[index];
+    static ViewType viewForIndex(int index) {
+        return ViewType.values()[index];
     }
 
-    static int indexForView(zividomelive.ViewType view) {
-        return view == null ? 0 : view.ordinal();
+    static int indexForView(ViewType view) {
+        return view == null ? ViewType.DOMEMASTER.ordinal() : view.ordinal();
     }
 
     static List<Integer> outputResolutions() {

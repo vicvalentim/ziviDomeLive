@@ -36,6 +36,9 @@ public class MouseControlledCamera implements PConstants {
     /** Cached eye position updated each frame. */
     private final PVector position = new PVector(0, 0, 0);
 
+    /** Cached rotation matrix shared by camera application and environment ray reconstruction. */
+    private final PMatrix3D rotationMatrix = new PMatrix3D();
+
     /** Look-at center (fixed at origin). */
     private final PVector center = new PVector(0, 0, 0);
 
@@ -59,11 +62,11 @@ public class MouseControlledCamera implements PConstants {
      * @param parent the PApplet instance (unused but kept for API compatibility)
      */
     public void update(PApplet parent) {
-        PMatrix3D m = rotation.toMatrix();
+        rotation.toMatrix(rotationMatrix);
         // Camera eye is the rotated (0, 0, distance) vector offset from center
-        position.x = center.x + m.m02 * distance;
-        position.y = center.y + m.m12 * distance;
-        position.z = center.z + m.m22 * distance;
+        position.x = center.x + rotationMatrix.m02 * distance;
+        position.y = center.y + rotationMatrix.m12 * distance;
+        position.z = center.z + rotationMatrix.m22 * distance;
     }
 
     /**
@@ -72,13 +75,24 @@ public class MouseControlledCamera implements PConstants {
      * @param pg the PGraphics object to apply the camera view to
      */
     public void apply(PGraphicsOpenGL pg) {
-        PMatrix3D m = rotation.toMatrix();
         // Up vector is the rotated (0, 1, 0) – second column of rotation matrix
         pg.camera(
             position.x, position.y, position.z,
             center.x,   center.y,   center.z,
-            m.m01,      m.m11,      m.m21
+            rotationMatrix.m01, rotationMatrix.m11, rotationMatrix.m21
         );
+    }
+
+    /**
+     * Copies the camera rotation into a caller-owned matrix without including eye translation.
+     *
+     * @param destination destination matrix; must not be {@code null}
+     */
+    public void copyRotationMatrix(PMatrix3D destination) {
+        if (destination == null) {
+            throw new IllegalArgumentException("Destination matrix cannot be null.");
+        }
+        destination.set(rotationMatrix);
     }
 
     /**
@@ -160,8 +174,12 @@ public class MouseControlledCamera implements PConstants {
         Quaternion yawDelta = Quaternion.fromAxisAngle(0f, 1f, 0f, -dx * DRAG_SENSITIVITY);
 
         // Pitch: rotate around camera's current right axis (first column of rotation matrix)
-        PMatrix3D m = rotation.toMatrix();
-        Quaternion pitchDelta = Quaternion.fromAxisAngle(m.m00, m.m10, m.m20, -dy * DRAG_SENSITIVITY);
+        rotation.toMatrix(rotationMatrix);
+        Quaternion pitchDelta = Quaternion.fromAxisAngle(
+                rotationMatrix.m00,
+                rotationMatrix.m10,
+                rotationMatrix.m20,
+                -dy * DRAG_SENSITIVITY);
 
         // Apply yaw in world space (pre-multiply), pitch in local space (post-multiply)
         rotation = yawDelta.multiply(rotation).multiply(pitchDelta).normalize();

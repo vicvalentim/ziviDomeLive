@@ -3,36 +3,52 @@ package com.victorvalentim.zividomelive.render;
 import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.render.camera.CameraManager;
 import com.victorvalentim.zividomelive.render.camera.CameraOrientation;
+import com.victorvalentim.zividomelive.render.camera.CubemapFace;
+import com.victorvalentim.zividomelive.render.gl.CubemapTarget;
+import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
 import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.PApplet;
 import processing.core.PConstants;
-import processing.core.PGraphics;
-import processing.core.PVector;
+import processing.core.PImage;
+import processing.core.PMatrix3D;
+import processing.opengl.FrameBuffer;
+import processing.opengl.PGL;
 import processing.opengl.PGraphicsOpenGL;
 
 import java.util.logging.Logger;
 
 /**
- * CubemapRenderer class handles the rendering of cubemap faces using Processing's PGraphicsOpenGL.
- * It uses cached frustum parameters for rendering.
+ * Captures a scene into a native OpenGL cubemap texture.
+ *
+ * <p>The renderer preserves the qualified 1.5 camera-orientation contract while using
+ * one reusable Processing OpenGL scratch target. Each rendered scratch face is copied
+ * GPU-to-GPU into the corresponding {@code GL_TEXTURE_CUBE_MAP} face.</p>
+ *
+ * <p>This avoids adapting the scene camera itself to native cubemap framebuffer
+ * conventions. Any framebuffer-origin conversion is isolated to the blit step.</p>
  */
 public class CubemapRenderer implements PConstants {
-    private static final int NUM_FACES = 6;
-    private static final float DEFAULT_NEAR_PLANE = 0.01f;
-    private static final float DEFAULT_FAR_PLANE = 10000000.0f;
+    private static final float DEFAULT_NEAR_PLANE = 1.0f;
+    private static final float DEFAULT_FAR_PLANE = 1122000.0f;
     private static final Logger LOGGER = LogManager.getLogger();
 
-    private PGraphicsOpenGL[] cubemapFaces;
+    private PGraphicsOpenGL nativeCaptureGraphics;
+    private CubemapTarget nativeCubemapTarget;
+    private final EnvironmentBackgroundRenderer environmentBackgroundRenderer;
+    private final boolean ownsEnvironmentState;
     private int resolution;
     private final PApplet parent;
+    private final ProcessingGlAdapter glAdapter = ProcessingGlAdapter.getDefault();
+    private boolean nativeCubemapUnavailableWarningLogged;
 
     // Cached frustum parameters
     private volatile float cachedNearPlane;
     private volatile float cachedFarPlane;
     private volatile float cachedFieldOfView;
 
-    private final SphericalOrientation legacyOrientation = new SphericalOrientation();
-
+    private final SphericalOrientation angleOrientation = new SphericalOrientation();
+    private final CameraManager defaultCameraManager = new CameraManager();
+    private final PMatrix3D captureOrientationMatrix = new PMatrix3D();
 
     /**
      * Constructs a CubemapRenderer with the specified initial resolution and parent PApplet.
@@ -41,72 +57,127 @@ public class CubemapRenderer implements PConstants {
      * @param parent the parent PApplet instance
      */
     public CubemapRenderer(int initialResolution, PApplet parent) {
+        this(initialResolution, parent, new EnvironmentState(), true);
+    }
+
+    /**
+     * Constructs a cubemap renderer consuming a shared Environment state.
+     *
+     * @param initialResolution initial face resolution
+     * @param parent Processing parent
+     * @param environmentState shared borrowed environment state
+     */
+    public CubemapRenderer(
+            int initialResolution,
+            PApplet parent,
+            EnvironmentState environmentState) {
+        this(initialResolution, parent, environmentState, false);
+    }
+
+    private CubemapRenderer(
+            int initialResolution,
+            PApplet parent,
+            EnvironmentState environmentState,
+            boolean ownsEnvironmentState) {
         this.parent = parent;
         this.resolution = initialResolution;
-        initializeCubemapFaces();
+        this.environmentBackgroundRenderer =
+                new EnvironmentBackgroundRenderer(parent, environmentState);
+        this.ownsEnvironmentState = ownsEnvironmentState;
+        initializeNativeCubemapTarget();
         cachedNearPlane = DEFAULT_NEAR_PLANE;
         cachedFarPlane = DEFAULT_FAR_PLANE;
         cachedFieldOfView = PApplet.PI / 2;
     }
 
     /**
-     * Initializes or reinitializes the cubemap faces with the current resolution.
-     */
-    private void initializeCubemapFaces() {
-        if (cubemapFaces == null) {
-            cubemapFaces = new PGraphicsOpenGL[NUM_FACES];
-        }
-        for (int i = 0; i < NUM_FACES; i++) {
-            if (cubemapFaces[i] != null) {
-                cubemapFaces[i].dispose();
-            }
-            cubemapFaces[i] = (PGraphicsOpenGL) parent.createGraphics(resolution, resolution, P3D);
-        }
-    }
-
-    /**
-     * Updates the resolution and reinitializes the cubemap faces if needed.
+     * Updates the native cubemap resolution when needed.
      *
-     * @param newResolution the new resolution for cubemap faces
+     * @param newResolution the new cubemap face resolution
      */
     void updateResolution(int newResolution) {
         if (this.resolution != newResolution) {
             this.resolution = newResolution;
-            initializeCubemapFaces();
+            disposeNativeCaptureGraphics();
+            initializeNativeCubemapTarget();
         }
     }
 
     /**
-     * Configures the camera for each cubemap face using asynchronously calculated frustum parameters.
-     * @param sphericalOrientation unit quaternion describing the spherical orientation
+     * Configures one Processing scratch render using the qualified 1.5 camera contract.
+     *
+     * <p>No native cubemap handedness correction is applied to the scene matrix here.
+     * The camera orientation comes directly from {@link CameraManager} /
+     * {@link CameraOrientation}; framebuffer-origin conversion is handled only during
+     * the GPU blit into the native cubemap face.</p>
      */
     private void configureCameraForFace(
             PGraphicsOpenGL pg,
             CameraOrientation orientation,
-            Quaternion sphericalOrientation) {
-        PVector eye = new PVector(0, 0, 0);
+            PMatrix3D sphericalOrientationMatrix,
+            float fieldOfView) {
+        pg.camera(
+                0f, 0f, 0f,
+                orientation.centerX,
+                orientation.centerY,
+                orientation.centerZ,
+                orientation.upX,
+                orientation.upY,
+                orientation.upZ);
 
-        pg.camera(eye.x, eye.y, eye.z, orientation.centerX, orientation.centerY, orientation.centerZ,
-                  orientation.upX, orientation.upY, orientation.upZ);
-        pg.perspective(cachedFieldOfView, 1, cachedNearPlane, cachedFarPlane);
+        pg.perspective(
+                fieldOfView,
+                1.0f,
+                cachedNearPlane,
+                cachedFarPlane);
 
-        pg.applyMatrix(sphericalOrientation.toMatrix());
+        pg.applyMatrix(sphericalOrientationMatrix);
     }
 
     /**
      * Captures the cubemap faces based on the camera orientation.
      *
      * @param pitch rotation around the X axis
-     * @param yaw   rotation around the Z axis
-     * @param roll  rotation around the Y axis
+     * @param yaw rotation around the Z axis
+     * @param roll rotation around the Y axis
      * @param cameraManager manager for camera orientations
      * @param currentScene the current scene to render
      */
-    public void captureCubemap(float pitch, float yaw, float roll, CameraManager cameraManager, Scene currentScene) {
-        legacyOrientation.setPitch(pitch);
-        legacyOrientation.setYaw(yaw);
-        legacyOrientation.setRoll(roll);
-        captureCubemap(legacyOrientation.getQuaternion(), cameraManager, currentScene);
+    public void captureCubemap(
+            float pitch,
+            float yaw,
+            float roll,
+            CameraManager cameraManager,
+            Scene currentScene) {
+        angleOrientation.setPitch(pitch);
+        angleOrientation.setYaw(yaw);
+        angleOrientation.setRoll(roll);
+        captureCubemap(
+                angleOrientation.getQuaternion(),
+                cameraManager,
+                currentScene);
+    }
+
+    /**
+     * Captures the cubemap faces using the default qualified camera orientations.
+     *
+     * @param pitch rotation around the X axis
+     * @param yaw rotation around the Z axis
+     * @param roll rotation around the Y axis
+     * @param currentScene the current scene to render
+     */
+    public void captureCubemap(
+            float pitch,
+            float yaw,
+            float roll,
+            Scene currentScene) {
+        angleOrientation.setPitch(pitch);
+        angleOrientation.setYaw(yaw);
+        angleOrientation.setRoll(roll);
+        captureCubemap(
+                angleOrientation.getQuaternion(),
+                defaultCameraManager,
+                currentScene);
     }
 
     /**
@@ -120,49 +191,361 @@ public class CubemapRenderer implements PConstants {
             Quaternion sphericalOrientation,
             CameraManager cameraManager,
             Scene currentScene) {
-        if (cubemapFaces == null) {
-            initializeCubemapFaces();
-        }
         Quaternion effectiveOrientation = sphericalOrientation == null
                 ? new Quaternion(0.0f, 0.0f, 0.0f, 1.0f)
                 : sphericalOrientation;
-        for (int i = 0; i < NUM_FACES; i++) {
-            cubemapFaces[i].beginDraw();
-            cubemapFaces[i].background(0, 0);
-            configureCameraForFace(
-                    cubemapFaces[i],
-                    cameraManager.getOrientation(i),
-                    effectiveOrientation);
-            if (currentScene != null) {
-                currentScene.sceneRender(cubemapFaces[i]);
-            }
-            cubemapFaces[i].endDraw();
-        }
+
+        captureNativeCubemap(
+                effectiveOrientation,
+                cameraManager,
+                currentScene);
     }
 
     /**
-     * Returns an array of cubemap faces.
+     * Captures the cubemap faces using the default qualified camera orientations.
      *
-     * @return an array containing the current PGraphics cubemap faces
+     * @param sphericalOrientation unit quaternion describing the spherical orientation
+     * @param currentScene the current scene to render
      */
-    public PGraphicsOpenGL[] getCubemapFaces() {
-        if (cubemapFaces == null) {
-            initializeCubemapFaces();
-        }
-        return cubemapFaces;
+    public void captureCubemap(
+            Quaternion sphericalOrientation,
+            Scene currentScene) {
+        Quaternion effectiveOrientation = sphericalOrientation == null
+                ? new Quaternion(0.0f, 0.0f, 0.0f, 1.0f)
+                : sphericalOrientation;
+
+        captureNativeCubemap(
+                effectiveOrientation,
+                defaultCameraManager,
+                currentScene);
     }
 
     /**
-     * Disposes of cubemap faces to free up resources.
+     * Renders each canonical 1.5 camera orientation into one reusable Processing scratch
+     * target and copies the resolved color framebuffer into the matching native cubemap face.
      */
-    public void dispose() {
-        if (cubemapFaces != null) {
-            for (PGraphics face : cubemapFaces) {
-                if (face != null) {
-                    face.dispose();
+    private boolean captureNativeCubemap(
+            Quaternion effectiveOrientation,
+            CameraManager cameraManager,
+            Scene currentScene) {
+        if (nativeCubemapTarget != null
+                && !nativeCubemapTarget.isValidInCurrentContext()) {
+            LOGGER.warning("OpenGL context changed; recreating native cubemap resources.");
+            nativeCubemapTarget.abandonAfterContextLoss();
+            nativeCubemapTarget = null;
+            disposeNativeCaptureGraphics();
+            initializeNativeCubemapTarget();
+        }
+        if (nativeCubemapTarget == null) {
+            if (!nativeCubemapUnavailableWarningLogged) {
+                LOGGER.warning(
+                        "Native cubemap capture unavailable; spherical frames will be skipped until resources are recreated.");
+                nativeCubemapUnavailableWarningLogged = true;
+            }
+            return false;
+        }
+
+        PGraphicsOpenGL captureGraphics = ensureNativeCaptureGraphics();
+        if (captureGraphics == null) {
+            return false;
+        }
+
+        CameraManager effectiveCameraManager =
+                cameraManager != null
+                        ? cameraManager
+                        : defaultCameraManager;
+
+        float captureFieldOfView = cachedFieldOfView;
+        effectiveOrientation.toMatrix(captureOrientationMatrix);
+
+        try {
+            for (CubemapFace face : CubemapFace.values()) {
+                CameraOrientation orientation =
+                        effectiveCameraManager.getOrientation(face.index());
+
+                captureGraphics.beginDraw();
+                try {
+                    captureGraphics.resetMatrix();
+                    captureGraphics.background(0, 0);
+
+                    configureCameraForFace(
+                            captureGraphics,
+                            orientation,
+                            captureOrientationMatrix,
+                            captureFieldOfView);
+
+                    if (currentScene != null) {
+                        currentScene.sceneRender(captureGraphics);
+                    }
+
+                    captureGraphics.noLights();
+                    captureGraphics.flush();
+
+                    environmentBackgroundRenderer.renderScratchCubemapFace(
+                            captureGraphics,
+                            face,
+                            captureOrientationMatrix);
+
+                    /*
+                     * Force Processing's resolved offscreen color framebuffer to contain
+                     * the latest draw when MSAA is enabled. This remains GPU-side.
+                     */
+                    captureGraphics.loadTexture();
+
+                    FrameBuffer sourceFramebuffer =
+                            captureGraphics.getFrameBuffer(false);
+
+                    if (sourceFramebuffer == null
+                            || sourceFramebuffer.glFbo == 0) {
+                        throw new IllegalStateException(
+                                "Processing cubemap scratch framebuffer is unavailable.");
+                    }
+
+                    nativeCubemapTarget.renderFace(
+                            face,
+                            captureGraphics,
+                            pgl -> {
+                                /*
+                                 * renderFace() owns the DRAW framebuffer and has already
+                                 * attached the matching GL_TEXTURE_CUBE_MAP face.
+                                 *
+                                 * Bind only READ to the Processing scratch framebuffer.
+                                 */
+                                pgl.bindFramebuffer(
+                                        PGL.READ_FRAMEBUFFER,
+                                        sourceFramebuffer.glFbo);
+                                pgl.readBuffer(PGL.COLOR_ATTACHMENT0);
+
+                                /*
+                                 * Flip only the framebuffer Y origin during GPU-to-GPU
+                                 * transfer. Camera geometry/orientation remains exactly
+                                 * the qualified 1.5 contract.
+                                 */
+                                pgl.blitFramebuffer(
+                                        0,
+                                        0,
+                                        resolution,
+                                        resolution,
+                                        0,
+                                        resolution,
+                                        resolution,
+                                        0,
+                                        PGL.COLOR_BUFFER_BIT,
+                                        PGL.NEAREST);
+                            });
+                } finally {
+                    captureGraphics.endDraw();
                 }
             }
-            cubemapFaces = null;
+
+            refreshNativeCubemapMipmaps();
+            nativeCubemapUnavailableWarningLogged = false;
+            return true;
+        } catch (RuntimeException error) {
+            LOGGER.warning(
+                    "Native cubemap capture failed; spherical frame skipped: "
+                            + error.getMessage());
+            disposeNativeCubemapTarget();
+            return false;
+        }
+    }
+
+    /**
+     * Returns the native cubemap target populated by GPU scratch-to-cubemap copies.
+     *
+     * @return native cubemap target, or {@code null} when unsupported/unavailable
+     */
+    public CubemapTarget getNativeCubemapTarget() {
+        return nativeCubemapTarget;
+    }
+
+    /**
+     * Reports whether the renderer currently owns an allocated native cubemap.
+     *
+     * @return {@code true} when {@code GL_TEXTURE_CUBE_MAP} capture is available
+     */
+    public boolean hasNativeCubemapTarget() {
+        return nativeCubemapTarget != null && nativeCubemapTarget.isAllocated();
+    }
+
+    /**
+     * Sets the LDR equirectangular environment image rendered behind spherical capture.
+     *
+     * <p>The library draws the environment at far depth after the scene has populated the
+     * reusable scratch target, then transfers the combined colour to the native cubemap face.</p>
+     *
+     * @param image Processing image, or {@code null} to clear the environment
+     */
+    public void setEquirectangularBackground(PImage image) {
+        environmentBackgroundRenderer.setEquirectangularImage(image);
+    }
+
+    /** Clears the configured environment background. */
+    public void clearEnvironmentBackground() {
+        environmentBackgroundRenderer.clear();
+    }
+
+    /**
+     * Reports whether this renderer has an environment image configured.
+     *
+     * @return {@code true} when an equirectangular background image is available
+     */
+    public boolean hasEnvironmentBackground() {
+        return environmentBackgroundRenderer.hasEquirectangularImage();
+    }
+
+    /**
+     * Shows or hides the configured environment background.
+     *
+     * @param visible {@code true} to draw the background
+     */
+    public void setEnvironmentBackgroundVisible(boolean visible) {
+        environmentBackgroundRenderer.setVisible(visible);
+    }
+
+    /**
+     * Reports whether the environment background is visible.
+     *
+     * @return {@code true} when visible
+     */
+    public boolean isEnvironmentBackgroundVisible() {
+        return environmentBackgroundRenderer.isVisible();
+    }
+
+    /**
+     * Sets the background colour multiplier used by the equirectangular environment pass.
+     *
+     * @param intensity non-negative multiplier
+     */
+    public void setEnvironmentIntensity(float intensity) {
+        environmentBackgroundRenderer.setIntensity(intensity);
+    }
+
+    /**
+     * Returns the current environment colour multiplier.
+     *
+     * @return non-negative multiplier
+     */
+    public float getEnvironmentIntensity() {
+        return environmentBackgroundRenderer.getIntensity();
+    }
+
+    /**
+     * Rotates the equirectangular environment around the vertical axis.
+     *
+     * @param yawOffset rotation offset, in radians, applied to the source longitude lookup
+     */
+    public void setEnvironmentYawOffset(float yawOffset) {
+        environmentBackgroundRenderer.setYawOffset(yawOffset);
+    }
+
+    /**
+     * Returns the current environment yaw offset.
+     *
+     * @return yaw offset in radians
+     */
+    public float getEnvironmentYawOffset() {
+        return environmentBackgroundRenderer.getYawOffset();
+    }
+
+    /**
+     * Returns the logical Environment state consumed by this renderer.
+     * @return logical Environment state
+     */
+    public EnvironmentState getEnvironmentState() {
+        return environmentBackgroundRenderer.getEnvironmentState();
+    }
+
+    /**
+     * Disposes native cubemap capture resources.
+     */
+    public void dispose() {
+        environmentBackgroundRenderer.dispose();
+        if (ownsEnvironmentState) {
+            environmentBackgroundRenderer.clear();
+        }
+        disposeNativeCaptureGraphics();
+        disposeNativeCubemapTarget();
+    }
+
+    private void initializeNativeCubemapTarget() {
+        disposeNativeCubemapTarget();
+        try {
+            nativeCubemapTarget = CubemapTarget.create(parent, resolution);
+            ensureNativeCaptureGraphics();
+            nativeCubemapUnavailableWarningLogged = false;
+        } catch (IllegalStateException error) {
+            nativeCubemapTarget = null;
+            if (!nativeCubemapUnavailableWarningLogged) {
+                LOGGER.warning(
+                        "Native cubemap target unavailable: "
+                                + error.getMessage());
+                nativeCubemapUnavailableWarningLogged = true;
+            }
+        }
+    }
+
+    private PGraphicsOpenGL ensureNativeCaptureGraphics() {
+        if (nativeCaptureGraphics != null
+                && nativeCaptureGraphics.width == resolution
+                && nativeCaptureGraphics.height == resolution) {
+            return nativeCaptureGraphics;
+        }
+
+        disposeNativeCaptureGraphics();
+        try {
+            nativeCaptureGraphics =
+                    glAdapter.createGraphics(
+                            parent,
+                            resolution,
+                            resolution,
+                            P3D);
+
+            if (LogManager.isDebugEnabled()) {
+                LOGGER.fine(
+                        "Native cubemap capture graphics allocated: resolution="
+                                + resolution
+                                + ", renderer="
+                                + nativeCaptureGraphics.getClass().getSimpleName());
+            }
+            return nativeCaptureGraphics;
+        } catch (RuntimeException error) {
+            LOGGER.warning(
+                    "Native cubemap capture graphics unavailable: "
+                            + error.getMessage());
+            nativeCaptureGraphics = null;
+            disposeNativeCubemapTarget();
+            return null;
+        }
+    }
+
+    private void refreshNativeCubemapMipmaps() {
+        if (nativeCubemapTarget == null
+                || nativeCubemapTarget.hasValidMipmaps()) {
+            return;
+        }
+
+        try {
+            nativeCubemapTarget.generateMipmaps();
+        } catch (RuntimeException error) {
+            LOGGER.warning(
+                    "Native cubemap mipmap refresh failed; disposing native target: "
+                            + error.getMessage());
+            disposeNativeCubemapTarget();
+        }
+    }
+
+    private void disposeNativeCubemapTarget() {
+        if (nativeCubemapTarget != null) {
+            nativeCubemapTarget.dispose();
+            nativeCubemapTarget = null;
+        }
+    }
+
+    private void disposeNativeCaptureGraphics() {
+        if (nativeCaptureGraphics != null) {
+            glAdapter.dispose(nativeCaptureGraphics);
+            nativeCaptureGraphics = null;
         }
     }
 }

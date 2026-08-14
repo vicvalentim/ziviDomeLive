@@ -11,7 +11,7 @@ import java.time.temporal.ChronoField;
  * Scene1 — integra ConfigLoader → PhysicsEngine → Renderer com SimulatedClock.
  */
 class Scene1 implements Scene {
-  private zividomelive parent;
+  private ziviDomeLive parent;
   private PApplet pApplet;
   private List<Planet> planets;
   private Sun sun;
@@ -46,7 +46,7 @@ class Scene1 implements Scene {
   // ————————————————————————————————
   // Construtor de Scene1
   // ————————————————————————————————
-  Scene1(zividomelive parent, PApplet pApplet) {
+  Scene1(ziviDomeLive parent, PApplet pApplet) {
     this.parent  = parent;
     this.pApplet = pApplet;
 
@@ -62,6 +62,10 @@ class Scene1 implements Scene {
 
     sun     = configLoader.loadSun();
     planets = configLoader.loadConfiguration();
+    if (configLoader.getSkyTexture() != null) {
+      parent.setEquirectangularBackground(configLoader.getSkyTexture());
+      parent.setEnvironmentBackgroundIntensity(1.0f);
+    }
 
     // configura central bodies
     for (Planet p : planets) {
@@ -332,8 +336,12 @@ class Scene1 implements Scene {
         // 4) Planetas + luas (com órbitas de luas via m.displayOrbit())
         renderer.drawPlanetsAndMoons(pg, showLabels, showMoonOrbits);
 
-        // 5) Céu
-        renderer.drawSkySphere(pg);
+        // 5) Céu legado do exemplo: somente para Standard.
+        // Nos modos esféricos, o fundo é desenhado pela API de environment da biblioteca
+        // como background infinito da captura cubemap, sem geometria de esfera.
+        if (shouldDrawLegacySkySphere()) {
+          renderer.drawSkySphere(pg);
+        }
 
       pg.popMatrix();
     } finally {
@@ -344,6 +352,10 @@ class Scene1 implements Scene {
   // ————————————————————————————————
   // Funções auxiliares
   // ————————————————————————————————
+  private boolean shouldDrawLegacySkySphere() {
+    return !(parent.hasEnvironmentBackground() && parent.isSphericalCaptureActive());
+  }
+
   private void changeRenderingMode(int mode) {
     renderer.setRenderingMode(mode);
     sun.setRenderingMode(mode);
@@ -525,6 +537,7 @@ class Scene1 implements Scene {
    * Limpa todos os recursos utilizados pela cena.
    */
   public void dispose() {
+    parent.clearEnvironmentBackground();
     textureManager.clear();
     configLoader.dispose();
     for (Planet p:planets) p.dispose();

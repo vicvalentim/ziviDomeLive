@@ -8,7 +8,7 @@ import processing.event.KeyEvent;
 import processing.opengl.PGraphicsOpenGL;
 import processing.opengl.PShader;
 
-zividomelive ziviDome;
+ziviDomeLive ziviDome;
 SceneManager sceneManager;
 
 void settings() {
@@ -19,7 +19,7 @@ void settings() {
 void setup() {
   surface.setTitle("ziviDomeLive - Calibration Tool");
 
-  ziviDome = new zividomelive(this);
+  ziviDome = new ziviDomeLive(this);
   ziviDome.setup();
   ziviDome.setRenderMode(RenderMode.FULL);
 
@@ -42,10 +42,10 @@ boolean handleCalibrationKey(KeyEvent event) {
 
   char pressed = Character.toLowerCase(event.getKey());
   switch (pressed) {
-    case '1': ziviDome.setCurrentView(zividomelive.ViewType.FISHEYE_DOMEMASTER); break;
-    case '2': ziviDome.setCurrentView(zividomelive.ViewType.EQUIRECTANGULAR); break;
-    case '3': ziviDome.setCurrentView(zividomelive.ViewType.CUBEMAP); break;
-    case '4': ziviDome.setCurrentView(zividomelive.ViewType.STANDARD); break;
+    case '1': ziviDome.setCurrentView(ViewType.DOMEMASTER); break;
+    case '2': ziviDome.setCurrentView(ViewType.EQUIRECTANGULAR); break;
+    case '3': ziviDome.setCurrentView(ViewType.SKYBOX); break;
+    case '4': ziviDome.setCurrentView(ViewType.STANDARD); break;
     case '[': ziviDome.setFishSize(max(0f, ziviDome.getFishSize() - 10f)); break;
     case ']': ziviDome.setFishSize(min(100f, ziviDome.getFishSize() + 10f)); break;
     case '-': ziviDome.setFov(max(0f, ziviDome.getFov() - 10f)); break;
@@ -64,7 +64,7 @@ boolean handleCalibrationKey(KeyEvent event) {
 }
 
 void resetCalibrationState() {
-  ziviDome.setCurrentView(zividomelive.ViewType.FISHEYE_DOMEMASTER);
+  ziviDome.setCurrentView(ViewType.DOMEMASTER);
   ziviDome.setFishSize(100f);
   ziviDome.setFov(210f);
   ziviDome.setPitch(0f);

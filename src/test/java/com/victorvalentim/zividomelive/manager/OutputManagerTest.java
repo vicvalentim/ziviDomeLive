@@ -1,13 +1,12 @@
 package com.victorvalentim.zividomelive.manager;
 
-import com.victorvalentim.zividomelive.zividomelive;
+import com.victorvalentim.zividomelive.ViewType;
+import com.victorvalentim.zividomelive.ziviDomeLive;
 import me.walkerknapp.devolay.DevolayFrameFormatType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assumptions;
 import processing.core.PApplet;
-
-import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -17,7 +16,7 @@ class OutputManagerTest {
 
 	@BeforeEach
 	void createOutputManager() {
-		zividomelive lib = new zividomelive(new PApplet());
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		try {
 			outputManager = new OutputManager(lib);
 		} catch (Throwable t) {
@@ -92,53 +91,47 @@ class OutputManagerTest {
 	@Test
 	void outputViewsDefaultToFisheyeDomemaster() {
 		for (OutputManager.OutputType type : OutputManager.OutputType.values()) {
-			assertEquals(zividomelive.ViewType.FISHEYE_DOMEMASTER, outputManager.getViewForOutput(type));
+			assertEquals(ViewType.DOMEMASTER, outputManager.getViewForOutput(type));
 		}
 	}
 
 	@Test
 	void setViewForOutputUpdatesMapping() {
-		outputManager.setViewForOutput(OutputManager.OutputType.NDI, zividomelive.ViewType.EQUIRECTANGULAR);
-		assertEquals(zividomelive.ViewType.EQUIRECTANGULAR,
+		outputManager.setViewForOutput(OutputManager.OutputType.NDI, ViewType.EQUIRECTANGULAR);
+		assertEquals(ViewType.EQUIRECTANGULAR,
 				outputManager.getViewForOutput(OutputManager.OutputType.NDI));
 	}
 
 	@Test
-	void ndiMetadataDefaultsToFacadeFrameRateAndProgressiveFrames() throws Exception {
-		zividomelive lib = new zividomelive(new PApplet());
+	void ndiMetadataDefaultsToFacadeFrameRateAndProgressiveFrames() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		lib.setTargetFrameRate(30);
 		OutputManager manager = new OutputManager(lib);
 
-		assertEquals(30, readIntField(manager, "ndiFrameRateNumerator"));
-		assertEquals(1, readIntField(manager, "ndiFrameRateDenominator"));
+		assertEquals(30, manager.ndiFrameRateNumerator());
+		assertEquals(1, manager.ndiFrameRateDenominator());
 		assertEquals(DevolayFrameFormatType.PROGRESSIVE, OutputManager.NDI_FRAME_FORMAT_TYPE);
 	}
 
 	@Test
-	void ndiFrameRateSupportsFractionalMetadataAndRejectsInvalidValues() throws Exception {
+	void ndiFrameRateSupportsFractionalMetadataAndRejectsInvalidValues() {
 		outputManager.setNdiFrameRate(60000, 1001);
 
-		assertEquals(60000, readIntField(outputManager, "ndiFrameRateNumerator"));
-		assertEquals(1001, readIntField(outputManager, "ndiFrameRateDenominator"));
+		assertEquals(60000, outputManager.ndiFrameRateNumerator());
+		assertEquals(1001, outputManager.ndiFrameRateDenominator());
 		assertThrows(IllegalArgumentException.class, () -> outputManager.setNdiFrameRate(0, 1));
 		assertThrows(IllegalArgumentException.class, () -> outputManager.setNdiFrameRate(60, 0));
 	}
 
 	@Test
-	void facadeFrameRateChangesUpdateNdiMetadataAfterSetup() throws Exception {
-		zividomelive lib = new zividomelive(new HeadlessApplet());
+	void facadeFrameRateChangesUpdateNdiMetadataAfterSetup() {
+		ziviDomeLive lib = new ziviDomeLive(new HeadlessApplet());
 		lib.setup();
 
 		lib.setTargetFrameRate(24);
 
-		assertEquals(24, readIntField(lib.getOutputManager(), "ndiFrameRateNumerator"));
-		assertEquals(1, readIntField(lib.getOutputManager(), "ndiFrameRateDenominator"));
-	}
-
-	private static int readIntField(OutputManager manager, String fieldName) throws Exception {
-		Field field = OutputManager.class.getDeclaredField(fieldName);
-		field.setAccessible(true);
-		return field.getInt(manager);
+		assertEquals(24, lib.getOutputManager().ndiFrameRateNumerator());
+		assertEquals(1, lib.getOutputManager().ndiFrameRateDenominator());
 	}
 
 	private static class HeadlessApplet extends PApplet {

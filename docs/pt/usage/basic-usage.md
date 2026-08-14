@@ -1,6 +1,6 @@
 # Modos de Renderização
 
-`RenderMode` controla a representação efetiva usada pela janela Processing e por cada output externo habilitado. Ele não seleciona um backend de output e não substitui a API legada de routing por `ViewType`.
+`RenderMode` controla a representação efetiva usada pela janela Processing e por cada output externo habilitado. Ele não seleciona um backend de output e não substitui a API de routing por `ViewType`.
 
 ## Modo de Compatibilidade FULL
 
@@ -8,12 +8,12 @@
 
 ```java
 dome.setRenderMode(RenderMode.FULL);
-dome.setCurrentView(zividomelive.ViewType.STANDARD);
+dome.setCurrentView(ViewType.STANDARD);
 
 OutputManager outputs = dome.getOutputManager();
-outputs.setNdiView(zividomelive.ViewType.EQUIRECTANGULAR);
-outputs.setSyphonView(zividomelive.ViewType.FISHEYE_DOMEMASTER);
-outputs.setSpoutView(zividomelive.ViewType.CUBEMAP);
+outputs.setNdiView(ViewType.EQUIRECTANGULAR);
+outputs.setSyphonView(ViewType.DOMEMASTER);
+outputs.setSpoutView(ViewType.SKYBOX);
 ```
 
 Somente outputs habilitados solicitam frames. Configurar uma rota ou preparar Syphon/Spout não ativa publicação nem adiciona requisito de renderização.
@@ -25,9 +25,9 @@ Modos dedicados forçam uma representação efetiva para o preview principal e t
 | `RenderMode` | `ViewType` efetivo | Pipeline principal |
 |---|---|---|
 | `STANDARD` | `STANDARD` | Renderer Standard perspectiva direto |
-| `DOMEMASTER` | `FISHEYE_DOMEMASTER` | Cubemap, equiretangular, fisheye |
+| `DOMEMASTER` | `DOMEMASTER` | Cubemap, fisheye samplerCube |
 | `EQUIRECTANGULAR` | `EQUIRECTANGULAR` | Cubemap, equiretangular |
-| `SKYBOX` | `CUBEMAP` | Cubemap, layout skybox |
+| `SKYBOX` | `SKYBOX` | Cubemap, layout skybox |
 
 ```java
 dome.setRenderMode(RenderMode.DOMEMASTER);
@@ -58,7 +58,7 @@ A biblioteca calcula o fechamento de dependências a cada frame:
 Standard                 -> somente Standard
 Layout cubemap           -> captura cubemap + layout
 Equirectangular          -> captura cubemap + equiretangular
-Domemaster fisheye       -> captura cubemap + equiretangular + fisheye
+Domemaster fisheye       -> captura cubemap + fisheye samplerCube
 ```
 
 Quando outputs habilitados solicitam views diferentes em `FULL`, seus requisitos são combinados. No máximo um cubemap mestre é capturado por frame. Consulte [Pipeline de Renderização](../architecture/rendering-pipeline.md) para a ordem completa.

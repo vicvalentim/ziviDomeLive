@@ -3,6 +3,7 @@ package com.victorvalentim.zividomelive;
 import com.victorvalentim.zividomelive.manager.*;
 import com.victorvalentim.zividomelive.render.*;
 import com.victorvalentim.zividomelive.render.camera.*;
+import com.victorvalentim.zividomelive.render.gl.*;
 import com.victorvalentim.zividomelive.render.modes.*;
 import com.victorvalentim.zividomelive.support.*;
 import processing.core.*;
@@ -14,7 +15,7 @@ import java.util.Set;
 import java.util.logging.Logger;
 
 /**
- * The `zividomelive` class manages rendering and control of a live dome visualization.
+ * The `ziviDomeLive` class manages rendering and control of a live dome visualization.
  * It integrates with Processing and `OutputManager` for dome rendering.
  *
  * <p>This class handles setup, initialization, and rendering of fisheye domemaster,
@@ -24,7 +25,7 @@ import java.util.logging.Logger;
  * handle mouse and key events, and render different views. The class also supports toggling
  * output methods (NDI, Spout, Syphon) and managing the current scene and view type.</p>
  */
-public class zividomelive implements PConstants {
+public class ziviDomeLive implements PConstants {
 
 	/**
 	 * Enum representing the initialization state of the library.
@@ -41,6 +42,7 @@ public class zividomelive implements PConstants {
 	}
 
 	private final PApplet p;
+	private final RenderPipeline renderPipeline;
 	private InitState initState = InitState.NOT_INITIALIZED;
 	private boolean paused;
 	private boolean disposed;
@@ -56,10 +58,12 @@ public class zividomelive implements PConstants {
 	private int targetFrameRate = 60;
 
 	// Shader resource paths (packaged under data/shaders by the build).
-	private static final String EQUIRECT_VERT = "data/shaders/equirectangular.vert";
-	private static final String EQUIRECT_FRAG = "data/shaders/equirectangular.frag";
-	private static final String DOME_VERT = "data/shaders/domemaster.vert";
-	private static final String DOME_FRAG = "data/shaders/domemaster.frag";
+	private static final String EQUIRECT_SAMPLERCUBE_VERT = "data/shaders/samplercube/equirectangular.vert";
+	private static final String EQUIRECT_SAMPLERCUBE_FRAG = "data/shaders/samplercube/equirectangular.frag";
+	private static final String DOME_SAMPLERCUBE_VERT = "data/shaders/samplercube/fisheye.vert";
+	private static final String DOME_SAMPLERCUBE_FRAG = "data/shaders/samplercube/fisheye.frag";
+	private static final String SKYBOX_SAMPLERCUBE_VERT = "data/shaders/samplercube/skybox.vert";
+	private static final String SKYBOX_SAMPLERCUBE_FRAG = "data/shaders/samplercube/skybox.frag";
 
 	private ControlManager controlManager;
 	// Output pipeline (high resolution)
@@ -84,27 +88,14 @@ public class zividomelive implements PConstants {
 	// Native scene-space orbit camera service (see OrbitCamera).
 	private final OrbitCamera sceneCamera = new OrbitCamera();
 	private boolean sceneCameraInputEnabled = false;
+	private final EnvironmentState environmentState = new EnvironmentState();
 	private OutputManager outputManager;
 	private boolean resumeNdiOutput;
 	private boolean resumeSpoutOutput;
 	private boolean resumeSyphonOutput;
 	private SplashScreen splash;
 	private SceneManager sceneManager;
-	private Scene fallbackScene;
-
-	/**
-	 * Enum representing the different types of views available.
-	 */
-	public enum ViewType {
-		/** Fisheye domemaster view. */
-		FISHEYE_DOMEMASTER,
-		/** Equirectangular view. */
-		EQUIRECTANGULAR,
-		/** Cubemap view. */
-		CUBEMAP,
-		/** Standard view. */
-		STANDARD
-	}
+	private Scene bootstrapScene;
 
 	/**
 	 * Aspect policy used to compute Standard output dimensions.
@@ -122,9 +113,10 @@ public class zividomelive implements PConstants {
 		ASPECT_1_1
 	}
 
-	private ViewType currentView = ViewType.FISHEYE_DOMEMASTER;
+	private ViewType currentView = ViewType.DOMEMASTER;
 	private RenderMode renderMode = RenderMode.FULL;
 	private StandardOutputAspectMode standardOutputAspectMode = StandardOutputAspectMode.AUTO;
+	private boolean sphericalCaptureActive = false;
 
 	private boolean pendingOutputReset = false;
 	private int pendingOutputResolution = outputResolution;
@@ -132,16 +124,17 @@ public class zividomelive implements PConstants {
 
 
 	/**
-	 * Constructs a new `zividomelive` instance with the specified PApplet.
+	 * Constructs a new `ziviDomeLive` instance with the specified PApplet.
 	 *
 	 * @param p the PApplet instance used for rendering
 	 * @throws IllegalArgumentException if the PApplet instance is null
 	 */
-	public zividomelive(PApplet p) {
+	public ziviDomeLive(PApplet p) {
 		if (p == null) {
 			throw new IllegalArgumentException("PApplet instance cannot be null.");
 		}
 		this.p = p;
+		this.renderPipeline = new RenderPipeline(this);
 		this.sceneManager = new SceneManager();
 
 		welcome();
@@ -150,7 +143,7 @@ public class zividomelive implements PConstants {
 
 	/**
 	 * Sets the global logging mode used by the library.
-	 * Call this before creating a zividomelive instance.
+	 * Call this before creating a ziviDomeLive instance.
 	 *
 	 * @param mode desired logging mode
 	 */
@@ -204,11 +197,11 @@ public class zividomelive implements PConstants {
 			LOGGER.warning("Cannot set a null scene.");
 			return;
 		}
-		if (fallbackScene != null
-				&& scene != fallbackScene
-				&& sceneManager.containsScene(fallbackScene)) {
+		if (bootstrapScene != null
+				&& scene != bootstrapScene
+				&& sceneManager.containsScene(bootstrapScene)) {
 			sceneManager.clearScenes();
-			fallbackScene = null;
+			bootstrapScene = null;
 		}
 		sceneManager.activateScene(scene);
 		syncCurrentSceneToRenderers();
@@ -272,8 +265,8 @@ public class zividomelive implements PConstants {
 		// Load DefaultScene through SceneManager when no user scene was selected before setup.
 		if (getCurrentScene() == null) {
 			try {
-				fallbackScene = new com.victorvalentim.zividomelive.scene.DefaultScene(p);
-				sceneManager.registerScene(fallbackScene);
+				bootstrapScene = new com.victorvalentim.zividomelive.scene.DefaultScene(p);
+				sceneManager.registerScene(bootstrapScene);
 				LOGGER.info("DefaultScene loaded successfully as the initial scene.");
 			} catch (Exception e) {
 				LOGGER.severe("Error initializing DefaultScene: " + e.getMessage());
@@ -292,14 +285,18 @@ public class zividomelive implements PConstants {
 	 * @param p the PApplet instance used for rendering
 	 */
 	public void printOpenGLInfo(PApplet p) {
-		if (p.g instanceof PGraphicsOpenGL pgl) {
-			PGL pglContext = pgl.beginPGL();
-
-			LOGGER.info("OpenGL Version: " + pglContext.getString(PGL.VERSION));
-			LOGGER.info("OpenGL Vendor: " + pglContext.getString(PGL.VENDOR));
-			LOGGER.info("OpenGL Renderer: " + pglContext.getString(PGL.RENDERER));
-
-			pgl.endPGL();
+		ProcessingGlCapabilities capabilities = ProcessingGlAdapter.getDefault().queryCapabilities(p);
+		if (capabilities.isOpenGlRenderer()) {
+			LOGGER.info("OpenGL Version: " + capabilities.version());
+			LOGGER.info("OpenGL Vendor: " + capabilities.vendor());
+			LOGGER.info("OpenGL Renderer: " + capabilities.renderer());
+			LOGGER.info("OpenGL Texture Support: " + capabilities.supportsTexture());
+			LOGGER.info("OpenGL FBO Support: " + capabilities.supportsFramebuffer());
+			LOGGER.info("OpenGL Cubemap Support: " + capabilities.supportsCubemap());
+			LOGGER.info("OpenGL Seamless Cubemap Support: " + capabilities.supportsSeamlessCubemap());
+			LOGGER.info("OpenGL Anisotropic Filtering Support: " + capabilities.supportsAnisotropicFiltering());
+			LOGGER.info("OpenGL PBO Support: " + capabilities.supportsPixelBufferObject());
+			LOGGER.info("OpenGL Fence Support: " + capabilities.supportsSyncFence());
 		} else {
 			LOGGER.severe("The current renderer is not OpenGL.");
 		}
@@ -364,7 +361,7 @@ public class zividomelive implements PConstants {
 			 * initialization during library startup so the later UI toggle is immediate.
 			 */
 			if (outputManager != null) {
-				outputManager.initializeLocalTextureOutput();
+				outputManager.initializeLocalTextureOutput(renderPipeline.finalFrameViews());
 
 				if (outputManager.isLocalTextureInitialized()) {
 					LOGGER.info(
@@ -467,28 +464,37 @@ public class zividomelive implements PConstants {
 				&& standardRenderer != null) {
 			return;
 		}
-		cubemapRenderer = new CubemapRenderer(outputResolution, p);
+		cubemapRenderer = new CubemapRenderer(outputResolution, p, environmentState);
 		LOGGER.info("CubemapRenderer (output) initialized at " + outputResolution + "px.");
-		equirectangularRenderer = new EquirectangularRenderer(outputResolution, EQUIRECT_FRAG, EQUIRECT_VERT, p);
+		equirectangularRenderer = new EquirectangularRenderer(
+				outputResolution,
+				EQUIRECT_SAMPLERCUBE_FRAG,
+				EQUIRECT_SAMPLERCUBE_VERT,
+				p);
 		LOGGER.info("EquirectangularRenderer (output) initialized.");
-		fisheyeDomemaster = new FisheyeDomemaster(outputResolution, DOME_FRAG, DOME_VERT, p);
+		fisheyeDomemaster = new FisheyeDomemaster(
+				outputResolution,
+				DOME_SAMPLERCUBE_FRAG,
+				DOME_SAMPLERCUBE_VERT,
+				p);
 		fisheyeDomemaster.setSizePercentage(fishSize);
 		LOGGER.info("FisheyeDomemaster (output) initialized.");
-		cubemapViewRenderer = new CubemapViewRenderer(p, outputResolution);
+		cubemapViewRenderer = new CubemapViewRenderer(
+				p,
+				outputResolution,
+				SKYBOX_SAMPLERCUBE_FRAG,
+				SKYBOX_SAMPLERCUBE_VERT);
 		LOGGER.info("CubemapViewRenderer (output) initialized.");
 		int[] standardOutputDimensions = computeStandardOutputDimensions();
 		standardRenderer = new StandardRenderer(
 				p,
 				standardOutputDimensions[0],
 				standardOutputDimensions[1],
-				getCurrentScene()
+				getCurrentScene(),
+				environmentState
 		);
 		LOGGER.info("StandardRenderer (output) initialized at "
 				+ standardOutputDimensions[0] + "×" + standardOutputDimensions[1] + "px.");
-		// Refresh OutputManager cache so Syphon/Spout have valid PGraphics references.
-		if (outputManager != null) {
-			outputManager.refreshCachedGraphics();
-		}
 	}
 
 	private int computePreviewResolution() {
@@ -683,15 +689,28 @@ public class zividomelive implements PConstants {
 	private void initializePreviewRenderers() {
 		previewResolution = computePreviewResolution();
 
-		previewCubemapRenderer = new CubemapRenderer(previewResolution, p);
-		previewEquirectangularRenderer = new EquirectangularRenderer(previewResolution, EQUIRECT_FRAG, EQUIRECT_VERT, p);
-		previewFisheyeDomemaster = new FisheyeDomemaster(previewResolution, DOME_FRAG, DOME_VERT, p);
+		previewCubemapRenderer = new CubemapRenderer(previewResolution, p, environmentState);
+		previewEquirectangularRenderer = new EquirectangularRenderer(
+				previewResolution,
+				EQUIRECT_SAMPLERCUBE_FRAG,
+				EQUIRECT_SAMPLERCUBE_VERT,
+				p);
+		previewFisheyeDomemaster = new FisheyeDomemaster(
+				previewResolution,
+				DOME_SAMPLERCUBE_FRAG,
+				DOME_SAMPLERCUBE_VERT,
+				p);
 		previewFisheyeDomemaster.setSizePercentage(fishSize);
-		previewCubemapViewRenderer = new CubemapViewRenderer(p, previewResolution);
+		previewCubemapViewRenderer = new CubemapViewRenderer(
+				p,
+				previewResolution,
+				SKYBOX_SAMPLERCUBE_FRAG,
+				SKYBOX_SAMPLERCUBE_VERT);
 
 		// Dynamic dimensions (0, 0) → renderer uses parent.width/parent.height each frame,
 		// preserving the window aspect ratio and handling window resize automatically.
-		standardRendererPreview = new StandardRenderer(p, 0, 0, getCurrentScene());
+		standardRendererPreview = new StandardRenderer(
+				p, 0, 0, getCurrentScene(), environmentState);
 
 		// Share camera so preview and output Standard views are always framing the same scene.
 		if (standardRenderer != null) {
@@ -705,7 +724,7 @@ public class zividomelive implements PConstants {
 	 * <p>Called at the beginning of each draw cycle. The Standard preview renderer is included
 	 * in the check because it belongs to the preview pipeline.</p>
 	 */
-	private void ensurePreviewRenderers() {
+	void ensurePreviewRenderers() {
 		int expected = computePreviewResolution();
 		if (previewCubemapRenderer == null
 				|| previewEquirectangularRenderer == null
@@ -720,9 +739,26 @@ public class zividomelive implements PConstants {
 
 	private void capturePreviewCubemap() {
 		if (previewCubemapRenderer != null) {
-			previewCubemapRenderer.captureCubemap(
-					sphericalOrientation.getQuaternion(), cameraManager, getCurrentScene());
+			sphericalCaptureActive = true;
+			try {
+				previewCubemapRenderer.captureCubemap(
+						sphericalOrientation.getQuaternion(), getCurrentScene());
+			} finally {
+				sphericalCaptureActive = false;
+			}
 		}
+	}
+
+	private CubemapTarget resolveMasterNativeCubemap(RenderRequirementsPolicy.Requirements output) {
+		if (output != null && output.needsCubemapSource()) {
+			return cubemapRenderer != null ? cubemapRenderer.getNativeCubemapTarget() : null;
+		}
+		return previewCubemapRenderer != null ? previewCubemapRenderer.getNativeCubemapTarget() : null;
+	}
+
+	private boolean hasMasterNativeCubemap(RenderRequirementsPolicy.Requirements output) {
+		CubemapTarget nativeCubemap = resolveMasterNativeCubemap(output);
+		return nativeCubemap != null && nativeCubemap.isAllocated();
 	}
 
 	/**
@@ -733,7 +769,7 @@ public class zividomelive implements PConstants {
 	 *
 	 * @return cached requirements for the current preview state
 	 */
-	private RenderRequirementsPolicy.Requirements computePreviewRequirements() {
+	RenderRequirementsPolicy.Requirements computePreviewRequirements() {
 		return RenderRequirementsPolicy.forPreview(renderMode, getCurrentView(), showPreview);
 	}
 
@@ -742,13 +778,13 @@ public class zividomelive implements PConstants {
 	 *
 	 * @return cached requirements for all enabled external-output routes
 	 */
-	private RenderRequirementsPolicy.Requirements computeOutputRequirements() {
+	RenderRequirementsPolicy.Requirements computeOutputRequirements() {
 		boolean outputsActive = outputManager != null && outputManager.isActive();
 		return RenderRequirementsPolicy.forOutputs(
 				outputsActive,
-				outputsActive && outputManager.requiresView(ViewType.FISHEYE_DOMEMASTER),
+				outputsActive && outputManager.requiresView(ViewType.DOMEMASTER),
 				outputsActive && outputManager.requiresView(ViewType.EQUIRECTANGULAR),
-				outputsActive && outputManager.requiresView(ViewType.CUBEMAP),
+				outputsActive && outputManager.requiresView(ViewType.SKYBOX),
 				outputsActive && outputManager.requiresView(ViewType.STANDARD)
 		);
 	}
@@ -762,22 +798,18 @@ public class zividomelive implements PConstants {
 	 *
 	 * @param preview preview requirements for the current frame
 	 * @param output output requirements for the current frame
-	 * @return master cubemap faces, or {@code null} when no cubemap is required
 	 */
-	private PGraphicsOpenGL[] captureMasterCubemap(
+	void captureMasterCubemap(
 			RenderRequirementsPolicy.Requirements preview,
 			RenderRequirementsPolicy.Requirements output) {
 		if (output.needsCubemapSource()) {
 			captureCubemap();
-			return cubemapRenderer != null ? cubemapRenderer.getCubemapFaces() : null;
+			return;
 		}
 
 		if (preview.needsCubemapSource()) {
 			capturePreviewCubemap();
-			return previewCubemapRenderer != null ? previewCubemapRenderer.getCubemapFaces() : null;
 		}
-
-		return null;
 	}
 
 	/**
@@ -798,10 +830,9 @@ public class zividomelive implements PConstants {
 	 *
 	 * <p>Must be called from the Processing draw thread after {@link #ensurePreviewRenderers()}.</p>
 	 */
-	private void renderPreviewPipeline(
+	void renderPreviewPipeline(
 			RenderRequirementsPolicy.Requirements preview,
-			RenderRequirementsPolicy.Requirements output,
-			PGraphicsOpenGL[] masterFaces) {
+			RenderRequirementsPolicy.Requirements output) {
 		if (preview.needsStandard()) {
 			standardRendererPreview.render();
 		}
@@ -810,7 +841,7 @@ public class zividomelive implements PConstants {
 			if (output.needsEquirectangular() && output.needsCubemapSource()) {
 				copyToPreview(equirectangularRenderer.getEquirectangular(), previewEquirectangularRenderer.getEquirectangular());
 			} else {
-				previewEquirectangularRenderer.render(masterFaces);
+				previewEquirectangularRenderer.render(resolveMasterNativeCubemap(output));
 			}
 		}
 
@@ -818,7 +849,9 @@ public class zividomelive implements PConstants {
 			if (output.needsFisheye()) {
 				copyToPreview(fisheyeDomemaster.getDomemasterGraphics(), previewFisheyeDomemaster.getDomemasterGraphics());
 			} else {
-				previewFisheyeDomemaster.applyShader(previewEquirectangularRenderer.getEquirectangular(), getFov());
+				previewFisheyeDomemaster.applyShader(
+						resolveMasterNativeCubemap(output),
+						getFov());
 			}
 		}
 
@@ -826,7 +859,7 @@ public class zividomelive implements PConstants {
 			if (output.needsCubemapLayout() && output.needsCubemapSource()) {
 				copyToPreview(cubemapViewRenderer.getCubemap(), previewCubemapViewRenderer.getCubemap());
 			} else {
-				previewCubemapViewRenderer.drawCubemapToGraphics(masterFaces);
+				previewCubemapViewRenderer.drawCubemapToGraphics(resolveMasterNativeCubemap(output));
 			}
 		}
 	}
@@ -838,7 +871,7 @@ public class zividomelive implements PConstants {
 	 * and remain offscreen. They are never composited onto the Processing window. After this
 	 * method returns, all relevant {@code endDraw()} calls have completed and the FBOs are
 	 * ready for
-	 * {@link com.victorvalentim.zividomelive.manager.OutputManager#sendOutput()}.</p>
+	 * {@link com.victorvalentim.zividomelive.manager.OutputManager#sendOutput(FrameViews)}.</p>
 	 *
 	 * <p>The set of passes is derived from
 	 * {@link com.victorvalentim.zividomelive.manager.OutputManager#requiresView(ViewType)}:
@@ -846,33 +879,68 @@ public class zividomelive implements PConstants {
 	 * output passes that need it.</p>
 	 *
 	 * <p>Example: NDI requests equirectangular, Syphon requests fisheye →
-	 * one cubemap capture → one equirectangular pass → one fisheye pass.</p>
+	 * one cubemap capture → one equirectangular samplerCube pass and one fisheye
+	 * samplerCube pass.</p>
 	 *
 	 * <p>Returns immediately when {@code outputManager} is {@code null} or inactive.
 	 * Must be called from the Processing draw thread.</p>
 	 */
-	private void renderOutputPipeline(
-			RenderRequirementsPolicy.Requirements output,
-			PGraphicsOpenGL[] masterFaces) {
-		if (output.needsCubemapSource() && masterFaces == null) {
+	void renderOutputPipeline(RenderRequirementsPolicy.Requirements output) {
+		if (output.needsCubemapSource() && !hasMasterNativeCubemap(output)) {
 			return;
 		}
 
 		if (output.needsEquirectangular()) {
-			equirectangularRenderer.render(masterFaces);
+			equirectangularRenderer.render(
+					cubemapRenderer != null ? cubemapRenderer.getNativeCubemapTarget() : null);
 		}
 
 		if (output.needsFisheye()) {
 			fisheyeDomemaster.applyShader(
-					equirectangularRenderer.getEquirectangular(), getFov());
+					cubemapRenderer != null ? cubemapRenderer.getNativeCubemapTarget() : null,
+					getFov());
 		}
 
 		if (output.needsCubemapLayout()) {
-			cubemapViewRenderer.drawCubemapToGraphics(masterFaces);
+			cubemapViewRenderer.drawCubemapToGraphics(
+					cubemapRenderer != null ? cubemapRenderer.getNativeCubemapTarget() : null);
 		}
 
 		if (output.needsStandard()) {
 			standardRenderer.render();
+		}
+	}
+
+	/**
+	 * Resolves a completed high-resolution output target without exposing its producer.
+	 *
+	 * <p>The returned target is owned by the existing renderer backend and remains valid only
+	 * until that backend is reallocated or disposed.</p>
+	 */
+	PGraphicsOpenGL resolveFinalFrame(ViewType view) {
+		if (view == null) {
+			return null;
+		}
+
+		switch (view) {
+			case DOMEMASTER:
+				return fisheyeDomemaster != null
+						? fisheyeDomemaster.getDomemasterGraphics()
+						: null;
+			case EQUIRECTANGULAR:
+				return equirectangularRenderer != null
+						? equirectangularRenderer.getEquirectangular()
+						: null;
+			case SKYBOX:
+				return cubemapViewRenderer != null
+						? cubemapViewRenderer.getCubemap()
+						: null;
+			case STANDARD:
+				return standardRenderer != null
+						? standardRenderer.getStandardView()
+						: null;
+			default:
+				return null;
 		}
 	}
 
@@ -883,16 +951,16 @@ public class zividomelive implements PConstants {
 	 * {@link processing.core.PApplet#image(processing.core.PImage, float, float, float, float)}
 	 * here. Output FBOs are never drawn onto the main window by this method.</p>
 	 */
-	private void displayPreviewCurrentView() {
+	void displayPreviewCurrentView() {
 		ViewType effectiveView = RenderRequirementsPolicy.resolveView(renderMode, getCurrentView());
 		switch (effectiveView) {
-			case CUBEMAP:
+			case SKYBOX:
 				displayView(previewCubemapViewRenderer.getCubemap());
 				break;
 			case EQUIRECTANGULAR:
 				displayView(previewEquirectangularRenderer.getEquirectangular());
 				break;
-			case FISHEYE_DOMEMASTER:
+			case DOMEMASTER:
 				displayView(previewFisheyeDomemaster.getDomemasterGraphics());
 				break;
 			case STANDARD:
@@ -911,7 +979,7 @@ public class zividomelive implements PConstants {
 		}
 
 		// Renderiza o conteúdo principal em segundo plano
-		renderContent();
+		renderPipeline.renderFrame();
 
 		// Atualiza e renderiza a splash screen enquanto ativa
 		if (splash != null && splash.showSplash) {
@@ -931,56 +999,11 @@ public class zividomelive implements PConstants {
 		}
 	}
 
-	/**
-	 * Executes the independent preview and external-output rendering pipelines for one frame.
-	 *
-	 * <p>The Processing window always displays preview-resolution FBOs. High-resolution output
-	 * FBOs remain offscreen and are submitted only to enabled backends after all relevant
-	 * {@code endDraw()} calls have completed.</p>
-	 *
-	 * <p>Frame order:</p>
-	 * <ol>
-	 *   <li>Clear the window background.</li>
-	 *   <li>Apply any pending output-resolution change (output FBOs only, preview unaffected).</li>
-	 *   <li>Ensure preview FBOs are valid for the current window size.</li>
-	 *   <li>Resolve preview and output requirements, then capture at most one master cubemap.</li>
-	 *   <li>When at least one output is active, run its minimal projection passes and submit
-	 *       completed targets to the enabled backends.</li>
-	 *   <li>Run the preview passes, reusing completed output projections when available.</li>
-	 *   <li>Composite the preview FBO onto the window.</li>
-	 *   <li>Optionally draw the floating fisheye thumbnail (preview FBO only).</li>
-	 *   <li>Draw the control panel.</li>
-	 * </ol>
-	 */
-	void renderContent() {
-		if (standardRendererPreview == null || standardRenderer == null || getCurrentScene() == null) {
-			LOGGER.severe("Cannot render content: renderer or scene not initialized.");
-			return;
-		}
-
-		clearBackground();
-		handleGraphicsReset();
-		ensurePreviewRenderers();
-		syncCurrentSceneToRenderers();
-
-		RenderRequirementsPolicy.Requirements preview = computePreviewRequirements();
-		RenderRequirementsPolicy.Requirements output = computeOutputRequirements();
-		PGraphicsOpenGL[] masterFaces = captureMasterCubemap(preview, output);
-
-		if (outputManager != null && outputManager.isActive()) {
-			renderOutputPipeline(output, masterFaces);
-			outputManager.sendOutput();
-		}
-
-		renderPreviewPipeline(preview, output, masterFaces);
-
-		// Only preview FBOs are composited onto the main window.
-		displayPreviewCurrentView();
-
-		if (showPreview) {
-			drawFloatingPreview();
-		}
-		drawControlPanel();
+	/** Returns whether the current renderer backend and active scene can produce a frame. */
+	boolean isRenderContentReady() {
+		return standardRendererPreview != null
+				&& standardRenderer != null
+				&& getCurrentScene() != null;
 	}
 
 	void clearBackground() {
@@ -994,7 +1017,7 @@ public class zividomelive implements PConstants {
 	 * on the next published frame via
 	 * {@link com.victorvalentim.zividomelive.manager.OutputManager#notifyResolutionChanged(int)}.</p>
 	 */
-	private void handleGraphicsReset() {
+	void handleGraphicsReset() {
 		if (pendingOutputReset) {
 			LOGGER.info("Applying output resolution change: " + pendingOutputResolution + "px.");
 			releaseOutputGraphicsResources();
@@ -1017,8 +1040,13 @@ public class zividomelive implements PConstants {
 	 */
 	private void captureCubemap() {
 		if (cubemapRenderer != null) {
-			cubemapRenderer.captureCubemap(
-					sphericalOrientation.getQuaternion(), cameraManager, getCurrentScene());
+			sphericalCaptureActive = true;
+			try {
+				cubemapRenderer.captureCubemap(
+						sphericalOrientation.getQuaternion(), getCurrentScene());
+			} finally {
+				sphericalCaptureActive = false;
+			}
 		} else {
 			LOGGER.severe("Error: CubemapRenderer not initialized.");
 		}
@@ -1044,16 +1072,16 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
-	 * Sets the current view to {@link ViewType#FISHEYE_DOMEMASTER}.
+	 * Sets the current view to {@link ViewType#DOMEMASTER}.
 	 *
-	 * @deprecated The library's internal draw loop ({@code draw()} → {@code renderContent()})
+	 * @deprecated The library's internal draw loop ({@code draw()} → {@code RenderPipeline})
 	 *             renders every frame automatically. Call {@link #setCurrentView(ViewType)}
 	 *             directly and let the pipeline handle the rest. This method is retained for
 	 *             source compatibility only.
 	 */
 	@Deprecated
 	public void renderFisheyeDomemaster() {
-		setCurrentView(ViewType.FISHEYE_DOMEMASTER);
+		setCurrentView(ViewType.DOMEMASTER);
 	}
 
 	/**
@@ -1067,13 +1095,13 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
-	 * Sets the current view to {@link ViewType#CUBEMAP}.
+	 * Sets the current view to {@link ViewType#SKYBOX}.
 	 *
 	 * @deprecated See {@link #renderFisheyeDomemaster()} for migration guidance.
 	 */
 	@Deprecated
 	public void renderCubemap() {
-		setCurrentView(ViewType.CUBEMAP);
+		setCurrentView(ViewType.SKYBOX);
 	}
 
 	/**
@@ -1089,7 +1117,7 @@ public class zividomelive implements PConstants {
 	/**
 	 * Draws the control panel if it is set to be shown.
 	 */
-	private void drawControlPanel() {
+	void drawControlPanel() {
 		p.hint(DISABLE_DEPTH_TEST);
 		controlManager.updateFpsLabel(p.frameRate);
 
@@ -1106,7 +1134,7 @@ public class zividomelive implements PConstants {
 	 *
 	 * <p>Uses exclusively the preview fisheye FBO ({@code previewFisheyeDomemaster}).
 	 * If the FBO is not yet available the method returns safely without drawing anything.
-	 * The output fisheye FBO is never used as a fallback.</p>
+	 * The output fisheye FBO is never substituted for the preview target.</p>
 	 *
 	 * <p>{@code renderPreviewPipeline()} guarantees the fisheye FBO is populated before
 	 * this method is called whenever {@code showPreview} is {@code true}.</p>
@@ -1262,7 +1290,7 @@ public class zividomelive implements PConstants {
 	}
 
 	/** Keeps stateful Standard renderers aligned with the authoritative SceneManager. */
-	private void syncCurrentSceneToRenderers() {
+	void syncCurrentSceneToRenderers() {
 		Scene activeScene = getCurrentScene();
 		if (standardRenderer != null) {
 			standardRenderer.setCurrentScene(activeScene);
@@ -1571,24 +1599,24 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
-	 * Gets the configured legacy preview view.
+	 * Gets the configured preview view.
 	 *
 	 * <p>In a dedicated {@link RenderMode}, the effective representation is controlled by that
 	 * mode while this value is preserved for a later return to {@link RenderMode#FULL}.</p>
 	 *
-	 * @return configured legacy preview view
+	 * @return configured preview view
 	 */
 	public ViewType getCurrentView() {
 		return currentView;
 	}
 
 	/**
-	 * Sets the configured legacy preview view.
+	 * Sets the configured preview view.
 	 *
 	 * <p>The selection takes effect immediately in {@link RenderMode#FULL}. Dedicated modes keep
 	 * it as the preview selection to restore when FULL is selected again.</p>
 	 *
-	 * @param currentView new legacy preview view
+	 * @param currentView new preview view
 	 */
 	public void setCurrentView(ViewType currentView) {
 		this.currentView = currentView;
@@ -1755,6 +1783,124 @@ public class zividomelive implements PConstants {
 	}
 
 	/**
+	 * Reports whether the current {@link Scene#sceneRender(PGraphicsOpenGL)} call is being
+	 * executed by a spherical cubemap capture pass.
+	 *
+	 * <p>Scenes can use this to skip viewport-only background geometry, HUDs, or helper
+	 * elements that should not be baked into domemaster, equirectangular, or skybox outputs.
+	 * The method does not change the {@code sceneRender(PGraphicsOpenGL)} contract; it only
+	 * exposes the current renderer phase.</p>
+	 *
+	 * @return {@code true} while a cubemap capture pass is rendering the scene
+	 * @since 2.0.0
+	 */
+	public boolean isSphericalCaptureActive() {
+		return sphericalCaptureActive;
+	}
+
+	/**
+	 * Sets an LDR equirectangular environment background for all render modes.
+	 *
+	 * <p>The image is rendered by the library as an infinite far-depth background after the
+	 * active {@link Scene} is drawn. This keeps backgrounds out of scene geometry, survives
+	 * scene-owned {@code background()} calls, and makes the same environment available to
+	 * domemaster, equirectangular, skybox, and Standard projections. In Standard view the
+	 * environment follows camera rotation but remains invariant under camera translation.
+	 * Passing {@code null} clears the environment.</p>
+	 *
+	 * @param image equirectangular Processing image, or {@code null} to clear
+	 */
+	public void setEquirectangularBackground(PImage image) {
+		environmentState.setLdrEquirectangularSource(image);
+	}
+
+	/**
+	 * Loads and sets an LDR equirectangular environment background from the sketch data path.
+	 *
+	 * @param imagePath Processing data path or absolute image path
+	 */
+	public void setEquirectangularBackground(String imagePath) {
+		if (imagePath == null || imagePath.isBlank()) {
+			clearEnvironmentBackground();
+			return;
+		}
+		PImage image = p.loadImage(imagePath);
+		if (image == null) {
+			LOGGER.warning("Could not load equirectangular environment background: " + imagePath);
+			return;
+		}
+		setEquirectangularBackground(image);
+	}
+
+	/** Clears the configured environment background. */
+	public void clearEnvironmentBackground() {
+		setEquirectangularBackground((PImage) null);
+	}
+
+	/**
+	 * Reports whether an environment background image is currently configured.
+	 *
+	 * @return {@code true} when an image is configured
+	 */
+	public boolean hasEnvironmentBackground() {
+		return environmentState.hasSource();
+	}
+
+	/**
+	 * Shows or hides the configured environment background without releasing the image.
+	 *
+	 * @param visible {@code true} to draw the environment background
+	 */
+	public void setEnvironmentBackgroundVisible(boolean visible) {
+		environmentState.setVisible(visible);
+	}
+
+	/**
+	 * Reports whether the configured environment background is visible.
+	 *
+	 * @return {@code true} when visible
+	 */
+	public boolean isEnvironmentBackgroundVisible() {
+		return environmentState.isVisible();
+	}
+
+	/**
+	 * Sets the colour multiplier applied to the LDR environment background.
+	 *
+	 * @param intensity non-negative colour multiplier
+	 */
+	public void setEnvironmentBackgroundIntensity(float intensity) {
+		environmentState.setIntensity(intensity);
+	}
+
+	/**
+	 * Returns the current environment background colour multiplier.
+	 *
+	 * @return non-negative colour multiplier
+	 */
+	public float getEnvironmentBackgroundIntensity() {
+		return environmentState.getIntensity();
+	}
+
+	/**
+	 * Rotates the equirectangular environment lookup around the vertical axis.
+	 *
+	 * @param yawOffset radians added to the source longitude lookup
+	 */
+	public void setEnvironmentBackgroundYawOffset(float yawOffset) {
+		environmentState.setYawOffset(yawOffset);
+	}
+
+	/**
+	 * Returns the current equirectangular environment yaw offset.
+	 *
+	 * @return yaw offset in radians
+	 */
+	public float getEnvironmentBackgroundYawOffset() {
+		return environmentState.getYawOffset();
+	}
+
+	/**
 	 * Enables or disables built-in mouse handling for the scene camera.
 	 * When enabled, the library forwards mouse drag/wheel events to
 	 * {@link #getSceneCamera()} automatically.
@@ -1782,6 +1928,10 @@ public class zividomelive implements PConstants {
 	public PApplet getPApplet() {
 
 		return p;
+	}
+
+	EnvironmentState getEnvironmentState() {
+		return environmentState;
 	}
 
 	/**
@@ -1854,7 +2004,7 @@ public class zividomelive implements PConstants {
 			}
 		}
 		this.sceneManager = sceneManager;
-		fallbackScene = null;
+		bootstrapScene = null;
 		syncCurrentSceneToRenderers();
 	}
 
@@ -2000,12 +2150,13 @@ public class zividomelive implements PConstants {
 				LOGGER.warning("SceneManager disposal failed: " + error.getMessage());
 			}
 		}
-		fallbackScene = null;
+		bootstrapScene = null;
 		try {
 			releaseGraphicsResources();
 		} catch (RuntimeException | LinkageError error) {
 			LOGGER.warning("Renderer disposal failed: " + error.getMessage());
 		}
+		environmentState.clearSource();
 		if (cameraManager != null) {
 			try {
 				cameraManager.dispose();

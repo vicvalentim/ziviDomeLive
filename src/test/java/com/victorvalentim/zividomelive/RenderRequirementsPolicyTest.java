@@ -8,34 +8,34 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class RenderRequirementsPolicyTest {
 
 	@Test
-	void previewRequirementsPreserveEveryLegacyView() {
+	void previewRequirementsPreserveEveryView() {
 		assertRequirements(
 				RenderRequirementsPolicy.forPreview(
-						RenderMode.FULL, zividomelive.ViewType.FISHEYE_DOMEMASTER, false),
-				true, true, false, false, true);
+						RenderMode.FULL, ViewType.DOMEMASTER, false),
+				true, false, false, false, true);
 		assertRequirements(
 				RenderRequirementsPolicy.forPreview(
-						RenderMode.FULL, zividomelive.ViewType.EQUIRECTANGULAR, false),
+						RenderMode.FULL, ViewType.EQUIRECTANGULAR, false),
 				false, true, false, false, true);
 		assertRequirements(
 				RenderRequirementsPolicy.forPreview(
-						RenderMode.FULL, zividomelive.ViewType.CUBEMAP, false),
+						RenderMode.FULL, ViewType.SKYBOX, false),
 				false, false, true, false, true);
 		assertRequirements(
 				RenderRequirementsPolicy.forPreview(
-						RenderMode.FULL, zividomelive.ViewType.STANDARD, false),
+						RenderMode.FULL, ViewType.STANDARD, false),
 				false, false, false, true, false);
 	}
 
 	@Test
 	void floatingPreviewAddsFisheyeChainWithoutDroppingSelectedView() {
 		RenderRequirementsPolicy.Requirements standard = RenderRequirementsPolicy.forPreview(
-				RenderMode.FULL, zividomelive.ViewType.STANDARD, true);
-		assertRequirements(standard, true, true, false, true, true);
+				RenderMode.FULL, ViewType.STANDARD, true);
+		assertRequirements(standard, true, false, false, true, true);
 
 		RenderRequirementsPolicy.Requirements cubemap = RenderRequirementsPolicy.forPreview(
-				RenderMode.FULL, zividomelive.ViewType.CUBEMAP, true);
-		assertRequirements(cubemap, true, true, true, false, true);
+				RenderMode.FULL, ViewType.SKYBOX, true);
+		assertRequirements(cubemap, true, false, true, false, true);
 	}
 
 	@Test
@@ -67,7 +67,7 @@ class RenderRequirementsPolicyTest {
 			assertRequirements(
 					requirements,
 					fisheye,
-					equirectangular || fisheye,
+					equirectangular,
 					cubemap,
 					standard,
 					fisheye || equirectangular || cubemap);

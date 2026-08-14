@@ -48,7 +48,7 @@ group = "com.victorvalentim.zividomelive"
 // - MINOR: Increases when you add new features that are backward-compatible.
 // - PATCH: Increases when you make backward-compatible bug fixes.
 // You can update these numbers as you release new versions of your library.
-version = "1.5.0"
+version = "2.0.0"
 
 tasks.register("verifyReleaseTag") {
     group = "verification"

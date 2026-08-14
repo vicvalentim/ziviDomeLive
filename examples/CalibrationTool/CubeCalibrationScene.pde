@@ -5,12 +5,12 @@ class CubeCalibrationScene implements Scene {
   private final int ANNOTATION_TEXTURE_SIZE = 1024;
   private final int GRID_DIVISIONS = 24;
 
-  private final zividomelive dome;
+  private final ziviDomeLive dome;
   private PShader calibrationShader;
   private PGraphicsOpenGL[] annotationMaps;
   private boolean shaderFailureReported;
 
-  CubeCalibrationScene(zividomelive dome) {
+  CubeCalibrationScene(ziviDomeLive dome) {
     this.dome = dome;
   }
 

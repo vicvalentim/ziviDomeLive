@@ -1,6 +1,6 @@
 # Lifecycle de Runtime
 
-A fachada `zividomelive` controla registro de hooks Processing, inicialização de managers, update de cenas, renderização, encaminhamento de entrada, pause/resume e descarte terminal.
+A fachada `ziviDomeLive` controla registro de hooks Processing, inicialização de managers, update de cenas, recursos dos renderers, encaminhamento de entrada, pause/resume e descarte terminal. Seu hook `draw()` delega a ordem de cada frame ao `RenderPipeline` interno, que usa o backend existente sem mudar ownership dos targets.
 
 ## Estados de Inicialização
 
@@ -17,7 +17,7 @@ Sequência típica:
 construtor
   -> registra hooks pre/draw/post/input/dispose
 setup()
-  -> frame rate, diagnóstico OpenGL, hints, OutputManager, splash, cena fallback
+  -> frame rate, diagnóstico OpenGL, hints, OutputManager, splash, cena bootstrap
 primeiro post()
   -> CameraManager, renderers de output/preview, preparação Syphon/Spout, ControlManager
   -> MANAGERS_READY
@@ -30,7 +30,7 @@ primeiro post()
 | Hook | Responsabilidade |
 |---|---|
 | `pre()` | Atualizar `OrbitCamera` compartilhado e chamar `Scene.update()` ativa uma vez |
-| `draw()` | Renderizar targets, enviar outputs, compor preview e desenhar controles |
+| `draw()` | Delegar a ordem do frame ao `RenderPipeline` e depois tratar o splash |
 | `post()` | Inicializar managers uma vez depois do setup Processing |
 | `keyEvent()` | Atalhos globais e encaminhamento à cena ativa |
 | `mouseEvent()` | Câmera da cena opcional, câmera Standard e cena ativa |

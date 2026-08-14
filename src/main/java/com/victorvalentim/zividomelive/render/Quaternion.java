@@ -85,6 +85,22 @@ public class Quaternion {
      */
     public PMatrix3D toMatrix() {
         PMatrix3D m = new PMatrix3D();
+        toMatrix(m);
+        return m;
+    }
+
+    /**
+     * Writes this quaternion's rotation matrix into a caller-owned matrix.
+     *
+     * <p>This allocation-free overload preserves the exact qualified orientation math used by
+     * {@link #toMatrix()}.</p>
+     *
+     * @param m destination matrix; must not be {@code null}
+     */
+    public void toMatrix(PMatrix3D m) {
+        if (m == null) {
+            throw new IllegalArgumentException("Destination matrix cannot be null.");
+        }
         float xx = x * x;
         float yy = y * y;
         float zz = z * z;
@@ -107,7 +123,6 @@ public class Quaternion {
         m.m03 = m.m13 = m.m23 = 0f;
         m.m30 = m.m31 = m.m32 = 0f;
         m.m33 = 1f;
-        return m;
     }
 
     /**

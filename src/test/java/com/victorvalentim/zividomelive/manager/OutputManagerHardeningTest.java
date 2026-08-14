@@ -1,6 +1,7 @@
 package com.victorvalentim.zividomelive.manager;
 
-import com.victorvalentim.zividomelive.zividomelive;
+import com.victorvalentim.zividomelive.ViewType;
+import com.victorvalentim.zividomelive.ziviDomeLive;
 import me.walkerknapp.devolay.DevolayFrameFormatType;
 import me.walkerknapp.devolay.DevolayFrameFourCCType;
 import org.junit.jupiter.api.Test;
@@ -41,7 +42,7 @@ class OutputManagerHardeningTest {
 
 	@Test
 	void defaultStatesReflectPlatformWithoutEnablingPublication() {
-		OutputManager manager = new OutputManager(new zividomelive(new PApplet()));
+		OutputManager manager = new OutputManager(new ziviDomeLive(new PApplet()));
 
 		assertEquals(OutputManager.OutputState.AVAILABLE,
 				manager.getOutputState(OutputManager.OutputType.NDI));
@@ -70,7 +71,7 @@ class OutputManagerHardeningTest {
 		}
 
 		assertFalse(manager.isActive());
-		assertFalse(manager.requiresView(zividomelive.ViewType.FISHEYE_DOMEMASTER));
+		assertFalse(manager.requiresView(ViewType.DOMEMASTER));
 	}
 
 	@Test
@@ -108,10 +109,10 @@ class OutputManagerHardeningTest {
 
 	@Test
 	void ndiPipelineKeepsThreeBoundedFrameSlots() throws Exception {
-		OutputManager manager = new OutputManager(new zividomelive(new PApplet()));
-		Object[] slots = (Object[]) readField(manager, "ndiSlots");
-		BlockingQueue<?> freeSlots = (BlockingQueue<?>) readField(manager, "ndiFreeSlots");
-		BlockingQueue<?> readySlots = (BlockingQueue<?>) readField(manager, "ndiReadySlots");
+		NdiOutputBackend backend = new NdiOutputBackend(60, 1_000);
+		Object[] slots = (Object[]) readField(backend, "ndiSlots");
+		BlockingQueue<?> freeSlots = (BlockingQueue<?>) readField(backend, "ndiFreeSlots");
+		BlockingQueue<?> readySlots = (BlockingQueue<?>) readField(backend, "ndiReadySlots");
 
 		assertAll(
 				() -> assertEquals(3, slots.length),
@@ -121,7 +122,7 @@ class OutputManagerHardeningTest {
 
 	@Test
 	void ndiShutdownIsBoundedAndDefersCleanupUntilWorkerStops() throws Exception {
-		OutputManager manager = new OutputManager(new zividomelive(new PApplet()), 25);
+		NdiOutputBackend backend = new NdiOutputBackend(60, 25);
 		CountDownLatch started = new CountDownLatch(1);
 		CountDownLatch release = new CountDownLatch(1);
 		Thread worker = new Thread(() -> {
@@ -138,23 +139,23 @@ class OutputManagerHardeningTest {
 		worker.start();
 		assertTrue(started.await(1, TimeUnit.SECONDS));
 
-		setField(manager, "ndiWorkerThread", worker);
-		setField(manager, "ndiWorkerRunning", true);
-		setField(manager, "ndiEnabled", true);
+		setField(backend, "ndiWorkerThread", worker);
+		setField(backend, "ndiWorkerRunning", true);
+		setField(backend, "ndiEnabled", true);
 
 		try {
 			long startedAt = System.nanoTime();
-			manager.shutdownOutputs();
+			backend.shutdown();
 			Duration elapsed = Duration.ofNanos(System.nanoTime() - startedAt);
 
 			assertTrue(elapsed.compareTo(Duration.ofMillis(500)) < 0, elapsed.toString());
 			assertEquals(OutputManager.OutputState.STOPPING,
-					manager.getOutputState(OutputManager.OutputType.NDI));
-			assertTrue(manager.getOutputFailureReason(OutputManager.OutputType.NDI)
+					backend.state());
+			assertTrue(backend.failureReason()
 					.contains("native cleanup was deferred"));
 
 			long repeatedAt = System.nanoTime();
-			manager.shutdownOutputs();
+			backend.shutdown();
 			Duration repeated = Duration.ofNanos(System.nanoTime() - repeatedAt);
 			assertTrue(repeated.compareTo(Duration.ofMillis(100)) < 0, repeated.toString());
 		} finally {
@@ -162,26 +163,26 @@ class OutputManagerHardeningTest {
 			worker.join(1_000);
 		}
 
-		manager.shutdownOutputs();
+		backend.shutdown();
 		assertEquals(OutputManager.OutputState.AVAILABLE,
-				manager.getOutputState(OutputManager.OutputType.NDI));
+				backend.state());
 	}
 
 	@Test
 	void constructorRejectsInvalidShutdownTimeout() {
-		zividomelive dome = new zividomelive(new PApplet());
+		ziviDomeLive dome = new ziviDomeLive(new PApplet());
 		assertThrows(IllegalArgumentException.class, () -> new OutputManager(dome, 0));
 	}
 
-	private static void setField(OutputManager manager, String fieldName, Object value) throws Exception {
-		Field field = OutputManager.class.getDeclaredField(fieldName);
+	private static void setField(Object target, String fieldName, Object value) throws Exception {
+		Field field = target.getClass().getDeclaredField(fieldName);
 		field.setAccessible(true);
-		field.set(manager, value);
+		field.set(target, value);
 	}
 
-	private static Object readField(OutputManager manager, String fieldName) throws Exception {
-		Field field = OutputManager.class.getDeclaredField(fieldName);
+	private static Object readField(Object target, String fieldName) throws Exception {
+		Field field = target.getClass().getDeclaredField(fieldName);
 		field.setAccessible(true);
-		return field.get(manager);
+		return field.get(target);
 	}
 }

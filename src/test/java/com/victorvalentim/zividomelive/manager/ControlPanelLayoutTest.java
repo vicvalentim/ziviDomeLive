@@ -1,7 +1,7 @@
 package com.victorvalentim.zividomelive.manager;
 
 import com.victorvalentim.zividomelive.RenderMode;
-import com.victorvalentim.zividomelive.zividomelive;
+import com.victorvalentim.zividomelive.ViewType;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -144,15 +144,15 @@ class ControlPanelLayoutTest {
 	}
 
 	@Test
-	void viewLabelsKeepCompatibilityLockedEnumOrder() {
+	void viewLabelsMatchFinalViewTypeOrder() {
 		assertEquals(
-				List.of("Fisheye Domemaster", "Equirectangular", "Cubemap Skybox", "Standard"),
+				List.of("Standard", "Domemaster", "Equirectangular", "Skybox"),
 				ControlPanelLayout.viewLabels());
-		for (int index = 0; index < zividomelive.ViewType.values().length; index++) {
-			assertEquals(zividomelive.ViewType.values()[index], ControlPanelLayout.viewForIndex(index));
-			assertEquals(index, ControlPanelLayout.indexForView(zividomelive.ViewType.values()[index]));
+		for (int index = 0; index < ViewType.values().length; index++) {
+			assertEquals(ViewType.values()[index], ControlPanelLayout.viewForIndex(index));
+			assertEquals(index, ControlPanelLayout.indexForView(ViewType.values()[index]));
 		}
-		assertEquals(0, ControlPanelLayout.indexForView(null));
+		assertEquals(ViewType.DOMEMASTER.ordinal(), ControlPanelLayout.indexForView(null));
 	}
 
 	@Test

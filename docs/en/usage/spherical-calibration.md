@@ -70,4 +70,4 @@ dome.resetControls();    // Orientation plus FOV=210 and Size%=100.
 
 Automated math tests verify normalization, event-order composition, cyclic boundary continuity, multi-turn accumulator compatibility, and axis independence at 90-degree Pitch. They do not verify GPU sampling, mirroring, seams, projector focus, or receiver color.
 
-Use the [CalibrationTool protocol](../qualification/1.5-calibration-tool.md) for those checks and record evidence with the [release-readiness checklist](../qualification/1.5-release-readiness.md).
+Use the [CalibrationTool protocol](../qualification/1.5-calibration-tool.md) for those checks and record evidence with the [2.0 release-readiness checklist](../qualification/2.0-release-readiness.md).

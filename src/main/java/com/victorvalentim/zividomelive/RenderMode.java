@@ -4,7 +4,7 @@ package com.victorvalentim.zividomelive;
  * Selects the global rendering behavior of a ziviDomeLive instance.
  *
  * <p>{@link #FULL} preserves the independent preview and external-output choices configured
- * through the legacy {@link zividomelive.ViewType} API. Dedicated modes temporarily override
+ * through the {@link ViewType} API. Dedicated modes temporarily override
  * those effective choices without erasing them.</p>
  *
  * @since 1.5.0

@@ -1,11 +1,11 @@
 # Classes Principais
 
-## zividomelive
+## ziviDomeLive
 
 Crie uma instância com o `PApplet` ativo e chame `setup()` uma vez:
 
 ```java
-zividomelive dome = new zividomelive(this);
+ziviDomeLive dome = new ziviDomeLive(this);
 dome.setup();
 ```
 
@@ -52,12 +52,14 @@ A troca descarta a cena anterior e configura a nova. `clearScenes()` descarta a 
 ## OutputManager
 
 O manager separa rota configurada, disponibilidade, inicialização nativa, publicação e requisitos de renderização.
+Internamente ele delega o ownership nativo a serviços concretos de NDI, Syphon e
+Spout; essas classes de implementação não fazem parte da API pública.
 
 ```java
 OutputManager output = dome.getOutputManager();
 output.setViewForOutput(
     OutputManager.OutputType.NDI,
-    zividomelive.ViewType.EQUIRECTANGULAR);
+    ViewType.EQUIRECTANGULAR);
 output.toggleOutput("ndi");
 ```
 
@@ -76,6 +78,11 @@ rota efetiva sem apagar o valor; `FULL` o restaura. Syphon e Spout recebem
 diretamente o `PGraphicsOpenGL` selecionado. NDI faz readback dos pixels na
 render thread e envia por um pipeline worker limitado a três slots.
 
+O `RenderPipeline` automático fornece targets completos por `FrameViews`.
+`OutputManager` escolhe o `ViewType` lógico a publicar e não inspeciona o
+renderer concreto que o produziu. Aplicações normalmente não precisam chamar
+diretamente o overload `sendOutput(FrameViews)`.
+
 ## SphericalOrientation
 
 `SphericalOrientation` controla a atitude compartilhada por todas as projeções
@@ -89,6 +96,39 @@ uma conversão Euler de `getQuaternion()`. A ordem dos comandos é significativa
 
 Aplicações normalmente usam esse comportamento pelos métodos de calibração da
 fachada em vez de criar outra orientação.
+
+## CubemapFace E CameraManager
+
+`CubemapFace` define a ordem qualificada das faces cubemap e seus vetores de
+câmera: `+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`. `CameraManager` continua disponível
+para compatibilidade com a 1.x e inicializa suas orientações a partir dessa
+tabela canônica.
+
+## ProcessingGlAdapter
+
+`ProcessingGlAdapter` centraliza as operações Processing/OpenGL atualmente
+necessárias pelo pipeline de renderização e pelos backends de output: alocação
+de targets gráficos, verificações de textura, cópia via `loadPixels()`, descarte
+e descoberta de capabilities PGL. `ProcessingGlCapabilities` registra se o
+contexto ativo anuncia suporte a textura, FBO, cubemap, seamless cubemap, PBO e
+sync fence.
+
+## CubemapTarget
+
+`CubemapTarget` controla uma alocação nativa `GL_TEXTURE_CUBE_MAP` com uma face
+RGBA8 quadrada para cada `CubemapFace` canônica. Ele aplica defaults
+conservadores: filtro min linear com mipmaps, filtro mag linear, clamp-to-edge
+nos três eixos, mipmaps regenerados após a captura e seamless cubemap apenas
+quando o contexto ativo anuncia suporte.
+
+`CubemapRenderer` preserva o contrato `Scene.sceneRender(PGraphicsOpenGL)` com
+um único target scratch Processing offscreen reutilizável. Depois que a Scene e
+o ambiente opcional em far depth estão completos, um blit GPU de framebuffer
+copia a cor resolvida para a face correspondente de `CubemapTarget`. Não existe
+mais array legado `PGraphicsOpenGL[]` de faces nem fallback de seis texturas.
+`EquirectangularRenderer`, `FisheyeDomemaster` e
+`CubemapViewRenderer` amostram diretamente o cubemap nativo. Os recursos de
+shader `samplerCube` adaptados são empacotados em `data/shaders/samplercube/`.
 
 ## OrbitCamera
 
@@ -104,9 +144,9 @@ ativo.
 
 ## Renderers
 
-As classes públicas de renderer da geração 1.x continuam disponíveis para compatibilidade: `StandardRenderer`, `CubemapRenderer`, `EquirectangularRenderer`, `FisheyeDomemaster` e `CubemapViewRenderer`.
+As classes públicas de renderer continuam disponíveis para integrações avançadas: `StandardRenderer`, `CubemapRenderer`, `EquirectangularRenderer`, `FisheyeDomemaster` e `CubemapViewRenderer`.
 
-Aplicações devem preferir a fachada e `RenderMode`. Ownership direto dos renderers é integração avançada da 1.x e pode não migrar sem mudanças para a 2.0.
+Aplicações devem preferir a fachada e `RenderMode`. Ownership direto dos renderers é integração avançada e não deve depender de detalhes internos de alocação.
 
 Não retenha um target de renderer depois de `resetGraphics()`: a mudança de
 resolução é adiada para o render loop e pode substituir as instâncias de alta

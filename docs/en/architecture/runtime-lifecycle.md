@@ -1,6 +1,6 @@
 # Runtime Lifecycle
 
-The `zividomelive` facade owns Processing hook registration, manager initialization, scene updates, rendering, input forwarding, pause/resume, and terminal disposal.
+The `ziviDomeLive` facade owns Processing hook registration, manager initialization, scene updates, renderer resources, input forwarding, pause/resume, and terminal disposal. Its `draw()` hook delegates per-frame ordering to the internal `RenderPipeline`, which uses the existing renderer backend without changing target ownership.
 
 ## Initialization States
 
@@ -17,7 +17,7 @@ Typical sequence:
 constructor
   -> register pre/draw/post/input/dispose hooks
 setup()
-  -> target frame rate, OpenGL diagnostics, hints, OutputManager, splash, fallback scene
+  -> target frame rate, OpenGL diagnostics, hints, OutputManager, splash, bootstrap scene
 first post()
   -> CameraManager, output and preview renderers, Syphon/Spout preparation, ControlManager
   -> MANAGERS_READY
@@ -30,7 +30,7 @@ first post()
 | Hook | Responsibility |
 |---|---|
 | `pre()` | Update shared `OrbitCamera`, then call active `Scene.update()` once |
-| `draw()` | Render required targets, send outputs, composite preview, draw controls |
+| `draw()` | Delegate frame ordering to `RenderPipeline`, then handle splash state |
 | `post()` | Lazily initialize managers once after Processing setup |
 | `keyEvent()` | Global shortcuts, then active-scene forwarding |
 | `mouseEvent()` | Optional scene camera, Standard camera, then active scene |

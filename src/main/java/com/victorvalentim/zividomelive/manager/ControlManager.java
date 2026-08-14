@@ -1,6 +1,7 @@
 package com.victorvalentim.zividomelive.manager;
 
-import com.victorvalentim.zividomelive.zividomelive;
+import com.victorvalentim.zividomelive.ViewType;
+import com.victorvalentim.zividomelive.ziviDomeLive;
 import controlP5.*;
 import processing.core.*;
 import processing.event.KeyEvent;
@@ -19,7 +20,7 @@ public class ControlManager {
     private final ControlP5 cp5;
     private final ControlListener parentControlListener;
     private boolean numberboxActive = false;
-    private final zividomelive parent;
+    private final ziviDomeLive parent;
     private Toggle previewToggle;
     private Toggle ndiToggle;
     private Toggle spoutToggle;
@@ -37,10 +38,10 @@ public class ControlManager {
      * Constructs a ControlManager with the specified PApplet, parent object, and base resolution.
      *
      * @param p the PApplet instance
-     * @param parent the parent zividomelive instance
+     * @param parent the parent ziviDomeLive instance
      * @param baseResolution the base resolution for the application
      */
-    public ControlManager(PApplet p, zividomelive parent, int baseResolution) {
+    public ControlManager(PApplet p, ziviDomeLive parent, int baseResolution) {
         this.p = p;
         this.parent = parent;
         cp5 = new ControlP5(p);
@@ -94,7 +95,7 @@ public class ControlManager {
         cp5.getController("resetControls").onClick(event -> parent.resetControls());
     }
 
-    /** Adds preview representation controls without changing their legacy positions. */
+    /** Adds preview representation controls without changing their established positions. */
     private void addViewControls() {
         previewToggle = cp5.addToggle("previewToggle")
                 .setPosition(
@@ -214,8 +215,8 @@ public class ControlManager {
      */
     private DropdownList createViewDropdown(
             String label,
-            zividomelive.ViewType initialView,
-            Consumer<zividomelive.ViewType> setView) {
+            ViewType initialView,
+            Consumer<ViewType> setView) {
         DropdownList dropdown = cp5.addDropdownList(label)
                 .setPosition(
                         ControlPanelLayout.CONTROL_X,

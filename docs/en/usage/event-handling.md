@@ -1,6 +1,6 @@
 # Event Handling
 
-The `zividomelive` constructor registers `keyEvent` and `mouseEvent` Processing hooks. The built-in ControlP5 panel registers one listener that forwards relevant events to the active scene.
+The `ziviDomeLive` constructor registers `keyEvent` and `mouseEvent` Processing hooks. The built-in ControlP5 panel registers one listener that forwards relevant events to the active scene.
 
 Implement callbacks on the scene:
 
@@ -15,7 +15,7 @@ Do not add main-sketch forwarding such as `ziviDome.keyEvent(event)`. That deliv
 ## Global Shortcuts
 
 - `h`: toggle the built-in panel
-- `m`: cycle the configured legacy preview view
+- `m`: cycle the configured preview view
 - Left/Right arrows: previous/next scene
 
 Global shortcuts run before the event reaches the scene.
