@@ -522,11 +522,14 @@ tasks.register("deployToProcessingSketchbook") {
     description = "Installs the release package in the local Processing sketchbook"
     dependsOn("buildReleaseArtifacts")
 
-    val installDirectory = "$sketchbookLocation/libraries/$libName"
+    val installDirectory = file("$sketchbookLocation/libraries/$libName")
 
     doLast {
         println("Copy to sketchbook  $sketchbookLocation ...")
-        project.delete(file("$installDirectory/src/test"))
+        if (installDirectory.exists()) {
+            println("Removing previous library install at ${installDirectory.absolutePath} ...")
+            project.delete(installDirectory)
+        }
         copy {
             from(releaseDirectory)
             include(
