@@ -12,7 +12,7 @@ import java.util.Locale;
 
 /** Writes one completed BenchmarkTool run without depending on Processing or a JSON library. */
 public final class BenchmarkResultWriter {
-    public static final int SCHEMA_VERSION = 1;
+    public static final int SCHEMA_VERSION = 2;
 
     private static final double NANOS_PER_MILLISECOND = 1_000_000.0;
 
@@ -165,6 +165,24 @@ public final class BenchmarkResultWriter {
             field(json, 2, "recoveryFrames", run.transition.recoveryFrames, false);
             json.append("  },\n");
         }
+        json.append("  \"profiling\": {\n");
+        field(json, 2, "requestedMode", snapshot.getRequestedMode().name(), true);
+        field(json, 2, "effectiveMode", snapshot.getEffectiveMode().name(), true);
+        field(json, 2, "gpuTimings", snapshot.hasGpuTimings(), true);
+        field(json, 2, "gpuMetric", snapshot.hasGpuTimings() ? "RENDER_PIPELINE" : "NONE", true);
+        field(json, 2, "gpuSamples",
+                snapshot.getGpuStatistics(PerformanceMetric.RENDER_PIPELINE).getSampledFrames(), false);
+        json.append("  },\n");
+        PerformanceSnapshot.MetricStatistics gpuPipeline =
+                snapshot.getGpuStatistics(PerformanceMetric.RENDER_PIPELINE);
+        json.append("  \"gpuPipeline\": {\n");
+        field(json, 2, "metric", "RENDER_PIPELINE", true);
+        field(json, 2, "samples", gpuPipeline.getSampledFrames(), true);
+        numberField(json, 2, "averageMs", gpuPipeline.getAverageMilliseconds(), true);
+        numberField(json, 2, "p95Ms", gpuPipeline.getP95Milliseconds(), true);
+        numberField(json, 2, "p99Ms", gpuPipeline.getP99Milliseconds(), true);
+        numberField(json, 2, "maxMs", gpuPipeline.getMaximumMilliseconds(), false);
+        json.append("  },\n");
         json.append("  \"metrics\": {\n");
         field(json, 2, "frames", snapshot.getStoredFrames(), true);
         field(json, 2, "framesCompleted", snapshot.getTotalFrames(), true);
@@ -252,7 +270,7 @@ public final class BenchmarkResultWriter {
         StringBuilder csv = new StringBuilder(Math.max(1_024, snapshot.getStoredFrames() * 180));
         csv.append("frame,totalMs,sceneMs,standardMs,cubemapMs,projectionMs,previewMs,")
                 .append("outputMs,ndiMs,standardCalls,cubemapCalls,domemasterCalls,")
-                .append("equirectangularCalls,skyboxCalls\n");
+                .append("equirectangularCalls,skyboxCalls,gpuPipelineMs,gpuPipelineCalls\n");
         for (int frame = 0; frame < snapshot.getStoredFrames(); frame++) {
             csv.append(frame).append(',');
             csvNumber(csv, duration(snapshot, PerformanceMetric.FRAME_TOTAL, frame));
@@ -273,7 +291,9 @@ public final class BenchmarkResultWriter {
             csv.append(snapshot.getCalls(PerformanceMetric.CUBEMAP_TOTAL, frame)).append(',');
             csv.append(snapshot.getCalls(PerformanceMetric.DOMEMASTER, frame)).append(',');
             csv.append(snapshot.getCalls(PerformanceMetric.EQUIRECTANGULAR, frame)).append(',');
-            csv.append(snapshot.getCalls(PerformanceMetric.SKYBOX, frame)).append('\n');
+            csv.append(snapshot.getCalls(PerformanceMetric.SKYBOX, frame)).append(',');
+            csvNumber(csv, gpuDuration(snapshot, PerformanceMetric.RENDER_PIPELINE, frame));
+            csv.append(snapshot.getGpuCalls(PerformanceMetric.RENDER_PIPELINE, frame)).append('\n');
         }
         return csv.toString();
     }
@@ -283,6 +303,13 @@ public final class BenchmarkResultWriter {
             PerformanceMetric metric,
             int frame) {
         return snapshot.getDurationNanos(metric, frame) / NANOS_PER_MILLISECOND;
+    }
+
+    private static double gpuDuration(
+            PerformanceSnapshot snapshot,
+            PerformanceMetric metric,
+            int frame) {
+        return snapshot.getGpuDurationNanos(metric, frame) / NANOS_PER_MILLISECOND;
     }
 
     private static void csvNumber(StringBuilder csv, double value) {

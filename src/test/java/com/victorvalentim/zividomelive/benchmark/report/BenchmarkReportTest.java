@@ -102,7 +102,7 @@ class BenchmarkReportTest {
         Path root = temporaryDirectory.resolve("results");
         Path run = writeRun(root, "future", 60.0, 16.0, 18.0, new double[]{15.0, 17.0});
         String summary = Files.readString(run.resolve("summary.json")).replace(
-                "\"schemaVersion\": 1", "\"schemaVersion\": 2");
+                "\"schemaVersion\": 1", "\"schemaVersion\": 3");
         Files.writeString(run.resolve("summary.json"), summary, StandardCharsets.UTF_8);
         BenchmarkRunRepository.Result result = new BenchmarkRunRepository().discover(root);
 

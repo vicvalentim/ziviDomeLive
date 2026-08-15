@@ -32,6 +32,7 @@ class BenchmarkController {
   DropdownList resolutionDropdown;
   DropdownList sceneDropdown;
   Toggle previewToggle;
+  Toggle gpuToggle;
   Toggle ndiToggle;
   Toggle syphonToggle;
   Toggle spoutToggle;
@@ -127,6 +128,7 @@ class BenchmarkController {
     sceneDropdown.setValue(2);
 
     previewToggle = addToggle(panel, "BENCH_PREVIEW", "Floating Preview", 224, 138, dome.isShowPreview());
+    gpuToggle = addToggle(panel, "BENCH_GPU", "GPU timer", 344, 138, gpuProfilingDefault());
     ndiToggle = addToggle(panel, "BENCH_NDI", "NDI", 12, 174, outputs.isNdiEnabled());
     syphonToggle = addToggle(panel, "BENCH_SYPHON", "Syphon", 118, 174, outputs.isSyphonEnabled());
     spoutToggle = addToggle(panel, "BENCH_SPOUT", "Spout", 224, 174, outputs.isSpoutEnabled());
@@ -280,7 +282,7 @@ class BenchmarkController {
     suiteActive = false;
     warmupOnly = true;
     if (!configureScenario()) return;
-    dome.enablePerformanceProfiling(PerformanceMode.CPU, sampleCapacity());
+    dome.enablePerformanceProfiling(selectedPerformanceMode(), sampleCapacity());
     dome.resetPerformanceStatistics();
     warmupCompleted = 0;
     state = configuredWarmupFrames > 0 ? BenchmarkState.WARMUP : BenchmarkState.WARMUP_FINISHING;
@@ -299,7 +301,7 @@ class BenchmarkController {
       suiteActive = false;
       return;
     }
-    dome.enablePerformanceProfiling(PerformanceMode.CPU, sampleCapacity());
+    dome.enablePerformanceProfiling(selectedPerformanceMode(), sampleCapacity());
     dome.resetPerformanceStatistics();
     warmupCompleted = 0;
     measurementCompleted = 0;
@@ -716,7 +718,8 @@ class BenchmarkController {
         + "   >50: " + frame.getFramesOver50Milliseconds());
 
     pipelineLabel.setText(
-        pipelineLine("Standard", PerformanceMetric.STANDARD_RENDER)
+        gpuPipelineLine()
+        + pipelineLine("Standard", PerformanceMetric.STANDARD_RENDER)
         + pipelineLine("Cubemap", PerformanceMetric.CUBEMAP_TOTAL)
         + pipelineLine("Domemaster", PerformanceMetric.DOMEMASTER)
         + pipelineLine("Equirect", PerformanceMetric.EQUIRECTANGULAR)
@@ -745,6 +748,24 @@ class BenchmarkController {
     return label + ": avg " + nf((float)statistics.getAverageMilliseconds(), 0, 3)
         + "  p95 " + nf((float)statistics.getP95Milliseconds(), 0, 3)
         + "  calls/f " + nf((float)statistics.getAverageCallsPerFrame(), 0, 2) + "\n";
+  }
+
+  String gpuPipelineLine() {
+    PerformanceSnapshot.MetricStatistics statistics =
+        lastSnapshot.getGpuStatistics(PerformanceMetric.RENDER_PIPELINE);
+    return "GPU pipeline [" + lastSnapshot.getEffectiveMode().name() + "]: avg "
+        + nf((float)statistics.getAverageMilliseconds(), 0, 3)
+        + "  p95 " + nf((float)statistics.getP95Milliseconds(), 0, 3)
+        + "  samples " + statistics.getSampledFrames() + "\n";
+  }
+
+  PerformanceMode selectedPerformanceMode() {
+    return gpuToggle.getState() ? PerformanceMode.CPU_GPU : PerformanceMode.CPU;
+  }
+
+  boolean gpuProfilingDefault() {
+    String configured = System.getenv("ZIVIDOME_BENCHMARK_GPU");
+    return configured != null && configured.equalsIgnoreCase("true");
   }
 
   void refreshStaticLabels(String message) {

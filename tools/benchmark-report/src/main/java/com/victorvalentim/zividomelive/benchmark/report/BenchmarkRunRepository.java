@@ -16,10 +16,12 @@ import java.util.stream.Stream;
 
 /** Discovers and validates versioned BenchmarkTool runs without following symbolic links. */
 public final class BenchmarkRunRepository {
-    public static final int SUPPORTED_SCHEMA_VERSION = 1;
+    public static final int MINIMUM_SCHEMA_VERSION = 1;
+    public static final int SUPPORTED_SCHEMA_VERSION = 2;
     public static final String FRAMES_HEADER = "frame,totalMs,sceneMs,standardMs,cubemapMs,projectionMs,"
             + "previewMs,outputMs,ndiMs,standardCalls,cubemapCalls,domemasterCalls,"
             + "equirectangularCalls,skyboxCalls";
+    public static final String FRAMES_HEADER_V2 = FRAMES_HEADER + ",gpuPipelineMs,gpuPipelineCalls";
 
     public Result discover(Path resultsRoot) {
         Path root = resultsRoot.toAbsolutePath().normalize();
@@ -99,8 +101,11 @@ public final class BenchmarkRunRepository {
     private BenchmarkRun load(Path directory) throws IOException {
         Map<String, Object> summary = document(directory.resolve("summary.json"), "summary.json");
         Map<String, Object> environment = document(directory.resolve("environment.json"), "environment.json");
-        requireSchema(summary, "summary.json");
-        requireSchema(environment, "environment.json");
+        int schemaVersion = requireSchema(summary, "summary.json");
+        int environmentSchemaVersion = requireSchema(environment, "environment.json");
+        if (schemaVersion != environmentSchemaVersion) {
+            throw new IllegalArgumentException("summary.json and environment.json schema versions differ");
+        }
         String library = requireText(summary, "library");
         String version = requireText(summary, "version");
         String revision = requireText(summary, "revision");
@@ -134,6 +139,19 @@ public final class BenchmarkRunRepository {
                 requireNumber(metric, key, false);
             }
         }
+        if (schemaVersion >= 2) {
+            Map<String, Object> profiling = requireMap(summary, "profiling");
+            requireText(profiling, "requestedMode");
+            requireText(profiling, "effectiveMode");
+            requireBoolean(profiling, "gpuTimings");
+            requireText(profiling, "gpuMetric");
+            requireNumber(profiling, "gpuSamples", false);
+            Map<String, Object> gpuPipeline = requireMap(summary, "gpuPipeline");
+            requireText(gpuPipeline, "metric");
+            for (String key : List.of("samples", "averageMs", "p95Ms", "p99Ms", "maxMs")) {
+                requireNumber(gpuPipeline, key, false);
+            }
+        }
         if (summary.containsKey("transition")) {
             Map<String, Object> transition = requireMap(summary, "transition");
             requireText(transition, "from");
@@ -145,7 +163,7 @@ public final class BenchmarkRunRepository {
             requireNumber(transition, "transitionMaxMs", false);
             requireNumber(transition, "recoveryFrames", true);
         }
-        double[] frameTimes = frames(directory.resolve("frames.csv"), frames);
+        double[] frameTimes = frames(directory.resolve("frames.csv"), frames, schemaVersion);
         return new BenchmarkRun(directory, summary, environment, frameTimes);
     }
 
@@ -160,19 +178,21 @@ public final class BenchmarkRunRepository {
         }
     }
 
-    private double[] frames(Path path, int expectedFrames) throws IOException {
+    private double[] frames(Path path, int expectedFrames, int schemaVersion) throws IOException {
         if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(path)) {
             throw new IllegalArgumentException("Missing regular frames.csv");
         }
         List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
-        if (lines.isEmpty() || !FRAMES_HEADER.equals(lines.get(0))) {
+        String expectedHeader = schemaVersion >= 2 ? FRAMES_HEADER_V2 : FRAMES_HEADER;
+        int expectedColumns = schemaVersion >= 2 ? 16 : 14;
+        if (lines.isEmpty() || !expectedHeader.equals(lines.get(0))) {
             throw new IllegalArgumentException("frames.csv has unsupported header");
         }
         List<Double> totals = new ArrayList<>();
         for (int line = 1; line < lines.size(); line++) {
             if (lines.get(line).isBlank()) continue;
             String[] columns = lines.get(line).split(",", -1);
-            if (columns.length != 14) {
+            if (columns.length != expectedColumns) {
                 throw new IllegalArgumentException("frames.csv row " + line + " has " + columns.length + " columns");
             }
             try {
@@ -196,11 +216,14 @@ public final class BenchmarkRunRepository {
         return values;
     }
 
-    private static void requireSchema(Map<String, Object> document, String name) {
+    private static int requireSchema(Map<String, Object> document, String name) {
         double schema = requireNumber(document, "schemaVersion", false);
-        if (schema != SUPPORTED_SCHEMA_VERSION) {
+        if (schema != Math.rint(schema)
+                || schema < MINIMUM_SCHEMA_VERSION
+                || schema > SUPPORTED_SCHEMA_VERSION) {
             throw new IllegalArgumentException(name + " schema " + schema + " is not supported");
         }
+        return (int) schema;
     }
 
     private static String requireText(Map<String, Object> map, String key) {
@@ -246,6 +269,12 @@ public final class BenchmarkRunRepository {
             throw new IllegalArgumentException("Invalid number " + key);
         }
         return number;
+    }
+
+    private static boolean requireBoolean(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (!(value instanceof Boolean)) throw new IllegalArgumentException("Missing boolean " + key);
+        return (Boolean) value;
     }
 
     private static int requireInteger(Map<String, Object> map, String key) {

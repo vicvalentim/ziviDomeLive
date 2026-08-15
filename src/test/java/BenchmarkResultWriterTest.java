@@ -1,6 +1,7 @@
 import com.victorvalentim.zividomelive.performance.PerformanceMetric;
 import com.victorvalentim.zividomelive.performance.PerformanceMode;
 import com.victorvalentim.zividomelive.performance.PerformanceSnapshot;
+import com.victorvalentim.zividomelive.benchmark.report.BenchmarkRunRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -28,7 +29,7 @@ class BenchmarkResultWriterTest {
         String summary = Files.readString(directory.resolve("summary.json"));
         String environment = Files.readString(directory.resolve("environment.json"));
         List<String> frames = Files.readAllLines(directory.resolve("frames.csv"));
-        assertTrue(summary.contains("\"schemaVersion\": 1"));
+        assertTrue(summary.contains("\"schemaVersion\": 2"));
         assertTrue(summary.contains("\"revision\": \"abc123\""));
         assertTrue(summary.contains("\"frameMsP95\": 20.0"));
         assertTrue(summary.contains("\"resolutionDomain\": \"OUTPUT_BASE\""));
@@ -38,14 +39,23 @@ class BenchmarkResultWriterTest {
         assertTrue(summary.contains("\"testType\": \"TRANSITION\""));
         assertTrue(summary.contains("\"transitionMaxMs\": 48.0"));
         assertTrue(summary.contains("\"recoveryFrames\": 3"));
+        assertTrue(summary.contains("\"effectiveMode\": \"CPU_GPU\""));
+        assertTrue(summary.contains("\"gpuMetric\": \"RENDER_PIPELINE\""));
+        assertTrue(summary.contains("\"gpuPipeline\""));
+        assertTrue(summary.contains("\"averageMs\": 6.0"));
         assertTrue(environment.contains("\"glRenderer\": \"Test GPU\""));
         assertEquals(3, frames.size());
         assertTrue(frames.get(0).startsWith("frame,totalMs,sceneMs"));
         assertTrue(frames.get(1).startsWith("0,10.0,"));
         for (String row : frames) {
-            assertEquals(14, row.split(",", -1).length);
+            assertEquals(16, row.split(",", -1).length);
         }
         assertTrue(directory.getFileName().toString().contains("domemaster-2048-medium"));
+
+        BenchmarkRunRepository.Result discovery =
+                new BenchmarkRunRepository().discover(temporaryDirectory);
+        assertEquals(1, discovery.runs().size());
+        assertTrue(discovery.issues().isEmpty());
     }
 
     @Test
@@ -108,15 +118,21 @@ class BenchmarkResultWriterTest {
         int metricCount = PerformanceMetric.values().length;
         long[][] durations = new long[metricCount][2];
         int[][] calls = new int[metricCount][2];
+        long[][] gpuDurations = new long[metricCount][2];
+        int[][] gpuCalls = new int[metricCount][2];
         durations[PerformanceMetric.FRAME_TOTAL.ordinal()][0] = 10_000_000L;
         durations[PerformanceMetric.FRAME_TOTAL.ordinal()][1] = 20_000_000L;
         calls[PerformanceMetric.FRAME_TOTAL.ordinal()][0] = 1;
         calls[PerformanceMetric.FRAME_TOTAL.ordinal()][1] = 1;
         durations[PerformanceMetric.CUBEMAP_TOTAL.ordinal()][0] = 3_000_000L;
         calls[PerformanceMetric.CUBEMAP_TOTAL.ordinal()][0] = 1;
+        gpuDurations[PerformanceMetric.RENDER_PIPELINE.ordinal()][0] = 5_000_000L;
+        gpuDurations[PerformanceMetric.RENDER_PIPELINE.ordinal()][1] = 7_000_000L;
+        gpuCalls[PerformanceMetric.RENDER_PIPELINE.ordinal()][0] = 1;
+        gpuCalls[PerformanceMetric.RENDER_PIPELINE.ordinal()][1] = 1;
         return new PerformanceSnapshot(
-                PerformanceMode.CPU,
-                PerformanceMode.CPU,
+                PerformanceMode.CPU_GPU,
+                PerformanceMode.CPU_GPU,
                 2L,
                 2,
                 0L,
@@ -125,6 +141,8 @@ class BenchmarkResultWriterTest {
                 0L,
                 0L,
                 0L,
-                List.of());
+                List.of(),
+                gpuDurations,
+                gpuCalls);
     }
 }

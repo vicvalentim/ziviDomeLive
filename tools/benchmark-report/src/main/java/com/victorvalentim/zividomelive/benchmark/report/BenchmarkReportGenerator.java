@@ -134,7 +134,7 @@ public final class BenchmarkReportGenerator {
                 .append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">")
                 .append("<title>").append(TITLE).append("</title><style>")
                 .append(css()).append("</style></head><body><main>")
-                .append("<header><p class=\"eyebrow\">BENCHMARK REPORT · SCHEMA 1</p><h1>")
+                .append("<header><p class=\"eyebrow\">BENCHMARK REPORT · RUN SCHEMA 1–2</p><h1>")
                 .append(TITLE).append("</h1><p class=\"lede\">")
                 .append(discovery.runs().size()).append(" valid run(s) discovered in <code>")
                 .append(escape(discovery.root().toString())).append("</code>; ")
@@ -210,6 +210,13 @@ public final class BenchmarkReportGenerator {
                 "glRenderer", "glVersion", "glslVersion", "windowWidth", "windowHeight",
                 "pixelDensity", "ndiState", "syphonState", "spoutState"));
         page.append("</article>");
+        Map<String, Object> profiling = run.section("profiling");
+        if (!profiling.isEmpty()) {
+            page.append("<article><h3>Profiling</h3>");
+            definition(page, profiling, List.of(
+                    "requestedMode", "effectiveMode", "gpuTimings", "gpuMetric", "gpuSamples"));
+            page.append("</article>");
+        }
         Map<String, Object> transition = run.section("transition");
         if (!transition.isEmpty()) {
             page.append("<article><h3>Transition</h3>");
@@ -248,8 +255,16 @@ public final class BenchmarkReportGenerator {
 
     private void pipeline(StringBuilder page, BenchmarkRun run) {
         double frame = run.metric("frameMsAverage");
+        boolean gpuColumns = !run.section("profiling").isEmpty();
+        Map<String, Object> gpuPipeline = run.section("gpuPipeline");
+        String gpuMetric = value(gpuPipeline.get("metric"));
+        boolean gpuMeasured = number(gpuPipeline.get("samples")) > 0.0;
         page.append("<section><h2>Pipeline</h2><div class=\"table-wrap\"><table><thead><tr>")
-                .append("<th>Metric</th><th>Average ms</th><th>P95 ms</th><th>P99 ms</th>")
+                .append("<th>Metric</th><th>CPU average ms</th><th>CPU P95 ms</th><th>CPU P99 ms</th>");
+        if (gpuColumns) {
+            page.append("<th>GPU average ms</th><th>GPU P95 ms</th><th>GPU samples</th>");
+        }
+        page
                 .append("<th>Calls/frame</th><th>Total calls</th><th>% frame</th></tr></thead><tbody>");
         for (Map.Entry<String, Object> entry : run.section("pipeline").entrySet()) {
             Map<String, Object> values = BenchmarkRun.map(entry.getValue());
@@ -257,7 +272,18 @@ public final class BenchmarkReportGenerator {
             page.append("<tr><td><code>").append(escape(entry.getKey())).append("</code></td><td>")
                     .append(format(average)).append("</td><td>").append(format(number(values.get("p95Ms"))))
                     .append("</td><td>").append(format(number(values.get("p99Ms"))))
-                    .append("</td><td>").append(format(number(values.get("callsPerFrame"))))
+                    .append("</td>");
+            if (gpuColumns) {
+                if (gpuMeasured && entry.getKey().equals(gpuMetric)) {
+                    page.append("<td>").append(format(number(gpuPipeline.get("averageMs"))))
+                            .append("</td><td>").append(format(number(gpuPipeline.get("p95Ms"))))
+                            .append("</td><td>").append(format(number(gpuPipeline.get("samples"))))
+                            .append("</td>");
+                } else {
+                    page.append("<td>—</td><td>—</td><td>—</td>");
+                }
+            }
+            page.append("<td>").append(format(number(values.get("callsPerFrame"))))
                     .append("</td><td>").append(format(number(values.get("totalCalls"))))
                     .append("</td><td>").append(frame == 0.0 ? "0.000" : format(average / frame * 100.0))
                     .append("%</td></tr>");
