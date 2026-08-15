@@ -6,7 +6,11 @@ graphical OpenGL session and the native backends requested by a scenario.
 
 ## Processing CLI
 
-Configure the Processing executable either as a Gradle property or environment variable:
+Run `./gradlew benchmarkDoctor` to see which launcher will be used. Gradle accepts the legacy
+`processing-java` launcher and the modern `Processing cli` application syntax. It searches `PATH`
+and, on macOS, `/Applications/Processing.app/Contents/MacOS/Processing` automatically.
+
+Configure the Processing executable explicitly when automatic discovery is not sufficient:
 
 ```bash
 ./gradlew benchmarkSuite \
@@ -16,9 +20,10 @@ export PROCESSING_EXECUTABLE=/path/to/processing-java
 ./gradlew benchmarkSuite
 ```
 
-When neither value is set, Gradle searches for `processing-java` on `PATH`. A missing or
-non-executable CLI stops immediately with a configuration message. No application location is
-hardcoded. `runBenchmark` uses the same discovery and opens the interactive sketch:
+When neither value is set, Gradle performs automatic discovery. A missing or non-executable CLI
+stops immediately with an actionable configuration message. The standard paths are discovery
+candidates, not installation requirements. `runBenchmark` uses the same discovery and opens the
+interactive sketch:
 
 ```bash
 ./gradlew runBenchmark -PprocessingExecutable=/path/to/processing-java

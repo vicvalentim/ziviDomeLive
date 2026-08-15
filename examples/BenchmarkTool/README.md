@@ -40,16 +40,29 @@ hide it. The BenchmarkTool panel is on the right.
 
 ## Output Location
 
-Set the output root explicitly when running from the repository:
+When running from the repository, let Gradle discover the legacy or modern Processing launcher:
+
+```bash
+./gradlew benchmarkDoctor
+./gradlew runBenchmark
+```
+
+Gradle searches `PATH` and standard application locations for the current operating system. Use
+`-PprocessingExecutable=<path>` or `PROCESSING_EXECUTABLE` only for a custom installation.
+
+When launching the sketch directly instead, set the output root explicitly. Processing 4.4.3 and
+newer use the application launcher with the `cli` subcommand:
 
 ```bash
 export ZIVIDOME_BENCHMARK_OUTPUT="$PWD/build/benchmark-results"
 export ZIVIDOME_BENCHMARK_REVISION="$(git rev-parse HEAD)"
-processing-java \
+/Applications/Processing.app/Contents/MacOS/Processing cli \
   --sketch="$PWD/examples/BenchmarkTool" \
   --output="$PWD/build/processing-benchmark" \
   --force --run
 ```
+
+For older Processing installations, replace that launcher with `processing-java` and omit `cli`.
 
 The current library must first be installed in the Processing sketchbook, for example with
 `./gradlew deployToProcessingSketchbook`. When the output variable/property is absent, the sketch

@@ -221,7 +221,7 @@ tasks.register<Zip>("benchmarkArchive") {
 
 val processingExecutable = providers.gradleProperty("processingExecutable")
     .orElse(providers.environmentVariable("PROCESSING_EXECUTABLE"))
-    .orElse("processing-java")
+    .orElse("AUTO")
 val benchmarkRevision = providers.gradleProperty("benchmarkRevision")
     .orElse(providers.environmentVariable("GITHUB_SHA"))
     .orElse(
@@ -233,7 +233,9 @@ val benchmarkRevision = providers.gradleProperty("benchmarkRevision")
         }
     )
 
-fun resolveProcessingExecutable(command: String): File? {
+data class ProcessingCli(val executable: File, val modern: Boolean)
+
+fun resolveExecutable(command: String): File? {
     val requested = file(command)
     if (requested.isAbsolute || command.contains(File.separatorChar)) {
         return requested.takeIf { it.isFile && it.canExecute() }
@@ -247,17 +249,92 @@ fun resolveProcessingExecutable(command: String): File? {
         .firstOrNull { it.isFile && it.canExecute() }
 }
 
+fun resolveProcessingCli(command: String): ProcessingCli? {
+    if (!command.equals("AUTO", ignoreCase = true)) {
+        val executable = resolveExecutable(command) ?: return null
+        val legacy = executable.nameWithoutExtension.equals("processing-java", ignoreCase = true)
+        return ProcessingCli(executable, modern = !legacy)
+    }
+
+    resolveExecutable("processing-java")?.let {
+        return ProcessingCli(it, modern = false)
+    }
+    resolveExecutable("processing")?.let {
+        return ProcessingCli(it, modern = true)
+    }
+    resolveExecutable("Processing")?.let {
+        return ProcessingCli(it, modern = true)
+    }
+    if (currentOS.isMacOsX) {
+        listOf(
+            file("/Applications/Processing.app/Contents/MacOS/Processing"),
+            file("$userHome/Applications/Processing.app/Contents/MacOS/Processing")
+        ).firstOrNull { it.isFile && it.canExecute() }?.let {
+            return ProcessingCli(it, modern = true)
+        }
+    }
+    if (currentOS.isWindows) {
+        listOfNotNull(
+            System.getenv("ProgramFiles"),
+            System.getenv("ProgramFiles(x86)")
+        ).map { file("$it/Processing/Processing.exe") }
+            .plus(
+                listOfNotNull(System.getenv("LOCALAPPDATA"))
+                    .map { file("$it/Programs/Processing/Processing.exe") }
+            )
+            .firstOrNull { it.isFile && it.canExecute() }
+            ?.let { return ProcessingCli(it, modern = true) }
+    }
+    if (currentOS.isLinux) {
+        listOf(
+            file("/snap/bin/processing"),
+            file("/usr/local/bin/processing"),
+            file("/usr/bin/processing")
+        ).firstOrNull { it.isFile && it.canExecute() }?.let {
+            return ProcessingCli(it, modern = true)
+        }
+        file("/opt").listFiles()
+            ?.asSequence()
+            ?.filter { it.isDirectory && it.name.startsWith("processing", ignoreCase = true) }
+            ?.map { it.resolve("processing") }
+            ?.firstOrNull { it.isFile && it.canExecute() }
+            ?.let { return ProcessingCli(it, modern = true) }
+    }
+    return null
+}
+
+fun processingCliNotFound(command: String): String {
+    val requested = if (command.equals("AUTO", ignoreCase = true)) {
+        "No Processing CLI was found on PATH or in the standard application location."
+    } else {
+        "Processing CLI '$command' was not found or is not executable."
+    }
+    return requested + " Install Processing using the official package for this OS, " +
+        "or set -PprocessingExecutable=<path> / PROCESSING_EXECUTABLE. On macOS, move " +
+        "Processing.app to /Applications. " +
+        "Modern Processing launchers are invoked automatically as 'Processing cli'."
+}
+
+tasks.register("benchmarkDoctor") {
+    group = "benchmark"
+    description = "Reports the Processing CLI and syntax that benchmark tasks will use"
+    doLast {
+        val configured = processingExecutable.get()
+        val resolved = resolveProcessingCli(configured)
+            ?: throw GradleException(processingCliNotFound(configured))
+        val syntax = if (resolved.modern) "Processing cli" else "processing-java"
+        logger.lifecycle("Processing CLI: ${resolved.executable.absolutePath} ($syntax)")
+    }
+}
+
 fun Exec.configureProcessingBenchmark(outputName: String) {
     group = "benchmark"
     dependsOn("deployBenchmarkLibrary")
     workingDir(rootDir)
     doFirst {
         val command = processingExecutable.get()
-        val executableFile = resolveProcessingExecutable(command)
-            ?: throw GradleException(
-                "Processing CLI '$command' was not found or is not executable. "
-                    + "Set -PprocessingExecutable=<path> or PROCESSING_EXECUTABLE."
-            )
+        val processingCli = resolveProcessingCli(command)
+            ?: throw GradleException(processingCliNotFound(command))
         val installedLibrary = file(
             "$sketchbookLocation/libraries/$libName/library/${libName}.jar"
         )
@@ -265,7 +342,10 @@ fun Exec.configureProcessingBenchmark(outputName: String) {
             "ziviDomeLive is not installed in the Processing sketchbook. " +
                 "Run ./gradlew deployToProcessingSketchbook before this task."
         }
-        executable(executableFile.absolutePath)
+        executable(processingCli.executable.absolutePath)
+        if (processingCli.modern) {
+            args("cli")
+        }
         args(
             "--sketch=${file("examples/BenchmarkTool").absolutePath}",
             "--output=${layout.buildDirectory.dir("processing-benchmark/$outputName").get().asFile.absolutePath}",
