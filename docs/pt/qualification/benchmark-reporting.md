@@ -1,6 +1,6 @@
 # Relatórios de Benchmark
 
-A ferramenta de relatório, exclusiva para desenvolvimento, valida e agrega execuções schema v1 do
+A ferramenta de relatório, exclusiva para desenvolvimento, valida e agrega execuções schema v1 e v2 do
 BenchmarkTool. Ela usa apenas o JDK, grava um dashboard estático offline e permanece isolada do JAR
 da biblioteca Processing e do pacote de release.
 
@@ -30,6 +30,9 @@ e identificadas no relatório. Um diretório ausente ou vazio produz um relatór
 reaproveitar dados antigos.
 Execuções de transição incluem endpoints inicial e final, P95 normal, máximo da transição e frames
 de recuperação tanto no detalhe selecionado quanto na matriz de testes.
+Execuções schema v2 acrescentam modo de profiling solicitado/efetivo, um agregado `gpuPipeline`
+separado e colunas GPU brutas cuja contagem distingue ausência de resultado assíncrono de zero
+medido. O HTML exibe valores GPU somente em `RENDER_PIPELINE`; passes não instrumentados usam “—”.
 
 ## Baseline e Candidate
 

@@ -62,6 +62,7 @@ Defaults represent qualification intervals, while shorter values are useful only
   -PbenchmarkScene=MEDIUM \
   -PbenchmarkResolution=2048 \
   -PbenchmarkPreview=false \
+  -PbenchmarkGpu=false \
   -PbenchmarkWarmupFrames=600 \
   -PbenchmarkMeasurementFrames=1800 \
   -PbenchmarkTransitionBaselineFrames=120 \
@@ -77,3 +78,8 @@ not observed. These are descriptive measurements with no hidden pass/fail thresh
 The CLI sets the output directory and current Git revision for the sketch. Use like-for-like
 machines and configurations for comparisons. A successful smoke run with very short intervals
 proves orchestration, not performance stability.
+
+Set `-PbenchmarkGpu=true` to request the bounded asynchronous pipeline timer. The exported
+`profiling.effectiveMode` is authoritative: unsupported desktop GL/JOGL contexts fall back to CPU.
+GPU mode adds two Processing GL flush boundaries per measured frame, so it must not be mixed with
+CPU-only runs in a baseline comparison.

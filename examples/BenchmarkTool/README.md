@@ -20,7 +20,7 @@ reusable `PShape`; no per-object Java allocation occurs in `sceneRender()`.
 
 ## Workflow
 
-1. Select `RenderMode`, output resolution, scene, Preview, and supported outputs.
+1. Select `RenderMode`, output resolution, scene, Preview, supported outputs, and optionally `GPU timer`.
 2. Keep the default 600 warm-up / 1800 measurement frames or choose another bounded interval.
 3. Press `START`. Warm-up samples are reset before measurement begins.
 4. Inspect the immutable snapshot after the run.
@@ -66,10 +66,11 @@ Each export creates:
     └── environment.json
 ```
 
-All files use schema version `1`. `frames.csv` contains one row per retained completed frame:
+Run files use schema version `2` (suite manifests remain version `1`). The report reader remains
+compatible with historical schema-v1 runs. `frames.csv` contains one row per retained completed frame:
 
 ```text
-frame,totalMs,sceneMs,standardMs,cubemapMs,projectionMs,previewMs,outputMs,ndiMs,standardCalls,cubemapCalls,domemasterCalls,equirectangularCalls,skyboxCalls
+frame,totalMs,sceneMs,standardMs,cubemapMs,projectionMs,previewMs,outputMs,ndiMs,standardCalls,cubemapCalls,domemasterCalls,equirectangularCalls,skyboxCalls,gpuPipelineMs,gpuPipelineCalls
 ```
 
 Automated suites also write a root-level `suite-<timestamp>.json` manifest. It records every
@@ -83,8 +84,12 @@ CLI configuration, suite composition, and hardware requirements.
 
 ## Interpretation And Limitations
 
-- Timings are CPU-observed wall time. OpenGL measurements include submission and any driver wait;
-  they are not isolated GPU elapsed time.
+- Pipeline timings are CPU-observed wall time. When `GPU timer` is enabled and supported,
+  `gpuPipeline` and the final CSV columns contain asynchronous elapsed time for
+  `RENDER_PIPELINE` only. A zero `gpuPipelineCalls` value means no result, not zero GPU cost.
+- GPU timing uses a bounded query pool, never `glFinish()`, and falls back to CPU with a diagnostic.
+  The two Processing GL boundaries flush queued commands and therefore add profiling overhead;
+  compare CPU-only runs with CPU-only runs and GPU runs with GPU runs.
 - NDI send time covers the native sender call, not receiver/network latency. Worker metrics that
   complete after the final frame boundary may not be attributed to the final snapshot; cumulative
   captured deltas begin exactly at measurement, while asynchronous sent/dropped/failed deltas may

@@ -63,6 +63,7 @@ Os padrões representam intervalos de qualificação; valores menores servem ape
   -PbenchmarkScene=MEDIUM \
   -PbenchmarkResolution=2048 \
   -PbenchmarkPreview=false \
+  -PbenchmarkGpu=false \
   -PbenchmarkWarmupFrames=600 \
   -PbenchmarkMeasurementFrames=1800 \
   -PbenchmarkTransitionBaselineFrames=120 \
@@ -78,3 +79,8 @@ São medidas descritivas, sem limiar oculto de aprovação.
 A CLI informa ao sketch o diretório de saída e a revisão Git atual. Compare máquinas e configurações
 equivalentes. Um smoke test bem-sucedido com intervalos muito curtos comprova a orquestração, não a
 estabilidade da performance.
+
+Use `-PbenchmarkGpu=true` para solicitar o timer assíncrono limitado do pipeline. O campo exportado
+`profiling.effectiveMode` é a fonte de verdade: contextos desktop GL/JOGL sem suporte fazem fallback
+para CPU. O modo GPU acrescenta duas fronteiras de flush GL do Processing por frame medido e não
+deve ser misturado com runs CPU-only em uma comparação de baseline.

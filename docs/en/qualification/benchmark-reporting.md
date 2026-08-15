@@ -1,6 +1,6 @@
 # Benchmark Reporting
 
-The development-only report tool validates and aggregates BenchmarkTool schema-v1 runs. It uses
+The development-only report tool validates and aggregates BenchmarkTool schema-v1 and schema-v2 runs. It uses
 only the JDK, writes a static offline dashboard, and is isolated from the Processing library JAR
 and release package.
 
@@ -29,6 +29,9 @@ Invalid, unsupported, symlinked, or incomplete runs are excluded and identified 
 An absent or empty results directory produces a valid empty report rather than reusing stale data.
 Transition runs include their initial and target endpoints, normal P95, transition maximum, and
 recovery-frame count in both the selected-run detail and test matrix.
+Schema-v2 runs add requested/effective profiling mode, a separate `gpuPipeline` aggregate, and raw
+GPU pipeline columns whose call count distinguishes missing asynchronous results from measured zero.
+The HTML shows GPU values only for `RENDER_PIPELINE`; uninstrumented passes display an em dash.
 
 ## Baseline And Candidate
 
