@@ -13,6 +13,7 @@
 | `SceneServices` | Activation-scoped time, tasks, assets, actions, camera, Environment, and cleanup |
 | `FrameClock` / `SimulationTimeline` | Clamped frame time and bounded fixed-step simulation |
 | `OutputManager` | NDI, Syphon, and Spout routing and lifecycle |
+| `PerformanceSnapshot` | Experimental CPU timings, pass counts, and invariant diagnostics |
 | `OrbitCamera` | Optional scene-space camera shared by all rendered targets |
 | `SphericalOrientation` | Cyclic pitch/yaw/roll accumulation on a unit quaternion |
 
@@ -61,3 +62,4 @@ Use [Generated Javadocs](javadocs.md) for direct API signatures,
 [Operational Helpers](helper-functions.md) for runtime controls, and the
 [Scene Interface](scene-interface.md) for the drawing contract. The
 [Scene Services](scene-services.md) guide covers reusable application infrastructure.
+Use [Performance Profiling](performance-profiling.md) for the experimental measurement API.

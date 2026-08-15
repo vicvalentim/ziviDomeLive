@@ -109,6 +109,7 @@ plugins:
             Scene Interface: Interface de Cena
             Scene Services: Serviços de Cena
             Helper Functions: Funções Auxiliares
+            Performance Profiling: Profiling de Performance
             Generated Javadocs: Javadocs Gerados
             Examples: Exemplos
             Basic Examples: Exemplos Básicos
@@ -201,6 +202,7 @@ nav:
       - Scene Interface: api/scene-interface.md
       - Scene Services: api/scene-services.md
       - Helper Functions: api/helper-functions.md
+      - Performance Profiling: api/performance-profiling.md
       - Generated Javadocs: api/javadocs.md
   - Examples:
       - Basic Examples: examples/basic.md

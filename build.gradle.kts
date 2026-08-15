@@ -323,6 +323,10 @@ tasks.register<WriteProperties>("writeLibraryProperties") {
 tasks.build.get().mustRunAfter("clean")
 tasks.assemble.get().mustRunAfter("clean")
 tasks.javadoc.get().mustRunAfter("assemble")
+tasks.javadoc {
+    // Cross-package benchmark recorders are implementation details, not Processing API.
+    exclude("**/internal/**")
+}
 
 tasks.register("buildReleaseArtifacts") {
     group = "processing"
