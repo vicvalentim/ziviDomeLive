@@ -30,10 +30,10 @@ Do not manipulate either ControlP5 panel during warm-up or measurement; configur
 not part of a steady-state scenario. Use `STOP`/`X`, then start a new run instead.
 
 `WARM UP` performs only the configured warm-up. `STOP` keeps completed measurement frames but
-discards warm-up-only work. `RESET` clears the run. `RUN SUITE` executes Standard, Domemaster,
-Equirectangular, and Skybox at the currently selected scene/resolution/output configuration and
-exports each completed run. This is the initial steady-state suite, not the later transition or
-full resolution matrix runner. Keyboard shortcuts: `X` stops and `E` exports.
+discards warm-up-only work. `RESET` clears the run. The interactive `RUN SUITE` executes Standard,
+Domemaster, Equirectangular, and Skybox at the selected scene and resolution. Automated Gradle
+suites additionally provide the full spherical resolution matrix and transition measurements.
+Keyboard shortcuts: `X` stops and `E` exports.
 
 The library's regular control panel remains available on the left; press `h` when you want to
 hide it. The BenchmarkTool panel is on the right.
@@ -71,6 +71,15 @@ All files use schema version `1`. `frames.csv` contains one row per retained com
 ```text
 frame,totalMs,sceneMs,standardMs,cubemapMs,projectionMs,previewMs,outputMs,ndiMs,standardCalls,cubemapCalls,domemasterCalls,equirectangularCalls,skyboxCalls
 ```
+
+Automated suites also write a root-level `suite-<timestamp>.json` manifest. It records every
+scenario as `SUPPORTED`, `UNSUPPORTED`, or `FAILED`, including scenarios skipped because a native
+output is unavailable. Transition summaries add the initial/target endpoints, normal P95,
+transition maximum, and recovery frames. Recovery is the first post-transition sample at or below
+the baseline P95; `-1` means the measured post interval did not recover.
+
+The repository document `docs/en/qualification/automated-benchmarks.md` describes Gradle tasks,
+CLI configuration, suite composition, and hardware requirements.
 
 ## Interpretation And Limitations
 

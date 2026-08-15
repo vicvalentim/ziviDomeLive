@@ -210,6 +210,7 @@ nav:
   - Qualification:
       - Processing Publication: qualification/processing-publication.md
       - Benchmark Reporting: qualification/benchmark-reporting.md
+      - Automated Benchmarks: qualification/automated-benchmarks.md
       - Calibration Tool Protocol: qualification/1.5-calibration-tool.md
       - Release Readiness 2.0: qualification/2.0-release-readiness.md
       - Release Readiness 1.5: qualification/1.5-release-readiness.md

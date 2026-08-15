@@ -28,6 +28,8 @@ A tarefa lê os diretórios de execução imediatamente abaixo de `build/benchma
 Execuções inválidas, incompatíveis, incompletas ou representadas por links simbólicos são excluídas
 e identificadas no relatório. Um diretório ausente ou vazio produz um relatório vazio válido, sem
 reaproveitar dados antigos.
+Execuções de transição incluem endpoints inicial e final, P95 normal, máximo da transição e frames
+de recuperação tanto no detalhe selecionado quanto na matriz de testes.
 
 ## Baseline e Candidate
 

@@ -27,6 +27,8 @@ The task reads immediate run directories from `build/benchmark-results/`, valida
 
 Invalid, unsupported, symlinked, or incomplete runs are excluded and identified in the report.
 An absent or empty results directory produces a valid empty report rather than reusing stale data.
+Transition runs include their initial and target endpoints, normal P95, transition maximum, and
+recovery-frame count in both the selected-run detail and test matrix.
 
 ## Baseline And Candidate
 
