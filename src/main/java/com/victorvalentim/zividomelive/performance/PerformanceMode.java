@@ -1,0 +1,19 @@
+package com.victorvalentim.zividomelive.performance;
+
+/**
+ * Selects the amount of runtime performance instrumentation.
+ *
+ * <p>The performance API is experimental in ziviDomeLive 2.0. CPU/GPU mode is
+ * reserved for capability-gated asynchronous OpenGL timer queries; until that
+ * backend is available it safely falls back to CPU instrumentation.</p>
+ *
+ * @since 2.0.0
+ */
+public enum PerformanceMode {
+	/** No timing or sample collection. */
+	OFF,
+	/** CPU wall-clock instrumentation based on {@link System#nanoTime()}. */
+	CPU,
+	/** CPU instrumentation plus optional GPU timers when supported. */
+	CPU_GPU
+}
