@@ -215,6 +215,125 @@ tasks.register<Zip>("benchmarkArchive") {
     }
 }
 
+val processingExecutable = providers.gradleProperty("processingExecutable")
+    .orElse(providers.environmentVariable("PROCESSING_EXECUTABLE"))
+    .orElse("processing-java")
+val benchmarkRevision = providers.gradleProperty("benchmarkRevision")
+    .orElse(providers.environmentVariable("GITHUB_SHA"))
+    .orElse(
+        providers.exec {
+            commandLine("git", "rev-parse", "HEAD")
+            isIgnoreExitValue = true
+        }.standardOutput.asText.map { revision ->
+            revision.trim().ifEmpty { "local-worktree" }
+        }
+    )
+
+fun resolveProcessingExecutable(command: String): File? {
+    val requested = file(command)
+    if (requested.isAbsolute || command.contains(File.separatorChar)) {
+        return requested.takeIf { it.isFile && it.canExecute() }
+    }
+    val candidates = if (currentOS.isWindows) listOf(command, "$command.exe") else listOf(command)
+    return (System.getenv("PATH") ?: "")
+        .split(File.pathSeparator)
+        .asSequence()
+        .filter(String::isNotBlank)
+        .flatMap { directory -> candidates.asSequence().map { name -> file("$directory/$name") } }
+        .firstOrNull { it.isFile && it.canExecute() }
+}
+
+fun Exec.configureProcessingBenchmark(outputName: String) {
+    group = "benchmark"
+    dependsOn("deployBenchmarkLibrary")
+    workingDir(rootDir)
+    doFirst {
+        val command = processingExecutable.get()
+        val executableFile = resolveProcessingExecutable(command)
+            ?: throw GradleException(
+                "Processing CLI '$command' was not found or is not executable. "
+                    + "Set -PprocessingExecutable=<path> or PROCESSING_EXECUTABLE."
+            )
+        val installedLibrary = file(
+            "$sketchbookLocation/libraries/$libName/library/${libName}.jar"
+        )
+        check(installedLibrary.isFile) {
+            "ziviDomeLive is not installed in the Processing sketchbook. " +
+                "Run ./gradlew deployToProcessingSketchbook before this task."
+        }
+        executable(executableFile.absolutePath)
+        args(
+            "--sketch=${file("examples/BenchmarkTool").absolutePath}",
+            "--output=${layout.buildDirectory.dir("processing-benchmark/$outputName").get().asFile.absolutePath}",
+            "--force",
+            "--run"
+        )
+        environment("ZIVIDOME_BENCHMARK_OUTPUT", benchmarkResultsDirectory.get().asFile.absolutePath)
+        environment("ZIVIDOME_BENCHMARK_REVISION", benchmarkRevision.get())
+    }
+}
+
+tasks.register("deployBenchmarkLibrary") {
+    group = "benchmark"
+    description = "Updates the Processing sketchbook library used by benchmarks without cleaning captured results"
+    dependsOn("jar", "writeLibraryProperties")
+    doLast {
+        val installRoot = file("$sketchbookLocation/libraries/$libName")
+        copy {
+            from(layout.buildDirectory.file("libs/${libName}.jar"))
+            from(configurations.runtimeClasspath)
+            into(installRoot.resolve("library"))
+        }
+        copy {
+            from(file("library.properties"))
+            into(installRoot)
+        }
+        logger.lifecycle(
+            "Benchmark library updated without cleaning results: ${installRoot.absolutePath}"
+        )
+    }
+}
+
+tasks.register<Exec>("runBenchmark") {
+    description = "Runs BenchmarkTool interactively with a configured Processing CLI"
+    configureProcessingBenchmark("interactive")
+}
+
+tasks.register<Exec>("benchmarkSuite") {
+    description = "Runs an automated BenchmarkTool suite and exits after writing structured results"
+    configureProcessingBenchmark("suite")
+    doFirst {
+        environment("ZIVIDOME_BENCHMARK_SUITE", providers.gradleProperty("benchmarkSuite").getOrElse("ALL"))
+        environment("ZIVIDOME_BENCHMARK_EXIT", "true")
+        environment("ZIVIDOME_BENCHMARK_SCENE", providers.gradleProperty("benchmarkScene").getOrElse("MEDIUM"))
+        environment(
+            "ZIVIDOME_BENCHMARK_RESOLUTION",
+            providers.gradleProperty("benchmarkResolution").getOrElse("2048")
+        )
+        environment(
+            "ZIVIDOME_BENCHMARK_PREVIEW",
+            providers.gradleProperty("benchmarkPreview").getOrElse("false")
+        )
+        environment(
+            "ZIVIDOME_BENCHMARK_WARMUP_FRAMES",
+            providers.gradleProperty("benchmarkWarmupFrames").getOrElse("600")
+        )
+        environment(
+            "ZIVIDOME_BENCHMARK_MEASUREMENT_FRAMES",
+            providers.gradleProperty("benchmarkMeasurementFrames").getOrElse("1800")
+        )
+        environment(
+            "ZIVIDOME_BENCHMARK_TRANSITION_BASELINE_FRAMES",
+            providers.gradleProperty("benchmarkTransitionBaselineFrames").getOrElse("120")
+        )
+        environment(
+            "ZIVIDOME_BENCHMARK_TRANSITION_POST_FRAMES",
+            providers.gradleProperty("benchmarkTransitionPostFrames").getOrElse("240")
+        )
+    }
+    finalizedBy("benchmarkReport")
+}
+
 val qualificationResultsDirectory = layout.buildDirectory.dir("test-results/qualification")
 val qualificationReportDirectory = layout.buildDirectory.dir("reports/qualification")
 
