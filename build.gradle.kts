@@ -7,6 +7,7 @@ import java.util.Properties
 import java.time.Instant
 import java.nio.file.Files
 import java.util.zip.ZipFile
+import java.awt.Desktop
 import groovy.json.JsonOutput
 import org.gradle.internal.os.OperatingSystem
 import org.gradle.api.tasks.testing.TestDescriptor
@@ -143,6 +144,76 @@ tasks.test {
 // Compile the pure-Java BenchmarkTool exporter only as test support. Processing
 // compiles the same Java tab when the example runs, keeping it out of the library JAR.
 sourceSets["test"].java.srcDir("examples/BenchmarkTool")
+
+// The offline report generator is development tooling, isolated from the library JAR.
+val benchmarkReportSourceSet = sourceSets.create("benchmarkReport") {
+    java.srcDir("tools/benchmark-report/src/main/java")
+}
+sourceSets["test"].compileClasspath += benchmarkReportSourceSet.output
+sourceSets["test"].runtimeClasspath += benchmarkReportSourceSet.output
+tasks.named("compileTestJava") {
+    dependsOn(tasks.named(benchmarkReportSourceSet.compileJavaTaskName))
+}
+
+val benchmarkResultsDirectory = layout.buildDirectory.dir("benchmark-results")
+val benchmarkReportDirectory = layout.buildDirectory.dir("reports/benchmark")
+
+tasks.register<Delete>("benchmarkClean") {
+    group = "benchmark"
+    description = "Deletes captured benchmark runs and generated benchmark reports"
+    delete(benchmarkResultsDirectory, benchmarkReportDirectory)
+}
+
+tasks.register<JavaExec>("benchmarkReport") {
+    group = "benchmark"
+    description = "Validates BenchmarkTool runs and generates a self-contained offline report"
+    dependsOn(tasks.named(benchmarkReportSourceSet.classesTaskName))
+    classpath = benchmarkReportSourceSet.runtimeClasspath
+    mainClass.set("com.victorvalentim.zividomelive.benchmark.report.BenchmarkReportMain")
+
+    doFirst {
+        args(
+            "--results", benchmarkResultsDirectory.get().asFile.absolutePath,
+            "--output", benchmarkReportDirectory.get().asFile.absolutePath
+        )
+        providers.gradleProperty("benchmarkBaseline").orNull?.let {
+            args("--baseline", it)
+        }
+        providers.gradleProperty("benchmarkCandidate").orNull?.let {
+            args("--candidate", it)
+        }
+    }
+}
+
+tasks.register("benchmarkOpen") {
+    group = "benchmark"
+    description = "Opens the generated benchmark report when desktop integration is available"
+    dependsOn("benchmarkReport")
+    doLast {
+        val report = benchmarkReportDirectory.get().file("index.html").asFile
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+            Desktop.getDesktop().browse(report.toURI())
+        } else {
+            logger.lifecycle("Desktop browsing is unavailable. Report: ${report.absolutePath}")
+        }
+    }
+}
+
+tasks.register<Zip>("benchmarkArchive") {
+    group = "benchmark"
+    description = "Archives validated benchmark inputs and the generated report"
+    dependsOn("benchmarkReport")
+    destinationDirectory.set(layout.buildDirectory.dir("benchmark-archives"))
+    archiveFileName.set(providers.provider {
+        "zividomelive-benchmark-${Instant.now().toString().replace(':', '-')}.zip"
+    })
+    from(benchmarkResultsDirectory) {
+        into("benchmark-results")
+    }
+    from(benchmarkReportDirectory) {
+        into("benchmark-report")
+    }
+}
 
 val qualificationResultsDirectory = layout.buildDirectory.dir("test-results/qualification")
 val qualificationReportDirectory = layout.buildDirectory.dir("reports/qualification")
@@ -463,6 +534,7 @@ val verifyProcessingPackage = tasks.register("verifyProcessingPackage") {
 
         val zipFile = file("$releaseRoot/$libName.zip")
         val pdexFile = file("$releaseRoot/$libName.pdex")
+        val libraryJar = file("$releaseDirectory/library/${libName}.jar")
         val metadataFile = file("$releaseDirectory/library.properties")
         val contributionMetadataFile = file("$releaseRoot/$libName.txt")
         check(zipFile.isFile) { "Missing release archive: $zipFile" }
@@ -514,6 +586,17 @@ val verifyProcessingPackage = tasks.register("verifyProcessingPackage") {
 
         check(Files.mismatch(zipFile.toPath(), pdexFile.toPath()) == -1L) {
             "$libName.zip and $libName.pdex must be byte-identical"
+        }
+
+        ZipFile(libraryJar).use { jar ->
+            val developmentEntries = jar.entries().asSequence().map { it.name }.filter { name ->
+                name.startsWith("com/victorvalentim/zividomelive/benchmark/report/")
+                    || name.startsWith("benchmark-results/")
+                    || name.startsWith("reports/benchmark/")
+            }.toList()
+            check(developmentEntries.isEmpty()) {
+                "Library JAR contains benchmark report development files: ${developmentEntries.joinToString()}"
+            }
         }
 
         logger.lifecycle(
