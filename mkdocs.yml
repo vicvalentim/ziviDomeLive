@@ -115,6 +115,7 @@ plugins:
             Basic Examples: Exemplos Básicos
             Advanced Examples: Exemplos Avançados
             Qualification: Qualificação
+            Benchmark Guide: Guia do Benchmark
             Processing Publication: Publicação Processing
             Calibration Tool Protocol: Protocolo da Ferramenta de Calibração
             Release Readiness: Prontidão da Release
@@ -208,6 +209,7 @@ nav:
       - Basic Examples: examples/basic.md
       - Advanced Examples: examples/advanced.md
   - Qualification:
+      - Benchmark Guide: qualification/benchmark-guide.md
       - Processing Publication: qualification/processing-publication.md
       - Benchmark Reporting: qualification/benchmark-reporting.md
       - Automated Benchmarks: qualification/automated-benchmarks.md
