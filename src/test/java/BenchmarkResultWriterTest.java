@@ -35,6 +35,9 @@ class BenchmarkResultWriterTest {
         assertTrue(summary.contains("\"ndiStatus\": \"NOT_TESTED\""));
         assertTrue(summary.contains("\"invariantViolations\": 0"));
         assertTrue(summary.contains("\"NDI_CAPTURE\""));
+        assertTrue(summary.contains("\"testType\": \"TRANSITION\""));
+        assertTrue(summary.contains("\"transitionMaxMs\": 48.0"));
+        assertTrue(summary.contains("\"recoveryFrames\": 3"));
         assertTrue(environment.contains("\"glRenderer\": \"Test GPU\""));
         assertEquals(3, frames.size());
         assertTrue(frames.get(0).startsWith("frame,totalMs,sceneMs"));
@@ -79,6 +82,17 @@ class BenchmarkResultWriterTest {
         run.preview = true;
         run.warmupFrames = 600;
         run.requestedMeasurementFrames = 2;
+        run.testType = "TRANSITION";
+        run.scenarioName = "STANDARD_TO_DOMEMASTER";
+        run.transition = new BenchmarkResultWriter.Transition();
+        run.transition.from = "STANDARD 2048 MEDIUM";
+        run.transition.to = "DOMEMASTER 2048 MEDIUM";
+        run.transition.transitionFrame = 1;
+        run.transition.baselineFrames = 1;
+        run.transition.postFrames = 1;
+        run.transition.normalP95Milliseconds = 20.0;
+        run.transition.transitionMaximumMilliseconds = 48.0;
+        run.transition.recoveryFrames = 3;
         run.ndiCaptured = 2;
         run.ndiSent = 1;
         run.ndiDropped = 1;

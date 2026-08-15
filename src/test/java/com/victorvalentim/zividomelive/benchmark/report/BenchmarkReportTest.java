@@ -115,6 +115,68 @@ class BenchmarkReportTest {
         assertTrue(Files.readString(report.index()).contains("not supported"));
     }
 
+    @Test
+    void validatesAndRendersTransitionEvidence() throws Exception {
+        Path root = temporaryDirectory.resolve("results");
+        Path run = writeRun(root, "transition", 50.0, 20.0, 80.0, new double[]{18.0, 20.0});
+        String summary = Files.readString(run.resolve("summary.json"));
+        summary = summary.replace(
+                "  \"metrics\": {",
+                """
+                  "transition": {
+                    "from": "STANDARD 2048 MEDIUM", "to": "DOMEMASTER 2048 MEDIUM",
+                    "transitionFrame": 1, "baselineFrames": 1, "postFrames": 1,
+                    "normalP95Ms": 18.0, "transitionMaxMs": 80.0, "recoveryFrames": -1
+                  },
+                  "metrics": {""");
+        Files.writeString(run.resolve("summary.json"), summary, StandardCharsets.UTF_8);
+        BenchmarkRunRepository.Result discovery = new BenchmarkRunRepository().discover(root);
+
+        BenchmarkReportGenerator.Report report = new BenchmarkReportGenerator().generate(
+                discovery, temporaryDirectory.resolve("report"), null, null);
+        String html = Files.readString(report.index());
+
+        assertEquals(1, discovery.runs().size());
+        assertTrue(discovery.issues().isEmpty());
+        assertTrue(html.contains("<h3>Transition</h3>"));
+        assertTrue(html.contains("transitionMaxMs"));
+        assertTrue(html.contains("80.0"));
+        assertTrue(html.contains("recoveryFrames"));
+    }
+
+    @Test
+    void discoversSuiteManifestAndRendersUnsupportedScenario() throws Exception {
+        Path root = Files.createDirectories(temporaryDirectory.resolve("results"));
+        Files.writeString(root.resolve("suite-test.json"), """
+                {
+                  "schemaVersion": 1,
+                  "library": "ziviDomeLive",
+                  "suite": "TRANSITIONS",
+                  "revision": "abc123",
+                  "startedAt": "2026-08-14T10:00:00Z",
+                  "completedAt": "2026-08-14T10:05:00Z",
+                  "scenarios": [
+                    {"name": "NDI_OFF_TO_ON", "testType": "TRANSITION",
+                     "status": "UNSUPPORTED", "reason": "NDI is unavailable", "resultDirectory": ""}
+                  ]
+                }
+                """, StandardCharsets.UTF_8);
+        BenchmarkRunRepository.Result discovery = new BenchmarkRunRepository().discover(root);
+
+        BenchmarkReportGenerator.Report report = new BenchmarkReportGenerator().generate(
+                discovery, temporaryDirectory.resolve("report"), null, null);
+        String html = Files.readString(report.index());
+        Map<String, Object> data = BenchmarkRun.map(
+                SimpleJson.parse(Files.readString(temporaryDirectory.resolve("report/data.json"))));
+
+        assertEquals(1, discovery.suites().size());
+        assertTrue(discovery.issues().isEmpty());
+        assertTrue(html.contains("Automated suites"));
+        assertTrue(html.contains("NDI_OFF_TO_ON"));
+        assertTrue(html.contains("NDI is unavailable"));
+        assertEquals(1, ((List<?>) data.get("suites")).size());
+    }
+
     private BenchmarkComparison.Delta delta(BenchmarkComparison comparison, String key) {
         return comparison.deltas().stream().filter(delta -> delta.key().equals(key)).findFirst().orElseThrow();
     }
