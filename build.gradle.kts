@@ -140,6 +140,10 @@ tasks.test {
     useJUnitPlatform()
 }
 
+// Compile the pure-Java BenchmarkTool exporter only as test support. Processing
+// compiles the same Java tab when the example runs, keeping it out of the library JAR.
+sourceSets["test"].java.srcDir("examples/BenchmarkTool")
+
 val qualificationResultsDirectory = layout.buildDirectory.dir("test-results/qualification")
 val qualificationReportDirectory = layout.buildDirectory.dir("reports/qualification")
 
