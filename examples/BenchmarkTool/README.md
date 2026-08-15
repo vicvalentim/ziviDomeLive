@@ -82,6 +82,13 @@ the baseline P95; `-1` means the measured post interval did not recover.
 The repository document `docs/en/qualification/automated-benchmarks.md` describes Gradle tasks,
 CLI configuration, suite composition, and hardware requirements.
 
+GPU timer backend selection is architecture-aware by default. `TIMESTAMP_PAIR` is preferred when
+the active context exposes useful timestamp counter bits. On Apple Silicon, when timestamps report
+zero bits but elapsed queries are available, the controlled BenchmarkTool scenes use
+`TIME_ELAPSED_EXCLUSIVE`. Override the policy with
+`ZIVIDOME_BENCHMARK_GPU_TIMER_POLICY` or `-PbenchmarkGpuTimerPolicy=` using `AUTO`, `SAFE`,
+`TIMESTAMP`, `ARCHITECTURE_AWARE`, `ELAPSED`, or `TIME_ELAPSED_EXCLUSIVE`.
+
 ## Interpretation And Limitations
 
 - Pipeline timings are CPU-observed wall time. When `GPU timer` is enabled and supported,
@@ -90,6 +97,8 @@ CLI configuration, suite composition, and hardware requirements.
 - GPU timing uses a bounded query pool, never `glFinish()`, and falls back to CPU with a diagnostic.
   The two Processing GL boundaries flush queued commands and therefore add profiling overhead;
   compare CPU-only runs with CPU-only runs and GPU runs with GPU runs.
+- `TIME_ELAPSED_EXCLUSIVE` is restricted to controlled benchmark scenes because OpenGL permits
+  only one active elapsed timer query. Do not use that policy when scene code owns timer queries.
 - NDI send time covers the native sender call, not receiver/network latency. Worker metrics that
   complete after the final frame boundary may not be attributed to the final snapshot; cumulative
   captured deltas begin exactly at measurement, while asynchronous sent/dropped/failed deltas may

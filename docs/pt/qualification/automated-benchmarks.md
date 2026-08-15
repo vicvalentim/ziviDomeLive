@@ -64,6 +64,7 @@ Os padrões representam intervalos de qualificação; valores menores servem ape
   -PbenchmarkResolution=2048 \
   -PbenchmarkPreview=false \
   -PbenchmarkGpu=false \
+  -PbenchmarkGpuTimerPolicy=AUTO \
   -PbenchmarkWarmupFrames=600 \
   -PbenchmarkMeasurementFrames=1800 \
   -PbenchmarkTransitionBaselineFrames=120 \
@@ -84,3 +85,8 @@ Use `-PbenchmarkGpu=true` para solicitar o timer assíncrono limitado do pipelin
 `profiling.effectiveMode` é a fonte de verdade: contextos desktop GL/JOGL sem suporte fazem fallback
 para CPU. O modo GPU acrescenta duas fronteiras de flush GL do Processing por frame medido e não
 deve ser misturado com runs CPU-only em uma comparação de baseline.
+
+`-PbenchmarkGpuTimerPolicy=AUTO` detecta arquitetura e capabilities em runtime. A política prefere
+pares de timestamps e usa o fallback elapsed exclusivo apenas no Apple Silicon. Use `SAFE` ou
+`TIMESTAMP` para proibir a propriedade do elapsed query, ou `ELAPSED` somente em diagnóstico
+controlado.

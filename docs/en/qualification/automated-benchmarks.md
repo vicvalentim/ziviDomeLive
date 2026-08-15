@@ -63,6 +63,7 @@ Defaults represent qualification intervals, while shorter values are useful only
   -PbenchmarkResolution=2048 \
   -PbenchmarkPreview=false \
   -PbenchmarkGpu=false \
+  -PbenchmarkGpuTimerPolicy=AUTO \
   -PbenchmarkWarmupFrames=600 \
   -PbenchmarkMeasurementFrames=1800 \
   -PbenchmarkTransitionBaselineFrames=120 \
@@ -83,3 +84,7 @@ Set `-PbenchmarkGpu=true` to request the bounded asynchronous pipeline timer. Th
 `profiling.effectiveMode` is authoritative: unsupported desktop GL/JOGL contexts fall back to CPU.
 GPU mode adds two Processing GL flush boundaries per measured frame, so it must not be mixed with
 CPU-only runs in a baseline comparison.
+
+`-PbenchmarkGpuTimerPolicy=AUTO` detects runtime architecture and capabilities. It prefers
+timestamp pairs and uses the exclusive elapsed-query fallback only on Apple Silicon. Use `SAFE`
+or `TIMESTAMP` to prohibit elapsed-query ownership, or `ELAPSED` only for a controlled diagnostic.
