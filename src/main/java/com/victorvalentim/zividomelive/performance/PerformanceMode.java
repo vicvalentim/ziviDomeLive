@@ -4,8 +4,8 @@ package com.victorvalentim.zividomelive.performance;
  * Selects the amount of runtime performance instrumentation.
  *
  * <p>The performance API is experimental in ziviDomeLive 2.0. CPU/GPU mode uses
- * capability-gated asynchronous OpenGL timer queries for the complete render pipeline
- * and safely falls back to CPU instrumentation when unavailable.</p>
+ * capability-gated asynchronous OpenGL timer queries for the complete render pipeline.
+ * {@link GpuTimerPolicy} controls architecture-specific fallback and query ownership.</p>
  *
  * @since 2.0.0
  */

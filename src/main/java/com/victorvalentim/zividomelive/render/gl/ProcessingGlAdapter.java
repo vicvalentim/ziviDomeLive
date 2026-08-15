@@ -1,6 +1,9 @@
 package com.victorvalentim.zividomelive.render.gl;
 
 import com.jogamp.opengl.GL2ES2;
+import com.victorvalentim.zividomelive.performance.GpuTimerArchitecture;
+import com.victorvalentim.zividomelive.performance.GpuTimerBackend;
+import com.victorvalentim.zividomelive.performance.GpuTimerPolicy;
 import processing.core.PApplet;
 import processing.core.PGraphics;
 import processing.core.PConstants;
@@ -54,7 +57,7 @@ public final class ProcessingGlAdapter {
 	}
 
 	/**
-	 * Bounded asynchronous GPU timestamp-pair pool owned by the Processing GL
+	 * Bounded asynchronous GPU timer-query pool owned by the Processing GL
 	 * context. Queries are read only after {@code GL_QUERY_RESULT_AVAILABLE}; a saturated pool
 	 * declines new samples instead of blocking the render thread.
 	 *
@@ -72,6 +75,9 @@ public final class ProcessingGlAdapter {
 		private final int[] counterBitsScratch = new int[1];
 		private final long[] timestampScratch = new long[1];
 		private final long[] durationScratch = new long[1];
+		private final GpuTimerPolicy policy;
+		private GpuTimerBackend backend = GpuTimerBackend.NONE;
+		private GpuTimerArchitecture architecture = GpuTimerArchitecture.OTHER;
 		private Object contextIdentity;
 		private int activeSlot = -1;
 		private boolean allocated;
@@ -79,8 +85,10 @@ public final class ProcessingGlAdapter {
 
 		private GpuTimerQuerySession(
 				PApplet parent,
-				int poolSize) {
+				int poolSize,
+				GpuTimerPolicy policy) {
 			this.parent = parent;
+			this.policy = policy;
 			this.queryIds = new int[poolSize * 2];
 			this.pending = new boolean[poolSize];
 			this.frameIds = new long[poolSize];
@@ -118,7 +126,11 @@ public final class ProcessingGlAdapter {
 				if (freeSlot < 0) {
 					return false;
 				}
-				gl.glQueryCounter(startQueryId(freeSlot), GL2ES2.GL_TIMESTAMP);
+				if (backend == GpuTimerBackend.TIMESTAMP_PAIR) {
+					gl.glQueryCounter(startQueryId(freeSlot), GL2ES2.GL_TIMESTAMP);
+				} else {
+					gl.glBeginQuery(GL2ES2.GL_TIME_ELAPSED, startQueryId(freeSlot));
+				}
 				frameIds[freeSlot] = frameId;
 				profilingSessionIds[freeSlot] = profilingSessionId;
 				activeSlot = freeSlot;
@@ -147,7 +159,11 @@ public final class ProcessingGlAdapter {
 				GL2ES2 gl = requireGl(pjogl);
 				int endingSlot = activeSlot;
 				try {
-					gl.glQueryCounter(endQueryId(endingSlot), GL2ES2.GL_TIMESTAMP);
+					if (backend == GpuTimerBackend.TIMESTAMP_PAIR) {
+						gl.glQueryCounter(endQueryId(endingSlot), GL2ES2.GL_TIMESTAMP);
+					} else {
+						gl.glEndQuery(GL2ES2.GL_TIME_ELAPSED);
+					}
 					pending[endingSlot] = true;
 				} finally {
 					activeSlot = -1;
@@ -189,8 +205,18 @@ public final class ProcessingGlAdapter {
 			return count;
 		}
 
+		/** @return backend selected after the first successful begin call */
+		public GpuTimerBackend getBackend() {
+			return backend;
+		}
+
+		/** @return normalized platform architecture used by backend selection */
+		public GpuTimerArchitecture getArchitecture() {
+			return architecture;
+		}
+
 		/**
-		 * Deletes timestamp objects only when their owning context is current. Pending results are
+		 * Deletes timer-query objects only when their owning context is current. Pending results are
 		 * abandoned without waiting; context-loss objects are left to the destroyed context.
 		 */
 		@Override
@@ -209,6 +235,11 @@ public final class ProcessingGlAdapter {
 						PJOGL pjogl = requirePjogl(pgl);
 						if (pjogl.context == contextIdentity) {
 							GL2ES2 gl = requireGl(pjogl);
+							if (activeSlot >= 0
+									&& backend == GpuTimerBackend.TIME_ELAPSED_EXCLUSIVE) {
+								gl.glEndQuery(GL2ES2.GL_TIME_ELAPSED);
+								activeSlot = -1;
+							}
 							gl.glDeleteQueries(queryIds.length, queryIds, 0);
 						}
 					} finally {
@@ -235,15 +266,45 @@ public final class ProcessingGlAdapter {
 					throw new IllegalStateException(
 							"Desktop OpenGL GPU timer queries are not supported by the active context.");
 				}
+				architecture = GpuTimerArchitecture.detect(
+						System.getProperty("os.name"),
+						System.getProperty("os.arch"),
+						capabilities.vendor(),
+						capabilities.renderer());
 				counterBitsScratch[0] = 0;
 				gl.glGetQueryiv(
 						GL2ES2.GL_TIMESTAMP,
 						GL2ES2.GL_QUERY_COUNTER_BITS,
 						counterBitsScratch,
 						0);
-				if (counterBitsScratch[0] <= 0) {
-					throw new IllegalStateException(
-							"The active OpenGL context reports zero GPU timestamp counter bits.");
+				int timestampCounterBits = counterBitsScratch[0];
+				counterBitsScratch[0] = 0;
+				gl.glGetQueryiv(
+						GL2ES2.GL_TIME_ELAPSED,
+						GL2ES2.GL_QUERY_COUNTER_BITS,
+						counterBitsScratch,
+						0);
+				int elapsedCounterBits = counterBitsScratch[0];
+				backend = policy.selectBackend(
+						architecture,
+						timestampCounterBits,
+						elapsedCounterBits);
+				if (backend == GpuTimerBackend.NONE) {
+					throw new IllegalStateException("No GPU timer backend satisfies policy "
+							+ policy + " on " + architecture + " (timestampBits="
+							+ timestampCounterBits + ", elapsedBits=" + elapsedCounterBits + ").");
+				}
+				if (backend == GpuTimerBackend.TIME_ELAPSED_EXCLUSIVE) {
+					counterBitsScratch[0] = 0;
+					gl.glGetQueryiv(
+							GL2ES2.GL_TIME_ELAPSED,
+							GL2ES2.GL_CURRENT_QUERY,
+							counterBitsScratch,
+							0);
+					if (counterBitsScratch[0] != 0) {
+						throw new IllegalStateException(
+								"GL_TIME_ELAPSED is already owned by another query.");
+					}
 				}
 				gl.glGenQueries(queryIds.length, queryIds, 0);
 				contextIdentity = pjogl.context;
@@ -258,42 +319,49 @@ public final class ProcessingGlAdapter {
 					continue;
 				}
 				availableScratch[0] = 0;
+				int resultQueryId = backend == GpuTimerBackend.TIMESTAMP_PAIR
+						? endQueryId(slot)
+						: startQueryId(slot);
 				gl.glGetQueryObjectiv(
-						endQueryId(slot),
+						resultQueryId,
 						GL2ES2.GL_QUERY_RESULT_AVAILABLE,
 						availableScratch,
 						0);
 				if (availableScratch[0] == 0) {
 					continue;
 				}
-				availableScratch[0] = 0;
-				gl.glGetQueryObjectiv(
-						startQueryId(slot),
-						GL2ES2.GL_QUERY_RESULT_AVAILABLE,
-						availableScratch,
-						0);
-				if (availableScratch[0] == 0) {
-					continue;
-				}
-				gl.glGetQueryObjectui64v(
-						startQueryId(slot),
-						GL2ES2.GL_QUERY_RESULT,
-						timestampScratch,
-						0);
-				gl.glGetQueryObjectui64v(
-						endQueryId(slot),
-						GL2ES2.GL_QUERY_RESULT,
-						durationScratch,
-						0);
-				if (durationScratch[0] <= timestampScratch[0]) {
-					throw new IllegalStateException(
-							"The GPU timestamp counter did not advance across the render pipeline.");
+				long elapsedNanos;
+				if (backend == GpuTimerBackend.TIMESTAMP_PAIR) {
+					availableScratch[0] = 0;
+					gl.glGetQueryObjectiv(
+							startQueryId(slot),
+							GL2ES2.GL_QUERY_RESULT_AVAILABLE,
+							availableScratch,
+							0);
+					if (availableScratch[0] == 0) continue;
+					gl.glGetQueryObjectui64v(
+							startQueryId(slot), GL2ES2.GL_QUERY_RESULT, timestampScratch, 0);
+					gl.glGetQueryObjectui64v(
+							endQueryId(slot), GL2ES2.GL_QUERY_RESULT, durationScratch, 0);
+					if (durationScratch[0] <= timestampScratch[0]) {
+						throw new IllegalStateException(
+								"The GPU timestamp counter did not advance across the render pipeline.");
+					}
+					elapsedNanos = durationScratch[0] - timestampScratch[0];
+				} else {
+					gl.glGetQueryObjectui64v(
+							startQueryId(slot), GL2ES2.GL_QUERY_RESULT, durationScratch, 0);
+					if (durationScratch[0] <= 0L) {
+						throw new IllegalStateException(
+								"The GPU elapsed query returned no useful duration.");
+					}
+					elapsedNanos = durationScratch[0];
 				}
 				pending[slot] = false;
 				consumer.accept(
 						frameIds[slot],
 						profilingSessionIds[slot],
-						durationScratch[0] - timestampScratch[0]);
+						elapsedNanos);
 			}
 		}
 
@@ -320,6 +388,8 @@ public final class ProcessingGlAdapter {
 			Arrays.fill(frameIds, 0L);
 			Arrays.fill(profilingSessionIds, 0L);
 			contextIdentity = null;
+			backend = GpuTimerBackend.NONE;
+			architecture = GpuTimerArchitecture.OTHER;
 			activeSlot = -1;
 			allocated = false;
 		}
@@ -359,7 +429,7 @@ public final class ProcessingGlAdapter {
 	}
 
 	/**
-	 * Creates a lazy, bounded GPU timer-query session. Native query IDs remain private to
+	 * Creates a lazy, bounded safe GPU timer-query session. Native query IDs remain private to
 	 * the adapter and are allocated only on the first render-thread {@code begin()} call.
 	 *
 	 * @param parent Processing parent that owns the OpenGL context
@@ -367,13 +437,31 @@ public final class ProcessingGlAdapter {
 	 * @return timer-query session
 	 */
 	public GpuTimerQuerySession createGpuTimerQuerySession(PApplet parent, int poolSize) {
+		return createGpuTimerQuerySession(parent, poolSize, GpuTimerPolicy.SAFE);
+	}
+
+	/**
+	 * Creates a timer session using the requested ownership/fallback policy.
+	 *
+	 * @param parent Processing parent that owns the OpenGL context
+	 * @param poolSize maximum number of in-flight asynchronous queries
+	 * @param policy timer backend selection and elapsed-query ownership policy
+	 * @return timer-query session
+	 */
+	public GpuTimerQuerySession createGpuTimerQuerySession(
+			PApplet parent,
+			int poolSize,
+			GpuTimerPolicy policy) {
 		if (parent == null) {
 			throw new IllegalArgumentException("Processing parent must not be null.");
 		}
 		if (poolSize < 2 || poolSize > 64) {
 			throw new IllegalArgumentException("GPU timer query pool size must be between 2 and 64.");
 		}
-		return new GpuTimerQuerySession(parent, poolSize);
+		if (policy == null) {
+			throw new IllegalArgumentException("GPU timer policy must not be null.");
+		}
+		return new GpuTimerQuerySession(parent, poolSize, policy);
 	}
 
 	/**

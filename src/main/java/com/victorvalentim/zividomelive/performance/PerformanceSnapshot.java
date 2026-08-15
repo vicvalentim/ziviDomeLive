@@ -27,6 +27,9 @@ public final class PerformanceSnapshot {
 	private final long cubemapCaptureViolations;
 	private final long unexpectedPassViolations;
 	private final List<String> diagnostics;
+	private final GpuTimerPolicy gpuTimerPolicy;
+	private final GpuTimerBackend gpuTimerBackend;
+	private final GpuTimerArchitecture gpuTimerArchitecture;
 
 	/**
 	 * Creates a snapshot from runtime-owned sample arrays.
@@ -107,6 +110,49 @@ public final class PerformanceSnapshot {
 			List<String> diagnostics,
 			long[][] gpuDurationsNanos,
 			int[][] gpuCalls) {
+		this(requestedMode, effectiveMode, totalFrames, storedFrames, overwrittenFrames,
+				durationsNanos, calls, invariantViolations, cubemapCaptureViolations,
+				unexpectedPassViolations, diagnostics, gpuDurationsNanos, gpuCalls,
+				GpuTimerPolicy.SAFE, GpuTimerBackend.NONE, GpuTimerArchitecture.OTHER);
+	}
+
+	/**
+	 * Creates a snapshot including the GPU timer selection evidence.
+	 *
+	 * @param requestedMode mode requested by the application
+	 * @param effectiveMode mode actually used by the recorder
+	 * @param totalFrames completed frames since the latest reset
+	 * @param storedFrames completed frames retained in the ring buffer
+	 * @param overwrittenFrames completed frames overwritten by the ring buffer
+	 * @param durationsNanos chronological CPU durations by metric ordinal
+	 * @param calls chronological CPU calls by metric ordinal
+	 * @param invariantViolations total render-graph invariant violations
+	 * @param cubemapCaptureViolations cubemap-capture invariant violations
+	 * @param unexpectedPassViolations unexpected render-pass violations
+	 * @param diagnostics immutable collection diagnostics
+	 * @param gpuDurationsNanos chronological GPU durations by metric ordinal
+	 * @param gpuCalls chronological GPU result counts by metric ordinal
+	 * @param gpuTimerPolicy requested GPU timer selection policy
+	 * @param gpuTimerBackend effective GPU timer backend
+	 * @param gpuTimerArchitecture normalized architecture used during selection
+	 */
+	public PerformanceSnapshot(
+			PerformanceMode requestedMode,
+			PerformanceMode effectiveMode,
+			long totalFrames,
+			int storedFrames,
+			long overwrittenFrames,
+			long[][] durationsNanos,
+			int[][] calls,
+			long invariantViolations,
+			long cubemapCaptureViolations,
+			long unexpectedPassViolations,
+			List<String> diagnostics,
+			long[][] gpuDurationsNanos,
+			int[][] gpuCalls,
+			GpuTimerPolicy gpuTimerPolicy,
+			GpuTimerBackend gpuTimerBackend,
+			GpuTimerArchitecture gpuTimerArchitecture) {
 		this.requestedMode = requestedMode;
 		this.effectiveMode = effectiveMode;
 		this.totalFrames = totalFrames;
@@ -120,6 +166,9 @@ public final class PerformanceSnapshot {
 		this.cubemapCaptureViolations = cubemapCaptureViolations;
 		this.unexpectedPassViolations = unexpectedPassViolations;
 		this.diagnostics = List.copyOf(diagnostics);
+		this.gpuTimerPolicy = gpuTimerPolicy;
+		this.gpuTimerBackend = gpuTimerBackend;
+		this.gpuTimerArchitecture = gpuTimerArchitecture;
 		this.statistics = createStatistics();
 		this.gpuStatistics = createStatistics(this.gpuDurationsNanos, this.gpuCalls);
 	}
@@ -252,6 +301,15 @@ public final class PerformanceSnapshot {
 	public List<String> getDiagnostics() {
 		return diagnostics;
 	}
+
+	/** @return timer-query ownership/fallback policy requested for this session */
+	public GpuTimerPolicy getGpuTimerPolicy() { return gpuTimerPolicy; }
+
+	/** @return GPU timer backend effectively used, or {@link GpuTimerBackend#NONE} */
+	public GpuTimerBackend getGpuTimerBackend() { return gpuTimerBackend; }
+
+	/** @return normalized architecture observed when the GPU backend was selected */
+	public GpuTimerArchitecture getGpuTimerArchitecture() { return gpuTimerArchitecture; }
 
 	private void checkFrameIndex(int frameIndex) {
 		if (frameIndex < 0 || frameIndex >= storedFrames) {

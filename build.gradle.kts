@@ -323,6 +323,10 @@ tasks.register<Exec>("benchmarkSuite") {
             providers.gradleProperty("benchmarkGpu").getOrElse("false")
         )
         environment(
+            "ZIVIDOME_BENCHMARK_GPU_TIMER_POLICY",
+            providers.gradleProperty("benchmarkGpuTimerPolicy").getOrElse("AUTO")
+        )
+        environment(
             "ZIVIDOME_BENCHMARK_WARMUP_FRAMES",
             providers.gradleProperty("benchmarkWarmupFrames").getOrElse("600")
         )

@@ -51,12 +51,18 @@ public final class GpuPerformanceTimer {
 		try {
 			if (querySession == null || querySessionId != activeSessionId || closePending) {
 				closeCurrentSession();
-				querySession = glAdapter.createGpuTimerQuerySession(parent, QUERY_POOL_SIZE);
+				querySession = glAdapter.createGpuTimerQuerySession(
+						parent,
+						QUERY_POOL_SIZE,
+						monitor.getGpuTimerPolicy());
 				querySessionId = activeSessionId;
 				closePending = false;
 			}
 			queryActive = querySession.begin(frameId, activeSessionId, resultConsumer);
-			monitor.activateGpu(activeSessionId);
+			monitor.activateGpu(
+					activeSessionId,
+					querySession.getBackend(),
+					querySession.getArchitecture());
 			if (!queryActive) {
 				monitor.countDroppedGpuSample(activeSessionId);
 			}

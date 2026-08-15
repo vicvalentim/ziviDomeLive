@@ -19,6 +19,7 @@ import com.victorvalentim.zividomelive.manager.OutputManager;
 import com.victorvalentim.zividomelive.performance.PerformanceMetric;
 import com.victorvalentim.zividomelive.performance.PerformanceMode;
 import com.victorvalentim.zividomelive.performance.PerformanceSnapshot;
+import com.victorvalentim.zividomelive.performance.GpuTimerPolicy;
 import com.victorvalentim.zividomelive.render.CubemapRenderer;
 import com.victorvalentim.zividomelive.render.EnvironmentBackgroundRenderer;
 import com.victorvalentim.zividomelive.render.Quaternion;
@@ -152,6 +153,7 @@ class PublicApiCompatibilityTest {
 		assertTrue(Modifier.isPublic(PerformanceSnapshot.class.getModifiers()));
 		assertMethod("enablePerformanceProfiling", PerformanceMode.class);
 		assertMethod("enablePerformanceProfiling", PerformanceMode.class, int.class);
+		assertMethod("enablePerformanceProfiling", PerformanceMode.class, int.class, GpuTimerPolicy.class);
 		assertMethod("disablePerformanceProfiling");
 		assertMethod("resetPerformanceStatistics");
 		assertEquals(PerformanceSnapshot.class,

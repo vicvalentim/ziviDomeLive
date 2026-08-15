@@ -168,6 +168,9 @@ public final class BenchmarkResultWriter {
         json.append("  \"profiling\": {\n");
         field(json, 2, "requestedMode", snapshot.getRequestedMode().name(), true);
         field(json, 2, "effectiveMode", snapshot.getEffectiveMode().name(), true);
+        field(json, 2, "gpuTimerPolicy", snapshot.getGpuTimerPolicy().name(), true);
+        field(json, 2, "gpuTimerBackend", snapshot.getGpuTimerBackend().name(), true);
+        field(json, 2, "gpuTimerArchitecture", snapshot.getGpuTimerArchitecture().name(), true);
         field(json, 2, "gpuTimings", snapshot.hasGpuTimings(), true);
         field(json, 2, "gpuMetric", snapshot.hasGpuTimings() ? "RENDER_PIPELINE" : "NONE", true);
         field(json, 2, "gpuSamples",

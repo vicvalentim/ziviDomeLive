@@ -2199,10 +2199,30 @@ public class ziviDomeLive implements PConstants {
 	 * @since 2.0.0
 	 */
 	public void enablePerformanceProfiling(PerformanceMode mode, int sampleCapacity) {
-		performanceMonitor.enable(mode, sampleCapacity);
+		enablePerformanceProfiling(mode, sampleCapacity, GpuTimerPolicy.SAFE);
+	}
+
+	/**
+	 * Enables profiling with an explicit GPU timer ownership/fallback policy.
+	 *
+	 * <p>{@link GpuTimerPolicy#ARCHITECTURE_AWARE} is intended for controlled benchmark
+	 * scenes. On Apple Silicon it may own {@code GL_TIME_ELAPSED} for the complete pipeline,
+	 * so scene code must not start another elapsed timer query during the interval.</p>
+	 *
+	 * @param mode requested profiling mode
+	 * @param sampleCapacity number of completed frames retained in the ring buffer
+	 * @param timerPolicy GPU timer selection policy
+	 * @since 2.0.0
+	 */
+	public void enablePerformanceProfiling(
+			PerformanceMode mode,
+			int sampleCapacity,
+			GpuTimerPolicy timerPolicy) {
+		performanceMonitor.enable(mode, sampleCapacity, timerPolicy);
 		gpuPerformanceTimer.stop(isOnRenderThread());
 		if (mode == PerformanceMode.CPU_GPU) {
-			LOGGER.info("CPU_GPU profiling requested; GPU support will be checked on the render thread.");
+			LOGGER.info("CPU_GPU profiling requested with " + timerPolicy
+					+ "; GPU support will be checked on the render thread.");
 		}
 	}
 

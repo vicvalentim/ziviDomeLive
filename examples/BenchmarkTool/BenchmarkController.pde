@@ -62,6 +62,7 @@ class BenchmarkController {
   String automationSceneName;
   boolean automationStarted;
   boolean exitAfterSuite;
+  GpuTimerPolicy configuredGpuTimerPolicy = GpuTimerPolicy.ARCHITECTURE_AWARE;
   int transitionBaselineCompleted;
   int transitionPostCompleted;
   int transitionFrameIndex;
@@ -282,7 +283,8 @@ class BenchmarkController {
     suiteActive = false;
     warmupOnly = true;
     if (!configureScenario()) return;
-    dome.enablePerformanceProfiling(selectedPerformanceMode(), sampleCapacity());
+    dome.enablePerformanceProfiling(
+        selectedPerformanceMode(), sampleCapacity(), configuredGpuTimerPolicy);
     dome.resetPerformanceStatistics();
     warmupCompleted = 0;
     state = configuredWarmupFrames > 0 ? BenchmarkState.WARMUP : BenchmarkState.WARMUP_FINISHING;
@@ -301,7 +303,8 @@ class BenchmarkController {
       suiteActive = false;
       return;
     }
-    dome.enablePerformanceProfiling(selectedPerformanceMode(), sampleCapacity());
+    dome.enablePerformanceProfiling(
+        selectedPerformanceMode(), sampleCapacity(), configuredGpuTimerPolicy);
     dome.resetPerformanceStatistics();
     warmupCompleted = 0;
     measurementCompleted = 0;
@@ -753,7 +756,9 @@ class BenchmarkController {
   String gpuPipelineLine() {
     PerformanceSnapshot.MetricStatistics statistics =
         lastSnapshot.getGpuStatistics(PerformanceMetric.RENDER_PIPELINE);
-    return "GPU pipeline [" + lastSnapshot.getEffectiveMode().name() + "]: avg "
+    return "GPU pipeline [" + lastSnapshot.getEffectiveMode().name()
+        + "/" + lastSnapshot.getGpuTimerBackend().name()
+        + "/" + lastSnapshot.getGpuTimerArchitecture().name() + "]: avg "
         + nf((float)statistics.getAverageMilliseconds(), 0, 3)
         + "  p95 " + nf((float)statistics.getP95Milliseconds(), 0, 3)
         + "  samples " + statistics.getSampledFrames() + "\n";
@@ -869,6 +874,7 @@ class BenchmarkController {
         "ZIVIDOME_BENCHMARK_SCENE", "zividome.benchmark.scene");
     exitAfterSuite = configuredBoolean(
         "ZIVIDOME_BENCHMARK_EXIT", "zividome.benchmark.exit", false);
+    configuredGpuTimerPolicy = configuredGpuTimerPolicy();
     configuredWarmupFrames = configuredInteger(
         "ZIVIDOME_BENCHMARK_WARMUP_FRAMES",
         "zividome.benchmark.warmupFrames",
@@ -906,6 +912,26 @@ class BenchmarkController {
         previewToggle.getState()));
     warmupFramesInput.setValue(configuredWarmupFrames);
     measurementFramesInput.setValue(configuredMeasurementFrames);
+  }
+
+  GpuTimerPolicy configuredGpuTimerPolicy() {
+    String configured = configuredValue(
+        "ZIVIDOME_BENCHMARK_GPU_TIMER_POLICY",
+        "zividome.benchmark.gpuTimerPolicy");
+    if (configured == null || configured.equalsIgnoreCase("AUTO")) {
+      return GpuTimerPolicy.ARCHITECTURE_AWARE;
+    }
+    if (configured.equalsIgnoreCase("TIMESTAMP")) return GpuTimerPolicy.SAFE;
+    if (configured.equalsIgnoreCase("ELAPSED")) {
+      return GpuTimerPolicy.TIME_ELAPSED_EXCLUSIVE;
+    }
+    try {
+      return GpuTimerPolicy.valueOf(configured.toUpperCase(Locale.ROOT));
+    } catch (IllegalArgumentException error) {
+      throw new IllegalArgumentException(
+          "ZIVIDOME_BENCHMARK_GPU_TIMER_POLICY must be AUTO, SAFE, TIMESTAMP, "
+          + "ARCHITECTURE_AWARE, ELAPSED, or TIME_ELAPSED_EXCLUSIVE.");
+    }
   }
 
   int configuredInteger(

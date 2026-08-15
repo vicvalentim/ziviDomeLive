@@ -3,6 +3,9 @@ package com.victorvalentim.zividomelive.internal.performance;
 import com.victorvalentim.zividomelive.performance.PerformanceMetric;
 import com.victorvalentim.zividomelive.performance.PerformanceMode;
 import com.victorvalentim.zividomelive.performance.PerformanceSnapshot;
+import com.victorvalentim.zividomelive.performance.GpuTimerArchitecture;
+import com.victorvalentim.zividomelive.performance.GpuTimerBackend;
+import com.victorvalentim.zividomelive.performance.GpuTimerPolicy;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,6 +29,9 @@ public final class PerformanceMonitor {
 
 	private volatile PerformanceMode requestedMode = PerformanceMode.OFF;
 	private volatile PerformanceMode effectiveMode = PerformanceMode.OFF;
+	private volatile GpuTimerPolicy gpuTimerPolicy = GpuTimerPolicy.SAFE;
+	private volatile GpuTimerBackend gpuTimerBackend = GpuTimerBackend.NONE;
+	private volatile GpuTimerArchitecture gpuTimerArchitecture = GpuTimerArchitecture.OTHER;
 	private volatile boolean active;
 	private volatile long sessionId;
 	private int capacity;
@@ -67,9 +73,22 @@ public final class PerformanceMonitor {
 	}
 
 	public synchronized void enable(PerformanceMode mode, int sampleCapacity) {
+		enable(mode, sampleCapacity, GpuTimerPolicy.SAFE);
+	}
+
+	public synchronized void enable(
+			PerformanceMode mode,
+			int sampleCapacity,
+			GpuTimerPolicy timerPolicy) {
 		if (mode == null) {
 			throw new IllegalArgumentException("Performance mode cannot be null.");
 		}
+		if (timerPolicy == null) {
+			throw new IllegalArgumentException("GPU timer policy cannot be null.");
+		}
+		gpuTimerPolicy = timerPolicy;
+		gpuTimerBackend = GpuTimerBackend.NONE;
+		gpuTimerArchitecture = GpuTimerArchitecture.OTHER;
 		if (mode == PerformanceMode.OFF) {
 			active = false;
 			advanceSession();
@@ -101,6 +120,10 @@ public final class PerformanceMonitor {
 		active = true;
 	}
 
+	public GpuTimerPolicy getGpuTimerPolicy() {
+		return gpuTimerPolicy;
+	}
+
 	public synchronized void disable() {
 		active = false;
 		advanceSession();
@@ -125,6 +148,11 @@ public final class PerformanceMonitor {
 			Arrays.fill(metricCalls, 0);
 		}
 		resetState();
+		effectiveMode = requestedMode == PerformanceMode.OFF
+				? PerformanceMode.OFF
+				: PerformanceMode.CPU;
+		gpuTimerBackend = GpuTimerBackend.NONE;
+		gpuTimerArchitecture = GpuTimerArchitecture.OTHER;
 		advanceSession();
 	}
 
@@ -156,8 +184,21 @@ public final class PerformanceMonitor {
 
 	/** Marks GPU collection active only when initialization belongs to this session. */
 	synchronized void activateGpu(long expectedSessionId) {
+		activateGpu(
+				expectedSessionId,
+				GpuTimerBackend.TIMESTAMP_PAIR,
+				GpuTimerArchitecture.OTHER);
+	}
+
+	/** Marks the selected GPU backend active only when initialization belongs to this session. */
+	synchronized void activateGpu(
+			long expectedSessionId,
+			GpuTimerBackend backend,
+			GpuTimerArchitecture architecture) {
 		if (requestedMode == PerformanceMode.CPU_GPU && isSessionActive(expectedSessionId)) {
 			effectiveMode = PerformanceMode.CPU_GPU;
+			gpuTimerBackend = backend;
+			gpuTimerArchitecture = architecture;
 			gpuDiagnostic = null;
 		}
 	}
@@ -166,6 +207,7 @@ public final class PerformanceMonitor {
 	synchronized void fallbackGpu(long expectedSessionId, String diagnostic) {
 		if (requestedMode == PerformanceMode.CPU_GPU && isSessionActive(expectedSessionId)) {
 			effectiveMode = PerformanceMode.CPU;
+			gpuTimerBackend = GpuTimerBackend.NONE;
 			gpuDiagnostic = diagnostic;
 		}
 	}
@@ -330,7 +372,9 @@ public final class PerformanceMonitor {
 					: gpuDiagnostic);
 		}
 		if (effectiveMode == PerformanceMode.CPU_GPU) {
-			diagnostics.add("GPU elapsed time covers RENDER_PIPELINE only; all other timings are CPU wall time.");
+			diagnostics.add("GPU elapsed time uses " + gpuTimerBackend
+					+ " on " + gpuTimerArchitecture
+					+ " and covers RENDER_PIPELINE only; all other timings are CPU wall time.");
 		}
 		if (droppedGpuSamples > 0L) {
 			diagnostics.add("Asynchronous GPU samples dropped without blocking: " + droppedGpuSamples + ".");
@@ -355,7 +399,10 @@ public final class PerformanceMonitor {
 				unexpectedPassViolations,
 				diagnostics,
 				chronologicalGpuDurations,
-				chronologicalGpuCalls);
+				chronologicalGpuCalls,
+				gpuTimerPolicy,
+				gpuTimerBackend,
+				gpuTimerArchitecture);
 	}
 
 	private void drainConcurrentMetrics() {

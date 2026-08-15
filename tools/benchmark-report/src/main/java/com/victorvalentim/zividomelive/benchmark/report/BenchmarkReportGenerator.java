@@ -214,7 +214,8 @@ public final class BenchmarkReportGenerator {
         if (!profiling.isEmpty()) {
             page.append("<article><h3>Profiling</h3>");
             definition(page, profiling, List.of(
-                    "requestedMode", "effectiveMode", "gpuTimings", "gpuMetric", "gpuSamples"));
+                    "requestedMode", "effectiveMode", "gpuTimerPolicy", "gpuTimerBackend",
+                    "gpuTimerArchitecture", "gpuTimings", "gpuMetric", "gpuSamples"));
             page.append("</article>");
         }
         Map<String, Object> transition = run.section("transition");
@@ -383,6 +384,7 @@ public final class BenchmarkReportGenerator {
         text.append("- Suite manifests: ").append(discovery.suites().size()).append('\n');
         text.append("- Results root: `").append(discovery.root()).append("`\n");
         if (selected != null) {
+            Map<String, Object> profiling = selected.section("profiling");
             text.append("- Selected run: `").append(selected.id()).append("`\n")
                     .append("- Average FPS: ").append(format(selected.metric("fpsAverage"))).append("\n")
                     .append("- 1% low FPS: ").append(format(selected.metric("onePercentLowFps"))).append("\n")
@@ -390,6 +392,12 @@ public final class BenchmarkReportGenerator {
                     .append(format(selected.metric("frameMsAverage"))).append(" / ")
                     .append(format(selected.metric("frameMsP95"))).append(" / ")
                     .append(format(selected.metric("frameMsP99"))).append(" ms\n");
+            if (!profiling.isEmpty()) {
+                text.append("- GPU timer policy/backend/architecture: ")
+                        .append(value(profiling.get("gpuTimerPolicy"))).append(" / ")
+                        .append(value(profiling.get("gpuTimerBackend"))).append(" / ")
+                        .append(value(profiling.get("gpuTimerArchitecture"))).append('\n');
+            }
         }
         if (!notices.isEmpty()) {
             text.append("\n## Validation notices\n\n");

@@ -1,6 +1,9 @@
 import com.victorvalentim.zividomelive.performance.PerformanceMetric;
 import com.victorvalentim.zividomelive.performance.PerformanceMode;
 import com.victorvalentim.zividomelive.performance.PerformanceSnapshot;
+import com.victorvalentim.zividomelive.performance.GpuTimerArchitecture;
+import com.victorvalentim.zividomelive.performance.GpuTimerBackend;
+import com.victorvalentim.zividomelive.performance.GpuTimerPolicy;
 import com.victorvalentim.zividomelive.benchmark.report.BenchmarkRunRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -40,6 +43,9 @@ class BenchmarkResultWriterTest {
         assertTrue(summary.contains("\"transitionMaxMs\": 48.0"));
         assertTrue(summary.contains("\"recoveryFrames\": 3"));
         assertTrue(summary.contains("\"effectiveMode\": \"CPU_GPU\""));
+        assertTrue(summary.contains("\"gpuTimerPolicy\": \"ARCHITECTURE_AWARE\""));
+        assertTrue(summary.contains("\"gpuTimerBackend\": \"TIME_ELAPSED_EXCLUSIVE\""));
+        assertTrue(summary.contains("\"gpuTimerArchitecture\": \"APPLE_SILICON\""));
         assertTrue(summary.contains("\"gpuMetric\": \"RENDER_PIPELINE\""));
         assertTrue(summary.contains("\"gpuPipeline\""));
         assertTrue(summary.contains("\"averageMs\": 6.0"));
@@ -143,6 +149,9 @@ class BenchmarkResultWriterTest {
                 0L,
                 List.of(),
                 gpuDurations,
-                gpuCalls);
+                gpuCalls,
+                GpuTimerPolicy.ARCHITECTURE_AWARE,
+                GpuTimerBackend.TIME_ELAPSED_EXCLUSIVE,
+                GpuTimerArchitecture.APPLE_SILICON);
     }
 }

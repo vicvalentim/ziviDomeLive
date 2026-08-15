@@ -3,6 +3,9 @@ package com.victorvalentim.zividomelive.internal.performance;
 import com.victorvalentim.zividomelive.performance.PerformanceMetric;
 import com.victorvalentim.zividomelive.performance.PerformanceMode;
 import com.victorvalentim.zividomelive.performance.PerformanceSnapshot;
+import com.victorvalentim.zividomelive.performance.GpuTimerArchitecture;
+import com.victorvalentim.zividomelive.performance.GpuTimerBackend;
+import com.victorvalentim.zividomelive.performance.GpuTimerPolicy;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -166,12 +169,15 @@ class PerformanceMonitorTest {
 	@Test
 	void delayedGpuResultIsAlignedWithItsOriginalCommittedFrame() {
 		PerformanceMonitor monitor = new PerformanceMonitor();
-		monitor.enable(PerformanceMode.CPU_GPU, 4);
+		monitor.enable(PerformanceMode.CPU_GPU, 4, GpuTimerPolicy.ARCHITECTURE_AWARE);
 		long sessionId = monitor.getActiveSessionId();
 
 		monitor.beginFrame(1L);
 		assertEquals(0L, monitor.getCurrentFrameId());
-		monitor.activateGpu(sessionId);
+		monitor.activateGpu(
+				sessionId,
+				GpuTimerBackend.TIME_ELAPSED_EXCLUSIVE,
+				GpuTimerArchitecture.APPLE_SILICON);
 		monitor.beginFrame(10_000_001L);
 		assertTrue(monitor.recordGpuDuration(
 				PerformanceMetric.RENDER_PIPELINE,
@@ -181,6 +187,9 @@ class PerformanceMonitorTest {
 
 		PerformanceSnapshot snapshot = monitor.snapshot();
 		assertEquals(PerformanceMode.CPU_GPU, snapshot.getEffectiveMode());
+		assertEquals(GpuTimerPolicy.ARCHITECTURE_AWARE, snapshot.getGpuTimerPolicy());
+		assertEquals(GpuTimerBackend.TIME_ELAPSED_EXCLUSIVE, snapshot.getGpuTimerBackend());
+		assertEquals(GpuTimerArchitecture.APPLE_SILICON, snapshot.getGpuTimerArchitecture());
 		assertTrue(snapshot.hasGpuTimings());
 		assertEquals(4_000_000L,
 				snapshot.getGpuDurationNanos(PerformanceMetric.RENDER_PIPELINE, 0));
@@ -216,6 +225,23 @@ class PerformanceMonitorTest {
 		assertFalse(snapshot.hasGpuTimings());
 		assertTrue(snapshot.getDiagnostics().stream()
 				.anyMatch(message -> message.contains("GPU samples dropped")));
+	}
+
+	@Test
+	void resetClearsThePreviouslySelectedGpuBackendUntilTheNewSessionBegins() {
+		PerformanceMonitor monitor = new PerformanceMonitor();
+		monitor.enable(PerformanceMode.CPU_GPU, 4, GpuTimerPolicy.ARCHITECTURE_AWARE);
+		monitor.activateGpu(
+				monitor.getActiveSessionId(),
+				GpuTimerBackend.TIME_ELAPSED_EXCLUSIVE,
+				GpuTimerArchitecture.APPLE_SILICON);
+
+		monitor.reset();
+		PerformanceSnapshot snapshot = monitor.snapshot();
+
+		assertEquals(PerformanceMode.CPU, snapshot.getEffectiveMode());
+		assertEquals(GpuTimerBackend.NONE, snapshot.getGpuTimerBackend());
+		assertEquals(GpuTimerArchitecture.OTHER, snapshot.getGpuTimerArchitecture());
 	}
 
 	@Test
