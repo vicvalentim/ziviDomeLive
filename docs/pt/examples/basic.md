@@ -23,6 +23,17 @@ Template inicial mínimo em múltiplos arquivos com uma `Scene`, um `SceneManage
 
 Exemplo de cena maior que executa no máximo uma tarefa de simulação pelo `ThreadManager` compartilhado, cancela o trabalho pertencente à cena no descarte e mantém as chamadas gráficas na render thread. Clique ou arraste para adicionar partículas.
 
+## BenchmarkTool
+
+Sketch de qualificação quantitativa com cenas determinísticas `EMPTY`, `LIGHT`, `MEDIUM`, `HEAVY`
+e `SPHERICAL_STRESS`. Seu painel ControlP5 separa warm-up de medição, apresenta um snapshot imutável
+após o run e exporta `summary.json`, `frames.csv` e `environment.json` com schema versionado. Defina
+`ZIVIDOME_BENCHMARK_OUTPUT` para manter execuções do repositório em `build/benchmark-results/`; o
+fallback manual documentado fica fora da pasta de exemplos.
+
+O `RUN SUITE` inicial cobre os quatro modos dedicados para a cena, resolução e outputs selecionados.
+Timer GPU, transições e relatório HTML pertencem às etapas seguintes.
+
 Todos os exemplos preservam `sceneRender(PGraphicsOpenGL)` e nunca chamam `ziviDome.draw()` manualmente.
 
 Comece em `EmptyProject`, use `Basic` para aprender troca de cenas e modos de

@@ -4,6 +4,7 @@ Open each sketch from Processing after installing ziviDomeLive and its declared 
 
 | Example | Purpose | Primary interaction |
 |---|---|---|
+| `BenchmarkTool` | Deterministic performance qualification and JSON/CSV export | ControlP5 panel, `X`, `E` |
 | `EmptyProject` | Empty starter template for a first scene | None |
 | `Basic` | Multiple scenes, all `RenderMode` values, and an alignment grid | `1..5`, `+`/`-`, mouse wheel, Left/Right arrows |
 | `SphereParticle` | Particle simulation using bounded scene tasks | Click/drag |
@@ -22,3 +23,6 @@ Open each sketch from Processing after installing ziviDomeLive and its declared 
 - External outputs remain disabled until explicitly enabled through the control panel or API.
 
 `CalibrationTool` is a qualification instrument, not a generated golden reference. Use independently captured baseline evidence on the target GPU and native-output stack. Its Paul Bourke image remains subject to the bundled third-party notice.
+
+`BenchmarkTool` is the quantitative counterpart: it creates machine-readable evidence only.
+See its [workflow and schema notes](BenchmarkTool/README.md) before comparing runs.
