@@ -5,6 +5,8 @@ import com.victorvalentim.zividomelive.render.EnvironmentBackgroundRenderer;
 import com.victorvalentim.zividomelive.render.EnvironmentState;
 import com.victorvalentim.zividomelive.render.camera.MouseControlledCamera;
 import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
+import com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor;
+import com.victorvalentim.zividomelive.performance.PerformanceMetric;
 import processing.core.*;
 import processing.opengl.PGraphicsOpenGL;
 
@@ -231,7 +233,14 @@ public class StandardRenderer {
         getCam().apply(standardView);
 
         if (currentScene != null) {
-            currentScene.sceneRender(standardView);
+            PerformanceMonitor monitor = PerformanceMonitor.current();
+            boolean profiling = monitor != null && monitor.isEnabled();
+            long started = profiling ? monitor.start() : 0L;
+            try {
+                currentScene.sceneRender(standardView);
+            } finally {
+                if (profiling) monitor.record(PerformanceMetric.SCENE_RENDER, started);
+            }
         }
 
         if (environmentBackgroundRenderer.isVisible()

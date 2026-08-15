@@ -1,6 +1,8 @@
 package com.victorvalentim.zividomelive;
 
 import com.victorvalentim.zividomelive.manager.OutputManager;
+import com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor;
+import com.victorvalentim.zividomelive.performance.PerformanceMetric;
 import com.victorvalentim.zividomelive.support.LogManager;
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -51,27 +53,74 @@ final class RenderPipeline {
 			return;
 		}
 
-		runtime.clearBackground();
-		runtime.handleGraphicsReset();
-		runtime.ensurePreviewRenderers();
-		runtime.syncCurrentSceneToRenderers();
+		PerformanceMonitor monitor = runtime.performanceMonitor();
+		boolean profiling = monitor.isEnabled();
+		PerformanceMonitor previous = profiling ? PerformanceMonitor.attach(monitor) : null;
+		long pipelineStarted = profiling ? monitor.start() : 0L;
+		try {
+			runtime.clearBackground();
+			runtime.handleGraphicsReset();
+			runtime.ensurePreviewRenderers();
+			runtime.syncCurrentSceneToRenderers();
 
-		RenderRequirementsPolicy.Requirements preview = runtime.computePreviewRequirements();
-		RenderRequirementsPolicy.Requirements output = runtime.computeOutputRequirements();
-		runtime.captureMasterCubemap(preview, output);
+			RenderRequirementsPolicy.Requirements preview = runtime.computePreviewRequirements();
+			RenderRequirementsPolicy.Requirements output = runtime.computeOutputRequirements();
+			if (profiling) {
+				monitor.setExpectedPassCounts(
+						(preview.needsStandard() ? 1 : 0) + (output.needsStandard() ? 1 : 0),
+						preview.needsCubemapSource() || output.needsCubemapSource() ? 1 : 0,
+						output.needsFisheye() || preview.needsFisheye() ? 1 : 0,
+						output.needsEquirectangular() || preview.needsEquirectangular() ? 1 : 0,
+						output.needsCubemapLayout() || preview.needsCubemapLayout() ? 1 : 0,
+						matchingPreviewCopies(preview, output));
+			}
+			runtime.captureMasterCubemap(preview, output);
 
-		OutputManager outputManager = runtime.getOutputManager();
-		if (outputManager != null && outputManager.isActive()) {
-			runtime.renderOutputPipeline(output);
-			outputManager.sendOutput(finalFrameViews);
+			OutputManager outputManager = runtime.getOutputManager();
+			if (outputManager != null && outputManager.isActive()) {
+				long outputStarted = profiling ? monitor.start() : 0L;
+				try {
+					runtime.renderOutputPipeline(output);
+					outputManager.sendOutput(finalFrameViews);
+				} finally {
+					if (profiling) monitor.record(PerformanceMetric.OUTPUT_PIPELINE, outputStarted);
+				}
+			}
+
+			long previewStarted = profiling ? monitor.start() : 0L;
+			try {
+				runtime.renderPreviewPipeline(preview, output);
+			} finally {
+				if (profiling) monitor.record(PerformanceMetric.PREVIEW_PIPELINE, previewStarted);
+			}
+
+			long compositeStarted = profiling ? monitor.start() : 0L;
+			runtime.displayPreviewCurrentView();
+			if (profiling) monitor.record(PerformanceMetric.PREVIEW_COMPOSITE, compositeStarted);
+
+			if (runtime.isShowPreview()) {
+				long floatingStarted = profiling ? monitor.start() : 0L;
+				runtime.drawFloatingPreview();
+				if (profiling) monitor.record(PerformanceMetric.FLOATING_PREVIEW, floatingStarted);
+			}
+			long controlsStarted = profiling ? monitor.start() : 0L;
+			runtime.drawControlPanel();
+			if (profiling) monitor.record(PerformanceMetric.CONTROL_PANEL, controlsStarted);
+		} finally {
+			if (profiling) {
+				monitor.record(PerformanceMetric.RENDER_PIPELINE, pipelineStarted);
+				PerformanceMonitor.restore(previous);
+			}
 		}
+	}
 
-		runtime.renderPreviewPipeline(preview, output);
-		runtime.displayPreviewCurrentView();
-
-		if (runtime.isShowPreview()) {
-			runtime.drawFloatingPreview();
-		}
-		runtime.drawControlPanel();
+	private static int matchingPreviewCopies(
+			RenderRequirementsPolicy.Requirements preview,
+			RenderRequirementsPolicy.Requirements output) {
+		int copies = 0;
+		if (preview.needsFisheye() && output.needsFisheye()) copies++;
+		if (preview.needsEquirectangular() && output.needsEquirectangular()) copies++;
+		if (preview.needsCubemapLayout() && output.needsCubemapLayout()) copies++;
+		return copies;
 	}
 }

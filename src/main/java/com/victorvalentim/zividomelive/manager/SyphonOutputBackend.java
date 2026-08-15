@@ -2,6 +2,8 @@ package com.victorvalentim.zividomelive.manager;
 
 import codeanticode.syphon.SyphonServer;
 import com.victorvalentim.zividomelive.support.LogManager;
+import com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor;
+import com.victorvalentim.zividomelive.performance.PerformanceMetric;
 import processing.core.PApplet;
 import processing.opengl.PGraphicsOpenGL;
 
@@ -88,6 +90,9 @@ final class SyphonOutputBackend {
 			return;
 		}
 
+		PerformanceMonitor monitor = PerformanceMonitor.current();
+		boolean profiling = monitor != null && monitor.isEnabled();
+		long started = profiling ? monitor.start() : 0L;
 		try {
 			server.sendImage(graphics);
 			failureReason = "";
@@ -98,6 +103,8 @@ final class SyphonOutputBackend {
 					"Syphon frame publication failed and was disabled without destroying the backend: "
 							+ failureReason
 			);
+		} finally {
+			if (profiling) monitor.record(PerformanceMetric.SYPHON, started);
 		}
 	}
 

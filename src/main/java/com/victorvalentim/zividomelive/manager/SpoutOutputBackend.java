@@ -1,6 +1,8 @@
 package com.victorvalentim.zividomelive.manager;
 
 import com.victorvalentim.zividomelive.support.LogManager;
+import com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor;
+import com.victorvalentim.zividomelive.performance.PerformanceMetric;
 import processing.core.PApplet;
 import processing.opengl.PGraphicsOpenGL;
 import spout.Spout;
@@ -112,6 +114,9 @@ final class SpoutOutputBackend {
 			return;
 		}
 
+		PerformanceMonitor monitor = PerformanceMonitor.current();
+		boolean profiling = monitor != null && monitor.isEnabled();
+		long started = profiling ? monitor.start() : 0L;
 		try {
 			if (graphics.width != width || graphics.height != height) {
 				sender.updateSender(graphics.width, graphics.height);
@@ -128,6 +133,8 @@ final class SpoutOutputBackend {
 					"Spout frame publication failed and was disabled without destroying the backend: "
 							+ failureReason
 			);
+		} finally {
+			if (profiling) monitor.record(PerformanceMetric.SPOUT, started);
 		}
 	}
 

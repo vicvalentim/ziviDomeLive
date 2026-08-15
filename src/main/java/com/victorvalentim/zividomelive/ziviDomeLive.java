@@ -6,6 +6,8 @@ import com.victorvalentim.zividomelive.render.camera.*;
 import com.victorvalentim.zividomelive.render.gl.*;
 import com.victorvalentim.zividomelive.render.modes.*;
 import com.victorvalentim.zividomelive.support.*;
+import com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor;
+import com.victorvalentim.zividomelive.performance.*;
 import processing.core.*;
 import processing.event.*;
 import processing.opengl.*;
@@ -45,6 +47,7 @@ public class ziviDomeLive implements PConstants {
 
 	private final PApplet p;
 	private final RenderPipeline renderPipeline;
+	private final PerformanceMonitor performanceMonitor = new PerformanceMonitor();
 	private InitState initState = InitState.NOT_INITIALIZED;
 	private boolean paused;
 	private boolean disposed;
@@ -788,12 +791,15 @@ public class ziviDomeLive implements PConstants {
 
 	private void capturePreviewCubemap() {
 		if (previewCubemapRenderer != null) {
+			boolean profiling = performanceMonitor.isEnabled();
+			long started = profiling ? performanceMonitor.start() : 0L;
 			sphericalCaptureActive = true;
 			try {
 				previewCubemapRenderer.captureCubemap(
 						sphericalOrientation.getQuaternion(), getCurrentScene());
 			} finally {
 				sphericalCaptureActive = false;
+				if (profiling) performanceMonitor.record(PerformanceMetric.CUBEMAP_PREVIEW, started);
 			}
 		}
 	}
@@ -883,14 +889,19 @@ public class ziviDomeLive implements PConstants {
 			RenderRequirementsPolicy.Requirements preview,
 			RenderRequirementsPolicy.Requirements output) {
 		if (preview.needsStandard()) {
-			standardRendererPreview.render();
+			renderStandardProfiled(standardRendererPreview, PerformanceMetric.STANDARD_PREVIEW);
 		}
 
 		if (preview.needsEquirectangular()) {
 			if (output.needsEquirectangular() && output.needsCubemapSource()) {
 				copyToPreview(equirectangularRenderer.getEquirectangular(), previewEquirectangularRenderer.getEquirectangular());
 			} else {
+				long started = performanceMonitor.isEnabled() ? performanceMonitor.start() : 0L;
 				previewEquirectangularRenderer.render(resolveMasterNativeCubemap(output));
+				recordProjection(
+						PerformanceMetric.EQUIRECTANGULAR,
+						PerformanceMetric.EQUIRECTANGULAR_PREVIEW,
+						started);
 			}
 		}
 
@@ -898,9 +909,14 @@ public class ziviDomeLive implements PConstants {
 			if (output.needsFisheye()) {
 				copyToPreview(fisheyeDomemaster.getDomemasterGraphics(), previewFisheyeDomemaster.getDomemasterGraphics());
 			} else {
+				long started = performanceMonitor.isEnabled() ? performanceMonitor.start() : 0L;
 				previewFisheyeDomemaster.applyShader(
 						resolveMasterNativeCubemap(output),
 						getFov());
+				recordProjection(
+						PerformanceMetric.DOMEMASTER,
+						PerformanceMetric.DOMEMASTER_PREVIEW,
+						started);
 			}
 		}
 
@@ -908,7 +924,12 @@ public class ziviDomeLive implements PConstants {
 			if (output.needsCubemapLayout() && output.needsCubemapSource()) {
 				copyToPreview(cubemapViewRenderer.getCubemap(), previewCubemapViewRenderer.getCubemap());
 			} else {
+				long started = performanceMonitor.isEnabled() ? performanceMonitor.start() : 0L;
 				previewCubemapViewRenderer.drawCubemapToGraphics(resolveMasterNativeCubemap(output));
+				recordProjection(
+						PerformanceMetric.SKYBOX,
+						PerformanceMetric.SKYBOX_PREVIEW,
+						started);
 			}
 		}
 	}
@@ -940,24 +961,62 @@ public class ziviDomeLive implements PConstants {
 		}
 
 		if (output.needsEquirectangular()) {
+			long started = performanceMonitor.isEnabled() ? performanceMonitor.start() : 0L;
 			equirectangularRenderer.render(
 					cubemapRenderer != null ? cubemapRenderer.getNativeCubemapTarget() : null);
+			recordProjection(
+					PerformanceMetric.EQUIRECTANGULAR,
+					PerformanceMetric.EQUIRECTANGULAR_OUTPUT,
+					started);
 		}
 
 		if (output.needsFisheye()) {
+			long started = performanceMonitor.isEnabled() ? performanceMonitor.start() : 0L;
 			fisheyeDomemaster.applyShader(
 					cubemapRenderer != null ? cubemapRenderer.getNativeCubemapTarget() : null,
 					getFov());
+			recordProjection(
+					PerformanceMetric.DOMEMASTER,
+					PerformanceMetric.DOMEMASTER_OUTPUT,
+					started);
 		}
 
 		if (output.needsCubemapLayout()) {
+			long started = performanceMonitor.isEnabled() ? performanceMonitor.start() : 0L;
 			cubemapViewRenderer.drawCubemapToGraphics(
 					cubemapRenderer != null ? cubemapRenderer.getNativeCubemapTarget() : null);
+			recordProjection(
+					PerformanceMetric.SKYBOX,
+					PerformanceMetric.SKYBOX_OUTPUT,
+					started);
 		}
 
 		if (output.needsStandard()) {
-			standardRenderer.render();
+			renderStandardProfiled(standardRenderer, PerformanceMetric.STANDARD_OUTPUT);
 		}
+	}
+
+	private void renderStandardProfiled(StandardRenderer renderer, PerformanceMetric domainMetric) {
+		boolean profiling = performanceMonitor.isEnabled();
+		long started = profiling ? performanceMonitor.start() : 0L;
+		renderer.render();
+		if (profiling) {
+			long duration = Math.max(0L, System.nanoTime() - started);
+			performanceMonitor.recordDuration(PerformanceMetric.STANDARD_RENDER, duration);
+			performanceMonitor.recordDuration(domainMetric, duration);
+		}
+	}
+
+	private void recordProjection(
+			PerformanceMetric aggregate,
+			PerformanceMetric domainMetric,
+			long started) {
+		if (!performanceMonitor.isEnabled() || started == 0L) {
+			return;
+		}
+		long duration = Math.max(0L, System.nanoTime() - started);
+		performanceMonitor.recordDuration(aggregate, duration);
+		performanceMonitor.recordDuration(domainMetric, duration);
 	}
 
 	/**
@@ -1068,19 +1127,25 @@ public class ziviDomeLive implements PConstants {
 	 */
 	void handleGraphicsReset() {
 		if (pendingOutputReset) {
+			boolean profiling = performanceMonitor.isEnabled();
+			long started = profiling ? performanceMonitor.start() : 0L;
 			LOGGER.info("Applying output resolution change: " + pendingOutputResolution + "px.");
-			releaseOutputGraphicsResources();
-			outputResolution = pendingOutputResolution;
-			initializeOutputRenderers();
-			// Restore camera sharing after the new output StandardRenderer is created.
-			if (standardRendererPreview != null && standardRenderer != null) {
-				standardRendererPreview.setCam(standardRenderer.getCam());
+			try {
+				releaseOutputGraphicsResources();
+				outputResolution = pendingOutputResolution;
+				initializeOutputRenderers();
+				// Restore camera sharing after the new output StandardRenderer is created.
+				if (standardRendererPreview != null && standardRenderer != null) {
+					standardRendererPreview.setCam(standardRenderer.getCam());
+				}
+				if (outputManager != null) {
+					outputManager.notifyResolutionChanged(outputResolution);
+				}
+				pendingOutputReset = false;
+				LOGGER.info("Output graphics reset completed at " + outputResolution + "px.");
+			} finally {
+				if (profiling) performanceMonitor.record(PerformanceMetric.GRAPHICS_RESET, started);
 			}
-			if (outputManager != null) {
-				outputManager.notifyResolutionChanged(outputResolution);
-			}
-			pendingOutputReset = false;
-			LOGGER.info("Output graphics reset completed at " + outputResolution + "px.");
 		}
 	}
 
@@ -1089,12 +1154,15 @@ public class ziviDomeLive implements PConstants {
 	 */
 	private void captureCubemap() {
 		if (cubemapRenderer != null) {
+			boolean profiling = performanceMonitor.isEnabled();
+			long started = profiling ? performanceMonitor.start() : 0L;
 			sphericalCaptureActive = true;
 			try {
 				cubemapRenderer.captureCubemap(
 						sphericalOrientation.getQuaternion(), getCurrentScene());
 			} finally {
 				sphericalCaptureActive = false;
+				if (profiling) performanceMonitor.record(PerformanceMetric.CUBEMAP_OUTPUT, started);
 			}
 		} else {
 			LOGGER.severe("Error: CubemapRenderer not initialized.");
@@ -1217,10 +1285,16 @@ public class ziviDomeLive implements PConstants {
 			return;
 		}
 
-		destination.beginDraw();
-		destination.clear();
-		destination.image(source, 0, 0, destination.width, destination.height);
-		destination.endDraw();
+		boolean profiling = performanceMonitor.isEnabled();
+		long started = profiling ? performanceMonitor.start() : 0L;
+		try {
+			destination.beginDraw();
+			destination.clear();
+			destination.image(source, 0, 0, destination.width, destination.height);
+			destination.endDraw();
+		} finally {
+			if (profiling) performanceMonitor.record(PerformanceMetric.PREVIEW_COPY, started);
+		}
 	}
 
 	/**
@@ -2100,6 +2174,67 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
+	 * Enables experimental CPU performance collection using the default ring-buffer capacity.
+	 *
+	 * <p>{@link PerformanceMode#CPU_GPU} currently falls back to CPU measurements; no
+	 * synchronous GPU query or {@code glFinish()} is introduced.</p>
+	 *
+	 * @param mode requested profiling mode
+	 * @since 2.0.0
+	 */
+	public void enablePerformanceProfiling(PerformanceMode mode) {
+		enablePerformanceProfiling(mode, PerformanceMonitor.DEFAULT_CAPACITY);
+	}
+
+	/**
+	 * Enables experimental performance collection with preallocated sample storage.
+	 * Calling this method resets previously collected samples.
+	 *
+	 * @param mode requested profiling mode
+	 * @param sampleCapacity number of completed frames retained in the ring buffer
+	 * @since 2.0.0
+	 */
+	public void enablePerformanceProfiling(PerformanceMode mode, int sampleCapacity) {
+		performanceMonitor.enable(mode, sampleCapacity);
+		if (mode == PerformanceMode.CPU_GPU) {
+			LOGGER.warning("CPU_GPU profiling requested; using CPU timings because GPU timer queries are not implemented.");
+		}
+	}
+
+	/**
+	 * Disables collection without discarding completed samples.
+	 *
+	 * @since 2.0.0
+	 */
+	public void disablePerformanceProfiling() {
+		performanceMonitor.disable();
+	}
+
+	/**
+	 * Clears all performance samples and invariant counters.
+	 *
+	 * @since 2.0.0
+	 */
+	public void resetPerformanceStatistics() {
+		performanceMonitor.reset();
+	}
+
+	/**
+	 * Creates an immutable performance snapshot. Call outside a measured interval because
+	 * snapshot aggregation intentionally allocates and sorts copies of retained samples.
+	 *
+	 * @return immutable snapshot of completed frames
+	 * @since 2.0.0
+	 */
+	public PerformanceSnapshot getPerformanceSnapshot() {
+		return performanceMonitor.snapshot();
+	}
+
+	PerformanceMonitor performanceMonitor() {
+		return performanceMonitor;
+	}
+
+	/**
 	 * Returns the current initialization state.
 	 *
 	 * @return the current InitState
@@ -2171,6 +2306,7 @@ public class ziviDomeLive implements PConstants {
 			LOGGER.warning("Render skipped: System not ready. State: " + initState);
 			return;
 		}
+		performanceMonitor.beginFrame();
 
 		// Processing can execute setup() and JOGL frame callbacks on different threads.
 		// pre() is the authoritative Processing/OpenGL frame boundary.
@@ -2184,7 +2320,13 @@ public class ziviDomeLive implements PConstants {
 				sceneManager.reloadCurrentScene();
 				syncCurrentSceneToRenderers();
 			} else {
-				activeScene.update();
+				boolean profiling = performanceMonitor.isEnabled();
+				long sceneStarted = profiling ? performanceMonitor.start() : 0L;
+				try {
+					activeScene.update();
+				} finally {
+					if (profiling) performanceMonitor.record(PerformanceMetric.SCENE_UPDATE, sceneStarted);
+				}
 				services.endFrame();
 			}
 		}

@@ -1,6 +1,8 @@
 package com.victorvalentim.zividomelive.manager;
 
 import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
+import com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor;
+import com.victorvalentim.zividomelive.performance.PerformanceMetric;
 import com.victorvalentim.zividomelive.support.LogManager;
 import me.walkerknapp.devolay.DevolayFrameFormatType;
 import me.walkerknapp.devolay.DevolayFrameFourCCType;
@@ -152,9 +154,15 @@ final class NdiOutputBackend {
 			return;
 		}
 
+		PerformanceMonitor monitor = PerformanceMonitor.current();
+		boolean profiling = monitor != null && monitor.isEnabled();
+		long captureStarted = profiling ? monitor.start() : 0L;
+		long queueStarted = profiling ? monitor.start() : 0L;
 		NdiFrameSlot slot = acquireCaptureSlot();
+		if (profiling) monitor.record(PerformanceMetric.NDI_QUEUE, queueStarted);
 		if (slot == null) {
 			ndiDroppedFrames.incrementAndGet();
+			if (profiling) monitor.record(PerformanceMetric.NDI_CAPTURE, captureStarted);
 			return;
 		}
 
@@ -176,8 +184,12 @@ final class NdiOutputBackend {
 			slot.pixelCount = pixelCount;
 			slot.frameRateNumerator = ndiFrameRateNumerator;
 			slot.frameRateDenominator = ndiFrameRateDenominator;
+			slot.performanceMonitor = monitor;
+			slot.performanceSessionId = profiling ? monitor.getActiveSessionId() : 0L;
 
+			queueStarted = profiling ? monitor.start() : 0L;
 			queued = offerLatestFrame(slot);
+			if (profiling) monitor.record(PerformanceMetric.NDI_QUEUE, queueStarted);
 			if (queued) {
 				ndiCapturedFrames.incrementAndGet();
 			} else {
@@ -190,6 +202,7 @@ final class NdiOutputBackend {
 			if (!queued) {
 				ndiFreeSlots.offer(slot);
 			}
+			if (profiling) monitor.record(PerformanceMetric.NDI_CAPTURE, captureStarted);
 		}
 	}
 
@@ -243,8 +256,32 @@ final class NdiOutputBackend {
 						continue;
 					}
 
-					slot.prepareDevolayFrame();
-					sender.sendVideoFrame(slot.frame);
+					PerformanceMonitor monitor = slot.performanceMonitor;
+					long performanceSessionId = slot.performanceSessionId;
+					boolean profiling = monitor != null
+							&& monitor.isSessionActive(performanceSessionId);
+					long conversionStarted = profiling ? System.nanoTime() : 0L;
+					try {
+						slot.prepareDevolayFrame();
+					} finally {
+						if (profiling) {
+							monitor.recordConcurrent(
+									PerformanceMetric.NDI_CONVERSION,
+									System.nanoTime() - conversionStarted,
+									performanceSessionId);
+						}
+					}
+					long sendStarted = profiling ? System.nanoTime() : 0L;
+					try {
+						sender.sendVideoFrame(slot.frame);
+					} finally {
+						if (profiling) {
+							monitor.recordConcurrent(
+									PerformanceMetric.NDI_SEND,
+									System.nanoTime() - sendStarted,
+									performanceSessionId);
+						}
+					}
 					ndiSentFrames.incrementAndGet();
 				} catch (InterruptedException interrupted) {
 					if (!ndiWorkerRunning) {
@@ -509,6 +546,8 @@ final class NdiOutputBackend {
 		private int pixelCount;
 		private int frameRateNumerator;
 		private int frameRateDenominator;
+		private PerformanceMonitor performanceMonitor;
+		private long performanceSessionId;
 
 		private void ensureCapacity(int requiredWidth, int requiredHeight) {
 			int requiredPixels = Math.multiplyExact(requiredWidth, requiredHeight);
@@ -541,6 +580,8 @@ final class NdiOutputBackend {
 			frame.close();
 			argbPixels = null;
 			rgbaBuffer = null;
+			performanceMonitor = null;
+			performanceSessionId = 0L;
 		}
 	}
 }

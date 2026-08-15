@@ -16,6 +16,9 @@ import com.victorvalentim.zividomelive.SimulationTimeline;
 import com.victorvalentim.zividomelive.RenderMode;
 import com.victorvalentim.zividomelive.ViewType;
 import com.victorvalentim.zividomelive.manager.OutputManager;
+import com.victorvalentim.zividomelive.performance.PerformanceMetric;
+import com.victorvalentim.zividomelive.performance.PerformanceMode;
+import com.victorvalentim.zividomelive.performance.PerformanceSnapshot;
 import com.victorvalentim.zividomelive.render.CubemapRenderer;
 import com.victorvalentim.zividomelive.render.EnvironmentBackgroundRenderer;
 import com.victorvalentim.zividomelive.render.Quaternion;
@@ -135,6 +138,24 @@ class PublicApiCompatibilityTest {
 				LogManager.Mode.DEBUG,
 				LogManager.Mode.RELEASE
 		}, LogManager.Mode.values());
+		assertArrayEquals(new PerformanceMode[]{
+				PerformanceMode.OFF,
+				PerformanceMode.CPU,
+				PerformanceMode.CPU_GPU
+		}, PerformanceMode.values());
+	}
+
+	@Test
+	void experimentalPerformanceApiExposesOnlyDataAndControlTypes() throws Exception {
+		assertTrue(Modifier.isPublic(PerformanceMode.class.getModifiers()));
+		assertTrue(Modifier.isPublic(PerformanceMetric.class.getModifiers()));
+		assertTrue(Modifier.isPublic(PerformanceSnapshot.class.getModifiers()));
+		assertMethod("enablePerformanceProfiling", PerformanceMode.class);
+		assertMethod("enablePerformanceProfiling", PerformanceMode.class, int.class);
+		assertMethod("disablePerformanceProfiling");
+		assertMethod("resetPerformanceStatistics");
+		assertEquals(PerformanceSnapshot.class,
+				ziviDomeLive.class.getMethod("getPerformanceSnapshot").getReturnType());
 	}
 
 	@Test

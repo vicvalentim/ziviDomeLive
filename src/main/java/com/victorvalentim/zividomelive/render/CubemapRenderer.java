@@ -6,6 +6,8 @@ import com.victorvalentim.zividomelive.render.camera.CameraOrientation;
 import com.victorvalentim.zividomelive.render.camera.CubemapFace;
 import com.victorvalentim.zividomelive.render.gl.CubemapTarget;
 import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
+import com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor;
+import com.victorvalentim.zividomelive.performance.PerformanceMetric;
 import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.PApplet;
 import processing.core.PConstants;
@@ -231,6 +233,27 @@ public class CubemapRenderer implements PConstants {
             Quaternion effectiveOrientation,
             CameraManager cameraManager,
             Scene currentScene) {
+        PerformanceMonitor monitor = PerformanceMonitor.current();
+        boolean profiling = monitor != null && monitor.isEnabled();
+        long captureStarted = profiling ? monitor.start() : 0L;
+        try {
+            return captureNativeCubemapFrame(
+                    effectiveOrientation,
+                    cameraManager,
+                    currentScene,
+                    monitor,
+                    profiling);
+        } finally {
+            if (profiling) monitor.record(PerformanceMetric.CUBEMAP_TOTAL, captureStarted);
+        }
+    }
+
+    private boolean captureNativeCubemapFrame(
+            Quaternion effectiveOrientation,
+            CameraManager cameraManager,
+            Scene currentScene,
+            PerformanceMonitor monitor,
+            boolean profiling) {
         if (nativeCubemapTarget != null
                 && !nativeCubemapTarget.isValidInCurrentContext()) {
             LOGGER.warning("OpenGL context changed; recreating native cubemap resources.");
@@ -267,81 +290,18 @@ public class CubemapRenderer implements PConstants {
 
         try {
             for (CubemapFace face : CubemapFace.values()) {
-                CameraOrientation orientation =
-                        effectiveCameraManager.getOrientation(face.index());
-
-                captureGraphics.beginDraw();
+                long faceStarted = profiling ? monitor.start() : 0L;
                 try {
-                    captureGraphics.resetMatrix();
-                    captureGraphics.background(0, 0);
-
-                    configureCameraForFace(
-                            captureGraphics,
-                            orientation,
-                            captureOrientationMatrix,
-                            captureFieldOfView);
-
-                    if (currentScene != null) {
-                        currentScene.sceneRender(captureGraphics);
-                    }
-
-                    captureGraphics.noLights();
-                    captureGraphics.flush();
-
-                    environmentBackgroundRenderer.renderScratchCubemapFace(
+                    renderNativeCubemapFace(
                             captureGraphics,
                             face,
-                            environmentOrientationMatrix);
-
-                    /*
-                     * Force Processing's resolved offscreen color framebuffer to contain
-                     * the latest draw when MSAA is enabled. This remains GPU-side.
-                     */
-                    captureGraphics.loadTexture();
-
-                    FrameBuffer sourceFramebuffer =
-                            captureGraphics.getFrameBuffer(false);
-
-                    if (sourceFramebuffer == null
-                            || sourceFramebuffer.glFbo == 0) {
-                        throw new IllegalStateException(
-                                "Processing cubemap scratch framebuffer is unavailable.");
-                    }
-
-                    nativeCubemapTarget.renderFace(
-                            face,
-                            captureGraphics,
-                            pgl -> {
-                                /*
-                                 * renderFace() owns the DRAW framebuffer and has already
-                                 * attached the matching GL_TEXTURE_CUBE_MAP face.
-                                 *
-                                 * Bind only READ to the Processing scratch framebuffer.
-                                 */
-                                pgl.bindFramebuffer(
-                                        PGL.READ_FRAMEBUFFER,
-                                        sourceFramebuffer.glFbo);
-                                pgl.readBuffer(PGL.COLOR_ATTACHMENT0);
-
-                                /*
-                                 * Flip only the framebuffer Y origin during GPU-to-GPU
-                                 * transfer. Camera geometry/orientation remains exactly
-                                 * the qualified 1.5 contract.
-                                 */
-                                pgl.blitFramebuffer(
-                                        0,
-                                        0,
-                                        resolution,
-                                        resolution,
-                                        0,
-                                        resolution,
-                                        resolution,
-                                        0,
-                                        PGL.COLOR_BUFFER_BIT,
-                                        PGL.NEAREST);
-                            });
+                            effectiveCameraManager.getOrientation(face.index()),
+                            currentScene,
+                            captureFieldOfView,
+                            monitor,
+                            profiling);
                 } finally {
-                    captureGraphics.endDraw();
+                    if (profiling) monitor.record(faceMetric(face), faceStarted);
                 }
             }
 
@@ -355,6 +315,80 @@ public class CubemapRenderer implements PConstants {
             disposeNativeCubemapTarget();
             return false;
         }
+    }
+
+    private void renderNativeCubemapFace(
+            PGraphicsOpenGL captureGraphics,
+            CubemapFace face,
+            CameraOrientation orientation,
+            Scene currentScene,
+            float captureFieldOfView,
+            PerformanceMonitor monitor,
+            boolean profiling) {
+        captureGraphics.beginDraw();
+        try {
+            captureGraphics.resetMatrix();
+            captureGraphics.background(0, 0);
+            configureCameraForFace(
+                    captureGraphics,
+                    orientation,
+                    captureOrientationMatrix,
+                    captureFieldOfView);
+
+            if (currentScene != null) {
+                long sceneStarted = profiling ? monitor.start() : 0L;
+                try {
+                    currentScene.sceneRender(captureGraphics);
+                } finally {
+                    if (profiling) monitor.record(PerformanceMetric.SCENE_RENDER, sceneStarted);
+                }
+            }
+
+            captureGraphics.noLights();
+            captureGraphics.flush();
+            environmentBackgroundRenderer.renderScratchCubemapFace(
+                    captureGraphics,
+                    face,
+                    environmentOrientationMatrix);
+
+            /* Keep Processing's resolved offscreen color framebuffer current under MSAA. */
+            captureGraphics.loadTexture();
+            FrameBuffer sourceFramebuffer = captureGraphics.getFrameBuffer(false);
+            if (sourceFramebuffer == null || sourceFramebuffer.glFbo == 0) {
+                throw new IllegalStateException(
+                        "Processing cubemap scratch framebuffer is unavailable.");
+            }
+
+            long blitStarted = profiling ? monitor.start() : 0L;
+            try {
+                nativeCubemapTarget.renderFace(
+                        face,
+                        captureGraphics,
+                        pgl -> blitResolvedFace(pgl, sourceFramebuffer.glFbo));
+            } finally {
+                if (profiling) monitor.record(PerformanceMetric.CUBEMAP_BLIT, blitStarted);
+            }
+        } finally {
+            captureGraphics.endDraw();
+        }
+    }
+
+    private void blitResolvedFace(PGL pgl, int sourceFramebufferId) {
+        /* renderFace() owns DRAW; bind only READ to the Processing scratch framebuffer. */
+        pgl.bindFramebuffer(PGL.READ_FRAMEBUFFER, sourceFramebufferId);
+        pgl.readBuffer(PGL.COLOR_ATTACHMENT0);
+        /* Flip only framebuffer Y during the GPU-to-GPU transfer. */
+        pgl.blitFramebuffer(
+                0,
+                0,
+                resolution,
+                resolution,
+                0,
+                resolution,
+                resolution,
+                0,
+                PGL.COLOR_BUFFER_BIT,
+                PGL.NEAREST);
     }
 
     /**
@@ -544,6 +578,9 @@ public class CubemapRenderer implements PConstants {
             return;
         }
 
+        PerformanceMonitor monitor = PerformanceMonitor.current();
+        boolean profiling = monitor != null && monitor.isEnabled();
+        long started = profiling ? monitor.start() : 0L;
         try {
             nativeCubemapTarget.generateMipmaps();
         } catch (RuntimeException error) {
@@ -551,7 +588,20 @@ public class CubemapRenderer implements PConstants {
                     "Native cubemap mipmap refresh failed; disposing native target: "
                             + error.getMessage());
             disposeNativeCubemapTarget();
+        } finally {
+            if (profiling) monitor.record(PerformanceMetric.CUBEMAP_MIPMAP, started);
         }
+    }
+
+    private static PerformanceMetric faceMetric(CubemapFace face) {
+        return switch (face) {
+            case POSITIVE_X -> PerformanceMetric.CUBEMAP_POS_X;
+            case NEGATIVE_X -> PerformanceMetric.CUBEMAP_NEG_X;
+            case POSITIVE_Y -> PerformanceMetric.CUBEMAP_POS_Y;
+            case NEGATIVE_Y -> PerformanceMetric.CUBEMAP_NEG_Y;
+            case POSITIVE_Z -> PerformanceMetric.CUBEMAP_POS_Z;
+            case NEGATIVE_Z -> PerformanceMetric.CUBEMAP_NEG_Z;
+        };
     }
 
     private void disposeNativeCubemapTarget() {
