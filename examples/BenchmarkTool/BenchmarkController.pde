@@ -4,6 +4,9 @@ enum BenchmarkState {
   WARMUP_FINISHING,
   READY,
   MEASURING,
+  TRANSITION_BASELINE,
+  TRANSITION_APPLYING,
+  TRANSITION_RECOVERY,
   MEASUREMENT_FINISHING,
   COMPLETE,
   FAILED
@@ -46,9 +49,23 @@ class BenchmarkController {
   int measurementCompleted;
   int configuredWarmupFrames = 600;
   int configuredMeasurementFrames = 1800;
+  int configuredTransitionBaselineFrames = 120;
+  int configuredTransitionPostFrames = 240;
   boolean warmupOnly;
   boolean suiteActive;
   int suiteIndex;
+  List<BenchmarkSuitePlan.Scenario> suiteScenarios = new ArrayList<BenchmarkSuitePlan.Scenario>();
+  BenchmarkSuitePlan.Scenario activeSuiteScenario;
+  BenchmarkSuiteResultWriter.Session suiteSession;
+  String automationSuiteName;
+  String automationSceneName;
+  boolean automationStarted;
+  boolean exitAfterSuite;
+  int transitionBaselineCompleted;
+  int transitionPostCompleted;
+  int transitionFrameIndex;
+  String measurementStatus = "SUPPORTED";
+  String measurementReason = "";
   BenchmarkResultWriter.Run currentRun;
   PerformanceSnapshot lastSnapshot;
   BenchmarkResultWriter.Run lastRun;
@@ -72,6 +89,7 @@ class BenchmarkController {
     this.outputRoot = resolveOutputRoot();
     cp5 = new ControlP5(app);
     createInterface();
+    configureAutomation();
     refreshStaticLabels("IDLE - configure a scenario and press START");
   }
 
@@ -199,6 +217,10 @@ class BenchmarkController {
       systemLabel.setText("Waiting for the ziviDomeLive OpenGL pipeline...");
       return;
     }
+    if (!automationStarted && automationSuiteName != null) {
+      automationStarted = true;
+      startSuite(BenchmarkSuitePlan.Suite.parse(automationSuiteName));
+    }
 
     switch (state) {
       case WARMUP:
@@ -220,8 +242,33 @@ class BenchmarkController {
           state = BenchmarkState.MEASUREMENT_FINISHING;
         }
         break;
+      case TRANSITION_BASELINE:
+        transitionBaselineCompleted++;
+        measurementCompleted++;
+        if (transitionBaselineCompleted >= activeSuiteScenario.baselineFrames) {
+          state = BenchmarkState.TRANSITION_APPLYING;
+        }
+        break;
+      case TRANSITION_APPLYING:
+        transitionFrameIndex = measurementCompleted;
+        boolean transitionSupported = applyTransitionTarget(activeSuiteScenario.target);
+        transitionPostCompleted = 1;
+        measurementCompleted++;
+        measurementStatus = transitionSupported ? "SUPPORTED" : "UNSUPPORTED";
+        measurementReason = transitionSupported ? "" : "Requested transition output could not be enabled";
+        state = !transitionSupported || transitionPostCompleted >= activeSuiteScenario.postFrames
+            ? BenchmarkState.MEASUREMENT_FINISHING
+            : BenchmarkState.TRANSITION_RECOVERY;
+        break;
+      case TRANSITION_RECOVERY:
+        transitionPostCompleted++;
+        measurementCompleted++;
+        if (transitionPostCompleted >= activeSuiteScenario.postFrames) {
+          state = BenchmarkState.MEASUREMENT_FINISHING;
+        }
+        break;
       case MEASUREMENT_FINISHING:
-        finishMeasurement("SUPPORTED");
+        finishMeasurement(measurementStatus);
         break;
       default:
         break;
@@ -242,7 +289,11 @@ class BenchmarkController {
 
   void startRun(boolean fromSuite) {
     if (!canStart()) return;
-    if (!fromSuite) suiteActive = false;
+    if (!fromSuite) {
+      suiteActive = false;
+      activeSuiteScenario = null;
+      suiteSession = null;
+    }
     warmupOnly = false;
     if (!configureScenario()) {
       suiteActive = false;
@@ -252,6 +303,22 @@ class BenchmarkController {
     dome.resetPerformanceStatistics();
     warmupCompleted = 0;
     measurementCompleted = 0;
+    transitionBaselineCompleted = 0;
+    transitionPostCompleted = 0;
+    transitionFrameIndex = 0;
+    measurementStatus = "SUPPORTED";
+    measurementReason = "";
+    if (fromSuite && activeSuiteScenario != null) {
+      currentRun.testType = activeSuiteScenario.kind.name();
+      currentRun.scenarioName = activeSuiteScenario.name;
+      if (activeSuiteScenario.kind == BenchmarkSuitePlan.Kind.TRANSITION) {
+        currentRun.requestedMeasurementFrames =
+            activeSuiteScenario.baselineFrames + activeSuiteScenario.postFrames;
+        currentRun.transition = new BenchmarkResultWriter.Transition();
+        currentRun.transition.from = activeSuiteScenario.initial.description();
+        currentRun.transition.to = activeSuiteScenario.target.description();
+      }
+    }
     state = configuredWarmupFrames > 0 ? BenchmarkState.WARMUP : BenchmarkState.WARMUP_FINISHING;
     refreshStaticLabels(configuredWarmupFrames > 0
         ? "WARM-UP started; measurement is isolated"
@@ -315,7 +382,12 @@ class BenchmarkController {
     currentRun.timestamp = Instant.now();
     captureNdiBaseline();
     measurementCompleted = 0;
-    state = BenchmarkState.MEASURING;
+    transitionBaselineCompleted = 0;
+    transitionPostCompleted = 0;
+    state = suiteActive && activeSuiteScenario != null
+            && activeSuiteScenario.kind == BenchmarkSuitePlan.Kind.TRANSITION
+        ? BenchmarkState.TRANSITION_BASELINE
+        : BenchmarkState.MEASURING;
     refreshStaticLabels("MEASURING; live aggregation paused to protect samples");
   }
 
@@ -330,6 +402,7 @@ class BenchmarkController {
     dome.disablePerformanceProfiling();
     lastSnapshot = dome.getPerformanceSnapshot();
     currentRun.status = status;
+    populateTransitionStatistics();
     captureNdiDelta(currentRun);
     refreshEnvironment(currentRun);
     lastRun = currentRun;
@@ -337,23 +410,20 @@ class BenchmarkController {
     updateResultViews();
     if (suiteActive) {
       if (!exportLastRun()) return;
+      recordSuiteResult(currentRun.status, measurementReason, lastExportDirectory);
       suiteIndex++;
-      if (suiteIndex < renderModes.length) {
-        renderModeDropdown.setValue(suiteIndex);
-        state = BenchmarkState.IDLE;
-        startRun(true);
-      } else {
-        suiteActive = false;
-        state = BenchmarkState.COMPLETE;
-        refreshStaticLabels("SUITE COMPLETE - four steady-state modes exported");
-      }
+      startNextSuiteScenario();
     }
   }
 
   void stopRun() {
     if (!isRunning()) return;
     suiteActive = false;
-    if (state == BenchmarkState.MEASURING || state == BenchmarkState.MEASUREMENT_FINISHING) {
+    if (state == BenchmarkState.MEASURING
+        || state == BenchmarkState.TRANSITION_BASELINE
+        || state == BenchmarkState.TRANSITION_APPLYING
+        || state == BenchmarkState.TRANSITION_RECOVERY
+        || state == BenchmarkState.MEASUREMENT_FINISHING) {
       finishMeasurement("STOPPED");
     } else {
       dome.disablePerformanceProfiling();
@@ -370,6 +440,8 @@ class BenchmarkController {
     lastSnapshot = null;
     lastRun = null;
     lastExportDirectory = null;
+    activeSuiteScenario = null;
+    suiteSession = null;
     state = BenchmarkState.IDLE;
     frameChart.setData("frameMs", new float[] {0.0f});
     pipelineLabel.setText("No completed measurement.");
@@ -377,11 +449,174 @@ class BenchmarkController {
   }
 
   void startSuite() {
+    startSuite(BenchmarkSuitePlan.Suite.MODES);
+  }
+
+  void startSuite(BenchmarkSuitePlan.Suite suite) {
     if (!canStart()) return;
+    String sceneName = automationSceneName == null
+        ? sceneOptions[selectedSceneIndex()].getName()
+        : automationSceneName;
+    suiteScenarios = BenchmarkSuitePlan.create(
+        suite,
+        sceneName,
+        selectedResolution(),
+        resolutions,
+        previewToggle.getState(),
+        configuredTransitionBaselineFrames,
+        configuredTransitionPostFrames);
+    suiteSession = new BenchmarkSuiteResultWriter.Session();
+    suiteSession.suite = suite.name();
+    suiteSession.revision = configuredRevision();
     suiteActive = true;
     suiteIndex = 0;
-    renderModeDropdown.setValue(suiteIndex);
-    startRun(true);
+    startNextSuiteScenario();
+  }
+
+  void startNextSuiteScenario() {
+    while (suiteActive && suiteIndex < suiteScenarios.size()) {
+      activeSuiteScenario = suiteScenarios.get(suiteIndex);
+      String unsupported = unsupportedReason(activeSuiteScenario);
+      if (unsupported != null) {
+        recordSuiteResult("UNSUPPORTED", unsupported, null);
+        suiteIndex++;
+        continue;
+      }
+      applyEndpointToControls(activeSuiteScenario.initial);
+      state = BenchmarkState.IDLE;
+      startRun(true);
+      return;
+    }
+    if (suiteActive) finishSuite();
+  }
+
+  String unsupportedReason(BenchmarkSuitePlan.Scenario scenario) {
+    String initial = unsupportedOutput(scenario.initial);
+    if (initial != null) return "Initial endpoint: " + initial;
+    if (scenario.kind == BenchmarkSuitePlan.Kind.TRANSITION) {
+      String target = unsupportedOutput(scenario.target);
+      if (target != null) return "Target endpoint: " + target;
+    }
+    return null;
+  }
+
+  String unsupportedOutput(BenchmarkSuitePlan.Endpoint endpoint) {
+    if (endpoint.ndi
+        && outputs.getOutputState(OutputManager.OutputType.NDI) == OutputManager.OutputState.UNAVAILABLE) {
+      return "NDI is unavailable";
+    }
+    if (endpoint.syphon
+        && outputs.getOutputState(OutputManager.OutputType.SYPHON) == OutputManager.OutputState.UNAVAILABLE) {
+      return "Syphon is unavailable";
+    }
+    if (endpoint.spout
+        && outputs.getOutputState(OutputManager.OutputType.SPOUT) == OutputManager.OutputState.UNAVAILABLE) {
+      return "Spout is unavailable";
+    }
+    return null;
+  }
+
+  void applyEndpointToControls(BenchmarkSuitePlan.Endpoint endpoint) {
+    renderModeDropdown.setValue(renderModeIndex(endpoint.renderMode));
+    resolutionDropdown.setValue(resolutionIndex(endpoint.resolution));
+    sceneDropdown.setValue(sceneIndex(endpoint.scene));
+    previewToggle.setState(endpoint.preview);
+    ndiToggle.setState(endpoint.ndi);
+    syphonToggle.setState(endpoint.syphon);
+    spoutToggle.setState(endpoint.spout);
+  }
+
+  boolean applyTransitionTarget(BenchmarkSuitePlan.Endpoint endpoint) {
+    applyEndpointToControls(endpoint);
+    RenderMode mode = RenderMode.valueOf(endpoint.renderMode);
+    ViewType view = viewFor(mode);
+    dome.setRenderMode(mode);
+    dome.setCurrentView(view);
+    dome.setCurrentScene(sceneOptions[sceneIndex(endpoint.scene)]);
+    dome.setShowPreview(endpoint.preview);
+    dome.resetGraphics(endpoint.resolution);
+    outputs.setNdiView(view);
+    outputs.setSyphonView(view);
+    outputs.setSpoutView(view);
+    return applyOutput(OutputManager.OutputType.NDI, endpoint.ndi, "ndi")
+        && applyOutput(OutputManager.OutputType.SYPHON, endpoint.syphon, "syphon")
+        && applyOutput(OutputManager.OutputType.SPOUT, endpoint.spout, "spout");
+  }
+
+  void populateTransitionStatistics() {
+    if (currentRun == null || currentRun.transition == null || lastSnapshot == null) return;
+    if (transitionFrameIndex <= 0) {
+      currentRun.transition = null;
+      return;
+    }
+    int stored = lastSnapshot.getStoredFrames();
+    if (stored < 2) {
+      currentRun.status = "FAILED";
+      measurementReason = "Transition completed without enough frame samples";
+      return;
+    }
+    int marker = constrain(transitionFrameIndex, 1, stored - 1);
+    long[] frameNanos = new long[stored];
+    for (int index = 0; index < stored; index++) {
+      frameNanos[index] = lastSnapshot.getDurationNanos(PerformanceMetric.FRAME_TOTAL, index);
+    }
+    BenchmarkTransitionAnalyzer.Statistics statistics =
+        BenchmarkTransitionAnalyzer.analyze(frameNanos, marker);
+    currentRun.transition.transitionFrame = marker;
+    currentRun.transition.baselineFrames = statistics.baselineFrames;
+    currentRun.transition.postFrames = statistics.postFrames;
+    currentRun.transition.normalP95Milliseconds = statistics.normalP95Milliseconds;
+    currentRun.transition.transitionMaximumMilliseconds = statistics.transitionMaximumMilliseconds;
+    currentRun.transition.recoveryFrames = statistics.recoveryFrames;
+  }
+
+  void recordSuiteResult(String status, String reason, Path directory) {
+    if (suiteSession == null || activeSuiteScenario == null) return;
+    BenchmarkSuiteResultWriter.Entry entry = new BenchmarkSuiteResultWriter.Entry();
+    entry.name = activeSuiteScenario.name;
+    entry.testType = activeSuiteScenario.kind.name();
+    entry.status = status;
+    entry.reason = reason == null ? "" : reason;
+    entry.resultDirectory = directory == null ? "" : directory.toString();
+    suiteSession.scenarios.add(entry);
+  }
+
+  void finishSuite() {
+    suiteActive = false;
+    activeSuiteScenario = null;
+    state = BenchmarkState.COMPLETE;
+    suiteSession.completedAt = Instant.now();
+    try {
+      lastExportDirectory = BenchmarkSuiteResultWriter.export(outputRoot, suiteSession);
+      resultPathLabel.setText("Suite manifest:\n" + lastExportDirectory.toString());
+      refreshStaticLabels(
+          "SUITE COMPLETE - " + suiteSession.scenarios.size() + " scenario result(s) recorded");
+    } catch (IOException error) {
+      state = BenchmarkState.FAILED;
+      refreshStaticLabels("SUITE MANIFEST FAILED - " + error.getMessage());
+    }
+    if (exitAfterSuite) app.exit();
+  }
+
+  int renderModeIndex(String name) {
+    for (int index = 0; index < renderModes.length; index++) {
+      if (renderModes[index].name().equals(name)) return index;
+    }
+    throw new IllegalArgumentException("Unknown render mode in suite: " + name);
+  }
+
+  int resolutionIndex(int resolution) {
+    for (int index = 0; index < resolutions.length; index++) {
+      if (resolutions[index] == resolution) return index;
+    }
+    throw new IllegalArgumentException("Resolution is not available in BenchmarkTool: " + resolution);
+  }
+
+  int sceneIndex(String name) {
+    for (int index = 0; index < sceneOptions.length; index++) {
+      if (sceneOptions[index].getName().equals(name)) return index;
+    }
+    throw new IllegalArgumentException("Scene is not available in BenchmarkTool: " + name);
   }
 
   boolean exportLastRun() {
@@ -410,10 +645,7 @@ class BenchmarkController {
     BenchmarkResultWriter.Run run = new BenchmarkResultWriter.Run();
     run.timestamp = Instant.now();
     run.libraryVersion = "2.0.0";
-    run.revision = firstKnown(
-        System.getenv("ZIVIDOME_BENCHMARK_REVISION"),
-        System.getenv("GITHUB_SHA"),
-        System.getProperty("zividome.benchmark.revision"));
+    run.revision = configuredRevision();
     run.renderMode = mode.name();
     run.view = view.name();
     run.resolution = resolution;
@@ -550,13 +782,21 @@ class BenchmarkController {
   }
 
   int sampleCapacity() {
-    return min(100000, max(4096, configuredMeasurementFrames + 8));
+    int required = configuredMeasurementFrames;
+    if (suiteActive && activeSuiteScenario != null
+        && activeSuiteScenario.kind == BenchmarkSuitePlan.Kind.TRANSITION) {
+      required = activeSuiteScenario.baselineFrames + activeSuiteScenario.postFrames;
+    }
+    return min(100000, max(4096, required + 8));
   }
 
   boolean isRunning() {
     return state == BenchmarkState.WARMUP
         || state == BenchmarkState.WARMUP_FINISHING
         || state == BenchmarkState.MEASURING
+        || state == BenchmarkState.TRANSITION_BASELINE
+        || state == BenchmarkState.TRANSITION_APPLYING
+        || state == BenchmarkState.TRANSITION_RECOVERY
         || state == BenchmarkState.MEASUREMENT_FINISHING;
   }
 
@@ -599,6 +839,92 @@ class BenchmarkController {
         System.getProperty("zividome.benchmark.output"));
     if (!configured.equals("unknown")) return Paths.get(configured);
     return Paths.get(System.getProperty("user.home"), "ziviDomeLive-benchmark-results");
+  }
+
+  void configureAutomation() {
+    automationSuiteName = configuredValue(
+        "ZIVIDOME_BENCHMARK_SUITE", "zividome.benchmark.suite");
+    automationSceneName = configuredValue(
+        "ZIVIDOME_BENCHMARK_SCENE", "zividome.benchmark.scene");
+    exitAfterSuite = configuredBoolean(
+        "ZIVIDOME_BENCHMARK_EXIT", "zividome.benchmark.exit", false);
+    configuredWarmupFrames = configuredInteger(
+        "ZIVIDOME_BENCHMARK_WARMUP_FRAMES",
+        "zividome.benchmark.warmupFrames",
+        configuredWarmupFrames,
+        0,
+        10000);
+    configuredMeasurementFrames = configuredInteger(
+        "ZIVIDOME_BENCHMARK_MEASUREMENT_FRAMES",
+        "zividome.benchmark.measurementFrames",
+        configuredMeasurementFrames,
+        2,
+        20000);
+    configuredTransitionBaselineFrames = configuredInteger(
+        "ZIVIDOME_BENCHMARK_TRANSITION_BASELINE_FRAMES",
+        "zividome.benchmark.transitionBaselineFrames",
+        configuredTransitionBaselineFrames,
+        2,
+        10000);
+    configuredTransitionPostFrames = configuredInteger(
+        "ZIVIDOME_BENCHMARK_TRANSITION_POST_FRAMES",
+        "zividome.benchmark.transitionPostFrames",
+        configuredTransitionPostFrames,
+        2,
+        20000);
+    int automatedResolution = configuredInteger(
+        "ZIVIDOME_BENCHMARK_RESOLUTION",
+        "zividome.benchmark.resolution",
+        selectedResolution(),
+        1,
+        16384);
+    resolutionDropdown.setValue(resolutionIndex(automatedResolution));
+    previewToggle.setState(configuredBoolean(
+        "ZIVIDOME_BENCHMARK_PREVIEW",
+        "zividome.benchmark.preview",
+        previewToggle.getState()));
+    warmupFramesInput.setValue(configuredWarmupFrames);
+    measurementFramesInput.setValue(configuredMeasurementFrames);
+  }
+
+  int configuredInteger(
+      String environmentName,
+      String propertyName,
+      int fallback,
+      int minimum,
+      int maximum) {
+    String configured = configuredValue(environmentName, propertyName);
+    if (configured == null) return fallback;
+    try {
+      int value = Integer.parseInt(configured);
+      if (value < minimum || value > maximum) throw new NumberFormatException();
+      return value;
+    } catch (NumberFormatException error) {
+      throw new IllegalArgumentException(
+          environmentName + " must be an integer from " + minimum + " to " + maximum + ".");
+    }
+  }
+
+  boolean configuredBoolean(String environmentName, String propertyName, boolean fallback) {
+    String configured = configuredValue(environmentName, propertyName);
+    if (configured == null) return fallback;
+    if (configured.equalsIgnoreCase("true")) return true;
+    if (configured.equalsIgnoreCase("false")) return false;
+    throw new IllegalArgumentException(environmentName + " must be true or false.");
+  }
+
+  String configuredValue(String environmentName, String propertyName) {
+    String environment = System.getenv(environmentName);
+    if (environment != null && !environment.trim().isEmpty()) return environment.trim();
+    String property = System.getProperty(propertyName);
+    return property == null || property.trim().isEmpty() ? null : property.trim();
+  }
+
+  String configuredRevision() {
+    return firstKnown(
+        System.getenv("ZIVIDOME_BENCHMARK_REVISION"),
+        System.getenv("GITHUB_SHA"),
+        System.getProperty("zividome.benchmark.revision"));
   }
 
   String firstKnown(String... candidates) {

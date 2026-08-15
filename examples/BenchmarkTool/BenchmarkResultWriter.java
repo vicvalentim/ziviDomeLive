@@ -25,6 +25,8 @@ public final class BenchmarkResultWriter {
         public String libraryVersion = "unknown";
         public String revision = "unknown";
         public String status = "SUPPORTED";
+        public String testType = "STEADY_STATE";
+        public String scenarioName = "MANUAL";
         public String renderMode = "unknown";
         public String view = "unknown";
         public int resolution;
@@ -43,7 +45,20 @@ public final class BenchmarkResultWriter {
         public long ndiSent;
         public long ndiDropped;
         public long ndiFailed;
+        public Transition transition;
         public final Environment environment = new Environment();
+    }
+
+    /** Optional evidence attached to a transition run after its samples are complete. */
+    public static final class Transition {
+        public String from = "unknown";
+        public String to = "unknown";
+        public int transitionFrame;
+        public int baselineFrames;
+        public int postFrames;
+        public double normalP95Milliseconds;
+        public double transitionMaximumMilliseconds;
+        public int recoveryFrames = -1;
     }
 
     /** Environment values captured by the sketch after its OpenGL context is initialized. */
@@ -121,6 +136,8 @@ public final class BenchmarkResultWriter {
         appendEnvironment(json, run.environment, 1);
         json.append(",\n");
         json.append("  \"scenario\": {\n");
+        field(json, 2, "testType", run.testType, true);
+        field(json, 2, "scenarioName", run.scenarioName, true);
         field(json, 2, "renderMode", run.renderMode, true);
         field(json, 2, "view", run.view, true);
         field(json, 2, "resolution", run.resolution, true);
@@ -136,6 +153,18 @@ public final class BenchmarkResultWriter {
         field(json, 2, "warmupFrames", run.warmupFrames, true);
         field(json, 2, "measurementFramesRequested", run.requestedMeasurementFrames, false);
         json.append("  },\n");
+        if (run.transition != null) {
+            json.append("  \"transition\": {\n");
+            field(json, 2, "from", run.transition.from, true);
+            field(json, 2, "to", run.transition.to, true);
+            field(json, 2, "transitionFrame", run.transition.transitionFrame, true);
+            field(json, 2, "baselineFrames", run.transition.baselineFrames, true);
+            field(json, 2, "postFrames", run.transition.postFrames, true);
+            numberField(json, 2, "normalP95Ms", run.transition.normalP95Milliseconds, true);
+            numberField(json, 2, "transitionMaxMs", run.transition.transitionMaximumMilliseconds, true);
+            field(json, 2, "recoveryFrames", run.transition.recoveryFrames, false);
+            json.append("  },\n");
+        }
         json.append("  \"metrics\": {\n");
         field(json, 2, "frames", snapshot.getStoredFrames(), true);
         field(json, 2, "framesCompleted", snapshot.getTotalFrames(), true);
