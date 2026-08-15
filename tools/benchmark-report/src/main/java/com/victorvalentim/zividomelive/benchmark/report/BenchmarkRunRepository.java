@@ -24,14 +24,15 @@ public final class BenchmarkRunRepository {
     public Result discover(Path resultsRoot) {
         Path root = resultsRoot.toAbsolutePath().normalize();
         List<BenchmarkRun> runs = new ArrayList<>();
+        List<SuiteManifest> suites = new ArrayList<>();
         List<Issue> issues = new ArrayList<>();
         if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
             issues.add(new Issue(root.toString(), "Results directory does not exist"));
-            return new Result(root, runs, issues);
+            return new Result(root, runs, suites, issues);
         }
         if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)) {
             issues.add(new Issue(root.toString(), "Results path is not a directory"));
-            return new Result(root, runs, issues);
+            return new Result(root, runs, suites, issues);
         }
 
         List<Path> candidates;
@@ -39,7 +40,7 @@ public final class BenchmarkRunRepository {
             candidates = children.sorted().toList();
         } catch (IOException exception) {
             issues.add(new Issue(root.toString(), "Cannot list results: " + exception.getMessage()));
-            return new Result(root, runs, issues);
+            return new Result(root, runs, suites, issues);
         }
         for (Path candidate : candidates) {
             if (Files.isSymbolicLink(candidate)) {
@@ -50,10 +51,49 @@ public final class BenchmarkRunRepository {
                 } catch (IOException | IllegalArgumentException exception) {
                     issues.add(new Issue(candidate.getFileName().toString(), exception.getMessage()));
                 }
+            } else if (Files.isRegularFile(candidate, LinkOption.NOFOLLOW_LINKS)
+                    && candidate.getFileName().toString().startsWith("suite-")
+                    && candidate.getFileName().toString().endsWith(".json")) {
+                try {
+                    suites.add(loadSuite(candidate));
+                } catch (IOException | IllegalArgumentException exception) {
+                    issues.add(new Issue(candidate.getFileName().toString(), exception.getMessage()));
+                }
             }
         }
         runs.sort(Comparator.comparing((BenchmarkRun run) -> run.text("timestamp")).thenComparing(BenchmarkRun::id));
-        return new Result(root, runs, issues);
+        suites.sort(Comparator.comparing(SuiteManifest::startedAt).thenComparing(SuiteManifest::id));
+        return new Result(root, runs, suites, issues);
+    }
+
+    private SuiteManifest loadSuite(Path path) throws IOException {
+        String name = path.getFileName().toString();
+        Map<String, Object> document = document(path, name);
+        requireSchema(document, name);
+        requireText(document, "library");
+        String suite = requireText(document, "suite");
+        String revision = requireText(document, "revision");
+        String startedAt = requireInstant(document, "startedAt", name);
+        String completedAt = requireInstant(document, "completedAt", name);
+        Object scenariosValue = document.get("scenarios");
+        if (!(scenariosValue instanceof List)) {
+            throw new IllegalArgumentException(name + " is missing scenarios array");
+        }
+        List<SuiteEntry> entries = new ArrayList<>();
+        for (Object value : (List<?>) scenariosValue) {
+            Map<String, Object> entry = requireMapValue(value, "suite scenario");
+            String status = requireText(entry, "status");
+            if (!List.of("SUPPORTED", "UNSUPPORTED", "FAILED", "NOT_TESTED", "STOPPED").contains(status)) {
+                throw new IllegalArgumentException(name + " has invalid scenario status " + status);
+            }
+            entries.add(new SuiteEntry(
+                    requireText(entry, "name"),
+                    requireText(entry, "testType"),
+                    status,
+                    optionalText(entry, "reason"),
+                    optionalText(entry, "resultDirectory")));
+        }
+        return new SuiteManifest(name, suite, revision, startedAt, completedAt, List.copyOf(entries));
     }
 
     private BenchmarkRun load(Path directory) throws IOException {
@@ -93,6 +133,17 @@ public final class BenchmarkRunRepository {
             for (String key : List.of("averageMs", "p95Ms", "p99Ms", "callsPerFrame", "totalCalls")) {
                 requireNumber(metric, key, false);
             }
+        }
+        if (summary.containsKey("transition")) {
+            Map<String, Object> transition = requireMap(summary, "transition");
+            requireText(transition, "from");
+            requireText(transition, "to");
+            requireNumber(transition, "transitionFrame", false);
+            requireNumber(transition, "baselineFrames", false);
+            requireNumber(transition, "postFrames", false);
+            requireNumber(transition, "normalP95Ms", false);
+            requireNumber(transition, "transitionMaxMs", false);
+            requireNumber(transition, "recoveryFrames", true);
         }
         double[] frameTimes = frames(directory.resolve("frames.csv"), frames);
         return new BenchmarkRun(directory, summary, environment, frameTimes);
@@ -160,6 +211,22 @@ public final class BenchmarkRunRepository {
         return (String) value;
     }
 
+    private static String optionalText(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (!(value instanceof String)) throw new IllegalArgumentException("Missing string " + key);
+        return (String) value;
+    }
+
+    private static String requireInstant(Map<String, Object> map, String key, String name) {
+        String value = requireText(map, key);
+        try {
+            Instant.parse(value);
+            return value;
+        } catch (DateTimeParseException exception) {
+            throw new IllegalArgumentException(name + " has invalid " + key);
+        }
+    }
+
     private static Map<String, Object> requireMap(Map<String, Object> map, String key) {
         return requireMapValue(map.get(key), key);
     }
@@ -198,16 +265,19 @@ public final class BenchmarkRunRepository {
     public static final class Result {
         private final Path root;
         private final List<BenchmarkRun> runs;
+        private final List<SuiteManifest> suites;
         private final List<Issue> issues;
 
-        Result(Path root, List<BenchmarkRun> runs, List<Issue> issues) {
+        Result(Path root, List<BenchmarkRun> runs, List<SuiteManifest> suites, List<Issue> issues) {
             this.root = root;
             this.runs = List.copyOf(runs);
+            this.suites = List.copyOf(suites);
             this.issues = List.copyOf(issues);
         }
 
         public Path root() { return root; }
         public List<BenchmarkRun> runs() { return runs; }
+        public List<SuiteManifest> suites() { return suites; }
         public List<Issue> issues() { return issues; }
 
         public Optional<BenchmarkRun> find(String idOrPath) {
@@ -219,5 +289,22 @@ public final class BenchmarkRunRepository {
     }
 
     public record Issue(String run, String message) {
+    }
+
+    public record SuiteManifest(
+            String id,
+            String suite,
+            String revision,
+            String startedAt,
+            String completedAt,
+            List<SuiteEntry> scenarios) {
+    }
+
+    public record SuiteEntry(
+            String name,
+            String testType,
+            String status,
+            String reason,
+            String resultDirectory) {
     }
 }

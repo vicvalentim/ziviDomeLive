@@ -76,6 +76,28 @@ public final class BenchmarkReportGenerator {
             runs.add(item);
         }
         root.put("runs", runs);
+        List<Object> suites = new ArrayList<>();
+        for (BenchmarkRunRepository.SuiteManifest suite : discovery.suites()) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", suite.id());
+            item.put("suite", suite.suite());
+            item.put("revision", suite.revision());
+            item.put("startedAt", suite.startedAt());
+            item.put("completedAt", suite.completedAt());
+            List<Object> scenarios = new ArrayList<>();
+            for (BenchmarkRunRepository.SuiteEntry entry : suite.scenarios()) {
+                Map<String, Object> scenario = new LinkedHashMap<>();
+                scenario.put("name", entry.name());
+                scenario.put("testType", entry.testType());
+                scenario.put("status", entry.status());
+                scenario.put("reason", entry.reason());
+                scenario.put("resultDirectory", entry.resultDirectory());
+                scenarios.add(scenario);
+            }
+            item.put("scenarios", scenarios);
+            suites.add(item);
+        }
+        root.put("suites", suites);
         root.put("notices", notices);
         comparison.ifPresent(value -> root.put("comparison", comparisonData(value)));
         return root;
@@ -115,12 +137,14 @@ public final class BenchmarkReportGenerator {
                 .append("<header><p class=\"eyebrow\">BENCHMARK REPORT · SCHEMA 1</p><h1>")
                 .append(TITLE).append("</h1><p class=\"lede\">")
                 .append(discovery.runs().size()).append(" valid run(s) discovered in <code>")
-                .append(escape(discovery.root().toString())).append("</code>.</p></header>");
+                .append(escape(discovery.root().toString())).append("</code>; ")
+                .append(discovery.suites().size()).append(" suite manifest(s).</p></header>");
         if (!notices.isEmpty()) {
             page.append("<section><h2>Validation notices</h2><ul class=\"notices\">");
             notices.forEach(notice -> page.append("<li>").append(escape(notice)).append("</li>"));
             page.append("</ul></section>");
         }
+        suites(page, discovery.suites());
         if (selected == null) {
             page.append("<section class=\"empty\"><h2>No valid benchmark runs</h2>")
                     .append("<p>Run BenchmarkTool and export results before regenerating this report.</p></section>");
@@ -136,6 +160,34 @@ public final class BenchmarkReportGenerator {
         return page.toString();
     }
 
+    private void suites(StringBuilder page, List<BenchmarkRunRepository.SuiteManifest> suites) {
+        if (suites.isEmpty()) return;
+        page.append("<section><h2>Automated suites</h2>");
+        for (BenchmarkRunRepository.SuiteManifest suite : suites) {
+            page.append("<article><h3>").append(escape(suite.suite())).append("</h3><p><code>")
+                    .append(escape(suite.id())).append("</code> · ")
+                    .append(escape(suite.revision())).append(" · ")
+                    .append(escape(suite.startedAt())).append(" → ")
+                    .append(escape(suite.completedAt())).append("</p>")
+                    .append("<div class=\"table-wrap\"><table><thead><tr><th>Scenario</th><th>Type</th>")
+                    .append("<th>Status</th><th>Reason</th><th>Result directory</th></tr></thead><tbody>");
+            for (BenchmarkRunRepository.SuiteEntry entry : suite.scenarios()) {
+                String statusClass = entry.status().equals("SUPPORTED") ? "good"
+                        : entry.status().equals("UNSUPPORTED") || entry.status().equals("NOT_TESTED")
+                                ? "neutral" : "bad";
+                page.append("<tr><td>").append(escape(entry.name())).append("</td><td>")
+                        .append(escape(entry.testType())).append("</td><td><span class=\"")
+                        .append(statusClass).append("\">").append(escape(entry.status()))
+                        .append("</span></td><td>").append(escape(entry.reason().isBlank() ? "—" : entry.reason()))
+                        .append("</td><td><code>")
+                        .append(escape(entry.resultDirectory().isBlank() ? "—" : entry.resultDirectory()))
+                        .append("</code></td></tr>");
+            }
+            page.append("</tbody></table></div></article>");
+        }
+        page.append("</section>");
+    }
+
     private void overview(StringBuilder page, BenchmarkRun run) {
         Map<String, Object> scenario = run.section("scenario");
         Map<String, Object> environment = run.section("environment");
@@ -149,7 +201,7 @@ public final class BenchmarkReportGenerator {
         card(page, "Maximum frame", format(run.metric("frameMsMax")), "ms");
         page.append("</div><div class=\"split\"><article><h3>Scenario</h3>");
         definition(page, scenario, List.of(
-                "renderMode", "view", "resolution", "resolutionDomain", "scene", "preview",
+                "testType", "scenarioName", "renderMode", "view", "resolution", "resolutionDomain", "scene", "preview",
                 "ndi", "ndiStatus", "syphon", "syphonStatus", "spout", "spoutStatus",
                 "warmupFrames", "measurementFramesRequested"));
         page.append("</article><article><h3>Environment</h3>");
@@ -157,7 +209,16 @@ public final class BenchmarkReportGenerator {
                 "os", "osVersion", "architecture", "java", "processing", "glVendor",
                 "glRenderer", "glVersion", "glslVersion", "windowWidth", "windowHeight",
                 "pixelDensity", "ndiState", "syphonState", "spoutState"));
-        page.append("</article></div></section>");
+        page.append("</article>");
+        Map<String, Object> transition = run.section("transition");
+        if (!transition.isEmpty()) {
+            page.append("<article><h3>Transition</h3>");
+            definition(page, transition, List.of(
+                    "from", "to", "transitionFrame", "baselineFrames", "postFrames",
+                    "normalP95Ms", "transitionMaxMs", "recoveryFrames"));
+            page.append("</article>");
+        }
+        page.append("</div></section>");
     }
 
     private void comparison(StringBuilder page, BenchmarkComparison comparison) {
@@ -213,13 +274,16 @@ public final class BenchmarkReportGenerator {
 
     private void matrix(StringBuilder page, List<BenchmarkRun> runs) {
         page.append("<section><h2>Test matrix</h2><div class=\"table-wrap\"><table><thead><tr>")
-                .append("<th>Run</th><th>Timestamp</th><th>Version</th><th>Mode</th><th>Scene</th>")
-                .append("<th>Resolution</th><th>Preview</th><th>FPS</th><th>P95 ms</th><th>Status</th>")
+                .append("<th>Run</th><th>Timestamp</th><th>Type</th><th>Scenario</th><th>Version</th><th>Mode</th><th>Scene</th>")
+                .append("<th>Resolution</th><th>Preview</th><th>FPS</th><th>P95 ms</th><th>Transition max ms</th><th>Recovery frames</th><th>Status</th>")
                 .append("</tr></thead><tbody>");
         for (BenchmarkRun run : runs) {
             Map<String, Object> scenario = run.section("scenario");
+            Map<String, Object> transition = run.section("transition");
             page.append("<tr><td><code>").append(escape(run.id())).append("</code></td><td>")
                     .append(escape(run.text("timestamp"))).append("</td><td>")
+                    .append(escape(value(scenario.get("testType")))).append("</td><td>")
+                    .append(escape(value(scenario.get("scenarioName")))).append("</td><td>")
                     .append(escape(run.text("version"))).append("</td><td>")
                     .append(escape(value(scenario.get("renderMode")))).append("</td><td>")
                     .append(escape(value(scenario.get("scene")))).append("</td><td>")
@@ -227,9 +291,11 @@ public final class BenchmarkReportGenerator {
                     .append(escape(value(scenario.get("preview")))).append("</td><td>")
                     .append(format(run.metric("fpsAverage"))).append("</td><td>")
                     .append(format(run.metric("frameMsP95"))).append("</td><td>")
+                    .append(escape(value(transition.get("transitionMaxMs")))).append("</td><td>")
+                    .append(escape(value(transition.get("recoveryFrames")))).append("</td><td>")
                     .append(escape(run.text("status"))).append("</td></tr>");
         }
-        if (runs.isEmpty()) page.append("<tr><td colspan=\"10\">No valid runs.</td></tr>");
+        if (runs.isEmpty()) page.append("<tr><td colspan=\"14\">No valid runs.</td></tr>");
         page.append("</tbody></table></div></section>");
     }
 
@@ -288,6 +354,7 @@ public final class BenchmarkReportGenerator {
             List<String> notices) {
         StringBuilder text = new StringBuilder("# " + TITLE + "\n\n");
         text.append("- Valid runs: ").append(discovery.runs().size()).append('\n');
+        text.append("- Suite manifests: ").append(discovery.suites().size()).append('\n');
         text.append("- Results root: `").append(discovery.root()).append("`\n");
         if (selected != null) {
             text.append("- Selected run: `").append(selected.id()).append("`\n")
