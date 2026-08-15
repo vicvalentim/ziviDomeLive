@@ -31,6 +31,8 @@ public final class PerformanceMonitor {
 	private int capacity;
 	private long[][] durationsNanos = EMPTY_DURATIONS;
 	private int[][] calls = EMPTY_CALLS;
+	private long[][] gpuDurationsNanos = EMPTY_DURATIONS;
+	private int[][] gpuCalls = EMPTY_CALLS;
 	private long[] currentDurations;
 	private int[] currentCalls;
 	private AtomicLongArray concurrentDurations;
@@ -42,6 +44,8 @@ public final class PerformanceMonitor {
 	private long invariantViolations;
 	private long cubemapCaptureViolations;
 	private long unexpectedPassViolations;
+	private long droppedGpuSamples;
+	private String gpuDiagnostic;
 	private boolean expectationsSet;
 	private int expectedStandard;
 	private int expectedCubemap;
@@ -78,10 +82,15 @@ public final class PerformanceMonitor {
 		validateCapacity(sampleCapacity);
 		active = false;
 		requestedMode = mode;
-		// GPU timers are intentionally deferred; CPU remains a truthful safe fallback.
 		capacity = sampleCapacity;
 		durationsNanos = new long[METRIC_COUNT][sampleCapacity];
 		calls = new int[METRIC_COUNT][sampleCapacity];
+		gpuDurationsNanos = mode == PerformanceMode.CPU_GPU
+				? new long[METRIC_COUNT][sampleCapacity]
+				: EMPTY_DURATIONS;
+		gpuCalls = mode == PerformanceMode.CPU_GPU
+				? new int[METRIC_COUNT][sampleCapacity]
+				: EMPTY_CALLS;
 		currentDurations = new long[METRIC_COUNT];
 		currentCalls = new int[METRIC_COUNT];
 		concurrentDurations = new AtomicLongArray(METRIC_COUNT);
@@ -109,6 +118,12 @@ public final class PerformanceMonitor {
 		for (int[] metricCalls : calls) {
 			Arrays.fill(metricCalls, 0);
 		}
+		for (long[] metricDurations : gpuDurationsNanos) {
+			Arrays.fill(metricDurations, 0L);
+		}
+		for (int[] metricCalls : gpuCalls) {
+			Arrays.fill(metricCalls, 0);
+		}
 		resetState();
 		advanceSession();
 	}
@@ -129,7 +144,57 @@ public final class PerformanceMonitor {
 		invariantViolations = 0L;
 		cubemapCaptureViolations = 0L;
 		unexpectedPassViolations = 0L;
+		droppedGpuSamples = 0L;
+		gpuDiagnostic = null;
 		expectationsSet = false;
+	}
+
+	/** Returns the absolute index of the open frame, or {@code -1} outside a frame. */
+	synchronized long getCurrentFrameId() {
+		return active && frameOpen ? totalFrames : -1L;
+	}
+
+	/** Marks GPU collection active only when initialization belongs to this session. */
+	synchronized void activateGpu(long expectedSessionId) {
+		if (requestedMode == PerformanceMode.CPU_GPU && isSessionActive(expectedSessionId)) {
+			effectiveMode = PerformanceMode.CPU_GPU;
+			gpuDiagnostic = null;
+		}
+	}
+
+	/** Falls back truthfully after a capability or runtime failure. */
+	synchronized void fallbackGpu(long expectedSessionId, String diagnostic) {
+		if (requestedMode == PerformanceMode.CPU_GPU && isSessionActive(expectedSessionId)) {
+			effectiveMode = PerformanceMode.CPU;
+			gpuDiagnostic = diagnostic;
+		}
+	}
+
+	/** Records one delayed GPU result against its original committed frame. */
+	synchronized boolean recordGpuDuration(
+			PerformanceMetric metric,
+			long frameId,
+			long durationNanos,
+			long expectedSessionId) {
+		if (metric == null
+				|| !isSessionActive(expectedSessionId)
+				|| effectiveMode != PerformanceMode.CPU_GPU
+				|| durationNanos <= 0L
+				|| frameId < Math.max(0L, totalFrames - storedFrames)
+				|| frameId >= totalFrames) {
+			return false;
+		}
+		int destination = (int) (frameId % capacity);
+		int metricIndex = metric.ordinal();
+		gpuDurationsNanos[metricIndex][destination] += Math.max(0L, durationNanos);
+		gpuCalls[metricIndex][destination]++;
+		return true;
+	}
+
+	synchronized void countDroppedGpuSample(long expectedSessionId) {
+		if (isSessionActive(expectedSessionId)) {
+			droppedGpuSamples++;
+		}
 	}
 
 	public void beginFrame() {
@@ -241,6 +306,8 @@ public final class PerformanceMonitor {
 		int retained = storedFrames;
 		long[][] chronologicalDurations = new long[METRIC_COUNT][retained];
 		int[][] chronologicalCalls = new int[METRIC_COUNT][retained];
+		long[][] chronologicalGpuDurations = new long[METRIC_COUNT][retained];
+		int[][] chronologicalGpuCalls = new int[METRIC_COUNT][retained];
 		int oldest = retained > 0 && retained == capacity
 				? (int) (totalFrames % capacity)
 				: 0;
@@ -249,12 +316,24 @@ public final class PerformanceMonitor {
 				int source = (oldest + frame) % capacity;
 				chronologicalDurations[metric][frame] = durationsNanos[metric][source];
 				chronologicalCalls[metric][frame] = calls[metric][source];
+				if (gpuDurationsNanos[metric].length > 0) {
+					chronologicalGpuDurations[metric][frame] = gpuDurationsNanos[metric][source];
+					chronologicalGpuCalls[metric][frame] = gpuCalls[metric][source];
+				}
 			}
 		}
 
-		List<String> diagnostics = new ArrayList<>(3);
+		List<String> diagnostics = new ArrayList<>(5);
 		if (requestedMode == PerformanceMode.CPU_GPU && effectiveMode == PerformanceMode.CPU) {
-			diagnostics.add("CPU_GPU requested; GPU timer queries are unavailable, so CPU profiling is active.");
+			diagnostics.add(gpuDiagnostic == null
+					? "CPU_GPU requested; GPU timer queries are unavailable, so CPU profiling is active."
+					: gpuDiagnostic);
+		}
+		if (effectiveMode == PerformanceMode.CPU_GPU) {
+			diagnostics.add("GPU elapsed time covers RENDER_PIPELINE only; all other timings are CPU wall time.");
+		}
+		if (droppedGpuSamples > 0L) {
+			diagnostics.add("Asynchronous GPU samples dropped without blocking: " + droppedGpuSamples + ".");
 		}
 		if (cubemapCaptureViolations > 0L) {
 			diagnostics.add("Cubemap capture invariant violations: " + cubemapCaptureViolations + ".");
@@ -274,7 +353,9 @@ public final class PerformanceMonitor {
 				invariantViolations,
 				cubemapCaptureViolations,
 				unexpectedPassViolations,
-				diagnostics);
+				diagnostics,
+				chronologicalGpuDurations,
+				chronologicalGpuCalls);
 	}
 
 	private void drainConcurrentMetrics() {
@@ -293,6 +374,10 @@ public final class PerformanceMonitor {
 		for (int metric = 0; metric < METRIC_COUNT; metric++) {
 			durationsNanos[metric][destination] = currentDurations[metric];
 			calls[metric][destination] = currentCalls[metric];
+			if (gpuDurationsNanos[metric].length > 0) {
+				gpuDurationsNanos[metric][destination] = 0L;
+				gpuCalls[metric][destination] = 0;
+			}
 		}
 		totalFrames++;
 		if (storedFrames < capacity) storedFrames++;

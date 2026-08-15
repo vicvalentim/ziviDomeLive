@@ -6,6 +6,7 @@ import com.victorvalentim.zividomelive.render.camera.*;
 import com.victorvalentim.zividomelive.render.gl.*;
 import com.victorvalentim.zividomelive.render.modes.*;
 import com.victorvalentim.zividomelive.support.*;
+import com.victorvalentim.zividomelive.internal.performance.GpuPerformanceTimer;
 import com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor;
 import com.victorvalentim.zividomelive.performance.*;
 import processing.core.*;
@@ -48,6 +49,7 @@ public class ziviDomeLive implements PConstants {
 	private final PApplet p;
 	private final RenderPipeline renderPipeline;
 	private final PerformanceMonitor performanceMonitor = new PerformanceMonitor();
+	private final GpuPerformanceTimer gpuPerformanceTimer;
 	private InitState initState = InitState.NOT_INITIALIZED;
 	private boolean paused;
 	private boolean disposed;
@@ -157,6 +159,7 @@ public class ziviDomeLive implements PConstants {
 			throw new IllegalArgumentException("PApplet instance cannot be null.");
 		}
 		this.p = p;
+		this.gpuPerformanceTimer = new GpuPerformanceTimer(p, performanceMonitor);
 		this.renderPipeline = new RenderPipeline(this);
 		this.sceneManager = new SceneManager();
 		this.sceneManager.setLifecycleListener(sceneLifecycle);
@@ -2174,10 +2177,11 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Enables experimental CPU performance collection using the default ring-buffer capacity.
+	 * Enables experimental performance collection using the default ring-buffer capacity.
 	 *
-	 * <p>{@link PerformanceMode#CPU_GPU} currently falls back to CPU measurements; no
-	 * synchronous GPU query or {@code glFinish()} is introduced.</p>
+	 * <p>{@link PerformanceMode#CPU_GPU} adds one capability-gated asynchronous GPU timestamp
+	 * interval around the complete render pipeline. Unsupported contexts fall back to CPU, and
+	 * no synchronous query or {@code glFinish()} is introduced.</p>
 	 *
 	 * @param mode requested profiling mode
 	 * @since 2.0.0
@@ -2196,8 +2200,9 @@ public class ziviDomeLive implements PConstants {
 	 */
 	public void enablePerformanceProfiling(PerformanceMode mode, int sampleCapacity) {
 		performanceMonitor.enable(mode, sampleCapacity);
+		gpuPerformanceTimer.stop(isOnRenderThread());
 		if (mode == PerformanceMode.CPU_GPU) {
-			LOGGER.warning("CPU_GPU profiling requested; using CPU timings because GPU timer queries are not implemented.");
+			LOGGER.info("CPU_GPU profiling requested; GPU support will be checked on the render thread.");
 		}
 	}
 
@@ -2207,6 +2212,7 @@ public class ziviDomeLive implements PConstants {
 	 * @since 2.0.0
 	 */
 	public void disablePerformanceProfiling() {
+		gpuPerformanceTimer.stop(isOnRenderThread());
 		performanceMonitor.disable();
 	}
 
@@ -2216,6 +2222,7 @@ public class ziviDomeLive implements PConstants {
 	 * @since 2.0.0
 	 */
 	public void resetPerformanceStatistics() {
+		gpuPerformanceTimer.stop(isOnRenderThread());
 		performanceMonitor.reset();
 	}
 
@@ -2232,6 +2239,18 @@ public class ziviDomeLive implements PConstants {
 
 	PerformanceMonitor performanceMonitor() {
 		return performanceMonitor;
+	}
+
+	boolean beginGpuPerformanceInterval() {
+		return gpuPerformanceTimer.begin();
+	}
+
+	void endGpuPerformanceInterval() {
+		gpuPerformanceTimer.end();
+	}
+
+	private boolean isOnRenderThread() {
+		return renderThread != null && Thread.currentThread() == renderThread;
 	}
 
 	/**
@@ -2311,6 +2330,7 @@ public class ziviDomeLive implements PConstants {
 		// Processing can execute setup() and JOGL frame callbacks on different threads.
 		// pre() is the authoritative Processing/OpenGL frame boundary.
 		renderThread = Thread.currentThread();
+		gpuPerformanceTimer.maintain();
 		syncCurrentSceneToRenderers();
 		Scene activeScene = getCurrentScene();
 		if (activeScene != null) {
@@ -2423,6 +2443,7 @@ public class ziviDomeLive implements PConstants {
 		disposed = true;
 		LOGGER.info("Disposing resources...");
 		clearPausedOutputState();
+		gpuPerformanceTimer.dispose(isOnRenderThread());
 
 		if (outputManager != null) {
 			try {

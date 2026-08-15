@@ -26,6 +26,7 @@ public final class ProcessingGlCapabilities {
 	private final boolean anisotropicFilteringSupported;
 	private final boolean pixelBufferObjectSupported;
 	private final boolean syncFenceSupported;
+	private final boolean gpuTimerQuerySupported;
 
 	private ProcessingGlCapabilities(
 			boolean openGlRenderer,
@@ -39,7 +40,8 @@ public final class ProcessingGlCapabilities {
 			boolean seamlessCubemapSupported,
 			boolean anisotropicFilteringSupported,
 			boolean pixelBufferObjectSupported,
-			boolean syncFenceSupported) {
+			boolean syncFenceSupported,
+			boolean gpuTimerQuerySupported) {
 		this.openGlRenderer = openGlRenderer;
 		this.version = normalize(version);
 		this.shadingLanguageVersion = normalize(shadingLanguageVersion);
@@ -52,6 +54,7 @@ public final class ProcessingGlCapabilities {
 		this.anisotropicFilteringSupported = anisotropicFilteringSupported;
 		this.pixelBufferObjectSupported = pixelBufferObjectSupported;
 		this.syncFenceSupported = syncFenceSupported;
+		this.gpuTimerQuerySupported = gpuTimerQuerySupported;
 	}
 
 	/**
@@ -60,7 +63,7 @@ public final class ProcessingGlCapabilities {
 	 * @return unavailable capabilities snapshot
 	 */
 	public static ProcessingGlCapabilities unavailable() {
-		return new ProcessingGlCapabilities(false, "", "", "", "", false, false, false, false, false, false, false);
+		return new ProcessingGlCapabilities(false, "", "", "", "", false, false, false, false, false, false, false, false);
 	}
 
 	/**
@@ -97,6 +100,8 @@ public final class ProcessingGlCapabilities {
 		boolean fence = parsed.atLeast(3, 2)
 				|| hasExtension(normalizedExtensions, "gl_arb_sync")
 				|| hasExtension(normalizedExtensions, "gl_apple_sync");
+		boolean gpuTimerQuery = desktopGl && (parsed.atLeast(3, 3)
+				|| hasExtension(normalizedExtensions, "gl_arb_timer_query"));
 
 		return new ProcessingGlCapabilities(
 				true,
@@ -110,7 +115,8 @@ public final class ProcessingGlCapabilities {
 				seamlessCubemap,
 				anisotropicFiltering,
 				pbo,
-				fence);
+				fence,
+				gpuTimerQuery);
 	}
 
 	/**
@@ -145,7 +151,8 @@ public final class ProcessingGlCapabilities {
 				seamlessCubemapSupported,
 				anisotropicFilteringSupported,
 				pixelBufferObjectSupported,
-				syncFenceSupported);
+				syncFenceSupported,
+				gpuTimerQuerySupported);
 	}
 
 	String shadingLanguageVersion() {
@@ -231,6 +238,18 @@ public final class ProcessingGlCapabilities {
 	 */
 	public boolean supportsSyncFence() {
 		return syncFenceSupported;
+	}
+
+	/**
+	 * Reports whether desktop OpenGL advertises the core/ARB GPU timer-query API.
+	 * OpenGL ES disjoint timers are intentionally excluded because they require
+	 * different validity handling. Runtime collection additionally requires non-zero
+	 * timestamp counter bits from the active context.
+	 *
+	 * @return {@code true} for desktop OpenGL 3.3+ or ARB_timer_query
+	 */
+	public boolean supportsGpuTimerQuery() {
+		return gpuTimerQuerySupported;
 	}
 
 	boolean supportsRequiredSphericalShaderProfile() {

@@ -68,6 +68,7 @@ tasks.register("verifyReleaseTag") {
 
 // Centralized dependency versions for easier Maven sync/updates.
 val processingCoreVersion = "4.5.6"
+val joglVersion = "2.6.0"
 val devolayVersion = "2.2.0-vic.1"
 
 // The location of your sketchbook folder. The sketchbook folder holds your installed
@@ -109,6 +110,9 @@ repositories {
 dependencies {
     // resolve Processing core
     compileOnly(group = "org.processing", name = "core", version = processingCoreVersion)
+    // Processing 4.5.6 supplies this exact JOGL version at runtime. Compile-only access is
+    // limited to the ProcessingGlAdapter timer-query boundary and is never packaged.
+    compileOnly(group = "org.jogamp.jogl", name = "jogl-all", version = joglVersion)
 
     // insert your external dependencies
     implementation(group = "io.github.vicvalentim", name = "devolay", version = devolayVersion)
@@ -313,6 +317,10 @@ tasks.register<Exec>("benchmarkSuite") {
         environment(
             "ZIVIDOME_BENCHMARK_PREVIEW",
             providers.gradleProperty("benchmarkPreview").getOrElse("false")
+        )
+        environment(
+            "ZIVIDOME_BENCHMARK_GPU",
+            providers.gradleProperty("benchmarkGpu").getOrElse("false")
         )
         environment(
             "ZIVIDOME_BENCHMARK_WARMUP_FRAMES",

@@ -1,10 +1,11 @@
 package com.victorvalentim.zividomelive.performance;
 
 /**
- * Stable names for CPU performance samples exposed by the experimental profiler.
+ * Stable names for performance samples exposed by the experimental profiler.
  *
- * <p>A duration around an OpenGL call is CPU-observed wall time. It must not be
- * interpreted as isolated GPU elapsed time.</p>
+ * <p>{@link PerformanceSnapshot#getStatistics(PerformanceMetric)} always returns
+ * CPU-observed wall time. GPU elapsed statistics are a separate channel and currently
+ * exist only for {@link #RENDER_PIPELINE}.</p>
  *
  * @since 2.0.0
  */

@@ -57,6 +57,7 @@ final class RenderPipeline {
 		boolean profiling = monitor.isEnabled();
 		PerformanceMonitor previous = profiling ? PerformanceMonitor.attach(monitor) : null;
 		long pipelineStarted = profiling ? monitor.start() : 0L;
+		boolean gpuTiming = profiling && runtime.beginGpuPerformanceInterval();
 		try {
 			runtime.clearBackground();
 			runtime.handleGraphicsReset();
@@ -108,6 +109,7 @@ final class RenderPipeline {
 			if (profiling) monitor.record(PerformanceMetric.CONTROL_PANEL, controlsStarted);
 		} finally {
 			if (profiling) {
+				if (gpuTiming) runtime.endGpuPerformanceInterval();
 				monitor.record(PerformanceMetric.RENDER_PIPELINE, pipelineStarted);
 				PerformanceMonitor.restore(previous);
 			}

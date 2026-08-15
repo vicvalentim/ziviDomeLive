@@ -63,4 +63,18 @@ class ProcessingGlAdapterTest {
 		assertDoesNotThrow(() -> adapter.restoreCubemapTexture(null, state));
 	}
 
+	@Test
+	void gpuTimerQuerySessionValidatesPoolBeforeTouchingGl() {
+		ProcessingGlAdapter adapter = ProcessingGlAdapter.getDefault();
+		PApplet parent = new PApplet();
+
+		assertThrows(IllegalArgumentException.class,
+				() -> adapter.createGpuTimerQuerySession(null, 8));
+		assertThrows(IllegalArgumentException.class,
+				() -> adapter.createGpuTimerQuerySession(parent, 1));
+		assertThrows(IllegalArgumentException.class,
+				() -> adapter.createGpuTimerQuerySession(parent, 65));
+		assertDoesNotThrow(() -> adapter.createGpuTimerQuerySession(parent, 8).close());
+	}
+
 }

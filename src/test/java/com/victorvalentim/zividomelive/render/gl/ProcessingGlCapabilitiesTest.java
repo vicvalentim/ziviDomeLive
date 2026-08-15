@@ -20,6 +20,7 @@ class ProcessingGlCapabilitiesTest {
 		assertFalse(capabilities.supportsAnisotropicFiltering());
 		assertFalse(capabilities.supportsPixelBufferObject());
 		assertFalse(capabilities.supportsSyncFence());
+		assertFalse(capabilities.supportsGpuTimerQuery());
 	}
 
 	@Test
@@ -38,6 +39,7 @@ class ProcessingGlCapabilitiesTest {
 		assertFalse(capabilities.supportsAnisotropicFiltering());
 		assertTrue(capabilities.supportsPixelBufferObject());
 		assertTrue(capabilities.supportsSyncFence());
+		assertTrue(capabilities.supportsGpuTimerQuery());
 	}
 
 	@Test
@@ -56,6 +58,7 @@ class ProcessingGlCapabilitiesTest {
 		assertTrue(capabilities.supportsAnisotropicFiltering());
 		assertTrue(capabilities.supportsPixelBufferObject());
 		assertTrue(capabilities.supportsSyncFence());
+		assertFalse(capabilities.supportsGpuTimerQuery());
 	}
 
 	@Test
@@ -73,6 +76,7 @@ class ProcessingGlCapabilitiesTest {
 		assertFalse(capabilities.supportsAnisotropicFiltering());
 		assertFalse(capabilities.supportsPixelBufferObject());
 		assertFalse(capabilities.supportsSyncFence());
+		assertFalse(capabilities.supportsGpuTimerQuery());
 	}
 
 	@Test
@@ -84,6 +88,18 @@ class ProcessingGlCapabilitiesTest {
 				"");
 
 		assertFalse(capabilities.supportsSeamlessCubemap());
+		assertFalse(capabilities.supportsGpuTimerQuery());
+	}
+
+	@Test
+	void arbTimerQueryEnablesElapsedTimingOnOlderDesktopGlOnly() {
+		ProcessingGlCapabilities desktop = ProcessingGlCapabilities.fromOpenGlStrings(
+				"3.2", "Vendor", "Renderer", "GL_ARB_timer_query");
+		ProcessingGlCapabilities embedded = ProcessingGlCapabilities.fromOpenGlStrings(
+				"OpenGL ES 3.2", "Vendor", "Renderer", "GL_ARB_timer_query");
+
+		assertTrue(desktop.supportsGpuTimerQuery());
+		assertFalse(embedded.supportsGpuTimerQuery());
 	}
 
 	@Test

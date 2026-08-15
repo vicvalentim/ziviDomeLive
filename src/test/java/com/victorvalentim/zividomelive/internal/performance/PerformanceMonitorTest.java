@@ -164,6 +164,61 @@ class PerformanceMonitorTest {
 	}
 
 	@Test
+	void delayedGpuResultIsAlignedWithItsOriginalCommittedFrame() {
+		PerformanceMonitor monitor = new PerformanceMonitor();
+		monitor.enable(PerformanceMode.CPU_GPU, 4);
+		long sessionId = monitor.getActiveSessionId();
+
+		monitor.beginFrame(1L);
+		assertEquals(0L, monitor.getCurrentFrameId());
+		monitor.activateGpu(sessionId);
+		monitor.beginFrame(10_000_001L);
+		assertTrue(monitor.recordGpuDuration(
+				PerformanceMetric.RENDER_PIPELINE,
+				0L,
+				4_000_000L,
+				sessionId));
+
+		PerformanceSnapshot snapshot = monitor.snapshot();
+		assertEquals(PerformanceMode.CPU_GPU, snapshot.getEffectiveMode());
+		assertTrue(snapshot.hasGpuTimings());
+		assertEquals(4_000_000L,
+				snapshot.getGpuDurationNanos(PerformanceMetric.RENDER_PIPELINE, 0));
+		assertEquals(1, snapshot.getGpuCalls(PerformanceMetric.RENDER_PIPELINE, 0));
+		assertEquals(4.0,
+				snapshot.getGpuStatistics(PerformanceMetric.RENDER_PIPELINE)
+						.getAverageMilliseconds(),
+				0.000001);
+		assertEquals(0L,
+				snapshot.getGpuStatistics(PerformanceMetric.CUBEMAP_TOTAL).getTotalCalls());
+	}
+
+	@Test
+	void lateGpuResultNeverOverwritesAReusedRingSlot() {
+		PerformanceMonitor monitor = new PerformanceMonitor();
+		monitor.enable(PerformanceMode.CPU_GPU, 2);
+		long sessionId = monitor.getActiveSessionId();
+		monitor.activateGpu(sessionId);
+
+		monitor.beginFrame(1L);
+		monitor.beginFrame(2L);
+		monitor.beginFrame(3L);
+		monitor.beginFrame(4L);
+
+		assertFalse(monitor.recordGpuDuration(
+				PerformanceMetric.RENDER_PIPELINE,
+				0L,
+				5_000_000L,
+				sessionId));
+		monitor.countDroppedGpuSample(sessionId);
+
+		PerformanceSnapshot snapshot = monitor.snapshot();
+		assertFalse(snapshot.hasGpuTimings());
+		assertTrue(snapshot.getDiagnostics().stream()
+				.anyMatch(message -> message.contains("GPU samples dropped")));
+	}
+
+	@Test
 	void disablePreservesCompletedSamplesAndResetClearsThem() {
 		PerformanceMonitor monitor = new PerformanceMonitor();
 		monitor.enable(PerformanceMode.CPU, 4);

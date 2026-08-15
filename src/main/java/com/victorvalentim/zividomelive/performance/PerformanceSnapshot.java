@@ -20,6 +20,9 @@ public final class PerformanceSnapshot {
 	private final long[][] durationsNanos;
 	private final int[][] calls;
 	private final MetricStatistics[] statistics;
+	private final long[][] gpuDurationsNanos;
+	private final int[][] gpuCalls;
+	private final MetricStatistics[] gpuStatistics;
 	private final long invariantViolations;
 	private final long cubemapCaptureViolations;
 	private final long unexpectedPassViolations;
@@ -55,6 +58,55 @@ public final class PerformanceSnapshot {
 			long cubemapCaptureViolations,
 			long unexpectedPassViolations,
 			List<String> diagnostics) {
+		this(
+				requestedMode,
+				effectiveMode,
+				totalFrames,
+				storedFrames,
+				overwrittenFrames,
+				durationsNanos,
+				calls,
+				invariantViolations,
+				cubemapCaptureViolations,
+				unexpectedPassViolations,
+				diagnostics,
+				emptyDurations(durationsNanos.length, storedFrames),
+				emptyCalls(calls.length, storedFrames));
+	}
+
+	/**
+	 * Creates a snapshot containing CPU samples and delayed GPU elapsed samples.
+	 * GPU arrays use the same chronological frame indices and metric ordinals as CPU arrays.
+	 *
+	 * @param requestedMode mode requested by the application
+	 * @param effectiveMode mode actually used by the recorder
+	 * @param totalFrames completed frames since the latest reset
+	 * @param storedFrames completed frames retained in the ring buffer
+	 * @param overwrittenFrames completed frames overwritten by the ring buffer
+	 * @param durationsNanos chronological CPU metric durations by metric ordinal
+	 * @param calls chronological CPU metric call counts by metric ordinal
+	 * @param invariantViolations total detected render-graph invariant violations
+	 * @param cubemapCaptureViolations detected cubemap-capture invariant violations
+	 * @param unexpectedPassViolations detected unexpected render-pass violations
+	 * @param diagnostics immutable human-readable collection diagnostics
+	 * @param gpuDurationsNanos chronological GPU durations by metric ordinal
+	 * @param gpuCalls chronological GPU result counts by metric ordinal
+	 * @since 2.0.0
+	 */
+	public PerformanceSnapshot(
+			PerformanceMode requestedMode,
+			PerformanceMode effectiveMode,
+			long totalFrames,
+			int storedFrames,
+			long overwrittenFrames,
+			long[][] durationsNanos,
+			int[][] calls,
+			long invariantViolations,
+			long cubemapCaptureViolations,
+			long unexpectedPassViolations,
+			List<String> diagnostics,
+			long[][] gpuDurationsNanos,
+			int[][] gpuCalls) {
 		this.requestedMode = requestedMode;
 		this.effectiveMode = effectiveMode;
 		this.totalFrames = totalFrames;
@@ -62,11 +114,14 @@ public final class PerformanceSnapshot {
 		this.overwrittenFrames = overwrittenFrames;
 		this.durationsNanos = deepCopy(durationsNanos);
 		this.calls = deepCopy(calls);
+		this.gpuDurationsNanos = deepCopy(gpuDurationsNanos);
+		this.gpuCalls = deepCopy(gpuCalls);
 		this.invariantViolations = invariantViolations;
 		this.cubemapCaptureViolations = cubemapCaptureViolations;
 		this.unexpectedPassViolations = unexpectedPassViolations;
 		this.diagnostics = List.copyOf(diagnostics);
 		this.statistics = createStatistics();
+		this.gpuStatistics = createStatistics(this.gpuDurationsNanos, this.gpuCalls);
 	}
 
 	/** @return profiling mode requested by the application */
@@ -108,6 +163,25 @@ public final class PerformanceSnapshot {
 	}
 
 	/**
+	 * Returns aggregate GPU elapsed values for one metric. Metrics without GPU instrumentation
+	 * return an empty aggregate rather than CPU values.
+	 *
+	 * @param metric metric to aggregate
+	 * @return immutable GPU aggregate statistics
+	 */
+	public MetricStatistics getGpuStatistics(PerformanceMetric metric) {
+		if (metric == null) {
+			throw new IllegalArgumentException("Performance metric cannot be null.");
+		}
+		return gpuStatistics[metric.ordinal()];
+	}
+
+	/** @return {@code true} when at least one retained GPU pipeline sample is available */
+	public boolean hasGpuTimings() {
+		return gpuStatistics[PerformanceMetric.RENDER_PIPELINE.ordinal()].getTotalCalls() > 0L;
+	}
+
+	/**
 	 * Returns one chronological raw duration sample without exposing mutable storage.
 	 *
 	 * @param metric sampled metric
@@ -131,6 +205,32 @@ public final class PerformanceSnapshot {
 		checkMetric(metric);
 		checkFrameIndex(frameIndex);
 		return calls[metric.ordinal()][frameIndex];
+	}
+
+	/**
+	 * Returns one chronological GPU elapsed sample in nanoseconds.
+	 *
+	 * @param metric sampled metric
+	 * @param frameIndex chronological retained-frame index
+	 * @return GPU elapsed duration, or zero when that frame has no GPU result
+	 */
+	public long getGpuDurationNanos(PerformanceMetric metric, int frameIndex) {
+		checkMetric(metric);
+		checkFrameIndex(frameIndex);
+		return gpuDurationsNanos[metric.ordinal()][frameIndex];
+	}
+
+	/**
+	 * Returns the GPU query result count associated with one retained frame.
+	 *
+	 * @param metric sampled metric
+	 * @param frameIndex chronological retained-frame index
+	 * @return GPU result count; zero means unavailable rather than zero GPU cost
+	 */
+	public int getGpuCalls(PerformanceMetric metric, int frameIndex) {
+		checkMetric(metric);
+		checkFrameIndex(frameIndex);
+		return gpuCalls[metric.ordinal()][frameIndex];
 	}
 
 	/** @return all detected render-graph invariant violations */
@@ -166,13 +266,17 @@ public final class PerformanceSnapshot {
 	}
 
 	private MetricStatistics[] createStatistics() {
+		return createStatistics(durationsNanos, calls);
+	}
+
+	private MetricStatistics[] createStatistics(long[][] metricDurations, int[][] metricCalls) {
 		PerformanceMetric[] metrics = PerformanceMetric.values();
 		MetricStatistics[] result = new MetricStatistics[metrics.length];
 		for (PerformanceMetric metric : metrics) {
 			result[metric.ordinal()] = aggregate(
 					metric,
-					durationsNanos[metric.ordinal()],
-					calls[metric.ordinal()],
+					metricDurations[metric.ordinal()],
+					metricCalls[metric.ordinal()],
 					storedFrames);
 		}
 		return result;
@@ -215,6 +319,14 @@ public final class PerformanceSnapshot {
 			copy[index] = source[index].clone();
 		}
 		return copy;
+	}
+
+	private static long[][] emptyDurations(int metricCount, int frameCount) {
+		return new long[metricCount][Math.max(0, frameCount)];
+	}
+
+	private static int[][] emptyCalls(int metricCount, int frameCount) {
+		return new int[metricCount][Math.max(0, frameCount)];
 	}
 
 	/** Aggregated values for one metric over retained frames. */
