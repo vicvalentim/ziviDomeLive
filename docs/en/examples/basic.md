@@ -32,7 +32,9 @@ immutable post-run snapshot, and exports schema-versioned `summary.json`, `frame
 `build/benchmark-results/`; the documented manual fallback is outside the examples directory.
 
 The initial `RUN SUITE` covers the four dedicated render modes for the selected scene,
-resolution, and outputs. GPU timers, transition runs, and HTML reporting are separate stages.
+resolution, and outputs. Generate the offline HTML dashboard with `./gradlew benchmarkReport`;
+see [Benchmark Reporting](../qualification/benchmark-reporting.md). GPU timers and transition
+runs remain separate stages.
 
 All examples preserve `sceneRender(PGraphicsOpenGL)` and never call `ziviDome.draw()` manually.
 

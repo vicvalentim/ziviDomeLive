@@ -32,7 +32,9 @@ após o run e exporta `summary.json`, `frames.csv` e `environment.json` com sche
 fallback manual documentado fica fora da pasta de exemplos.
 
 O `RUN SUITE` inicial cobre os quatro modos dedicados para a cena, resolução e outputs selecionados.
-Timer GPU, transições e relatório HTML pertencem às etapas seguintes.
+Gere o dashboard HTML offline com `./gradlew benchmarkReport`; consulte
+[Relatórios de Benchmark](../qualification/benchmark-reporting.md). Timer GPU e transições
+continuam pertencendo a etapas separadas.
 
 Todos os exemplos preservam `sceneRender(PGraphicsOpenGL)` e nunca chamam `ziviDome.draw()` manualmente.
 
