@@ -1,0 +1,27 @@
+# Documentation image placeholders
+
+These files are intentionally schematic placeholders for the 2.0 documentation freeze. Replace them with project-specific screenshots/illustrations without changing their semantic role or filename unless all links are updated.
+
+## `hero-overview.png`
+
+Final image should communicate the artist workflow first: Processing creative scene at left/centre, final representations (Standard, Domemaster, Equirectangular, Skybox) visible as outcomes. Avoid OpenGL terminology in the hero image. Prefer a real ziviDomeLive artwork or a composed screenshot set.
+
+## `render-modes-overview.png`
+
+Final image should show the four final visual representations side by side using the same scene, with clear labels. It should make `RenderMode`/representation differences visually understandable.
+
+## `preview-output-routing.png`
+
+Final diagram should show one ziviDomeLive runtime in `FULL`, an independently selected Preview `ViewType`, and independent NDI/Syphon/Spout routes. Do not imply that all outputs must share one view.
+
+## `spherical-calibration.png`
+
+Final figure should explain Pitch/Yaw/Roll as shared spherical orientation, FOV as Domemaster angular coverage, and Size% as physical circle fit. Explicitly avoid representing Size% as scene zoom.
+
+## `external-outputs.png`
+
+Final figure should organize outputs by user intention: NDI network video, Syphon macOS texture sharing, Spout Windows texture sharing, with a `ViewType` selector before each destination. Do not depict unqualified platforms as tested.
+
+## `architecture-domains.png`
+
+Final developer figure should show two parallel domains: Standard Scene → Standard target; Spherical Scene capture → CubemapTarget → sibling Domemaster/Equirectangular/Skybox projections. This figure belongs to Developer Guide material, not the homepage hero.

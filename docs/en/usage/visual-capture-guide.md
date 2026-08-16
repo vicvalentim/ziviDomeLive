@@ -1,111 +1,33 @@
-# Visual Capture Guide
+# Preview and Output
 
-This page defines the screenshot slots used by the manual. Capture the images manually, save them with the suggested names, then replace each placeholder block with a normal Markdown image.
+Preview and output are independent consumers of rendered views.
 
-!!! tip "Recommended capture rhythm"
-    Capture the same sketch in `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR`, and `SKYBOX` so readers can compare modes without wondering whether the scene changed.
+![Preview and output routing](../../img/preview-output-routing.png)
 
-## Capture checklist
+## Preview
 
-<div class="zd-checklist" markdown>
-<div class="zd-check" markdown>
-**1. Use CalibrationTool**
+- Standard preview follows the current Processing window dimensions.
+- Spherical preview uses the library's automatic square preview policy rather than the output resolution.
+- Resizing the window therefore does not redefine the external-output resolution.
 
-<span>Start from a scene with visible face orientation, depth, and horizon cues.</span>
-</div>
-<div class="zd-check" markdown>
-**2. Wait for splash**
+## Output resolution
 
-<span>Let the splash screen finish before taking production screenshots.</span>
-</div>
-<div class="zd-check" markdown>
-**3. Ignore GL 1282 noise**
+The public resize entry point is `resetGraphics(int)`. Documentation and examples must use that implemented API name.
 
-<span>The known Processing teardown warning does not invalidate a capture.</span>
-</div>
-<div class="zd-check" markdown>
-**4. Keep naming stable**
+Output-target changes are deferred to the render/draw boundary so graphics resources are recreated in the correct Processing/OpenGL context.
 
-<span>Use the filenames below so future docs edits stay mechanical.</span>
-</div>
-</div>
+Changing output resolution must not silently redefine preview resolution. Domemaster Size% is calibration state and must remain persistent across output-target recreation.
 
-## Primary screenshots
+## Output aspect
 
-<div class="zd-gallery" markdown>
-<div class="zd-placeholder" markdown>
-<div class="zd-placeholder__label" markdown>
-**Hero / SKYBOX**
+The final representation determines the relevant output geometry/aspect. Standard, Domemaster, Equirectangular and Skybox should be treated as distinct final views rather than as one rescaled image.
 
-Save as `docs/assets/images/screenshots/hero-skybox.png`. Use this on the home page.
-</div>
-</div>
+## Independent routing in FULL
 
-<div class="zd-placeholder" markdown>
-<div class="zd-placeholder__label" markdown>
-**Standard preview**
+`RenderMode.FULL` allows combinations such as:
 
-Save as `docs/assets/images/screenshots/standard-preview.png`.
-</div>
-</div>
+- Standard preview + Domemaster NDI;
+- Standard preview + Equirectangular local texture output;
+- Domemaster preview + another enabled output view.
 
-<div class="zd-placeholder" markdown>
-<div class="zd-placeholder__label" markdown>
-**Domemaster output**
-
-Save as `docs/assets/images/screenshots/domemaster-output.png`.
-</div>
-</div>
-
-<div class="zd-placeholder" markdown>
-<div class="zd-placeholder__label" markdown>
-**Equirectangular output**
-
-Save as `docs/assets/images/screenshots/equirectangular-output.png`.
-</div>
-</div>
-
-<div class="zd-placeholder" markdown>
-<div class="zd-placeholder__label" markdown>
-**Skybox face layout**
-
-Save as `docs/assets/images/screenshots/skybox-layout.png`.
-</div>
-</div>
-
-<div class="zd-placeholder" markdown>
-<div class="zd-placeholder__label" markdown>
-**Control panel**
-
-Save as `docs/assets/images/screenshots/control-panel.png`.
-</div>
-</div>
-</div>
-
-## Replacement pattern
-
-When a capture exists, replace the placeholder with:
-
-```markdown
-![Domemaster output](../../assets/images/screenshots/domemaster-output.png){ .img-center }
-```
-
-Keep screenshots under `docs/assets/images/screenshots/` and prefer PNG for UI or calibration images where crisp text and hard edges matter.
-
-## Suggested framing
-
-| Capture | Suggested ratio | What it should prove |
-|---|---:|---|
-| Hero / SKYBOX | 16:9 | Face layout, horizon continuity, overall identity |
-| Standard preview | 16:9 | Standard Processing-window preview remains independent |
-| Domemaster | 1:1 | Fisheye shape, FOV, Size%, dome framing |
-| Equirectangular | 2:1 | Seam quality and horizontal continuity |
-| Control panel | 16:9 or cropped | Mode routing, calibration controls, output state |
-
-After replacing the slots, run:
-
-```bash
-.venv-docs/bin/mkdocs build --strict
-```
-
-The GitHub Pages workflow also attaches generated Javadocs to `/reference/`, so API links can point there once the site is deployed.
+The effective route is resolved per destination. A dedicated `RenderMode` temporarily overrides effective representation without deleting the stored `ViewType` selections.

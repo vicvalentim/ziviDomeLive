@@ -1,87 +1,34 @@
-# Render Modes
+# Render Modes and View Types
 
-`RenderMode` controls the effective representation used by the Processing window and every enabled external output. It does not select an output backend and it does not replace the `ViewType` routing API.
+ziviDomeLive separates **how the application is currently working** from **which representation a destination receives**.
 
-## FULL Compatibility Mode
+![RenderMode and ViewType](../../img/render-modes-overview.png)
 
-`FULL` is the default. Existing sketches that never call `setRenderMode()` keep independent preview and output routes:
+## RenderMode: how do I want to work now?
 
-```java
-dome.setRenderMode(RenderMode.FULL);
-dome.setCurrentView(ViewType.STANDARD);
+`RenderMode` defines the effective global working mode:
 
-OutputManager outputs = dome.getOutputManager();
-outputs.setNdiView(ViewType.EQUIRECTANGULAR);
-outputs.setSyphonView(ViewType.DOMEMASTER);
-outputs.setSpoutView(ViewType.SKYBOX);
-```
+- `FULL`
+- `STANDARD`
+- `DOMEMASTER`
+- `EQUIRECTANGULAR`
+- `SKYBOX`
 
-Only enabled outputs request frames. Merely configuring a route or preparing Syphon/Spout does not activate publication or add a render requirement.
+`FULL` is the default. It preserves the independent preview and output routes configured through `ViewType`.
 
-## Dedicated Modes
+Dedicated modes temporarily override the effective representation. They do **not** erase the stored routes that reappear when you return to `FULL`.
 
-Dedicated modes force one effective representation for the main preview and all enabled outputs:
+## ViewType: which representation goes to this destination?
 
-| `RenderMode` | Effective `ViewType` | Main pipeline |
-|---|---|---|
-| `STANDARD` | `STANDARD` | Direct perspective Standard renderer |
-| `DOMEMASTER` | `DOMEMASTER` | Cubemap, fisheye samplerCube |
-| `EQUIRECTANGULAR` | `EQUIRECTANGULAR` | Cubemap, equirectangular |
-| `SKYBOX` | `SKYBOX` | Cubemap, skybox layout |
+`ViewType` identifies the final representation requested by preview or an external output:
 
-```java
-dome.setRenderMode(RenderMode.DOMEMASTER);
-```
+- `STANDARD`
+- `DOMEMASTER`
+- `EQUIRECTANGULAR`
+- `SKYBOX`
 
-The configured preview and per-output `ViewType` values are retained while a dedicated mode is active. Returning to `FULL` restores those independent routes:
+This distinction matters most in `FULL`: a Standard preview can coexist with a Domemaster NDI output, for example, without turning those destinations into the same route.
 
-```java
-dome.setRenderMode(RenderMode.FULL);
-```
+## What RenderMode does not mean
 
-## Floating Domemaster
-
-The floating fisheye thumbnail is an auxiliary preview service:
-
-```java
-dome.setRenderMode(RenderMode.STANDARD);
-dome.setShowPreview(true);
-```
-
-This combination intentionally renders the Standard path plus the spherical passes needed by the thumbnail. In other dedicated modes the service can still be enabled programmatically, but the built-in panel hides its redundant toggle.
-
-## Render Requirements
-
-The library computes a dependency closure for each frame:
-
-```text
-Standard                 -> Standard only
-Cubemap layout           -> cubemap capture + layout
-Equirectangular          -> cubemap capture + equirectangular
-Fisheye domemaster       -> cubemap capture + fisheye samplerCube
-```
-
-When multiple enabled outputs request different views in `FULL`, their requirements are merged. At most one master cubemap is captured for the frame. See [Rendering Pipeline](../architecture/rendering-pipeline.md) for the complete frame order.
-
-## Resolution Domains
-
-Standard preview uses the current Processing window dimensions. Spherical preview targets use:
-
-```text
-min(1024, max(256, min(windowWidth, windowHeight)))
-```
-
-External output targets use the independent output resolution:
-
-```java
-dome.resetGraphics(2048);
-```
-
-The supported panel presets are `1024`, `2048`, `3072`, and `4096`. Reallocation is deferred to the draw loop, affects output targets only, and preserves domemaster Size%.
-
-## Related Guides
-
-- [Control Panel](control-panel.md)
-- [Spherical Calibration](spherical-calibration.md)
-- [External Integration](external-integration.md)
-- [Runtime Lifecycle](../architecture/runtime-lifecycle.md)
+A render mode is not a second runtime class and does not replace the `ziviDomeLive` instance. The public model remains one runtime with multiple working modes.

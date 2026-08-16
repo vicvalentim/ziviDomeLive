@@ -1,87 +1,34 @@
-# Modos de Renderização
+# RenderMode e ViewType
 
-`RenderMode` controla a representação efetiva usada pela janela Processing e por cada output externo habilitado. Ele não seleciona um backend de output e não substitui a API de routing por `ViewType`.
+O ziviDomeLive separa **como a aplicação está trabalhando agora** de **qual representação um destino recebe**.
 
-## Modo de Compatibilidade FULL
+![RenderMode e ViewType](../../img/render-modes-overview.png)
 
-`FULL` é o padrão. Sketches existentes que nunca chamam `setRenderMode()` mantêm rotas independentes para preview e outputs:
+## RenderMode: como quero trabalhar agora?
 
-```java
-dome.setRenderMode(RenderMode.FULL);
-dome.setCurrentView(ViewType.STANDARD);
+`RenderMode` define o modo global efetivo:
 
-OutputManager outputs = dome.getOutputManager();
-outputs.setNdiView(ViewType.EQUIRECTANGULAR);
-outputs.setSyphonView(ViewType.DOMEMASTER);
-outputs.setSpoutView(ViewType.SKYBOX);
-```
+- `FULL`
+- `STANDARD`
+- `DOMEMASTER`
+- `EQUIRECTANGULAR`
+- `SKYBOX`
 
-Somente outputs habilitados solicitam frames. Configurar uma rota ou preparar Syphon/Spout não ativa publicação nem adiciona requisito de renderização.
+`FULL` é o padrão e preserva as rotas independentes de preview e outputs configuradas por `ViewType`.
 
-## Modos Dedicados
+Modos dedicados substituem temporariamente a representação efetiva. Eles **não** apagam as rotas armazenadas que reaparecem ao retornar a `FULL`.
 
-Modos dedicados forçam uma representação efetiva para o preview principal e todos os outputs habilitados:
+## ViewType: qual representação vai para este destino?
 
-| `RenderMode` | `ViewType` efetivo | Pipeline principal |
-|---|---|---|
-| `STANDARD` | `STANDARD` | Renderer Standard perspectiva direto |
-| `DOMEMASTER` | `DOMEMASTER` | Cubemap, fisheye samplerCube |
-| `EQUIRECTANGULAR` | `EQUIRECTANGULAR` | Cubemap, equiretangular |
-| `SKYBOX` | `SKYBOX` | Cubemap, layout skybox |
+`ViewType` identifica a representação final solicitada pelo preview ou por um output externo:
 
-```java
-dome.setRenderMode(RenderMode.DOMEMASTER);
-```
+- `STANDARD`
+- `DOMEMASTER`
+- `EQUIRECTANGULAR`
+- `SKYBOX`
 
-Os valores `ViewType` configurados para preview e outputs permanecem armazenados durante um modo dedicado. Voltar para `FULL` restaura essas rotas independentes:
+A distinção é especialmente importante em `FULL`: um preview Standard pode coexistir, por exemplo, com uma saída NDI Domemaster sem transformar os dois destinos na mesma rota.
 
-```java
-dome.setRenderMode(RenderMode.FULL);
-```
+## O que RenderMode não significa
 
-## Domemaster Flutuante
-
-A miniatura fisheye flutuante é um serviço auxiliar de preview:
-
-```java
-dome.setRenderMode(RenderMode.STANDARD);
-dome.setShowPreview(true);
-```
-
-Essa combinação renderiza intencionalmente o caminho Standard e os passes esféricos exigidos pela miniatura. Nos demais modos dedicados o serviço ainda pode ser habilitado por API, mas o painel interno oculta seu toggle redundante.
-
-## Requisitos de Renderização
-
-A biblioteca calcula o fechamento de dependências a cada frame:
-
-```text
-Standard                 -> somente Standard
-Layout cubemap           -> captura cubemap + layout
-Equirectangular          -> captura cubemap + equiretangular
-Domemaster fisheye       -> captura cubemap + fisheye samplerCube
-```
-
-Quando outputs habilitados solicitam views diferentes em `FULL`, seus requisitos são combinados. No máximo um cubemap mestre é capturado por frame. Consulte [Pipeline de Renderização](../architecture/rendering-pipeline.md) para a ordem completa.
-
-## Domínios de Resolução
-
-O preview Standard usa as dimensões atuais da janela Processing. Targets esféricos de preview usam:
-
-```text
-min(1024, max(256, min(windowWidth, windowHeight)))
-```
-
-Targets de output externo usam a resolução independente de output:
-
-```java
-dome.resetGraphics(2048);
-```
-
-Os presets do painel são `1024`, `2048`, `3072` e `4096`. A realocação é adiada para o draw loop, afeta somente targets de output e preserva o Size% do domemaster.
-
-## Guias Relacionados
-
-- [Painel de Controle](control-panel.md)
-- [Calibração Esférica](spherical-calibration.md)
-- [Integração Externa](external-integration.md)
-- [Lifecycle de Runtime](../architecture/runtime-lifecycle.md)
+Um modo de renderização não é uma segunda classe de runtime e não substitui a instância `ziviDomeLive`. O modelo público continua sendo um único runtime com múltiplos modos de trabalho.

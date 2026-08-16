@@ -1,46 +1,49 @@
 # Guia Rápido
 
-## Crie o Sketch
+Este percurso evita deliberadamente Scene Services, benchmark, internals de output, threading e arquitetura do renderer.
+
+## 1. Imports
 
 ```java
 import com.victorvalentim.zividomelive.*;
-import com.victorvalentim.zividomelive.manager.OutputManager;
 import processing.opengl.PGraphicsOpenGL;
-// Processing usa estes imports para montar dependências contributed-library.
+
+// Dependências de runtime do pacote Processing:
 import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;
+```
 
-ziviDomeLive ziviDome;
+Os imports de Syphon/Spout fazem parte das dependências de runtime da distribuição como biblioteca contribuída. Você não precisa configurar nem aprender esses sistemas para criar uma cena básica.
+
+## 2. Crie o ziviDomeLive
+
+```java
+ziviDomeLive dome;
 
 void settings() {
   size(1280, 720, P3D);
   pixelDensity(1);
 }
+```
 
+## 3. Setup
+
+```java
 void setup() {
-  ziviDome = new ziviDomeLive(this);
-  ziviDome.setTargetFrameRate(60); // Configuração opcional de startup.
-  ziviDome.setup();
-  ziviDome.setScene(new MainScene());
-}
-
-void draw() {
-  // ziviDomeLive renderiza automaticamente pelo hook draw do Processing.
+  dome = new ziviDomeLive(this);
+  dome.setup();
+  dome.setScene(new MainScene());
 }
 ```
 
-Chame `setup()` uma vez após a construção. Não chame `ziviDome.draw()` no sketch: o construtor já registrou os hooks Processing da biblioteca. Os imports de ControlP5, Syphon e Spout são necessários nos exemplos contributed-library para que o Processing monte o classpath de runtime; somente o backend local válido para a plataforma é usado.
+O construtor registra os hooks do Processing usados pela biblioteca. Não encaminhe manualmente draw/eventos salvo quando uma API documentada solicitar isso.
 
-## Implemente uma Cena
+## 4. Crie uma Scene
 
 ```java
 class MainScene implements Scene {
   float angle;
-
-  public void setupScene() {
-    angle = 0;
-  }
 
   public void update() {
     angle += 0.01f;
@@ -49,89 +52,50 @@ class MainScene implements Scene {
   public void sceneRender(PGraphicsOpenGL pg) {
     pg.background(8, 12, 24);
     pg.lights();
+    pg.translate(pg.width * 0.5f, pg.height * 0.5f);
     pg.rotateY(angle);
     pg.box(180);
-    // A biblioteca controla beginDraw() e endDraw().
-  }
-
-  public String getName() {
-    return "Main";
   }
 }
 ```
 
-`sceneRender()` é invocado para cada target necessário no frame. Mantenha alterações de estado em `update()` para que a animação avance uma vez por frame, não uma vez por face do cubemap.
+## 5. `update()` = estado
 
-## Selecione um RenderMode
+Use `update()` para tudo que precisa avançar **uma vez por frame do Processing**:
 
-`FULL` é o padrão. Um sketch que nunca chama `setRenderMode()` mantém o comportamento de roteamento da 1.4.
+- contadores de animação;
+- física/simulação;
+- timelines;
+- randomização mutável;
+- transições de estado.
 
-```java
-ziviDome.setRenderMode(RenderMode.FULL);
-ziviDome.setRenderMode(RenderMode.STANDARD);
-ziviDome.setRenderMode(RenderMode.DOMEMASTER);
-ziviDome.setRenderMode(RenderMode.EQUIRECTANGULAR);
-ziviDome.setRenderMode(RenderMode.SKYBOX);
-```
+## 6. `sceneRender()` = desenho
 
-Use `setCurrentView()` para a rota de preview no modo `FULL`:
+Use `sceneRender(PGraphicsOpenGL)` somente para desenhar o estado atual.
 
-```java
-ziviDome.setCurrentView(ViewType.DOMEMASTER);
-```
+!!! important
+    A captura esférica pode chamar `sceneRender()` mais de uma vez durante um único frame do Processing. Se a animação/estado avançar dentro de `sceneRender()`, as diferentes direções esféricas podem observar estados diferentes.
 
-Modos dedicados preservam essa seleção configurada, mas forçam temporariamente sua própria representação efetiva. Consulte [Modos de Renderização](../usage/basic-usage.md) e o [Painel de Controle](../usage/control-panel.md) para a matriz completa de routing.
+A biblioteca já controla `beginDraw()` e `endDraw()` no target recebido. Não os chame dentro de `sceneRender()`.
 
-## Receba Eventos
-
-A biblioteca registra hooks de teclado e mouse do Processing e encaminha cada evento uma vez para a cena ativa. O listener ControlP5 interno encaminha eventos do painel pelo mesmo contrato.
+## 7. Mude o RenderMode
 
 ```java
-public void keyEvent(processing.event.KeyEvent event) {
-  if (event.getAction() == processing.event.KeyEvent.PRESS) {
-    println(event.getKey());
-  }
-}
-
-public void mouseEvent(processing.event.MouseEvent event) {
-  // Trate a entrada da cena.
-}
-
-public void controlEvent(controlP5.ControlEvent event) {
-  // Trate eventos relevantes do painel interno.
-}
+dome.setRenderMode(RenderMode.STANDARD);
+dome.setRenderMode(RenderMode.DOMEMASTER);
+dome.setRenderMode(RenderMode.EQUIRECTANGULAR);
+dome.setRenderMode(RenderMode.SKYBOX);
+dome.setRenderMode(RenderMode.FULL);
 ```
 
-Não encaminhe esses eventos novamente pelo sketch principal.
+`FULL` é o modo padrão para preview e outputs com rotas independentes.
 
-## Adicione Outras Cenas
+## 8. Teste Domemaster
+
+Comece com:
 
 ```java
-SceneManager scenes = new SceneManager();
-scenes.registerScene(new IntroScene());
-scenes.registerScene(new MainScene());
-ziviDome.setSceneManager(scenes);
+dome.setRenderMode(RenderMode.DOMEMASTER);
 ```
 
-O primeiro registro ativa a cena. As setas Esquerda e Direita alternam cenas pelos atalhos globais da biblioteca.
-
-## Roteie um Output
-
-Outputs começam desabilitados:
-
-```java
-OutputManager outputs = ziviDome.getOutputManager();
-outputs.setNdiView(ViewType.EQUIRECTANGULAR);
-outputs.toggleOutput("ndi");
-```
-
-Consulte estado e diagnóstico sem confundir disponibilidade com demanda de renderização:
-
-```java
-println(outputs.getOutputState(OutputManager.OutputType.NDI));
-println(outputs.getOutputFailureReason(OutputManager.OutputType.NDI));
-```
-
-A interoperabilidade nativa ainda exige qualificação de hardware por plataforma.
-
-Continue em [Gerenciamento de Cenas](../usage/scene-management.md), [Calibração Esférica](../usage/spherical-calibration.md) e [Integração Externa](../usage/external-integration.md).
+Depois consulte Calibração Esférica antes de usar projetor/lente. FOV, Size% e Pitch/Yaw/Roll são controles de calibração; não substituem o movimento da câmera da cena.

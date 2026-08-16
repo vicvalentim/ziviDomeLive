@@ -2,10 +2,10 @@ site_name: ziviDomeLive - Processing Library Documentation
 site_url: https://vicvalentim.github.io/ziviDomeLive/
 repo_url: https://github.com/vicvalentim/ziviDomeLive
 repo_name: GitHub
-edit_uri: edit/main/docs/
-site_description: Real-time immersive visuals and 3D rendering framework for fulldome and VR in Processing
+edit_uri: edit/release/2.0.0/docs/
+site_description: Technical documentation for ziviDomeLive real-time fulldome, spherical and immersive rendering workflows in Processing
 site_author: Victor Valentim
-copyright: Copyright &copy; 2024 <a href="https://vicvalentim.com/" target="_blank">Victor Valentim</a> - GPL-2.0-only
+copyright: Copyright &copy; 2024 Victor Valentim - GPL-2.0-only
 docs_dir: docs
 site_dir: site
 use_directory_urls: true
@@ -38,13 +38,11 @@ theme:
         icon: material/brightness-4
         name: Switch to system preference
   features:
-    - announce.dismiss
     - navigation.tabs
     - navigation.tabs.sticky
     - navigation.sections
     - navigation.expand
     - navigation.top
-    - navigation.prune
     - navigation.footer
     - navigation.path
     - navigation.tracking
@@ -61,8 +59,6 @@ theme:
     - content.tooltips
   icon:
     repo: fontawesome/brands/github
-    search: material/magnify
-    close: material/close-circle
 
 plugins:
   - search
@@ -76,55 +72,56 @@ plugins:
           name: English
           build: true
           site_name: ziviDomeLive - Processing Library Documentation
-          site_description: Real-time immersive visuals and 3D rendering framework for fulldome and VR in Processing
+          site_description: Technical documentation for real-time fulldome, spherical and immersive rendering workflows in Processing
         - locale: pt
           name: Português (Brasil)
           build: true
           site_name: ziviDomeLive - Documentação da Biblioteca Processing
-          site_description: Framework de visualização imersiva em tempo real e renderização 3D para fulldome e VR em Processing
+          site_description: Documentação técnica para fluxos de renderização fulldome, esférica e imersiva em tempo real no Processing
           nav_translations:
             Home: Início
+            Start Creating: Comece a Criar
             Installation: Instalação
             Requirements: Requisitos
-            Installation Steps: Passos de Instalação
             Dependencies: Dependências
             NDI Runtime: Runtime NDI
-            Getting Started: Introdução
-            Quickstart Guide: Guia Rápido
-            Key Features: Funcionalidades Principais
-            Usage: Uso
+            Quickstart: Guia Rápido
+            Key Concepts: Conceitos Principais
+            Creative Guide: Guia Criativo
             Render Modes: Modos de Renderização
-            Visual Capture Guide: Guia de Capturas Visuais
+            Preview and Output: Preview e Output
             Control Panel: Painel de Controle
             Spherical Calibration: Calibração Esférica
+            Camera and Navigation: Câmera e Navegação
+            Environment: Environment
             Scene Management: Gerenciamento de Cenas
-            Event Handling: Manipulação de Eventos
-            External Integration: Integração Externa
+            Interaction and Events: Interação e Eventos
+            External Outputs: Outputs Externos
             Architecture: Arquitetura
             Rendering Pipeline: Pipeline de Renderização
             Runtime Lifecycle: Lifecycle de Runtime
             API Reference: Referência da API
             Overview: Visão Geral
             Core Classes: Classes Principais
-            Scene Interface: Interface de Cena
-            Scene Services: Serviços de Cena
+            Scene Interface: Interface Scene
+            Scene Services: Scene Services
             Helper Functions: Funções Auxiliares
             Performance Profiling: Profiling de Performance
             Generated Javadocs: Javadocs Gerados
             Examples: Exemplos
-            Basic Examples: Exemplos Básicos
+            Learning Examples: Exemplos de Aprendizagem
             Advanced Examples: Exemplos Avançados
             Qualification: Qualificação
             Benchmark Guide: Guia do Benchmark
             Processing Publication: Publicação Processing
             Calibration Tool Protocol: Protocolo da Ferramenta de Calibração
-            Release Readiness: Prontidão da Release
             Release Readiness 2.0: Prontidão da Release 2.0
             Release Notes: Notas de Versão
             Version 2.0.0: Versão 2.0.0
             Version 1.5.0: Versão 1.5.0
             Project: Projeto
             Contributing: Contribuindo
+            Roadmap: Roadmap
             Known Issues: Problemas Conhecidos
             Author: Autor
             License: Licença
@@ -140,21 +137,12 @@ markdown_extensions:
       permalink: true
   - pymdownx.details
   - pymdownx.superfences
-  - pymdownx.betterem
-  - pymdownx.caret
-  - pymdownx.mark
-  - pymdownx.tilde
   - pymdownx.inlinehilite
   - pymdownx.keys
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tabbed:
       alternate_style: true
-  - pymdownx.snippets:
-      base_path:
-        - ./examples/
-        - ./examples/advanced_usage
-        - ./examples/getting_started
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
@@ -166,34 +154,31 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/vicvalentim/ziviDomeLive
       name: ziviDomeLive on GitHub
-    - icon: fontawesome/solid/globe
-      link: https://vicvalentim.com/
-      name: Victor Valentim
 
 extra_css:
   - assets/css/extra.css
-
 extra_javascript:
   - assets/js/extra.js
 
 nav:
   - Home: index.md
-  - Installation:
+  - Start Creating:
+      - Installation: installation/installation-steps.md
       - Requirements: installation/requirements.md
-      - Installation Steps: installation/installation-steps.md
       - Dependencies: installation/dependencies.md
       - NDI Runtime: installation/ndi.md
-  - Getting Started:
-      - Quickstart Guide: getting-started/quickstart.md
-      - Key Features: getting-started/features.md
-  - Usage:
+      - Quickstart: getting-started/quickstart.md
+      - Key Concepts: getting-started/features.md
+  - Creative Guide:
       - Render Modes: usage/basic-usage.md
-      - Visual Capture Guide: usage/visual-capture-guide.md
+      - Preview and Output: usage/visual-capture-guide.md
       - Control Panel: usage/control-panel.md
       - Spherical Calibration: usage/spherical-calibration.md
+      - Camera and Navigation: usage/camera-navigation.md
+      - Environment: usage/environment.md
       - Scene Management: usage/scene-management.md
-      - Event Handling: usage/event-handling.md
-      - External Integration: usage/external-integration.md
+      - Interaction and Events: usage/event-handling.md
+      - External Outputs: usage/external-integration.md
   - Architecture:
       - Rendering Pipeline: architecture/rendering-pipeline.md
       - Runtime Lifecycle: architecture/runtime-lifecycle.md
@@ -206,7 +191,7 @@ nav:
       - Performance Profiling: api/performance-profiling.md
       - Generated Javadocs: api/javadocs.md
   - Examples:
-      - Basic Examples: examples/basic.md
+      - Learning Examples: examples/basic.md
       - Advanced Examples: examples/advanced.md
   - Qualification:
       - Benchmark Guide: qualification/benchmark-guide.md
