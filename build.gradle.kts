@@ -69,7 +69,7 @@ tasks.register("verifyReleaseTag") {
 // Centralized dependency versions for easier Maven sync/updates.
 val processingCoreVersion = "4.5.6"
 val joglVersion = "2.6.0"
-val devolayVersion = "2.2.0-vic.1"
+val devolayVersion = "2.2.0-vic.2"
 
 // The location of your sketchbook folder. The sketchbook folder holds your installed
 // libraries, tools, and modes. It is needed if you:
