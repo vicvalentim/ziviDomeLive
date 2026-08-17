@@ -9,20 +9,20 @@ This file is the pre-tag evidence ledger. Replace every `UNVERIFIED` with a conc
 
 | Item | Status | Evidence |
 |---|---|---|
-| branch is `release/2.0.0` | UNVERIFIED | `git branch --show-current` |
-| final HEAD recorded | UNVERIFIED | `git rev-parse HEAD` |
-| working tree clean | UNVERIFIED | `git status --porcelain` |
+| branch is `release/2.0.0` | PASS | `git branch --show-current` → `release/2.0.0` |
+| qualified HEAD recorded | PASS | automated qualification executed at `6089194071084ebcc240116b7501d179ce4c66d6` |
+| working tree clean | PASS | `git status --porcelain` returned empty |
 
 ## AUTOMATED
 
 | Check | Status | Evidence |
 |---|---|---|
-| `./gradlew clean test build --console=plain` | UNVERIFIED | attach/log run |
-| `./gradlew qualificationTests --console=plain` | UNVERIFIED | attach/log run |
-| `python3 tools/validate_documentation.py --root .` | UNVERIFIED | attach/log run |
-| `python3 -m mkdocs build --strict` | UNVERIFIED | attach/log run |
-| `./gradlew buildReleaseArtifacts --console=plain` | UNVERIFIED | attach/log run |
-| package/sibling validator | UNVERIFIED | attach/log run |
+| `./gradlew clean test build --console=plain` | PASS | BUILD SUCCESSFUL at HEAD `6089194071084ebcc240116b7501d179ce4c66d6` |
+| `./gradlew qualificationTests --console=plain` | PASS | 304 total; 304 passed; 0 failed; 0 skipped |
+| `python3 tools/validate_documentation.py --root .` | PASS | 0 errors; 0 warnings |
+| `python3 -m mkdocs build --strict` | PASS | EN/PT documentation built successfully |
+| `./gradlew buildReleaseArtifacts --console=plain` | PASS | BUILD SUCCESSFUL; Processing package verified |
+| package/sibling validator | PASS | 0 errors; 0 warnings; ZIP/PDEX byte-identical |
 
 ## GPU VISUAL
 
@@ -78,12 +78,12 @@ If a backend/platform is not claimed for 2.0.0, replace its row status with `NOT
 
 | Check | Status | Evidence |
 |---|---|---|
-| `library.properties` validated | UNVERIFIED | |
-| ZIP/TXT/PDEX stable siblings present | UNVERIFIED | |
+| `library.properties` validated | PASS | documentation/package validator: 0 errors; 0 warnings |
+| ZIP/TXT/PDEX stable siblings present | PASS | `buildReleaseArtifacts` + package/sibling validator |
 | software DOI externally verified | UNVERIFIED | registered record |
-| CFF / Zenodo / README / MkDocs consistent | UNVERIFIED | validator |
+| CFF / Zenodo / README / MkDocs consistent | PASS | documentation validator: 0 errors; 0 warnings |
 | Processing minimum revision confirmed | UNVERIFIED | official Processing source/revision record |
-| tested-platform claims match evidence | UNVERIFIED | current `library.properties` intentionally makes no `tested.*` claim |
+| tested-platform claims match evidence | PASS | no `tested.*` claim is published while manual platform qualification remains incomplete |
 | GitBook DOI absent/null | UNVERIFIED | metadata audit |
 | GitBook ISBN absent/null | UNVERIFIED | metadata audit |
 
