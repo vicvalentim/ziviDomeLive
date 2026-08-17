@@ -42,5 +42,5 @@ Pitch/Yaw/Roll, FOV and Size% solve **different calibration problems**. Keeping 
 
 <div class="zd-actions" markdown>
 [Camera and Navigation](camera-navigation.md){ .md-button }
-[CalibrationTool](../qualification/1.5-calibration-tool.md){ .md-button .md-button--primary }
+[CalibrationTool](../qualification/calibration-tool.md){ .md-button .md-button--primary }
 </div>

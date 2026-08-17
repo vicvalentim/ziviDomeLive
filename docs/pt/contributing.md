@@ -22,7 +22,7 @@ mkdocs build --strict
 - Mantenha Syphon/Spout no caminho `PGraphicsOpenGL`.
 - Não reintroduza o caminho removido de captura esférica `PGraphicsOpenGL[]`.
 
-Mudanças de GPU ou output exigem o protocolo visual CalibrationTool e evidência no hardware da plataforma, além dos testes unitários.
+Mudanças de GPU ou output exigem o protocolo visual [CalibrationTool](qualification/calibration-tool.md) e evidência no hardware da plataforma, além dos testes unitários.
 
 `qualificationTests` é a execução automatizada canônica. O resumo, o relatório
 HTML e os resultados JUnit XML ficam em `build/reports/qualification/` e

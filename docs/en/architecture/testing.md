@@ -13,11 +13,11 @@ Use unit/integration/qualification tests for routing, lifecycle, metadata and no
 
 ## GPU visual
 
-Use `CalibrationTool` and representative scenes to inspect projection orientation, seams, calibration and Environment behavior on a real OpenGL configuration.
+Use [CalibrationTool](../qualification/calibration-tool.md) and representative scenes to inspect projection orientation, seams, calibration and Environment behavior on a real OpenGL configuration.
 
 ## Benchmark
 
-Use `BenchmarkTool` for smoke, CPU baseline and CPU/GPU measurement modes supported by the tool.
+Use [BenchmarkTool](../qualification/benchmark-guide.md) for smoke, CPU baseline and CPU/GPU measurement modes supported by the tool.
 
 ## Native output
 

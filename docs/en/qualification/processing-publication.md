@@ -22,7 +22,7 @@ The generated Processing library must remain self-contained for installation, ex
 
 ## GPU VISUAL
 
-- [ ] `CalibrationTool` inspected on each configuration used as GPU qualification evidence
+- [ ] [CalibrationTool](calibration-tool.md) inspected on each configuration used as GPU qualification evidence
 - [ ] Domemaster orientation/calibration checked
 - [ ] Equirectangular checked
 - [ ] Skybox checked
@@ -31,7 +31,7 @@ The generated Processing library must remain self-contained for installation, ex
 
 ## BENCHMARK
 
-- [ ] BenchmarkTool smoke completed
+- [ ] [BenchmarkTool](benchmark-guide.md) smoke completed
 - [ ] CPU baseline recorded
 - [ ] CPU/GPU measurement mode recorded when available in the tool
 - [ ] report identifies version/commit, resolution, routes, Processing/Java, OS and hardware

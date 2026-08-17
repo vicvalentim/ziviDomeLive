@@ -1,4 +1,18 @@
-# Exemplos Básicos
+# Exemplos de Aprendizagem — Fundamentos
+
+Estes exemplos formam o primeiro percurso de aprendizagem da biblioteca. Ferramentas de qualificação são documentadas separadamente porque sua finalidade é testar uma release ou configuração de hardware, e não ensinar o modelo básico de projeto.
+
+<div class="zd-image-placeholder" markdown>
+**PLACEHOLDER DE IMAGEM — Exemplos fundamentais de aprendizagem**
+Captura final: montagem compacta de `EmptyProject`, `Basic` e `SphereParticle` executados a partir da biblioteca instalada.
+Asset final sugerido: `docs/img/learning-examples-foundations.png`
+</div>
+
+## EmptyProject
+
+Template inicial mínimo em múltiplos arquivos com uma `Scene`, um `SceneManager`, hooks automáticos do Processing, `sceneRender()` intencionalmente vazio e `draw()` também vazio.
+
+Comece aqui ao criar um projeto do zero.
 
 ## Basic
 
@@ -15,29 +29,13 @@ Demonstra duas cenas gerenciadas e a API `RenderMode`. Em `Scene1`, pressione:
 
 Use as setas Esquerda/Direita para alternar entre os pilares rotativos e a grade estática de alinhamento com seis faces.
 
-## EmptyProject
-
-Template inicial mínimo em múltiplos arquivos com uma `Scene`, um `SceneManager`, hooks automáticos do Processing, `sceneRender()` intencionalmente vazio e `draw()` também vazio.
-
 ## SphereParticle
 
 Exemplo de cena maior que executa no máximo uma tarefa de simulação pelo `ThreadManager` compartilhado, cancela o trabalho pertencente à cena no descarte e mantém as chamadas gráficas na render thread. Clique ou arraste para adicionar partículas.
 
-## BenchmarkTool
+Todos os exemplos de aprendizagem preservam `sceneRender(PGraphicsOpenGL)` e nunca chamam `ziviDome.draw()` manualmente.
 
-Sketch de qualificação quantitativa com cenas determinísticas `EMPTY`, `LIGHT`, `MEDIUM`, `HEAVY`
-e `SPHERICAL_STRESS`. Seu painel ControlP5 separa warm-up de medição, apresenta um snapshot imutável
-após o run e exporta `summary.json`, `frames.csv` e `environment.json` com schema versionado. Defina
-`ZIVIDOME_BENCHMARK_OUTPUT` para manter execuções do repositório em `build/benchmark-results/`; o
-fallback manual documentado fica fora da pasta de exemplos.
-
-O `RUN SUITE` inicial cobre os quatro modos dedicados para a cena, resolução e outputs selecionados.
-Gere o dashboard HTML offline com `./gradlew benchmarkReport`; consulte
-[Relatórios de Benchmark](../qualification/benchmark-reporting.md). Timer GPU e transições
-continuam pertencendo a etapas separadas.
-
-Todos os exemplos preservam `sceneRender(PGraphicsOpenGL)` e nunca chamam `ziviDome.draw()` manualmente.
-
-Comece em `EmptyProject`, use `Basic` para aprender troca de cenas e modos de
-renderização e então consulte `SphereParticle` para a fronteira entre simulação
-em background e desenho na render thread.
+<div class="zd-actions" markdown>
+[Exemplos Avançados de Aprendizagem](advanced.md){ .md-button .md-button--primary }
+[BenchmarkTool](../qualification/benchmark-guide.md){ .md-button }
+</div>

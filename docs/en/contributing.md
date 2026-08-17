@@ -22,7 +22,7 @@ mkdocs build --strict
 - Keep Syphon/Spout on the `PGraphicsOpenGL` path.
 - Do not reintroduce the removed `PGraphicsOpenGL[]` spherical capture path.
 
-GPU or output changes require the CalibrationTool visual protocol and target-platform hardware evidence in addition to unit tests.
+GPU or output changes require the [CalibrationTool](qualification/calibration-tool.md) visual protocol and target-platform hardware evidence in addition to unit tests.
 
 `qualificationTests` is the canonical automated test run. Its summary, HTML,
 and JUnit XML evidence is written under `build/reports/qualification/` and

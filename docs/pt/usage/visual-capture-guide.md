@@ -45,7 +45,7 @@ Alterar a resolução de output não deve redefinir silenciosamente a resoluçã
 |---|---|---|
 | Standard | Domemaster NDI | Trabalhar convencionalmente enquanto alimenta o pipeline do domo |
 | Standard | Equirectangular | Manter uma view de operação enquanto publica representação 360° |
-| Domemaster | Another enabled ViewType | Inspecionar calibração enquanto outra rota permanece ativa |
+| Domemaster | Outro ViewType habilitado | Inspecionar calibração enquanto outra rota permanece ativa |
 
 Um `RenderMode` dedicado substitui temporariamente a representação efetiva sem apagar as seleções armazenadas de `ViewType`.
 

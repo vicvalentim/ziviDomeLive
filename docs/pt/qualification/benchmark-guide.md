@@ -7,6 +7,13 @@ uma alteração de código melhorou ou piorou a performance.
 Não é preciso conhecer OpenGL para começar. Primeiro execute um teste rápido; depois, quando tudo
 estiver funcionando, rode a qualificação completa.
 
+
+<div class="zd-image-placeholder" markdown>
+**PLACEHOLDER DE IMAGEM — Interface do BenchmarkTool**
+Captura final: BenchmarkTool em execução com o painel ziviDomeLive e os controles de benchmark visíveis.
+Asset final sugerido: `docs/img/benchmark-tool-interface.png`
+</div>
+
 !!! note "Requer uma sessão gráfica"
     O benchmark abre uma janela do Processing e usa a GPU real da máquina. Ele não é um teste
     unitário headless e precisa de uma sessão gráfica OpenGL funcional.

@@ -30,5 +30,5 @@ The Processing/Syphon stack used by this project may require the Intel Processin
 
 Before deployment, review [Known Issues](../known-issues.md),
 [NDI Runtime](ndi.md), the
-[Calibration Tool Protocol](../qualification/1.5-calibration-tool.md), and
+[Calibration Tool Protocol](../qualification/calibration-tool.md), and
 [Release Readiness](../qualification/2.0-release-readiness.md).

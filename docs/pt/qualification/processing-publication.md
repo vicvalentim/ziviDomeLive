@@ -22,13 +22,13 @@ O pacote Processing deve ser autocontido para instalação, exemplos, source, re
 
 ## GPU VISUAL
 
-- [ ] `CalibrationTool` inspecionado em cada configuração usada como evidência GPU
+- [ ] [CalibrationTool](calibration-tool.md) inspecionado em cada configuração usada como evidência GPU
 - [ ] Domemaster, Equirectangular, Skybox e Standard conferidos
 - [ ] Environment conferido conforme o contrato visual LDR equirectangular corrente
 
 ## BENCHMARK
 
-- [ ] smoke do BenchmarkTool concluído
+- [ ] smoke do [BenchmarkTool](benchmark-guide.md) concluído
 - [ ] baseline CPU registrado
 - [ ] modo CPU/GPU registrado quando implementado pela ferramenta
 - [ ] relatório identifica versão/commit, resolução, rotas, Processing/Java, OS e hardware

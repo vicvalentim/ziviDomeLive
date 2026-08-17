@@ -30,5 +30,5 @@ A stack Processing/Syphon usada pelo projeto pode exigir a versão Intel do Proc
 
 Antes da implantação, consulte [Problemas Conhecidos](../known-issues.md),
 [Runtime NDI](ndi.md), o
-[Protocolo do Calibration Tool](../qualification/1.5-calibration-tool.md) e a
+[Protocolo do Calibration Tool](../qualification/calibration-tool.md) e a
 [Prontidão para Release](../qualification/2.0-release-readiness.md).

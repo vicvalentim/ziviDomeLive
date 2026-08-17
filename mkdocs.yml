@@ -241,7 +241,7 @@ nav:
           - Example Catalogue: examples/basic.md
           - Advanced Learning Examples: examples/advanced.md
       - Qualification Tools:
-          - CalibrationTool: qualification/1.5-calibration-tool.md
+          - CalibrationTool: qualification/calibration-tool.md
           - BenchmarkTool: qualification/benchmark-guide.md
   - Developer Guide:
       - Architecture Overview: architecture/overview.md

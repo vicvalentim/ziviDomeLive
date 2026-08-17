@@ -7,6 +7,13 @@ whether a code change improved or reduced performance.
 You do not need OpenGL knowledge to get started. Run a quick test first; once it works, continue
 with the full qualification suite.
 
+
+<div class="zd-image-placeholder" markdown>
+**IMAGE PLACEHOLDER — BenchmarkTool interface**
+Final capture: BenchmarkTool running with the ziviDomeLive panel and benchmark controls visible.
+Suggested final asset: `docs/img/benchmark-tool-interface.png`
+</div>
+
 !!! note "A graphical session is required"
     The benchmark opens a Processing window and uses the machine's real GPU. It is not a headless
     unit test and requires a working graphical OpenGL session.
