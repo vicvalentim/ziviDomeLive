@@ -29,7 +29,7 @@ jobs:
         run: ./gradlew verifyReleaseTag -PreleaseTag="$RELEASE_TAG"
 
       - name: Run automated qualification
-        run: ./gradlew qualificationTests
+        run: ./gradlew qualificationTests --console=plain
 
       - name: Upload automated qualification evidence
         if: always()
@@ -42,9 +42,20 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
+      - name: Validate release evidence
+        run: python3 tools/validate_documentation.py --root . --release-evidence
+
       - name: Build with Gradle
         id: build
-        run: ./gradlew buildReleaseArtifacts
+        run: ./gradlew buildReleaseArtifacts --console=plain
+
+      - name: Validate release package
+        run: >-
+          python3 tools/validate_documentation.py
+          --root .
+          --release-dir release
+          --package release/ziviDomeLive.zip
+          --release-evidence
 
       - name: Release
         uses: softprops/action-gh-release@v2
