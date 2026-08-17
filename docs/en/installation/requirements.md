@@ -2,7 +2,7 @@
 
 ## Runtime
 
-- Processing 4; release 2.0.0 is built and tested against Processing core `4.5.6`
+- Processing 4; release 2.0.0 compiles and runs its automated Java tests against Processing core `4.5.6`. Installed Processing/platform qualification is recorded separately in the release evidence.
 - `P3D` renderer
 - `pixelDensity(1)` recommended for stable cross-display behavior
 - A GPU and driver exposing an OpenGL 4.1 context; packaged shaders use GLSL 4.10

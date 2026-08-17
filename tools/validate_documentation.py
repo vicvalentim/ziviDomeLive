@@ -69,6 +69,11 @@ def parse_props(path):
         out[k.strip()]=normalize_property_value(v.strip())
     return out
 
+def release_evidence_complete(root: Path) -> bool:
+    p=root/'maintainer/release-evidence.md'
+    if not p.exists(): return False
+    return re.search(r'\b(?:UNVERIFIED|PENDING)\b|\[ \]', read(p)) is None
+
 def check_metadata(root,c):
     props=parse_props(root/'library.properties')
     if props.get('prettyVersion') != EXPECTED_VERSION: c.error(f"library.properties prettyVersion != {EXPECTED_VERSION}")
@@ -81,20 +86,20 @@ def check_metadata(root,c):
         key: props.get(key, '').strip()
         for key in ('tested.platform', 'tested.processingVersion')
     }
-    if any(tested_values.values()):
-        c.error('tested.* metadata contains a qualification claim; record release evidence before publishing it')
+    if any(tested_values.values()) and not release_evidence_complete(root):
+        c.error('tested.* metadata contains a qualification claim while release evidence is incomplete')
     if re.search(r'(?i)(^|[,\s])VR([,\s]|$)|(^|[,\s])XR([,\s]|$)',props.get('library.keywords','')):
         c.error('library keywords contain generic VR/XR claim')
     source_props=parse_props(root/'release.properties')
     if not source_props:
         c.error('release.properties missing or empty: it is the source for generated library.properties')
     else:
-        for key in ('name','version','authors','url','categories','sentence','paragraph','minRevision','maxRevision','library.copyright','library.dependencies','library.keywords'):
+        for key in ('name','version','authors','url','categories','sentence','paragraph','minRevision','maxRevision','tested.platform','tested.processingVersion','library.copyright','library.dependencies','library.keywords'):
             if source_props.get(key) != props.get(key):
                 c.error(f'release.properties and library.properties differ for {key}')
         source_tested = {key: source_props.get(key, '').strip() for key in ('tested.platform','tested.processingVersion')}
-        if any(source_tested.values()):
-            c.error('release.properties contains tested.* qualification claims without recorded release evidence')
+        if any(source_tested.values()) and not release_evidence_complete(root):
+            c.error('release.properties contains tested.* qualification claims while release evidence is incomplete')
         if re.search(r'(?i)(^|[,\s])VR([,\s]|$)|(^|[,\s])XR([,\s]|$)', source_props.get('library.keywords','')):
             c.error('release.properties library keywords contain generic VR/XR claim')
     cff=read(root/'CITATION.cff')
@@ -106,6 +111,9 @@ def check_metadata(root,c):
     except Exception as e:
         c.error(f'.zenodo.json is invalid JSON: {e}'); zen={}
     if zen.get('version') != EXPECTED_VERSION: c.error('.zenodo.json version mismatch')
+    zen_claim_text=' '.join([str(zen.get('description','')), *map(str, zen.get('keywords',[]))])
+    if re.search(r'(?i)(^|[,\s])VR([,\s]|$)|(^|[,\s])XR([,\s]|$)', zen_claim_text):
+        c.error('.zenodo.json contains generic VR/XR product metadata outside the 2.0 public contract')
     all_public='\n'.join(read(p) for p in public_text_files(root))
     if EXPECTED_DOI not in all_public: c.warn('software DOI not found in current public documentation text')
     if re.search(r'10\.5281/zenodo\.(?:X+|0{4,}|<[^>]+>)',all_public,re.I): c.error('fake/placeholder Zenodo DOI found')
@@ -195,8 +203,7 @@ def check_release_dir(path:Path,c):
 def check_evidence(root,c):
     p=root/'maintainer/release-evidence.md'
     if not p.exists(): c.error('maintainer/release-evidence.md missing'); return
-    txt=read(p)
-    if re.search(r'\bUNVERIFIED\b|\bPENDING\b|\[ \]',txt): c.error('release evidence still contains UNVERIFIED/PENDING/unchecked gates')
+    if not release_evidence_complete(root): c.error('release evidence still contains UNVERIFIED/PENDING/unchecked gates')
 
 def check_editorial_system(root,c):
     mk=read(root/'mkdocs.yml')

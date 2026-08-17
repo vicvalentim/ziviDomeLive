@@ -14,43 +14,57 @@ concurrency:
 
 jobs:
   qualification:
-    name: JUnit qualification evidence
+    name: Automated release qualification
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
 
-    - name: Run automated qualification
-      run: ./gradlew qualificationTests
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
 
-    - name: Add qualification result to job summary
-      if: always()
-      shell: bash
-      run: |
-        if [[ -f build/reports/qualification/summary.md ]]; then
-          cat build/reports/qualification/summary.md >> "$GITHUB_STEP_SUMMARY"
-        else
-          echo "Automated qualification did not produce a summary." >> "$GITHUB_STEP_SUMMARY"
-        fi
+      - name: Install documentation dependencies
+        run: python3 -m pip install -r requirements-docs.txt
 
-    - name: Upload automated qualification evidence
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: automated-qualification-${{ runner.os }}-java17
-        path: |
-          build/reports/qualification/
-          build/test-results/qualification/
-        if-no-files-found: warn
-        retention-days: 30
+      - name: Run automated qualification
+        run: ./gradlew qualificationTests --console=plain
+
+      - name: Validate documentation contract
+        run: python3 tools/validate_documentation.py --root .
+
+      - name: Build documentation in strict mode
+        run: python3 -m mkdocs build --strict
+
+      - name: Add qualification result to job summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f build/reports/qualification/summary.md ]]; then
+            cat build/reports/qualification/summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Automated qualification did not produce a summary." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload automated qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: automated-qualification-${{ runner.os }}-java17
+          path: |
+            build/reports/qualification/
+            build/test-results/qualification/
+          if-no-files-found: warn
+          retention-days: 30

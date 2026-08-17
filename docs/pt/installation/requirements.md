@@ -2,7 +2,7 @@
 
 ## Runtime
 
-- Processing 4; a versão 2.0.0 é compilada e testada contra Processing core `4.5.6`
+- Processing 4; a versão 2.0.0 compila e executa seus testes Java automatizados contra o Processing core `4.5.6`. A qualificação do Processing instalado/plataforma é registrada separadamente nas evidências da release.
 - Renderizador `P3D`
 - `pixelDensity(1)` recomendado para estabilidade entre displays
 - GPU e driver capazes de expor OpenGL 4.1; os shaders empacotados usam GLSL 4.10

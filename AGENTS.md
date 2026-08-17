@@ -1,7 +1,7 @@
 # AGENTS Guide for ziviDomeLive
 
 ## Scope and source priority
-- This repo is a Processing 4 Java library for fulldome/VR rendering (`README.md`, `src/main/java/com/victorvalentim/zividomelive/zividomelive.java`).
+- This repo is a Processing 4 Java library for fulldome, spherical and immersive rendering (`README.md`, `src/main/java/com/victorvalentim/zividomelive/zividomelive.java`).
 - Prefer source-of-truth in this order: `src/main/java` -> `build.gradle.kts` + `.github/workflows` -> `README.md` -> `examples/`.
 - Canonical agent guidance is this `AGENTS.md`; `.github/copilot-instructions.md` provides supplementary architecture context, and no `CLAUDE.md` is present.
 
