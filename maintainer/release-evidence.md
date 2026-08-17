@@ -62,8 +62,8 @@ If a backend/platform is not claimed for 2.0.0, replace its row status with `NOT
 | Check | Status | Evidence |
 |---|---|---|
 | generated ZIP/PDEX installed in clean sketchbook | UNVERIFIED | |
-| `reference/index.html` opens | UNVERIFIED | |
-| `src/` present; `src/test/` absent | UNVERIFIED | |
+| `reference/index.html` opens | PASS | full local documentation preview returned HTTP 200 for EN `/reference/index.html` and PT `/pt/reference/index.html` |
+| `src/` present; `src/test/` absent | PASS | generated package inspection: `src/` present; `src/test/` absent |
 | EmptyProject | UNVERIFIED | |
 | Basic | UNVERIFIED | |
 | SphereParticle | UNVERIFIED | |
@@ -72,7 +72,7 @@ If a backend/platform is not claimed for 2.0.0, replace its row status with `NOT
 | SolarSystem | UNVERIFIED | |
 | CalibrationTool | UNVERIFIED | |
 | BenchmarkTool | UNVERIFIED | |
-| no local reports/helper artifacts/`.DS_Store` | UNVERIFIED | |
+| no local reports/helper artifacts/`.DS_Store` | PASS | generated package inspection found no `.DS_Store`, `__MACOSX`, build reports, test-results or benchmark-results |
 
 ## PUBLICATION METADATA
 
