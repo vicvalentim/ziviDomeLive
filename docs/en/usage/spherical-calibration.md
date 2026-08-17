@@ -1,30 +1,46 @@
+---
+title: Spherical Calibration
+icon: material/axis-arrow
+---
+
 # Spherical Calibration
 
-![Spherical calibration](../../img/spherical-calibration.png)
+Pitch/Yaw/Roll, FOV and Size% solve **different calibration problems**. Keeping them separate prevents orientation, field of view and physical image fitting from being confused with Scene camera motion.
 
-The spherical controls solve different problems and should not be collapsed into one generic “zoom/orientation” concept.
+<figure markdown="span">
+  ![Spherical calibration controls](../../img/spherical-calibration.png)
+  <figcaption>Shared spherical orientation and Domemaster-specific calibration controls.</figcaption>
+</figure>
 
-## Pitch / Yaw / Roll
+<div class="grid cards" markdown>
 
-Pitch, Yaw and Roll orient the **shared spherical domain**. They affect spherical representations consistently.
+- :material-axis-arrow: **Pitch / Yaw / Roll**
 
-They are not the Scene Camera.
+    Orient the shared spherical domain. They are not the Scene Camera.
 
-## FOV
+- :material-angle-acute: **FOV**
 
-FOV is a Domemaster control. It defines the angular field represented by the fisheye output.
+    Defines the angular field represented by Domemaster.
 
-## Size%
+- :material-resize: **Size%**
 
-Size% scales the physical Domemaster circle within its output target so an installation can match projector/lens geometry.
+    Fits the physical Domemaster circle to projector/lens geometry. It is not scene zoom.
 
-Size% is **not scene zoom**. To move through or reframe scene content, use the scene/camera model instead.
+</div>
 
-## Calibration workflow
+## Recommended workflow
 
-1. choose Domemaster;
-2. establish Pitch/Yaw/Roll orientation;
-3. set the required Domemaster FOV;
-4. adjust Size% to the optical/projector geometry;
-5. verify against `CalibrationTool` on the target system;
-6. preserve the resulting settings while changing output resolution unless the installation itself requires recalibration.
+1. Choose Domemaster.
+2. Establish Pitch/Yaw/Roll orientation.
+3. Set the required Domemaster FOV.
+4. Adjust Size% to the optical/projector geometry.
+5. Verify the result with `CalibrationTool` on the target system.
+6. Preserve the calibration while changing output resolution unless the installation itself requires recalibration.
+
+!!! warning "Size% is not zoom"
+    To move through or reframe scene content, use the Scene camera/navigation model. Size% adjusts the circular Domemaster image inside the output target.
+
+<div class="zd-actions" markdown>
+[Camera and Navigation](camera-navigation.md){ .md-button }
+[CalibrationTool](../qualification/1.5-calibration-tool.md){ .md-button .md-button--primary }
+</div>

@@ -1,3 +1,7 @@
+---
+title: "Environment"
+icon: material/palette-outline
+---
 # Environment
 
 O recurso Environment da versão 2.0 é um **background visual LDR equirectangular** compartilhado pelas representações Standard e esféricas.

@@ -1,6 +1,15 @@
+---
+title: Quickstart
+icon: material/rocket-launch-outline
+description: Build a first ziviDomeLive Scene and test Domemaster without learning renderer internals.
+---
+
 # Quickstart
 
-This path intentionally avoids Scene Services, benchmark tooling, output internals, threading and renderer architecture.
+Create a first working scene, keep animation state coherent and switch to Domemaster. This path intentionally avoids Scene Services, benchmark tooling, output internals, threading and renderer architecture.
+
+!!! info "The one contract to remember"
+    `update()` advances **state/simulation once per Processing frame**. `sceneRender()` draws the current state and may run more than once during spherical capture.
 
 ## 1. Imports
 
@@ -16,7 +25,7 @@ import spout.*;
 
 The Syphon/Spout imports are package-runtime dependencies used by the contributed-library distribution. You do not need to configure or learn those output systems to create a basic scene.
 
-## 2. Create ziviDomeLive
+## 2. Create the runtime
 
 ```java
 ziviDomeLive dome;
@@ -31,13 +40,14 @@ void settings() {
 
 ```java
 void setup() {
-  dome = new ziviDomeLive(this);
+  dome = new ziviDomeLive(this); // (1)!
   dome.setup();
-  dome.setScene(new MainScene());
+  dome.setScene(new MainScene()); // (2)!
 }
 ```
 
-The constructor registers the Processing hooks used by the library. Do not manually forward draw/input hooks unless a documented API explicitly asks you to.
+1. Associates the runtime with the current Processing sketch and its lifecycle hooks.
+2. Makes `MainScene` the active scene.
 
 ## 4. Create a Scene
 
@@ -46,7 +56,7 @@ class MainScene implements Scene {
   float angle;
 
   public void update() {
-    angle += 0.01f;
+    angle += 0.01f; // (1)!
   }
 
   public void sceneRender(PGraphicsOpenGL pg) {
@@ -59,28 +69,25 @@ class MainScene implements Scene {
 }
 ```
 
-## 5. `update()` = state
+1. State advances here so every spherical render pass observes the same frame state.
 
-Use `update()` for state that must advance **once per Processing frame**:
+## 5. Understand `update()`
 
-- animation counters;
-- physics/simulation;
-- timelines;
-- mutable randomization;
-- state transitions.
+Use `update()` for state that must advance **once per Processing frame**: animation counters, physics/simulation, timelines, mutable randomization and state transitions.
 
-## 6. `sceneRender()` = drawing
+## 6. Understand `sceneRender()`
 
 Use `sceneRender(PGraphicsOpenGL)` only to draw the current state.
 
-!!! important
-    Spherical capture may call `sceneRender()` more than once during one Processing frame. If animation/state is advanced inside `sceneRender()`, the six spherical directions can observe different states.
+!!! warning "Spherical capture can render the Scene repeatedly"
+    `sceneRender()` may be called more than once during one Processing frame. Advancing animation inside it can make different spherical directions observe different states.
 
 The library already owns `beginDraw()` and `endDraw()` for the target passed to the scene. Do not call them inside `sceneRender()`.
 
 ## 7. Change RenderMode
 
 ```java
+// Try one at a time:
 dome.setRenderMode(RenderMode.STANDARD);
 dome.setRenderMode(RenderMode.DOMEMASTER);
 dome.setRenderMode(RenderMode.EQUIRECTANGULAR);
@@ -92,10 +99,13 @@ dome.setRenderMode(RenderMode.FULL);
 
 ## 8. Test Domemaster
 
-Start with:
-
 ```java
 dome.setRenderMode(RenderMode.DOMEMASTER);
 ```
 
-Then open the Spherical Calibration page before using projector/lens output. FOV, Size% and Pitch/Yaw/Roll are calibration controls; they are not substitutes for moving the scene camera.
+Then continue to [Spherical Calibration](../usage/spherical-calibration.md). FOV, Size% and Pitch/Yaw/Roll are calibration controls; they are not substitutes for moving the Scene camera.
+
+<div class="zd-actions" markdown>
+[Render modes](../usage/basic-usage.md){ .md-button .md-button--primary }
+[Learning examples](../examples/basic.md){ .md-button }
+</div>

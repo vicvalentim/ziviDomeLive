@@ -38,6 +38,8 @@ theme:
         icon: material/brightness-4
         name: Switch to system preference
   features:
+    - navigation.instant
+    - navigation.instant.progress
     - navigation.tabs
     - navigation.tabs.sticky
     - navigation.sections
@@ -59,6 +61,9 @@ theme:
     - content.tooltips
   icon:
     repo: fontawesome/brands/github
+    annotation: material/plus-circle-outline
+    previous: material/arrow-left
+    next: material/arrow-right
 
 plugins:
   - search
@@ -125,8 +130,33 @@ plugins:
             Known Issues: Problemas Conhecidos
             Author: Autor
             License: Licença
+            Artist API Map: Mapa da API para Artistas
+            Rendering: Renderização
+            Outputs: Outputs
+            Advanced API: API Avançada
+            Experimental API: API Experimental
+            Deprecated API: API Deprecated
+            Engine-facing Public API: API Pública Engine-facing
+            Advanced Projects: Projetos Avançados
+            Time and Simulation: Tempo e Simulação
+            Assets: Assets
+            Background Tasks: Tasks em Background
+            Developer Guide: Guia de Desenvolvimento
+            Architecture Overview: Visão Geral da Arquitetura
+            Standard Domain: Standard Domain
+            Spherical Domain: Spherical Domain
+            OpenGL Backend: Backend OpenGL
+            Lifecycle and Resource Ownership: Lifecycle e Ownership de Recursos
+            Threading: Threading
+            Output Backends: Backends de Output
+            Performance Internals: Internals de Performance
+            Testing: Testes
+            Qualification Tools: Ferramentas de Qualificação
+            Maintainer: Manutenção
+            Citation: Citação
 
 markdown_extensions:
+  - abbr
   - admonition
   - attr_list
   - def_list
@@ -136,6 +166,9 @@ markdown_extensions:
   - toc:
       permalink: true
   - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.superfences
   - pymdownx.inlinehilite
   - pymdownx.keys
@@ -150,6 +183,12 @@ markdown_extensions:
 
 extra:
   generator: false
+  status:
+    stable: Stable artist-facing API
+    advanced: Advanced public API
+    experimental: Experimental public API
+    engine: Engine-facing public API
+    qualification: Qualification or release evidence
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/vicvalentim/ziviDomeLive
@@ -157,6 +196,7 @@ extra:
 
 extra_css:
   - assets/css/extra.css
+  - assets/css/material-editorial.css
 extra_javascript:
   - assets/js/extra.js
 
@@ -179,34 +219,56 @@ nav:
       - Scene Management: usage/scene-management.md
       - Interaction and Events: usage/event-handling.md
       - External Outputs: usage/external-integration.md
-  - Architecture:
-      - Rendering Pipeline: architecture/rendering-pipeline.md
-      - Runtime Lifecycle: architecture/runtime-lifecycle.md
+  - Advanced Projects:
+      - Scene Services: api/scene-services.md
+      - Time and Simulation: advanced/time-simulation.md
+      - Assets: advanced/assets.md
+      - Background Tasks: advanced/background-tasks.md
+      - Performance Profiling: api/performance-profiling.md
   - API Reference:
+      - Artist API Map: api/artist-api-map.md
       - Overview: api/overview.md
       - Core Classes: api/core-classes.md
       - Scene Interface: api/scene-interface.md
-      - Scene Services: api/scene-services.md
       - Helper Functions: api/helper-functions.md
-      - Performance Profiling: api/performance-profiling.md
+      - Rendering: api/rendering.md
+      - Outputs: api/outputs.md
+      - Advanced API: api/advanced.md
+      - Experimental API: api/experimental.md
+      - Deprecated API: api/deprecated.md
+      - Engine-facing Public API: api/engine-facing.md
       - Generated Javadocs: api/javadocs.md
   - Examples:
-      - Learning Examples: examples/basic.md
-      - Advanced Examples: examples/advanced.md
-  - Qualification:
-      - Benchmark Guide: qualification/benchmark-guide.md
-      - Processing Publication: qualification/processing-publication.md
-      - Benchmark Reporting: qualification/benchmark-reporting.md
-      - Automated Benchmarks: qualification/automated-benchmarks.md
-      - Calibration Tool Protocol: qualification/1.5-calibration-tool.md
-      - Release Readiness 2.0: qualification/2.0-release-readiness.md
-      - Release Readiness 1.5: qualification/1.5-release-readiness.md
-  - Release Notes:
-      - Version 2.0.0: release-notes/2.0.0.md
-      - Version 1.5.0: release-notes/1.5.0.md
-  - Project:
+      - Learning Examples:
+          - Example Catalogue: examples/basic.md
+          - Advanced Learning Examples: examples/advanced.md
+      - Qualification Tools:
+          - CalibrationTool: qualification/1.5-calibration-tool.md
+          - BenchmarkTool: qualification/benchmark-guide.md
+  - Developer Guide:
+      - Architecture Overview: architecture/overview.md
+      - Rendering Pipeline: architecture/rendering-pipeline.md
+      - Standard Domain: architecture/standard-domain.md
+      - Spherical Domain: architecture/spherical-domain.md
+      - OpenGL Backend: architecture/opengl-backend.md
+      - Lifecycle and Resource Ownership: architecture/runtime-lifecycle.md
+      - Threading: architecture/threading.md
+      - Output Backends: architecture/output-backends.md
+      - Performance Internals: architecture/performance-internals.md
+      - Testing: architecture/testing.md
       - Contributing: contributing.md
-      - Roadmap: roadmap.md
+  - Project:
+      - Release Notes:
+          - Version 2.0.0: release-notes/2.0.0.md
+          - Version 1.5.0: release-notes/1.5.0.md
       - Known Issues: known-issues.md
+      - Roadmap: roadmap.md
+      - Citation: citation.md
       - Author: author.md
       - License: license.md
+  - Maintainer:
+      - Processing Publication: qualification/processing-publication.md
+      - Automated Qualification: qualification/automated-benchmarks.md
+      - Benchmark Reporting: qualification/benchmark-reporting.md
+      - Release Readiness 2.0: qualification/2.0-release-readiness.md
+      - Release Readiness 1.5: qualification/1.5-release-readiness.md

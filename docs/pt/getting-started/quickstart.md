@@ -1,6 +1,15 @@
+---
+title: Guia Rápido
+icon: material/rocket-launch-outline
+description: Crie uma primeira Scene do ziviDomeLive e teste Domemaster sem aprender os internals do renderer.
+---
+
 # Guia Rápido
 
-Este percurso evita deliberadamente Scene Services, benchmark, internals de output, threading e arquitetura do renderer.
+Crie uma primeira cena funcional, mantenha o estado da animação coerente e teste o Domemaster. Este percurso evita intencionalmente Scene Services, benchmark, internals de output, threading e arquitetura do renderer.
+
+!!! info "O contrato essencial"
+    `update()` avança **estado/simulação uma vez por frame do Processing**. `sceneRender()` desenha o estado atual e pode executar mais de uma vez durante a captura esférica.
 
 ## 1. Imports
 
@@ -8,15 +17,15 @@ Este percurso evita deliberadamente Scene Services, benchmark, internals de outp
 import com.victorvalentim.zividomelive.*;
 import processing.opengl.PGraphicsOpenGL;
 
-// Dependências de runtime do pacote Processing:
+// Processing contributed-library runtime dependencies:
 import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;
 ```
 
-Os imports de Syphon/Spout fazem parte das dependências de runtime da distribuição como biblioteca contribuída. Você não precisa configurar nem aprender esses sistemas para criar uma cena básica.
+Os imports de Syphon/Spout são dependências de runtime da distribuição da biblioteca. Você não precisa configurar nem aprender esses sistemas para criar uma cena básica.
 
-## 2. Crie o ziviDomeLive
+## 2. Crie o runtime
 
 ```java
 ziviDomeLive dome;
@@ -31,13 +40,14 @@ void settings() {
 
 ```java
 void setup() {
-  dome = new ziviDomeLive(this);
+  dome = new ziviDomeLive(this); // (1)!
   dome.setup();
-  dome.setScene(new MainScene());
+  dome.setScene(new MainScene()); // (2)!
 }
 ```
 
-O construtor registra os hooks do Processing usados pela biblioteca. Não encaminhe manualmente draw/eventos salvo quando uma API documentada solicitar isso.
+1. Associa o runtime ao sketch atual do Processing e aos hooks de lifecycle.
+2. Define `MainScene` como a cena ativa.
 
 ## 4. Crie uma Scene
 
@@ -46,7 +56,7 @@ class MainScene implements Scene {
   float angle;
 
   public void update() {
-    angle += 0.01f;
+    angle += 0.01f; // (1)!
   }
 
   public void sceneRender(PGraphicsOpenGL pg) {
@@ -59,28 +69,25 @@ class MainScene implements Scene {
 }
 ```
 
-## 5. `update()` = estado
+1. O estado avança aqui para que todos os passes esféricos observem o mesmo estado do frame.
 
-Use `update()` para tudo que precisa avançar **uma vez por frame do Processing**:
+## 5. Entenda `update()`
 
-- contadores de animação;
-- física/simulação;
-- timelines;
-- randomização mutável;
-- transições de estado.
+Use `update()` para estados que devem avançar **uma vez por frame do Processing**: contadores de animação, física/simulação, timelines, randomização mutável e transições de estado.
 
-## 6. `sceneRender()` = desenho
+## 6. Entenda `sceneRender()`
 
-Use `sceneRender(PGraphicsOpenGL)` somente para desenhar o estado atual.
+Use `sceneRender(PGraphicsOpenGL)` apenas para desenhar o estado atual.
 
-!!! important
-    A captura esférica pode chamar `sceneRender()` mais de uma vez durante um único frame do Processing. Se a animação/estado avançar dentro de `sceneRender()`, as diferentes direções esféricas podem observar estados diferentes.
+!!! warning "A captura esférica pode renderizar a Scene repetidamente"
+    `sceneRender()` pode ser chamado mais de uma vez durante um frame do Processing. Avançar animação dentro dele pode fazer diferentes direções esféricas observarem estados diferentes.
 
-A biblioteca já controla `beginDraw()` e `endDraw()` no target recebido. Não os chame dentro de `sceneRender()`.
+A biblioteca já controla `beginDraw()` e `endDraw()` do target entregue à Scene. Não os chame dentro de `sceneRender()`.
 
-## 7. Mude o RenderMode
+## 7. Altere o RenderMode
 
 ```java
+// Teste um por vez:
 dome.setRenderMode(RenderMode.STANDARD);
 dome.setRenderMode(RenderMode.DOMEMASTER);
 dome.setRenderMode(RenderMode.EQUIRECTANGULAR);
@@ -88,14 +95,17 @@ dome.setRenderMode(RenderMode.SKYBOX);
 dome.setRenderMode(RenderMode.FULL);
 ```
 
-`FULL` é o modo padrão para preview e outputs com rotas independentes.
+`FULL` é o modo de trabalho padrão para rotas independentes de preview/output.
 
 ## 8. Teste Domemaster
-
-Comece com:
 
 ```java
 dome.setRenderMode(RenderMode.DOMEMASTER);
 ```
 
-Depois consulte Calibração Esférica antes de usar projetor/lente. FOV, Size% e Pitch/Yaw/Roll são controles de calibração; não substituem o movimento da câmera da cena.
+Depois siga para [Calibração Esférica](../usage/spherical-calibration.md). FOV, Size% e Pitch/Yaw/Roll são controles de calibração; não substituem o movimento da câmera da Scene.
+
+<div class="zd-actions" markdown>
+[Modos de renderização](../usage/basic-usage.md){ .md-button .md-button--primary }
+[Exemplos de aprendizagem](../examples/basic.md){ .md-button }
+</div>

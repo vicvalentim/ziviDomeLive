@@ -1,40 +1,91 @@
-# ziviDomeLive
+---
+title: ziviDomeLive
+icon: material/home-outline
+description: Crie fluxos visuais fulldome, esféricos e imersivos em tempo real no Processing.
+---
 
-**Crie visuais fulldome, esféricos e imersivos em tempo real no Processing.**
+<div class="zd-hero" markdown>
+<div markdown>
 
-O ziviDomeLive permite apresentar uma mesma cena Processing como perspectiva Standard, Domemaster, Equirectangular ou Skybox. É possível trabalhar interativamente na janela do Processing, calibrar a saída esférica para domo, gerenciar múltiplas cenas e, opcionalmente, publicar representações selecionadas via NDI, Syphon ou Spout.
+<div class="zd-hero__eyebrow">Biblioteca Processing · ziviDomeLive 2.0</div>
 
-![Visão geral orientada ao artista](../img/hero-overview.png)
+# Crie para o domo, a esfera e a imagem ao vivo
 
-## Comece aqui
+Construa fluxos visuais **fulldome, esféricos e imersivos em tempo real** a partir de uma única Scene do Processing e escolha como cada preview ou output será representado.
 
-Se este é seu primeiro projeto, siga o [Guia Rápido](getting-started/quickstart.md). Uma cena simples precisa apenas da instância da biblioteca, `setup()`, `update()` quando o estado muda no tempo e `sceneRender()` para desenho.
+<div class="zd-actions" markdown>
+[Comece a criar](getting-started/quickstart.md){ .md-button .md-button--primary }
+[Explore a API](api/artist-api-map.md){ .md-button }
+</div>
 
-## Escolha uma representação
+</div>
+<div class="zd-hero__image" markdown>
 
-![Visão geral dos modos](../img/render-modes-overview.png)
+![Visão geral dos fluxos criativos do ziviDomeLive](../img/hero-overview.png)
 
-| Representação | Uso típico |
-|---|---|
-| Standard | Perspectiva na janela do Processing e saída visual convencional |
-| Domemaster | Imagem fisheye para projeção fulldome |
-| Equirectangular | Fluxos esféricos/360° em 2:1 |
-| Skybox | Layout de cubemap e inspeção |
+</div>
+</div>
 
-`RenderMode.FULL` mantém preview e outputs habilitados roteáveis independentemente por `ViewType`. Modos dedicados são modos de trabalho temporários e não apagam rotas armazenadas.
+## O que posso criar?
 
-## Calibre para o domo
+<div class="grid cards" markdown>
 
-Use Pitch/Yaw/Roll para orientar o domínio esférico compartilhado, FOV para definir o campo angular do Domemaster e Size% para ajustar a imagem circular ao conjunto projetor/lente. Size% é calibração física da saída, não zoom da cena.
+- :material-monitor: **Standard**
 
-## Aprenda pelos exemplos
+    Renderização em perspectiva para a janela do Processing e outputs visuais convencionais.
 
-Use os seis exemplos de aprendizagem em ordem crescente de complexidade e depois avance para as ferramentas de qualificação quando precisar validar uma instalação ou produzir evidências de desempenho.
+- :material-fisheye: **Domemaster**
 
-## API e material de desenvolvimento
+    Representação fisheye circular para projeção fulldome e calibração do domo.
 
-A [Referência da API](api/overview.md) documenta contratos chamáveis. O Guia do Desenvolvedor explica a arquitetura Standard/Spherical, backend OpenGL, lifecycle, threading e internals de output. Esses detalhes não são pré-requisitos para criação artística.
+- :material-earth: **Equirectangular**
 
-### Sob o capô
+    Representação esférica 2:1 para fluxos de imagem 360°.
 
-A versão 2.0 usa um cubemap nativo como fonte compartilhada das projeções esféricas. Esse é um detalhe de implementação: os contratos para artistas são as representações finais, o roteamento, a orientação e a calibração.
+- :material-cube-outline: **Skybox**
+
+    Layout de cubemap para inspeção e fluxos esféricos compatíveis.
+
+</div>
+
+!!! tip "Comece com uma Scene"
+    Um projeto básico precisa do runtime `ziviDomeLive` e de uma `Scene`. Coloque estado/simulação em `update()` e desenho em `sceneRender()`.
+
+## Escolha seu percurso
+
+<div class="grid cards" markdown>
+
+- :material-rocket-launch-outline: **Primeiro contato com ziviDomeLive**
+
+    Instale a biblioteca, execute o Guia Rápido e avance pelos seis exemplos de aprendizagem.
+
+    [Abrir o Guia Rápido →](getting-started/quickstart.md)
+
+- :material-palette-outline: **Criando uma obra ou instalação**
+
+    Aprenda RenderMode, Preview × Output, calibração esférica, câmera/navegação e outputs externos.
+
+    [Abrir o Guia Criativo →](usage/basic-usage.md)
+
+- :material-api: **Programando com a biblioteca**
+
+    Comece pelo Mapa da API para Artistas e use os Javadocs gerados para assinaturas exatas.
+
+    [Abrir o Mapa da API →](api/artist-api-map.md)
+
+- :material-source-branch: **Contribuindo ou pesquisando o engine**
+
+    Estude os domínios Standard/Esférico, backend OpenGL, lifecycle, threading e fronteiras de output.
+
+    [Abrir a arquitetura →](architecture/overview.md)
+
+</div>
+
+## Calibração pertence ao output, não ao zoom da cena
+
+Pitch/Yaw/Roll orientam o domínio esférico compartilhado. O Domemaster utiliza adicionalmente FOV e Size% para adequar a representação ao sistema físico de projeção.
+
+[Abrir Calibração Esférica](usage/spherical-calibration.md){ .md-button }
+
+??? abstract "Por dentro"
+    A versão 2.0 captura o domínio esférico em um cubemap nativo e deriva Domemaster, Equirectangular e Skybox dessa representação compartilhada. Esse detalhe de implementação pertence ao percurso de desenvolvimento; artistas podem permanecer no nível de `Scene`, `RenderMode`, `ViewType` e calibração.

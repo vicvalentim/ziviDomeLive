@@ -1,65 +1,42 @@
+---
+title: "API Overview"
+icon: material/api
+---
 # API Overview
 
-## Primary Types
+The public Java surface is deliberately documented by **audience and stability role**, not only by the `public` modifier.
 
-| Type | Responsibility |
-|---|---|
-| `ziviDomeLive` | Processing integration, lifecycle, rendering, calibration, and service access |
-| `RenderMode` | Global rendering behavior |
-| `ViewType` | Preview and independent output route selection in `FULL` mode |
-| `FrameViews` | Completed final targets exposed by logical view without renderer coupling |
-| `Scene` | User drawing and event contract |
-| `SceneManager` | Scene registration, active ownership, switching, and disposal |
-| `SceneServices` | Activation-scoped time, tasks, assets, actions, camera, Environment, and cleanup |
-| `FrameClock` / `SimulationTimeline` | Clamped frame time and bounded fixed-step simulation |
-| `OutputManager` | NDI, Syphon, and Spout routing and lifecycle |
-| `PerformanceSnapshot` | Experimental CPU timings, pass counts, and invariant diagnostics |
-| `OrbitCamera` | Optional scene-space camera shared by all rendered targets |
-| `SphericalOrientation` | Cyclic pitch/yaw/roll accumulation on a unit quaternion |
+## Artist-facing stable
 
-## Public Enums
+Start here for normal Processing projects:
 
-```java
-RenderMode.FULL
-RenderMode.STANDARD
-RenderMode.DOMEMASTER
-RenderMode.EQUIRECTANGULAR
-RenderMode.SKYBOX
-```
+- `ziviDomeLive`
+- `Scene`
+- `SceneManager`
+- `RenderMode`
+- `ViewType`
+- `OutputManager`
 
-`ViewType` is a top-level public enum for preview and per-output routes. Its 2.0 order is part of the public contract.
+These types define the normal scene, rendering, calibration, preview and output workflow.
 
-| `ViewType` index | Value | Representation |
-|---:|---|---|
-| 0 | `STANDARD` | Perspective scene rendering |
-| 1 | `DOMEMASTER` | Circular fulldome projection |
-| 2 | `EQUIRECTANGULAR` | 2:1 spherical projection |
-| 3 | `SKYBOX` | Six-face inspection layout |
+## Advanced public
 
-`StandardOutputAspectMode` selects `AUTO`, `ASPECT_16_9`, `ASPECT_16_10`,
-`ASPECT_4_3`, or `ASPECT_1_1` for the high-resolution Standard output. It does
-not resize the Processing preview window.
+Public facilities intended for projects that need more lifecycle, time, task, camera or direct renderer control include `SceneServices`, `FrameClock`, `SimulationTimeline`, `OrbitCamera`, `SphericalOrientation` and public renderer implementations. They remain callable public API, but are not prerequisites for a simple scene.
 
-`OutputManager.OutputState` distinguishes:
+## Experimental public
 
-- `UNAVAILABLE`: unsupported or last initialization failed
-- `AVAILABLE`: eligible for initialization, no native resources
-- `INITIALIZED`: native resources exist, publication disabled
-- `ENABLED`: publication enabled
-- `STOPPING`: NDI publication stopped while bounded cleanup completes
+Performance instrumentation is experimental/qualification-oriented. Treat the generated Javadocs and the Performance Profiling page as the contract for the exact metrics currently implemented. CPU wall time and GPU elapsed time are different measurements.
 
-## Compatibility Notes
+## Engine-facing public
 
-- The public facade is `ziviDomeLive`; the lowercase 1.x class is not retained in 2.0.
-- `ViewType` is top-level in 2.0; the nested 1.x enum and its old constant names are not retained.
-- `RenderMode.FULL` preserves the compatibility routing model.
-- `renderFisheyeDomemaster()`, `renderEquirectangular()`, `renderCubemap()`, and `renderStandard()` remain deprecated compatibility shims.
-- Renderer getters remain public for compatibility, but renderer topology is not a permanent backend contract.
+Some public types exist because renderer/output components need a callable boundary. Examples include `FrameViews`, `CubemapTarget` and `ProcessingGlAdapter`. They are documented for contributors and advanced integration work; they are not part of the artist learning path.
 
-Generated Javadocs in the release package and on GitHub Pages are the signature-level reference.
-Use [Generated Javadocs](javadocs.md) for direct API signatures,
-[Core Classes](core-classes.md) for ownership and state semantics,
-[Operational Helpers](helper-functions.md) for runtime controls, and the
-[Scene Interface](scene-interface.md) for the drawing contract. The
-[Scene Services](scene-services.md) guide covers reusable application infrastructure.
-Use [Performance Profiling](performance-profiling.md) for the experimental measurement API.
+## Deprecated compatibility surface
+
+Deprecated methods remain documented while they exist so existing sketches can migrate. Do not use deprecated convenience methods in new examples when a current route is available.
+
+## Internal architecture is not public API
+
+Types such as the package-private rendering policy/pipeline internals can be documented in the Developer Guide without being presented as callable API.
+
+For exact signatures, always use the generated Javadocs. If prose and Javadocs disagree, implementation/Javadocs win and the prose must be corrected.

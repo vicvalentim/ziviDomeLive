@@ -1,45 +1,55 @@
+---
+title: Outputs Externos
+icon: material/video-wireless-outline
+---
+
 # Outputs Externos
 
-Outputs externos são opcionais. Comece escolhendo **qual representação** cada destino deve receber e habilite somente o backend necessário à instalação.
+Outputs externos são opcionais. Primeiro escolha **qual representação** o destino deve receber; depois habilite apenas o backend necessário à instalação e verifique seu estado real no receiver.
 
-![Outputs externos](../../img/external-outputs.png)
+<figure markdown="span">
+  ![Rotas de output externo](../../img/external-outputs.png)
+  <figcaption>ViewType seleciona a representação; o backend define como essa representação sai da aplicação.</figcaption>
+</figure>
 
-## NDI
+=== "NDI"
 
-**O que é?** Saída de vídeo em rede.  
-**Plataforma:** disponibilidade depende de runtime nativo Devolay/NDI compatível e qualificação com receiver.  
-**Selecionar view:** `setNdiView(ViewType...)`.  
-**Habilitar/desabilitar:** `toggleOutput("ndi")`.
+    **O que é?** Output de vídeo em rede.  
+    **Plataforma:** a disponibilidade depende de runtime nativo Devolay/NDI compatível e qualificação com receiver.  
+    **Selecione uma view:** `setNdiView(ViewType...)`.  
+    **Habilite/desabilite:** `toggleOutput("ndi")`.
 
-```java
-OutputManager outputs = dome.getOutputManager();
-outputs.setNdiView(ViewType.EQUIRECTANGULAR);
-outputs.toggleOutput("ndi");
+    ```java
+    OutputManager outputs = dome.getOutputManager();
+    outputs.setNdiView(ViewType.EQUIRECTANGULAR);
+    outputs.toggleOutput("ndi");
 
-println(outputs.getOutputState(OutputManager.OutputType.NDI));
-println(outputs.getOutputFailureReason(OutputManager.OutputType.NDI));
-```
+    println(outputs.getOutputState(OutputManager.OutputType.NDI));
+    println(outputs.getOutputFailureReason(OutputManager.OutputType.NDI));
+    ```
 
-Teste com receiver NDI real antes de declarar uma plataforma qualificada.
+    !!! tip "Qualificação"
+        Teste com um receiver NDI real antes de marcar uma plataforma como qualificada.
 
-## Syphon
+=== "Syphon"
 
-**O que é?** Compartilhamento local de textura GPU no macOS.  
-**Selecionar view:** `setSyphonView(ViewType...)`.  
-**Habilitar/desabilitar:** `toggleOutput("syphon")`.
+    **O que é?** Compartilhamento local de textura GPU no macOS.  
+    **Selecione uma view:** `setSyphonView(ViewType...)`.  
+    **Habilite/desabilite:** `toggleOutput("syphon")`.
 
-Disponibilidade não equivale a inicialização bem-sucedida nem a receiver qualificado.
+    Disponibilidade não equivale a inicialização bem-sucedida nem a qualificação com receiver.
 
-## Spout
+=== "Spout"
 
-**O que é?** Compartilhamento local de textura GPU no Windows.  
-**Selecionar view:** `setSpoutView(ViewType...)`.  
-**Habilitar/desabilitar:** `toggleOutput("spout")`.
+    **O que é?** Compartilhamento local de textura GPU no Windows.  
+    **Selecione uma view:** `setSpoutView(ViewType...)`.  
+    **Habilite/desabilite:** `toggleOutput("spout")`.
 
-Teste com receiver real na configuração Windows que será declarada como qualificada.
+    Teste com um receiver real na configuração Windows que será declarada como qualificada.
 
 ## Estado e troubleshooting
 
-Use `getOutputState(...)` e `getOutputFailureReason(...)` para distinguir indisponibilidade, inicialização/habilitação e falhas. Não deduza a saúde do backend apenas pelo estado visual de um toggle.
+Use `getOutputState(...)` e `getOutputFailureReason(...)` para distinguir estados indisponíveis, inicializados/habilitados e falhos. Não deduza a saúde do output apenas pelo toggle da UI.
 
-Fronteiras GPU/CPU, workers, buffers e latest-frame-wins pertencem ao Guia do Desenvolvedor, não a esta página de primeiro uso.
+??? abstract "Por dentro"
+    Fronteiras GPU/CPU, filas de worker, buffers, comportamento latest-frame-wins e detalhes de compartilhamento nativo estão em [Backends de Output](../architecture/output-backends.md). Eles não são pré-requisitos para habilitar um output.

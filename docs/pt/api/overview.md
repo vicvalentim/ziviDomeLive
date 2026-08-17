@@ -1,65 +1,42 @@
+---
+title: "Visão Geral da API"
+icon: material/api
+---
 # Visão Geral da API
 
-## Tipos Principais
+A superfície Java pública é documentada deliberadamente por **público e papel de estabilidade**, não apenas pelo modificador `public`.
 
-| Tipo | Responsabilidade |
-|---|---|
-| `ziviDomeLive` | Integração Processing, lifecycle, renderização, calibração e acesso aos serviços |
-| `RenderMode` | Comportamento global de renderização |
-| `ViewType` | Seleção de rotas para preview e outputs independentes no modo `FULL` |
-| `FrameViews` | Targets finais completos expostos por view lógica sem acoplamento a renderers |
-| `Scene` | Contrato de desenho e eventos do usuário |
-| `SceneManager` | Registro, ownership ativo, troca e descarte de cenas |
-| `SceneServices` | Tempo, tarefas, assets, ações, câmera, Environment e cleanup por ativação |
-| `FrameClock` / `SimulationTimeline` | Tempo de frame limitado e simulação fixed-step limitada |
-| `OutputManager` | Roteamento e lifecycle de NDI, Syphon e Spout |
-| `PerformanceSnapshot` | Tempos CPU, contagens de passes e diagnósticos experimentais |
-| `OrbitCamera` | Câmera opcional em scene space compartilhada pelos targets |
-| `SphericalOrientation` | Acumulação cíclica de pitch/yaw/roll em um quaternion unitário |
+## Artist-facing stable
 
-## Enums Públicos
+Comece aqui em projetos Processing comuns:
 
-```java
-RenderMode.FULL
-RenderMode.STANDARD
-RenderMode.DOMEMASTER
-RenderMode.EQUIRECTANGULAR
-RenderMode.SKYBOX
-```
+- `ziviDomeLive`
+- `Scene`
+- `SceneManager`
+- `RenderMode`
+- `ViewType`
+- `OutputManager`
 
-`ViewType` é um enum público top-level para rotas de preview e output. Sua ordem na 2.0 faz parte do contrato público.
+Esses tipos definem o fluxo normal de cena, renderização, calibração, preview e output.
 
-| Índice de `ViewType` | Valor | Representação |
-|---:|---|---|
-| 0 | `STANDARD` | Renderização perspectiva da cena |
-| 1 | `DOMEMASTER` | Projeção circular fulldome |
-| 2 | `EQUIRECTANGULAR` | Projeção esférica 2:1 |
-| 3 | `SKYBOX` | Layout de inspeção das seis faces |
+## Advanced public
 
-`StandardOutputAspectMode` seleciona `AUTO`, `ASPECT_16_9`, `ASPECT_16_10`,
-`ASPECT_4_3` ou `ASPECT_1_1` para o output Standard em alta resolução. Ele não
-redimensiona a janela de preview do Processing.
+Recursos públicos para projetos que exigem mais controle de lifecycle, tempo, tasks, câmera ou renderers incluem `SceneServices`, `FrameClock`, `SimulationTimeline`, `OrbitCamera`, `SphericalOrientation` e implementações públicas de renderers. Permanecem API pública chamável, mas não são pré-requisitos de uma cena simples.
 
-`OutputManager.OutputState` distingue:
+## Experimental public
 
-- `UNAVAILABLE`: não suportado ou última inicialização falhou
-- `AVAILABLE`: elegível para inicialização, sem recursos nativos
-- `INITIALIZED`: recursos nativos existem, publicação desabilitada
-- `ENABLED`: publicação habilitada
-- `STOPPING`: NDI sem publicação enquanto conclui limpeza limitada
+A instrumentação de performance é experimental e orientada a qualificação. Trate os Javadocs gerados e a página Performance Profiling como contrato das métricas efetivamente implementadas. CPU wall time e GPU elapsed time são medidas diferentes.
 
-## Compatibilidade
+## Engine-facing public
 
-- A fachada pública é `ziviDomeLive`; a classe em minúsculas da 1.x não é mantida na 2.0.
-- `ViewType` é top-level na 2.0; o enum aninhado da 1.x e seus nomes antigos não são mantidos.
-- `RenderMode.FULL` preserva o modelo de roteamento por compatibilidade.
-- `renderFisheyeDomemaster()`, `renderEquirectangular()`, `renderCubemap()` e `renderStandard()` continuam como shims de compatibilidade depreciados.
-- Getters de renderers permanecem públicos por compatibilidade, mas a topologia interna não é um contrato permanente.
+Alguns tipos são públicos porque componentes do renderer/output precisam de uma fronteira chamável. Exemplos: `FrameViews`, `CubemapTarget` e `ProcessingGlAdapter`. Eles são documentados para contribuidores e integrações avançadas, não como percurso inicial do artista.
 
-Os Javadocs gerados no pacote de release e no GitHub Pages são a referência de assinaturas.
-Consulte [Javadocs Gerados](javadocs.md) para assinaturas diretas,
-[Classes Principais](core-classes.md) para ownership e estados,
-[Funções Operacionais](helper-functions.md) para controles de runtime e
-[Interface Scene](scene-interface.md) para o contrato de desenho. O guia de
-[Serviços de Cena](scene-services.md) cobre infraestrutura reutilizável de aplicações.
-Consulte [Profiling de Performance](performance-profiling.md) para a API experimental de medição.
+## Superfície deprecated de compatibilidade
+
+Métodos deprecated continuam documentados enquanto existirem para permitir migração de sketches. Novos exemplos não devem usar convenience methods deprecated quando houver rota corrente.
+
+## Arquitetura interna não é API pública
+
+Tipos package-private da política/pipeline de renderização podem ser explicados no Developer Guide sem serem apresentados como API chamável.
+
+Para assinaturas exatas, use sempre os Javadocs gerados. Se prosa e Javadocs divergirem, implementação/Javadocs prevalecem e a prosa deve ser corrigida.

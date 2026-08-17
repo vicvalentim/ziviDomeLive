@@ -1,40 +1,91 @@
-# ziviDomeLive
+---
+title: ziviDomeLive
+icon: material/home-outline
+description: Create real-time fulldome, spherical and immersive visual workflows in Processing.
+---
 
-**Create real-time fulldome, spherical and immersive visuals in Processing.**
+<div class="zd-hero" markdown>
+<div markdown>
 
-ziviDomeLive lets one Processing scene be presented as Standard perspective, Domemaster, Equirectangular or Skybox output. You can work interactively in the Processing window, calibrate spherical output for a dome, manage multiple scenes and optionally publish selected views through NDI, Syphon or Spout.
+<div class="zd-hero__eyebrow">Processing library · ziviDomeLive 2.0</div>
 
-![Artist-first overview](../img/hero-overview.png)
+# Create for the dome, the sphere and the live image
 
-## Start here
+Build real-time **fulldome, spherical and immersive visual workflows** from one Processing scene, then choose how each preview or output should be represented.
 
-If this is your first project, follow the [Quickstart](getting-started/quickstart.md). A basic scene only needs the library instance, `setup()`, `update()` when state changes over time, and `sceneRender()` for drawing.
+<div class="zd-actions" markdown>
+[Start creating](getting-started/quickstart.md){ .md-button .md-button--primary }
+[Explore the API](api/artist-api-map.md){ .md-button }
+</div>
 
-## Choose a representation
+</div>
+<div class="zd-hero__image" markdown>
 
-![Render modes overview](../img/render-modes-overview.png)
+![Overview of ziviDomeLive creative workflows](../img/hero-overview.png)
 
-| Representation | Typical use |
-|---|---|
-| Standard | Processing-window perspective view and conventional visual output |
-| Domemaster | Fisheye image for fulldome projection |
-| Equirectangular | 2:1 spherical/360° workflows |
-| Skybox | Cubemap layout and inspection workflows |
+</div>
+</div>
 
-`RenderMode.FULL` keeps preview and enabled outputs independently routable through `ViewType`. Dedicated modes are temporary working modes and do not erase stored routes.
+## What can I create?
 
-## Calibrate for the dome
+<div class="grid cards" markdown>
 
-Use Pitch/Yaw/Roll to orient the shared spherical domain, FOV to define the Domemaster angular field, and Size% to fit the circular Domemaster image to the projector/lens system. Size% is a physical output calibration control, not scene zoom.
+- :material-monitor: **Standard**
 
-## Learn from examples
+    Conventional perspective rendering for the Processing window and standard visual outputs.
 
-Use the six learning examples in increasing complexity, then move to the qualification tools when you need installation validation or performance evidence.
+- :material-fisheye: **Domemaster**
 
-## API and developer material
+    Circular fisheye representation for fulldome projection and dome calibration.
 
-The [API Reference](api/overview.md) documents callable contracts. The Developer Guide explains the Standard/Spherical rendering architecture, OpenGL backend, lifecycle, threading and output internals. Those internals are not prerequisites for creative use.
+- :material-earth: **Equirectangular**
 
-### Under the hood
+    2:1 spherical representation for 360° image workflows.
 
-Version 2.0 uses a native cubemap as the shared source for spherical projections. This is an implementation detail: artist-facing contracts are the final representations, routing, orientation and calibration behavior.
+- :material-cube-outline: **Skybox**
+
+    Cubemap-layout representation for inspection and compatible spherical workflows.
+
+</div>
+
+!!! tip "Start with one Scene"
+    A basic project needs the `ziviDomeLive` runtime and a `Scene`. Put state/simulation in `update()` and drawing in `sceneRender()`.
+
+## Choose your path
+
+<div class="grid cards" markdown>
+
+- :material-rocket-launch-outline: **New to ziviDomeLive**
+
+    Install the library, run the Quickstart and continue through the six learning examples.
+
+    [Open the Quickstart →](getting-started/quickstart.md)
+
+- :material-palette-outline: **Building an artwork or installation**
+
+    Learn RenderMode, Preview × Output, spherical calibration, camera/navigation and external outputs.
+
+    [Open the Creative Guide →](usage/basic-usage.md)
+
+- :material-api: **Programming against the library**
+
+    Use the Artist API Map first, then generated Javadocs for exact signatures.
+
+    [Open the API Map →](api/artist-api-map.md)
+
+- :material-source-branch: **Contributing or researching the engine**
+
+    Study the Standard/Spherical domains, OpenGL backend, lifecycle, threading and output boundaries.
+
+    [Open the architecture →](architecture/overview.md)
+
+</div>
+
+## Calibration belongs to the output, not to scene zoom
+
+Pitch/Yaw/Roll orient the shared spherical domain. Domemaster additionally uses FOV and Size% to fit the representation to a physical projection system.
+
+[Open Spherical Calibration](usage/spherical-calibration.md){ .md-button }
+
+??? abstract "Under the hood"
+    Version 2.0 captures the spherical domain through a native cubemap and derives Domemaster, Equirectangular and Skybox from that shared representation. This implementation detail is documented for developers; artists can remain at the `Scene`, `RenderMode`, `ViewType` and calibration level.

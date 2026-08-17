@@ -1,30 +1,46 @@
+---
+title: Calibração Esférica
+icon: material/axis-arrow
+---
+
 # Calibração Esférica
 
-![Calibração esférica](../../img/spherical-calibration.png)
+Pitch/Yaw/Roll, FOV e Size% resolvem **problemas de calibração diferentes**. Mantê-los separados evita confundir orientação, campo de visão e ajuste físico da imagem com o movimento da câmera da Scene.
 
-Os controles esféricos resolvem problemas diferentes e não devem ser reduzidos a um conceito genérico de “zoom/orientação”.
+<figure markdown="span">
+  ![Spherical calibration controls](../../img/spherical-calibration.png)
+  <figcaption>Orientação esférica compartilhada e controles específicos de calibração do Domemaster.</figcaption>
+</figure>
 
-## Pitch / Yaw / Roll
+<div class="grid cards" markdown>
 
-Pitch, Yaw e Roll orientam o **domínio esférico compartilhado** e afetam de forma consistente as representações esféricas.
+- :material-axis-arrow: **Pitch / Yaw / Roll**
 
-Eles não são a Scene Camera.
+    Orientam o domínio esférico compartilhado. Não são a câmera da Scene.
 
-## FOV
+- :material-angle-acute: **FOV**
 
-FOV é um controle do Domemaster e define o campo angular representado pela saída fisheye.
+    Define o campo angular representado pelo Domemaster.
 
-## Size%
+- :material-resize: **Size%**
 
-Size% escala fisicamente o círculo Domemaster dentro do target de saída para adequá-lo à geometria de projetor/lente da instalação.
+    Ajusta o círculo físico do Domemaster à geometria projetor/lente. Não é zoom da cena.
 
-Size% **não é zoom da cena**. Para navegar ou reenquadrar o conteúdo, use o modelo de câmera/cena.
+</div>
 
-## Fluxo de calibração
+## Fluxo recomendado
 
-1. selecione Domemaster;
-2. estabeleça a orientação Pitch/Yaw/Roll;
-3. defina o FOV necessário;
-4. ajuste Size% à geometria óptica/projetor;
-5. verifique com `CalibrationTool` no sistema-alvo;
-6. preserve os ajustes ao mudar a resolução de output salvo quando a instalação exigir nova calibração.
+1. Escolha Domemaster.
+2. Estabeleça a orientação Pitch/Yaw/Roll.
+3. Defina o FOV necessário do Domemaster.
+4. Ajuste Size% à geometria óptica/projetor.
+5. Verifique o resultado com `CalibrationTool` no sistema de destino.
+6. Preserve a calibração ao alterar a resolução de output, salvo quando a própria instalação exigir recalibração.
+
+!!! warning "Size% não é zoom"
+    Para mover ou reenquadrar o conteúdo da cena, use o modelo de câmera/navegação da Scene. Size% ajusta a imagem circular Domemaster dentro do target de output.
+
+<div class="zd-actions" markdown>
+[Câmera e Navegação](camera-navigation.md){ .md-button }
+[CalibrationTool](../qualification/1.5-calibration-tool.md){ .md-button .md-button--primary }
+</div>

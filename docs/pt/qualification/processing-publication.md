@@ -1,65 +1,83 @@
-# Checklist de Publicação Processing
+---
+title: "Publicação como Processing Contributed Library"
+icon: material/check-decagram-outline
+status: qualification
+---
+# Publicação como Processing Contributed Library
 
-Use este checklist antes de submeter ziviDomeLive ao Gerenciador de Contribuições do Processing ou publicar uma atualização. Ele segue as diretrizes de bibliotecas Processing para metadados, documentação, exemplos, artefatos de release, disponibilidade do código-fonte e licenciamento.
+Este checklist pertence à superfície de **manutenção/publicação**, não ao percurso de aprendizagem do artista.
 
-## Conteúdo obrigatório do release
+## Artefato de publicação
 
-| Requisito | Local em ziviDomeLive | Verificação |
-|---|---|---|
-| Metadados Processing | `library.properties`, `release/ziviDomeLive.txt` | `name`, `authors`, `url`, `categories`, `sentence` e `version` inteiro estão presentes |
-| Arquivo instalável | `release/ziviDomeLive.zip` | Contém `ziviDomeLive/library/ziviDomeLive.jar` |
-| Artefato instalador PDE | `release/ziviDomeLive.pdex` | Idêntico ao ZIP, com extensão `.pdex` |
-| Exemplos | `release/ziviDomeLive/examples/` | Exemplos abrem pelo menu **File > Examples** do Processing |
-| Documentação de referência | `release/ziviDomeLive/reference/index.html` | Gerada por Javadocs e atualizada para o release |
-| Código-fonte | Repositório GitHub | Código público permanece disponível para revisão e manutenção |
-| Arquivos de licença | `LICENSE`, `THIRD_PARTY.md`, `licenses/` | Incluídos no arquivo de release |
+O pacote Processing deve ser autocontido para instalação, exemplos, source, referência de API, licenças e citação. MkDocs é o manual técnico; o futuro GitBook não é dependência do pacote.
 
-## Regras de metadados
+## AUTOMATED
 
-O Gerenciador de Contribuições lê `library.properties`. Mantenha estes campos alinhados ao release:
+- [ ] `./gradlew clean test build --console=plain`
+- [ ] `./gradlew qualificationTests --console=plain`
+- [ ] validator documental passa
+- [ ] `python3 -m mkdocs build --strict` passa para EN/PT configurados
+- [ ] `./gradlew buildReleaseArtifacts --console=plain`
+- [ ] estrutura ZIP/PDEX passa na validação do pacote
 
-- `name`: `ziviDomeLive`
-- `authors`: lista de autores com links quando aplicável
-- `url`: página pública estável da documentação, não um link direto de download
-- `categories`: somente categorias Processing; este release usa `3D, Video & Vision`
-- `sentence`: uma frase curta, iniciada com maiúscula e terminada com ponto, sem repetir o nome da biblioteca
-- `paragraph`: segunda frase em diante para o site Processing; mencione limitações específicas de plataforma aqui
-- `version`: contador inteiro usado para verificação de updates
-- `prettyVersion`: versão legível, sem espaços
-- `minRevision` e `maxRevision`: limites de revisão do Processing; mantenha `maxRevision=0` a menos que uma revisão futura incompatível seja conhecida
+## GPU VISUAL
 
-## Página pública da documentação
+- [ ] `CalibrationTool` inspecionado em cada configuração usada como evidência GPU
+- [ ] Domemaster, Equirectangular, Skybox e Standard conferidos
+- [ ] Environment conferido conforme o contrato visual LDR equirectangular corrente
 
-O site público da documentação deve permanecer em uma URL estável e incluir:
+## BENCHMARK
 
-- um resumo curto do propósito da biblioteca;
-- instruções de instalação pelo Gerenciador de Contribuições e por instalação manual;
-- exemplos de uso básico e avançado;
-- sistemas operacionais e versão Processing testados;
-- notas de dependências e runtime, incluindo separação do NDI Runtime;
-- keywords e versão mais recente vindas de `library.properties`;
-- links para os artefatos ZIP/PDEX quando publicados;
-- Javadocs gerados em `/reference/`.
+- [ ] smoke do BenchmarkTool concluído
+- [ ] baseline CPU registrado
+- [ ] modo CPU/GPU registrado quando implementado pela ferramenta
+- [ ] relatório identifica versão/commit, resolução, rotas, Processing/Java, OS e hardware
 
-## Validação manual antes da submissão
+## NATIVE OUTPUT
 
-1. Rode `./gradlew clean test build --console=plain`.
-2. Rode `./gradlew buildReleaseArtifacts --console=plain`.
-3. Confirme que `release/ziviDomeLive.zip`, `release/ziviDomeLive.pdex` e `release/ziviDomeLive.txt` usam o mesmo nome base e o mesmo diretório.
-4. Instale o pacote por `./gradlew deployToProcessingSketchbook --console=plain` ou por extração manual.
-5. Reinicie o Processing e abra **File > Examples > Contributed Libraries > ziviDomeLive**.
-6. Abra todos os exemplos mantidos: `EmptyProject`, `Basic`, `SphereParticle`,
-   `CalibrationTool`, `FulldomePBR`, `InfiniteBackground` e `SolarSystem`.
-7. Registre versão do Processing, sistema operacional, arquitetura de CPU, GPU, driver, backend de output e qualquer aviso OpenGL observado.
-8. Complete o checklist de [Prontidão da Release 2.0](2.0-release-readiness.md) para evidências GPU e outputs nativos.
+Só declare backend/plataforma como **testado** após evidência end-to-end:
 
-## Nota de submissão
+- [ ] receiver NDI em toda plataforma declarada para NDI
+- [ ] receiver Syphon em cada configuração macOS declarada
+- [ ] receiver Spout em cada configuração Windows declarada
 
-Quando os artefatos e a documentação estiverem finais, submeta a biblioteca pelo formulário de issue do repositório Processing Contributions. Mantenedores Processing podem solicitar ajustes de metadados, empacotamento ou documentação antes de indexar o release.
+Caminho de código suportado e plataforma testada na release são fatos diferentes.
 
-## Referências oficiais
+## PACKAGE INSTALLATION
 
-- [Processing Library Guidelines](https://github.com/processing/processing4/wiki/Library-Guidelines)
-- [Processing Library Basics](https://github.com/processing/processing4/wiki/Library-Basics)
-- [Processing Library Overview](https://github.com/processing/processing4/wiki/Library-Overview)
-- [Processing Library Template: Release](https://processing.github.io/processing-library-template/release.html)
+O pacote final deve conter:
+
+- [ ] `library/`
+- [ ] `reference/index.html`
+- [ ] `examples/` com seis learning examples + `CalibrationTool` + `BenchmarkTool`
+- [ ] `src/` sem `src/test/`
+- [ ] `library.properties`
+- [ ] licença e notices de terceiros
+- [ ] metadata de citação conforme a task de packaging corrente
+
+Não deve conter relatórios locais de benchmark, evidência maintainer-only, `.DS_Store`, testes ou helper JARs locais excluídos pelo contrato de release.
+
+Abra/execute os oito exemplos **a partir do pacote instalado**.
+
+## PUBLICATION METADATA
+
+- [ ] campos centrais de `library.properties` validados pelas regras/parser atuais do Processing
+- [ ] keywords descrevem capacidades implementadas (sem claim VR/XR genérico)
+- [ ] metadata de plataforma testada ausente sem evidência de qualificação
+- [ ] boundary de Processing suportado/testado corresponde à realidade
+- [ ] DOI do software consistente em CFF, Zenodo, README e MkDocs
+- [ ] nenhum DOI/ISBN documental inventado
+
+## Arquivos estáveis de release
+
+O workflow publica os siblings gerados:
+
+- `ziviDomeLive.zip`
+- `ziviDomeLive.txt`
+- `ziviDomeLive.pdex`
+
+Valide o URL estável pretendido antes de submeter/atualizar a contribuição.
+
+## Regra da tag
+
+A tag é o ponto de publicação da release, **não a primeira execução de qualificação**. Evidências automated, GPU, benchmark, native output, package installation e publication metadata precisam estar concluídas antes de `v2.0.0`.

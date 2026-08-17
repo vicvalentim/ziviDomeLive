@@ -1,3 +1,7 @@
+---
+title: "Camera and Navigation"
+icon: material/palette-outline
+---
 # Camera and Navigation
 
 Scene Camera and spherical orientation are separate layers.

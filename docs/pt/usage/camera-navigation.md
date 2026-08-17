@@ -1,3 +1,7 @@
+---
+title: "Câmera e Navegação"
+icon: material/palette-outline
+---
 # Câmera e Navegação
 
 Scene Camera e orientação esférica são camadas distintas.

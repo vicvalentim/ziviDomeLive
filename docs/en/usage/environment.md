@@ -1,3 +1,7 @@
+---
+title: "Environment"
+icon: material/palette-outline
+---
 # Environment
 
 The 2.0 Environment feature is a **visual LDR equirectangular background** shared by Standard and spherical representations.

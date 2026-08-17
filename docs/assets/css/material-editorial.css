@@ -1,0 +1,159 @@
+
+/* ziviDomeLive — Material editorial layer
+ * Additive styling only: it intentionally builds on Material for MkDocs variables
+ * so light/dark palettes and accessibility behavior remain theme-native.
+ */
+
+:root {
+  --zd-radius-sm: .45rem;
+  --zd-radius-md: .75rem;
+  --zd-radius-lg: 1.05rem;
+  --zd-shadow-soft: 0 .45rem 1.35rem rgba(0, 0, 0, .07);
+  --zd-border: color-mix(in srgb, var(--md-default-fg-color) 14%, transparent);
+}
+
+.md-grid { max-width: 90rem; }
+.md-content__inner { padding-bottom: 3.5rem; }
+.md-typeset { line-height: 1.7; }
+.md-typeset h1 {
+  margin-bottom: .55rem;
+  font-weight: 760;
+  letter-spacing: -.035em;
+  line-height: 1.08;
+}
+.md-typeset h2 {
+  margin-top: 2.25rem;
+  padding-top: .25rem;
+  font-weight: 690;
+  letter-spacing: -.02em;
+}
+.md-typeset h3 { font-weight: 650; }
+.md-typeset > h1 + p,
+.md-typeset .zd-lead {
+  max-width: 52rem;
+  margin-top: 0;
+  margin-bottom: 1.75rem;
+  font-size: 1.05rem;
+  line-height: 1.62;
+  color: var(--md-default-fg-color--light);
+}
+
+/* Hero */
+.zd-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(18rem, .95fr);
+  gap: 2.2rem;
+  align-items: center;
+  margin: .6rem 0 2.1rem;
+  padding: clamp(1.2rem, 3vw, 2.4rem);
+  border: .05rem solid var(--zd-border);
+  border-radius: var(--zd-radius-lg);
+  background: linear-gradient(145deg,
+    color-mix(in srgb, var(--md-primary-fg-color) 9%, transparent),
+    color-mix(in srgb, var(--md-accent-fg-color) 4%, transparent) 54%,
+    transparent);
+  box-shadow: var(--zd-shadow-soft);
+}
+.zd-hero h1 { margin-top: 0; font-size: clamp(2.15rem, 5vw, 4rem); }
+.zd-hero__eyebrow {
+  margin-bottom: .55rem;
+  font-size: .72rem;
+  font-weight: 750;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+  color: var(--md-accent-fg-color);
+}
+.zd-hero__image img { width: 100%; border-radius: var(--zd-radius-md); }
+.zd-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.25rem; }
+.md-typeset .zd-actions .md-button { margin: 0; }
+
+/* Cards */
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid > .card {
+  border: .05rem solid var(--zd-border);
+  border-radius: var(--zd-radius-md);
+  box-shadow: none;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.md-typeset .grid.cards > ul > li:hover,
+.md-typeset .grid > .card:hover {
+  transform: translateY(-.08rem);
+  border-color: color-mix(in srgb, var(--md-accent-fg-color) 45%, var(--zd-border));
+  box-shadow: var(--zd-shadow-soft);
+}
+.md-typeset .grid.cards > ul > li > p:first-child { margin-top: .15rem; }
+.md-typeset .grid.cards .twemoji { color: var(--md-accent-fg-color); }
+
+/* Figures and diagrams */
+.md-typeset figure { margin: 1.65rem auto 2rem; }
+.md-typeset figure img,
+.md-typeset > p > img {
+  border: .05rem solid var(--zd-border);
+  border-radius: var(--zd-radius-md);
+  box-shadow: var(--zd-shadow-soft);
+}
+.md-typeset figcaption { max-width: 44rem; color: var(--md-default-fg-color--light); }
+
+/* Tables */
+.md-typeset table:not([class]) {
+  border: .05rem solid var(--zd-border);
+  border-radius: var(--zd-radius-sm);
+  overflow: hidden;
+  box-shadow: none;
+}
+.md-typeset table:not([class]) th { font-weight: 700; }
+
+/* Admonitions and details */
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: var(--zd-radius-sm);
+  box-shadow: 0 .15rem .7rem rgba(0,0,0,.045);
+}
+.md-typeset .admonition-title,
+.md-typeset summary { font-weight: 690; }
+
+/* Code */
+.md-typeset code { border-radius: .22rem; }
+.md-typeset pre > code { line-height: 1.58; }
+.md-typeset .highlight { border-radius: var(--zd-radius-sm); }
+
+/* Content tabs */
+.md-typeset .tabbed-labels { border-bottom: .05rem solid var(--zd-border); }
+.md-typeset .tabbed-labels > label { font-weight: 650; }
+
+/* Compact semantic chips used sparingly in prose. */
+.zd-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: .12rem .48rem;
+  border: .05rem solid var(--zd-border);
+  border-radius: 999px;
+  font-size: .68rem;
+  font-weight: 720;
+  letter-spacing: .025em;
+  vertical-align: middle;
+  background: color-mix(in srgb, var(--md-default-fg-color) 4%, transparent);
+}
+
+/* Section landing note */
+.zd-section-note {
+  margin: 1.5rem 0;
+  padding: 1rem 1.15rem;
+  border-left: .18rem solid var(--md-accent-fg-color);
+  border-radius: 0 var(--zd-radius-sm) var(--zd-radius-sm) 0;
+  background: color-mix(in srgb, var(--md-accent-fg-color) 5%, transparent);
+}
+
+/* Navigation readability */
+.md-nav__title { font-weight: 720; }
+.md-nav__link--active { font-weight: 650; }
+
+@media screen and (max-width: 60em) {
+  .zd-hero { grid-template-columns: 1fr; gap: 1.1rem; }
+  .zd-hero__image { order: -1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-typeset .grid.cards > ul > li,
+  .md-typeset .grid > .card { transition: none; }
+}

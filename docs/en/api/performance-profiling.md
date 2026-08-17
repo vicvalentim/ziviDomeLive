@@ -1,56 +1,32 @@
+---
+title: "Performance Profiling"
+icon: material/api
+status: experimental
+---
 # Performance Profiling
 
-The experimental performance API provides low-overhead CPU instrumentation plus an optional coarse GPU elapsed measurement for development and qualification tools. It is disabled by default and does not replace external GPU profilers.
+!!! warning "Advanced / qualification"
+    Performance instrumentation is not required to create or render a normal ziviDomeLive scene. Use it when profiling, benchmarking or qualifying a release/hardware configuration.
 
-## Enable And Read
+## CPU wall time is not GPU elapsed time
 
-```java
-dome.enablePerformanceProfiling(PerformanceMode.CPU, 4096);
+CPU wall-time measurements describe time observed by the CPU around a stage. OpenGL work can be queued/asynchronous, so that value must not be described as the GPU execution time of the same stage.
 
-// Run warm-up, then reset before the measured interval.
-dome.resetPerformanceStatistics();
+GPU elapsed measurements are only valid where the current implementation actually exposes a GPU timing result. Do not infer per-stage GPU granularity that the API does not provide.
 
-PerformanceSnapshot snapshot = dome.getPerformanceSnapshot();
-PerformanceSnapshot.MetricStatistics frame =
-    snapshot.getStatistics(PerformanceMetric.FRAME_TOTAL);
+## BenchmarkTool
 
-println(frame.getAverageMilliseconds());
-println(frame.getP95Milliseconds());
-println(frame.getOnePercentLowFps());
-```
+`BenchmarkTool` is a qualification tool. Use it to produce repeatable evidence for a specific software/hardware configuration; do not present it as a prerequisite for ordinary sketches.
 
-To request GPU elapsed time, use `PerformanceMode.CPU_GPU`, then inspect the effective mode and
-the separate GPU channel:
+## Reporting rule
 
-```java
-PerformanceSnapshot snapshot = dome.getPerformanceSnapshot();
-if (snapshot.getEffectiveMode() == PerformanceMode.CPU_GPU && snapshot.hasGpuTimings()) {
-  PerformanceSnapshot.MetricStatistics gpu =
-      snapshot.getGpuStatistics(PerformanceMetric.RENDER_PIPELINE);
-  println(gpu.getAverageMilliseconds());
-}
-```
+A useful report identifies at least:
 
-Snapshot creation copies and sorts retained samples. Request snapshots only outside the interval being measured. The first `pre()` boundary establishes a baseline; the first completed `FRAME_TOTAL` sample appears at the next boundary.
+- ziviDomeLive version/commit under test;
+- Processing/Java environment actually used;
+- output resolution and active render/output routes;
+- benchmark mode/measurement type;
+- whether a metric is CPU or GPU derived;
+- hardware/OS when the result is used as platform qualification evidence.
 
-## Modes And Overhead
-
-- `OFF`: no `System.nanoTime()`, sample writes, or profiler atomics on the render path.
-- `CPU`: CPU-observed wall time from `System.nanoTime()`.
-- `CPU_GPU`: CPU instrumentation plus one asynchronous, capability-gated GPU timestamp interval around `RENDER_PIPELINE`. Unsupported or failed contexts report `CPU` as the effective mode and add a diagnostic.
-
-The OFF path performs only predictable inactive-monitor checks at instrumented boundaries. Sample arrays and worker accumulators are allocated only when profiling is enabled. GPU query objects are allocated lazily only after `CPU_GPU` is requested on the Processing render thread. The default `GpuTimerPolicy.SAFE` requires non-zero `GL_TIMESTAMP` counter bits and otherwise falls back to CPU. Controlled tools may request `GpuTimerPolicy.ARCHITECTURE_AWARE`: timestamp pairs remain preferred, while Apple Silicon may use `GL_TIME_ELAPSED` when timestamps are unavailable. The elapsed backend has exclusive ownership of the global elapsed-query target and must not be used with scene-owned timer queries. An eight-slot pool reads only results advertised by `GL_QUERY_RESULT_AVAILABLE`; saturation, late results, disable, or context loss discard samples instead of waiting. No `glFinish()` is used. Snapshots expose the requested policy, normalized architecture, and effective backend.
-
-## Interpretation
-
-`FRAME_TOTAL` is the interval between consecutive Processing `pre()` boundaries. It is the primary source for average FPS, P50, P95, P99, maximum frame time, 1% low, and the 16.67/33.33/50 ms threshold counts.
-
-OpenGL-related CPU durations measure submission plus any driver wait observed by the caller. The separate GPU value measures only commands between the complete pipeline timer boundaries; it excludes `Scene.update()`, frame pacing, CPU work outside that interval, receiver presentation, and network latency. It is intentionally not split into per-pass intervals because extra `beginPGL()` boundaries would flush and perturb the workload. Timestamp pairs avoid occupying the global `GL_TIME_ELAPSED` target. The architecture-aware Apple Silicon fallback explicitly occupies that target and is therefore limited to controlled scenes. NDI send duration remains the native sender-call duration; Syphon and Spout durations do not measure receiver presentation.
-
-Each metric also reports total calls and average calls per retained frame. This makes pass-count invariants observable independently from timing. The monitor records violations when cubemap capture exceeds or differs from the required count, or when Standard/projection/preview-copy calls differ from the current requirement closure.
-
-## Storage
-
-Samples use a preallocated primitive ring buffer. When its capacity is exceeded, the oldest frames are overwritten and `getOverwrittenFrames()` reports the count. Raw CPU samples remain available through `getDurationNanos()` / `getCalls()`; aligned GPU results use `getGpuDurationNanos()` / `getGpuCalls()`. A GPU call count of zero means that frame has no completed query result, not zero GPU cost.
-
-Calling `disablePerformanceProfiling()` stops collection without discarding completed samples. Calling `resetPerformanceStatistics()` clears timings and invariant counters.
+Never convert “supported by the code path” into “tested on this platform” without recorded qualification.

@@ -1,34 +1,59 @@
+---
+title: RenderMode e ViewType
+icon: material/view-dashboard-outline
+---
+
 # RenderMode e ViewType
 
-O ziviDomeLive separa **como a aplicação está trabalhando agora** de **qual representação um destino recebe**.
+ziviDomeLive separa **como a aplicação está trabalhando agora** de **qual representação um destino recebe**. Manter essas decisões distintas é a chave para um roteamento previsível de preview/output.
 
-![RenderMode e ViewType](../../img/render-modes-overview.png)
+<figure markdown="span">
+  ![RenderMode and ViewType overview](../../img/render-modes-overview.png)
+  <figcaption>RenderMode altera o modo de trabalho atual; ViewType seleciona a representação solicitada por um destino.</figcaption>
+</figure>
 
-## RenderMode: como quero trabalhar agora?
+<div class="grid cards" markdown>
 
-`RenderMode` define o modo global efetivo:
+- :material-tune-variant: **RenderMode** — *Como quero trabalhar agora?*
 
-- `FULL`
-- `STANDARD`
-- `DOMEMASTER`
-- `EQUIRECTANGULAR`
-- `SKYBOX`
+    `FULL`, `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR`, `SKYBOX`
 
-`FULL` é o padrão e preserva as rotas independentes de preview e outputs configuradas por `ViewType`.
+- :material-routes: **ViewType** — *O que este destino deve receber?*
 
-Modos dedicados substituem temporariamente a representação efetiva. Eles **não** apagam as rotas armazenadas que reaparecem ao retornar a `FULL`.
+    `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR`, `SKYBOX`
 
-## ViewType: qual representação vai para este destino?
+</div>
 
-`ViewType` identifica a representação final solicitada pelo preview ou por um output externo:
+## RenderMode: modo de trabalho atual
 
-- `STANDARD`
-- `DOMEMASTER`
-- `EQUIRECTANGULAR`
-- `SKYBOX`
+`FULL` é o padrão. Ele preserva as rotas independentes de preview e output configuradas por `ViewType`.
 
-A distinção é especialmente importante em `FULL`: um preview Standard pode coexistir, por exemplo, com uma saída NDI Domemaster sem transformar os dois destinos na mesma rota.
+Modos dedicados substituem temporariamente a representação efetiva. Eles **não** apagam as rotas armazenadas, que reaparecem ao retornar a `FULL`.
 
-## O que RenderMode não significa
+!!! info "Rotas armazenadas sobrevivem aos modos dedicados"
+    Mudar para `DOMEMASTER` durante a calibração não destrói o preview Standard nem as seleções de `ViewType` por destino armazenadas para `FULL`.
 
-Um modo de renderização não é uma segunda classe de runtime e não substitui a instância `ziviDomeLive`. O modelo público continua sendo um único runtime com múltiplos modos de trabalho.
+## ViewType: representação por destino
+
+Em `FULL`, cada destino pode solicitar uma representação final diferente. Um preview Standard pode coexistir, por exemplo, com um output NDI Domemaster sem transformar ambos na mesma rota.
+
+=== "Standard"
+    Representação convencional em perspectiva.
+
+=== "Domemaster"
+    Representação fisheye circular usada para projeção fulldome.
+
+=== "Equirectangular"
+    Representação esférica 2:1 para fluxos 360°.
+
+=== "Skybox"
+    Representação em layout de cubemap.
+
+## Um runtime, múltiplos modos
+
+Um modo de renderização não é uma segunda classe de runtime e não substitui a instância `ziviDomeLive`. O modelo público permanece um runtime único com múltiplos modos de trabalho.
+
+<div class="zd-actions" markdown>
+[Preview e Output](visual-capture-guide.md){ .md-button .md-button--primary }
+[Calibração Esférica](spherical-calibration.md){ .md-button }
+</div>

@@ -1,56 +1,32 @@
+---
+title: "Profiling de Performance"
+icon: material/api
+status: experimental
+---
 # Profiling de Performance
 
-A API experimental de performance fornece instrumentação CPU de baixo overhead e uma medição GPU agregada opcional para ferramentas de desenvolvimento e qualificação. Ela permanece desabilitada por padrão e não substitui profilers externos de GPU.
+!!! warning "Avançado / qualificação"
+    Instrumentação de performance não é requisito para criar/renderizar uma cena ziviDomeLive comum. Use-a para profiling, benchmark ou qualificação de release/hardware.
 
-## Habilitar e Ler
+## CPU wall time não é GPU elapsed time
 
-```java
-dome.enablePerformanceProfiling(PerformanceMode.CPU, 4096);
+CPU wall time descreve tempo observado pela CPU ao redor de uma etapa. Trabalho OpenGL pode ser enfileirado/assíncrono, portanto esse valor não deve ser descrito como tempo de execução GPU da mesma etapa.
 
-// Execute o warm-up e então resete antes do intervalo medido.
-dome.resetPerformanceStatistics();
+GPU elapsed só é válido onde a implementação corrente expõe de fato uma medida GPU. Não deduza granularidade GPU por estágio que a API não fornece.
 
-PerformanceSnapshot snapshot = dome.getPerformanceSnapshot();
-PerformanceSnapshot.MetricStatistics frame =
-    snapshot.getStatistics(PerformanceMetric.FRAME_TOTAL);
+## BenchmarkTool
 
-println(frame.getAverageMilliseconds());
-println(frame.getP95Milliseconds());
-println(frame.getOnePercentLowFps());
-```
+`BenchmarkTool` é ferramenta de qualificação. Use-a para produzir evidência repetível de uma configuração específica de software/hardware; não a apresente como pré-requisito de sketches comuns.
 
-Para solicitar tempo GPU, use `PerformanceMode.CPU_GPU` e consulte o modo efetivo e o canal GPU
-separado:
+## Regra de relatório
 
-```java
-PerformanceSnapshot snapshot = dome.getPerformanceSnapshot();
-if (snapshot.getEffectiveMode() == PerformanceMode.CPU_GPU && snapshot.hasGpuTimings()) {
-  PerformanceSnapshot.MetricStatistics gpu =
-      snapshot.getGpuStatistics(PerformanceMetric.RENDER_PIPELINE);
-  println(gpu.getAverageMilliseconds());
-}
-```
+Um relatório útil identifica ao menos:
 
-A criação do snapshot copia e ordena as amostras retidas. Solicite snapshots somente fora do intervalo medido. A primeira fronteira `pre()` estabelece a linha de base; a primeira amostra completa de `FRAME_TOTAL` surge na fronteira seguinte.
+- versão/commit ziviDomeLive sob teste;
+- ambiente Processing/Java realmente usado;
+- resolução de output e rotas ativas;
+- modo/tipo de medida de benchmark;
+- origem CPU ou GPU de cada métrica;
+- hardware/OS quando o resultado for usado como evidência de qualificação de plataforma.
 
-## Modos e Overhead
-
-- `OFF`: sem `System.nanoTime()`, escrita de samples ou atomics adicionais no caminho de renderização.
-- `CPU`: wall time observado pela CPU com `System.nanoTime()`.
-- `CPU_GPU`: instrumentação CPU mais um intervalo assíncrono de timestamps GPU, condicionado a capability, em torno de `RENDER_PIPELINE`. Contextos sem suporte ou com falha informam `CPU` como modo efetivo e acrescentam um diagnóstico.
-
-O caminho OFF executa apenas verificações previsíveis de monitor inativo nas fronteiras instrumentadas. Os arrays de samples e acumuladores do worker são alocados somente ao habilitar profiling. Objetos de query GPU são criados de forma tardia somente após solicitar `CPU_GPU` na thread de renderização do Processing. A política padrão `GpuTimerPolicy.SAFE` exige counter bits não nulos para `GL_TIMESTAMP` e, caso contrário, faz fallback para CPU. Ferramentas controladas podem solicitar `GpuTimerPolicy.ARCHITECTURE_AWARE`: pares de timestamps continuam preferenciais, enquanto Apple Silicon pode usar `GL_TIME_ELAPSED` quando timestamps não estão disponíveis. O backend elapsed possui propriedade exclusiva do target global e não deve ser usado com timer queries pertencentes à cena. Um pool de oito slots lê apenas resultados indicados por `GL_QUERY_RESULT_AVAILABLE`; saturação, resultados atrasados, disable ou perda de contexto descartam samples em vez de esperar. Não há `glFinish()`. Snapshots expõem política solicitada, arquitetura normalizada e backend efetivo.
-
-## Interpretação
-
-`FRAME_TOTAL` é o intervalo entre fronteiras `pre()` consecutivas do Processing. Ele é a fonte primária para FPS médio, P50, P95, P99, pior frame, 1% low e contagens acima de 16,67/33,33/50 ms.
-
-Durações CPU ao redor de operações OpenGL medem submissão mais qualquer espera de driver observada pelo chamador. O valor GPU separado mede somente comandos entre as fronteiras do timer do pipeline completo; não inclui `Scene.update()`, pacing, trabalho CPU fora desse intervalo, apresentação no receptor ou latência de rede. Ele não é dividido por passe porque fronteiras `beginPGL()` adicionais fariam flush e perturbariam a carga. Pares de timestamp não ocupam o target global `GL_TIME_ELAPSED`. O fallback Apple Silicon consciente da arquitetura ocupa explicitamente esse target e, portanto, fica limitado a cenas controladas. O tempo NDI continua sendo a duração da chamada do sender nativo; Syphon e Spout não medem apresentação no receptor.
-
-Cada métrica também informa o total de chamadas e a média de chamadas por frame retido. Isso torna invariantes de passes observáveis independentemente dos tempos. O monitor registra violações quando a captura cubemap excede ou diverge da contagem requerida, ou quando Standard, projeções e cópias de preview divergem do fechamento de requisitos atual.
-
-## Armazenamento
-
-As amostras usam ring buffer prealocado de tipos primitivos. Ao exceder a capacidade, os frames mais antigos são sobrescritos e `getOverwrittenFrames()` informa a quantidade. Samples CPU brutos usam `getDurationNanos()` / `getCalls()`; resultados GPU alinhados usam `getGpuDurationNanos()` / `getGpuCalls()`. Contagem GPU zero significa ausência de resultado completo naquele frame, não custo GPU zero.
-
-`disablePerformanceProfiling()` interrompe a coleta sem descartar frames completos. `resetPerformanceStatistics()` limpa tempos e contadores de invariantes.
+Nunca converta “suportado pelo caminho de código” em “testado nesta plataforma” sem qualificação registrada.
