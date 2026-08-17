@@ -1,0 +1,70 @@
+name: Final Pre-release Gate
+
+on:
+  workflow_dispatch:
+
+jobs:
+  gate:
+    name: v2.0.0 pre-tag gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install documentation dependencies
+        run: python3 -m pip install -r requirements-docs.txt
+
+      - name: Clean, test and build
+        run: ./gradlew clean test build --console=plain
+
+      - name: Automated qualification
+        run: ./gradlew qualificationTests --console=plain
+
+      - name: Documentation contract and manual evidence gate
+        run: python3 tools/validate_documentation.py --root . --release-evidence
+
+      - name: MkDocs strict
+        run: python3 -m mkdocs build --strict
+
+      - name: Build release artifacts
+        run: ./gradlew buildReleaseArtifacts --console=plain
+
+      - name: Validate package and release siblings
+        run: >-
+          python3 tools/validate_documentation.py
+          --root .
+          --release-dir release
+          --package release/ziviDomeLive.zip
+          --release-evidence
+
+      - name: Upload final automated evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-pre-release-${{ github.sha }}
+          path: |
+            build/reports/qualification/
+            build/test-results/qualification/
+            site/
+            release/*.txt
+            release/*.zip
+            release/*.pdex
+            maintainer/release-evidence.md
+          if-no-files-found: warn
+          retention-days: 90
