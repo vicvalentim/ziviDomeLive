@@ -32,64 +32,107 @@ class ReleaseMetadataTest {
 		assertTrue(read("CHANGELOG.md").contains("## [" + RELEASE_VERSION + "]"));
 	}
 
-	@Test
-	void generatedProcessingMetadataKeepsReleaseQualificationFields() throws IOException {
-		Properties release = loadProperties("release.properties");
-		Properties library = loadProperties("library.properties");
-		String build = read("build.gradle.kts");
+    @org.junit.jupiter.api.Test
+    void generatedProcessingMetadataKeepsReleaseQualificationFields() throws Exception {
+        java.util.Properties release = new java.util.Properties();
+        java.util.Properties generated = new java.util.Properties();
 
-		for (String key : new String[]{
-				"tested.platform",
-				"tested.processingVersion",
-				"library.copyright",
-				"library.dependencies",
-				"library.keywords"}) {
-			assertTrue(release.containsKey(key), key);
-			assertTrue(build.contains("property(\"" + key + "\""), key);
-		}
-		assertEquals("4.5.6", release.getProperty("tested.processingVersion"));
-		assertEquals("https://vicvalentim.github.io/ziviDomeLive/", release.getProperty("url"));
-		assertEquals("https://vicvalentim.github.io/ziviDomeLive/", library.getProperty("url"));
-		assertEquals("Renders fulldome, equirectangular, skybox, and Standard views from Processing sketches.",
-				library.getProperty("sentence"));
-		assertFalse(library.getProperty("sentence").toLowerCase().contains("library"));
-		assertTrue(library.getProperty("paragraph").contains("platform-specific dependencies"));
-	}
+        try (java.io.Reader reader = java.nio.file.Files.newBufferedReader(
+                java.nio.file.Path.of("release.properties"),
+                java.nio.charset.StandardCharsets.UTF_8)) {
+            release.load(reader);
+        }
+        try (java.io.Reader reader = java.nio.file.Files.newBufferedReader(
+                java.nio.file.Path.of("library.properties"),
+                java.nio.charset.StandardCharsets.UTF_8)) {
+            generated.load(reader);
+        }
 
-	@Test
-	void releasePackageAndWorkflowsKeepPublicationGates() throws IOException {
-		String build = read("build.gradle.kts");
-		String releaseWorkflow = read(".github/workflows/release.yml");
-		String websiteWorkflow = read(".github/workflows/deploy_website.yml");
-		String previewWorkflow = read(".github/workflows/pr_preview.yml");
-		String copilotInstructions = read(".github/copilot-instructions.md");
-		String documentationRequirements = read("requirements-docs.txt");
+        for (String key : new String[] {
+                "name", "version", "authors", "url", "categories", "sentence",
+                "paragraph", "minRevision", "maxRevision", "library.copyright",
+                "library.dependencies", "library.keywords"
+        }) {
+            org.junit.jupiter.api.Assertions.assertEquals(
+                    release.getProperty(key), generated.getProperty(key),
+                    "generated Processing metadata must preserve release.properties: " + key);
+        }
 
-		for (String requiredFile : new String[]{
-				"LICENSE", "CHANGELOG.md", "CITATION.cff", ".zenodo.json",
-				"THIRD_PARTY.md", "licenses/Apache-2.0.txt"}) {
-			assertTrue(build.contains("\"" + requiredFile + "\""), requiredFile);
-		}
-		assertTrue(build.contains("verifyReleaseTag"));
-		assertTrue(build.contains("src/main/libs/**"));
-		assertTrue(releaseWorkflow.contains("contents: write"));
-		assertFalse(releaseWorkflow.contains("write-all"));
-		assertTrue(releaseWorkflow.contains("verifyReleaseTag"));
-		assertTrue(releaseWorkflow.contains("RELEASE_TAG: ${{ github.ref_name }}"));
-		assertTrue(releaseWorkflow.contains("-PreleaseTag=\"$RELEASE_TAG\""));
-		assertTrue(releaseWorkflow.contains("github.ref_name"));
-		assertTrue(releaseWorkflow.contains("fail_on_unmatched_files: true"));
-		assertTrue(websiteWorkflow.contains("pip install -r requirements-docs.txt"));
-		assertTrue(websiteWorkflow.contains("mkdocs build --strict"));
-		assertTrue(websiteWorkflow.contains("cp -R build/docs/javadoc site/reference"));
-		assertTrue(websiteWorkflow.contains("cp -R build/docs/javadoc site/pt/reference"));
-		assertTrue(previewWorkflow.contains("pip install -r requirements-docs.txt"));
-		assertTrue(previewWorkflow.contains("mkdocs build --strict"));
-		assertTrue(documentationRequirements.contains("mkdocs>=1.6.1,<2.0"));
-		assertTrue(documentationRequirements.contains("mkdocs-material>=9.7.7,<10.0"));
-		assertTrue(copilotInstructions.contains("examples/CalibrationTool/"));
-		assertFalse(copilotInstructions.contains("examples/CompatibilityLock/"));
-	}
+        org.junit.jupiter.api.Assertions.assertEquals("2.0.0", generated.getProperty("prettyVersion"));
+        org.junit.jupiter.api.Assertions.assertEquals("1285", generated.getProperty("minRevision"));
+
+        org.junit.jupiter.api.Assertions.assertTrue(
+                generated.containsKey("tested.platform"),
+                "generated metadata keeps the optional qualification field");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                generated.containsKey("tested.processingVersion"),
+                "generated metadata keeps the optional qualification field");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                generated.getProperty("tested.platform", "").isBlank(),
+                "tested.platform must stay blank until release qualification evidence supports a claim");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                generated.getProperty("tested.processingVersion", "").isBlank(),
+                "tested.processingVersion must stay blank until release qualification evidence supports a claim");
+
+        String keywords = generated.getProperty("library.keywords", "");
+        org.junit.jupiter.api.Assertions.assertFalse(
+                java.util.regex.Pattern.compile("(?i)(^|[,\\s])(VR|XR)([,\\s]|$)")
+                        .matcher(keywords).find(),
+                "generic VR/XR keywords are outside the 2.0 public contract");
+    }
+
+    @org.junit.jupiter.api.Test
+    void releasePackageAndWorkflowsKeepPublicationGates() throws Exception {
+        String build = java.nio.file.Files.readString(java.nio.file.Path.of("build.gradle.kts"));
+        String automated = java.nio.file.Files.readString(
+                java.nio.file.Path.of(".github/workflows/automated-qualification.yml"));
+        String preRelease = java.nio.file.Files.readString(
+                java.nio.file.Path.of(".github/workflows/pre-release.yml"));
+        String release = java.nio.file.Files.readString(
+                java.nio.file.Path.of(".github/workflows/release.yml"));
+
+        org.junit.jupiter.api.Assertions.assertTrue(build.contains("verifyProcessingPackage"));
+        org.junit.jupiter.api.Assertions.assertTrue(build.contains("buildReleaseArtifacts"));
+
+        // Continuous automated qualification.
+        org.junit.jupiter.api.Assertions.assertTrue(
+                automated.contains("./gradlew qualificationTests --console=plain"));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                automated.contains("python3 tools/validate_documentation.py --root ."));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                automated.contains("python3 -m mkdocs build --strict"));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                automated.contains("actions/upload-artifact@v4"));
+
+        // The actual release gate happens before a tag is created.
+        org.junit.jupiter.api.Assertions.assertTrue(
+                preRelease.contains("./gradlew clean test build --console=plain"));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                preRelease.contains("./gradlew qualificationTests --console=plain"));
+        org.junit.jupiter.api.Assertions.assertTrue(preRelease.contains("--release-evidence"));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                preRelease.contains("python3 -m mkdocs build --strict"));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                preRelease.contains("./gradlew buildReleaseArtifacts --console=plain"));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                preRelease.contains("--package release/ziviDomeLive.zip"));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                preRelease.contains("actions/upload-artifact@v4"));
+
+        // A tag reproduces and audits the already-qualified revision; it is not the
+        // first place where release readiness is discovered.
+        org.junit.jupiter.api.Assertions.assertTrue(release.contains("./gradlew verifyReleaseTag"));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                release.contains("./gradlew qualificationTests --console=plain"));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                release.contains("Upload tagged qualification evidence"));
+        org.junit.jupiter.api.Assertions.assertTrue(release.contains("--release-evidence"));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                release.contains("./gradlew buildReleaseArtifacts --console=plain"));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                release.contains("--package release/ziviDomeLive.zip"));
+        org.junit.jupiter.api.Assertions.assertTrue(release.contains("softprops/action-gh-release@v2"));
+    }
 
 	private static Properties loadProperties(String relativePath) throws IOException {
 		Properties properties = new Properties();

@@ -50,11 +50,23 @@ def check_required(root,c):
     for rel in ['README.md','mkdocs.yml','library.properties','CITATION.cff','.zenodo.json','examples','src/main/java','docs/en','docs/pt']:
         if not (root/rel).exists(): c.error(f"required path missing: {rel}")
 
+def normalize_property_value(value: str) -> str:
+    """Normalize the escaping emitted by java.util.Properties.store().
+
+    Gradle writes library.properties through java.util.Properties, which escapes
+    ':' in URLs (for example an escaped colon after 'https'). release.properties is author-edited
+    and normally keeps the literal colon. They are semantically identical and must
+    compare equal. Keep normalization deliberately narrow so the validator does not
+    reinterpret arbitrary backslash sequences.
+    """
+    return value.replace('\\:', ':')
+
 def parse_props(path):
     out={}
     for line in read(path).splitlines():
         if not line or line.lstrip().startswith('#') or '=' not in line: continue
-        k,v=line.split('=',1);out[k.strip()]=v.strip()
+        k,v=line.split('=',1)
+        out[k.strip()]=normalize_property_value(v.strip())
     return out
 
 def check_metadata(root,c):
