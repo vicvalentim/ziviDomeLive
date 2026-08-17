@@ -65,10 +65,26 @@ def check_metadata(root,c):
         minrev=int(props.get('minRevision',''))
         if minrev < 1285: c.error('minRevision predates the declared Processing 4 baseline; verify Processing revision mapping')
     except ValueError: c.error('minRevision must be an integer')
-    if 'tested.platform' in props or 'tested.processingVersion' in props:
-        c.error('tested.* metadata is present: add it only with recorded release qualification evidence')
+    tested_values = {
+        key: props.get(key, '').strip()
+        for key in ('tested.platform', 'tested.processingVersion')
+    }
+    if any(tested_values.values()):
+        c.error('tested.* metadata contains a qualification claim; record release evidence before publishing it')
     if re.search(r'(?i)(^|[,\s])VR([,\s]|$)|(^|[,\s])XR([,\s]|$)',props.get('library.keywords','')):
         c.error('library keywords contain generic VR/XR claim')
+    source_props=parse_props(root/'release.properties')
+    if not source_props:
+        c.error('release.properties missing or empty: it is the source for generated library.properties')
+    else:
+        for key in ('name','version','authors','url','categories','sentence','paragraph','minRevision','maxRevision','library.copyright','library.dependencies','library.keywords'):
+            if source_props.get(key) != props.get(key):
+                c.error(f'release.properties and library.properties differ for {key}')
+        source_tested = {key: source_props.get(key, '').strip() for key in ('tested.platform','tested.processingVersion')}
+        if any(source_tested.values()):
+            c.error('release.properties contains tested.* qualification claims without recorded release evidence')
+        if re.search(r'(?i)(^|[,\s])VR([,\s]|$)|(^|[,\s])XR([,\s]|$)', source_props.get('library.keywords','')):
+            c.error('release.properties library keywords contain generic VR/XR claim')
     cff=read(root/'CITATION.cff')
     m=re.search(r'(?m)^version:\s*["\']?([^"\'\s]+)',cff)
     if not m or m.group(1)!=EXPECTED_VERSION: c.error('CITATION.cff version mismatch')
@@ -174,8 +190,10 @@ def check_editorial_system(root,c):
     mk=read(root/'mkdocs.yml')
     css=root/'docs/assets/css/material-editorial.css'
     if not css.exists(): c.error('Material editorial stylesheet missing')
-    for token in ['navigation.instant','navigation.instant.progress','pymdownx.emoji','material-editorial.css']:
+    for token in ['pymdownx.emoji','material-editorial.css']:
         if token not in mk: c.error(f'Material editorial configuration missing: {token}')
+    if 'navigation.instant' in mk:
+        c.error('navigation.instant is incompatible with the configured mkdocs-static-i18n contextual language switcher')
     for rel in ['docs/en/index.md','docs/pt/index.md','docs/en/getting-started/quickstart.md','docs/pt/getting-started/quickstart.md','docs/en/api/artist-api-map.md','docs/pt/api/artist-api-map.md']:
         txt=read(root/rel)
         if not txt.startswith('---\n'): c.error(f'editorial front matter missing: {rel}')

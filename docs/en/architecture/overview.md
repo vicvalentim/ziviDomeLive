@@ -8,7 +8,7 @@ icon: material/source-branch
 ziviDomeLive 2.0 organizes rendering into **two domains** that can be required independently or in the same Processing frame. This separation is the central architectural fact behind routing and reuse.
 
 <figure markdown="span">
-  ![Standard and spherical rendering domains](../img/architecture-domains.png)
+  ![Standard and spherical rendering domains](../../img/architecture-domains.png)
   <figcaption>Standard rendering remains independent; spherical final views share one cubemap capture.</figcaption>
 </figure>
 

@@ -38,8 +38,6 @@ theme:
         icon: material/brightness-4
         name: Switch to system preference
   features:
-    - navigation.instant
-    - navigation.instant.progress
     - navigation.tabs
     - navigation.tabs.sticky
     - navigation.sections

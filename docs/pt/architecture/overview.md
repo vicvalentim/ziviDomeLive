@@ -8,7 +8,7 @@ icon: material/source-branch
 ziviDomeLive 2.0 organiza a renderização em **dois domínios** que podem ser exigidos independentemente ou no mesmo frame do Processing. Essa separação é o fato arquitetural central por trás do roteamento e do reuso.
 
 <figure markdown="span">
-  ![Domínios de renderização Standard e esférico](../img/architecture-domains.png)
+  ![Domínios de renderização Standard e esférico](../../img/architecture-domains.png)
   <figcaption>A renderização Standard permanece independente; as views esféricas finais compartilham uma captura cubemap.</figcaption>
 </figure>
 
