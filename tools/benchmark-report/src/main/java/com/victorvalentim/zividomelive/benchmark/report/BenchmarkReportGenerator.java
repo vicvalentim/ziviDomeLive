@@ -206,9 +206,24 @@ public final class BenchmarkReportGenerator {
                 "warmupFrames", "measurementFramesRequested"));
         page.append("</article><article><h3>Environment</h3>");
         definition(page, environment, List.of(
-                "os", "osVersion", "architecture", "java", "processing", "glVendor",
-                "glRenderer", "glVersion", "glslVersion", "windowWidth", "windowHeight",
-                "pixelDensity", "ndiState", "syphonState", "spoutState"));
+                "os",
+                "osVersion",
+                "architecture",
+                "java",
+                "processing",
+                "glVendor",
+                "glRenderer",
+                "glVersion",
+                "glslVersion",
+                "joglProfile",
+                "hardwareRasterizerKnown",
+                "hardwareRasterizer",
+                "windowWidth",
+                "windowHeight",
+                "pixelDensity",
+                "ndiState",
+                "syphonState",
+                "spoutState"));
         page.append("</article>");
         Map<String, Object> profiling = run.section("profiling");
         if (!profiling.isEmpty()) {
@@ -300,30 +315,77 @@ public final class BenchmarkReportGenerator {
     }
 
     private void matrix(StringBuilder page, List<BenchmarkRun> runs) {
-        page.append("<section><h2>Test matrix</h2><div class=\"table-wrap\"><table><thead><tr>")
-                .append("<th>Run</th><th>Timestamp</th><th>Type</th><th>Scenario</th><th>Version</th><th>Mode</th><th>Scene</th>")
-                .append("<th>Resolution</th><th>Preview</th><th>FPS</th><th>P95 ms</th><th>Transition max ms</th><th>Recovery frames</th><th>Status</th>")
+
+        page.append(
+                        "<section><h2>Test matrix</h2>"
+                                + "<div class=\"table-wrap\"><table><thead><tr>")
+                .append("<th>Run</th>")
+                .append("<th>Timestamp</th>")
+                .append("<th>Type</th>")
+                .append("<th>Scenario</th>")
+                .append("<th>Version</th>")
+                .append("<th>Mode</th>")
+                .append("<th>Scene</th>")
+                .append("<th>Resolution</th>")
+                .append("<th>Domain</th>")
+                .append("<th>Preview</th>")
+                .append("<th>NDI</th>")
+                .append("<th>FPS</th>")
+                .append("<th>P95 ms</th>")
+                .append("<th>Transition max ms</th>")
+                .append("<th>Recovery frames</th>")
+                .append("<th>Status</th>")
                 .append("</tr></thead><tbody>");
+
         for (BenchmarkRun run : runs) {
-            Map<String, Object> scenario = run.section("scenario");
-            Map<String, Object> transition = run.section("transition");
-            page.append("<tr><td><code>").append(escape(run.id())).append("</code></td><td>")
-                    .append(escape(run.text("timestamp"))).append("</td><td>")
-                    .append(escape(value(scenario.get("testType")))).append("</td><td>")
-                    .append(escape(value(scenario.get("scenarioName")))).append("</td><td>")
-                    .append(escape(run.text("version"))).append("</td><td>")
-                    .append(escape(value(scenario.get("renderMode")))).append("</td><td>")
-                    .append(escape(value(scenario.get("scene")))).append("</td><td>")
-                    .append(escape(value(scenario.get("resolution")))).append("</td><td>")
-                    .append(escape(value(scenario.get("preview")))).append("</td><td>")
-                    .append(format(run.metric("fpsAverage"))).append("</td><td>")
-                    .append(format(run.metric("frameMsP95"))).append("</td><td>")
-                    .append(escape(value(transition.get("transitionMaxMs")))).append("</td><td>")
-                    .append(escape(value(transition.get("recoveryFrames")))).append("</td><td>")
-                    .append(escape(run.text("status"))).append("</td></tr>");
+            Map<String, Object> scenario =
+                    run.section("scenario");
+
+            Map<String, Object> transition =
+                    run.section("transition");
+
+            page.append("<tr><td><code>")
+                    .append(escape(run.id()))
+                    .append("</code></td><td>")
+                    .append(escape(run.text("timestamp")))
+                    .append("</td><td>")
+                    .append(escape(value(scenario.get("testType"))))
+                    .append("</td><td>")
+                    .append(escape(value(scenario.get("scenarioName"))))
+                    .append("</td><td>")
+                    .append(escape(run.text("version")))
+                    .append("</td><td>")
+                    .append(escape(value(scenario.get("renderMode"))))
+                    .append("</td><td>")
+                    .append(escape(value(scenario.get("scene"))))
+                    .append("</td><td>")
+                    .append(escape(value(scenario.get("resolution"))))
+                    .append("</td><td>")
+                    .append(escape(value(scenario.get("resolutionDomain"))))
+                    .append("</td><td>")
+                    .append(escape(value(scenario.get("preview"))))
+                    .append("</td><td>")
+                    .append(escape(value(scenario.get("ndi"))))
+                    .append("</td><td>")
+                    .append(format(run.metric("fpsAverage")))
+                    .append("</td><td>")
+                    .append(format(run.metric("frameMsP95")))
+                    .append("</td><td>")
+                    .append(escape(value(transition.get("transitionMaxMs"))))
+                    .append("</td><td>")
+                    .append(escape(value(transition.get("recoveryFrames"))))
+                    .append("</td><td>")
+                    .append(escape(run.text("status")))
+                    .append("</td></tr>");
         }
-        if (runs.isEmpty()) page.append("<tr><td colspan=\"14\">No valid runs.</td></tr>");
-        page.append("</tbody></table></div></section>");
+
+        if (runs.isEmpty()) {
+            page.append(
+                    "<tr><td colspan=\"16\">No valid runs.</td></tr>");
+        }
+
+        page.append(
+                "</tbody></table></div></section>");
     }
 
     private String lineChart(double[] values) {

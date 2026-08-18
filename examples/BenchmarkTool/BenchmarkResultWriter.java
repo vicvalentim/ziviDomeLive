@@ -72,6 +72,9 @@ public final class BenchmarkResultWriter {
         public String glRenderer = "unknown";
         public String glVersion = "unknown";
         public String glslVersion = "unknown";
+        public String joglProfile = "unknown";
+        public boolean hardwareRasterizerKnown;
+        public boolean hardwareRasterizer;
         public int windowWidth;
         public int windowHeight;
         public int pixelDensity;
@@ -260,8 +263,15 @@ public final class BenchmarkResultWriter {
         field(json, fieldsIndentation, "glRenderer", environment.glRenderer, true);
         field(json, fieldsIndentation, "glVersion", environment.glVersion, true);
         field(json, fieldsIndentation, "glslVersion", environment.glslVersion, true);
+        field(json, fieldsIndentation, "joglProfile", environment.joglProfile, true);
+        field(json, fieldsIndentation, "hardwareRasterizerKnown", environment.hardwareRasterizerKnown, true);
+        field(json, fieldsIndentation, "hardwareRasterizer", environment.hardwareRasterizer, true);
         field(json, fieldsIndentation, "windowWidth", environment.windowWidth, true);
         field(json, fieldsIndentation, "windowHeight", environment.windowHeight, true);
+        field(json, fieldsIndentation, "pixelDensity", environment.pixelDensity, true);
+        field(json, fieldsIndentation, "ndiState", environment.ndiState, true);
+        field(json, fieldsIndentation, "syphonState", environment.syphonState, true);
+        field(json, fieldsIndentation, "spoutState", environment.spoutState, false);field(json, fieldsIndentation, "windowHeight", environment.windowHeight, true);
         field(json, fieldsIndentation, "pixelDensity", environment.pixelDensity, true);
         field(json, fieldsIndentation, "ndiState", environment.ndiState, true);
         field(json, fieldsIndentation, "syphonState", environment.syphonState, true);

@@ -270,7 +270,12 @@ public final class ProcessingGlCapabilities {
 				gpuTimerQuerySupported);
 	}
 
-	String shadingLanguageVersion() {
+	/**
+	 * Returns the raw OpenGL Shading Language version string.
+	 *
+	 * @return GLSL version string, or empty when unavailable
+	 */
+	public String shadingLanguageVersion() {
 		return shadingLanguageVersion;
 	}
 
