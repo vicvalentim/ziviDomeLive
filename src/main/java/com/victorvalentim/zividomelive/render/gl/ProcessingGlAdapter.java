@@ -480,13 +480,27 @@ public final class ProcessingGlAdapter {
 			if (pgl == null) {
 				return ProcessingGlCapabilities.unavailable();
 			}
-			return ProcessingGlCapabilities.fromOpenGlStrings(
-					pgl.getString(PGL.VERSION),
-					pgl.getString(PGL.VENDOR),
-					pgl.getString(PGL.RENDERER),
-					pgl.getString(PGL.EXTENSIONS))
+
+			ProcessingGlCapabilities capabilities =
+					ProcessingGlCapabilities.fromOpenGlStrings(
+									pgl.getString(PGL.VERSION),
+									pgl.getString(PGL.VENDOR),
+									pgl.getString(PGL.RENDERER),
+									pgl.getString(PGL.EXTENSIONS))
 							.withShadingLanguageVersion(
 									pgl.getString(PGL.SHADING_LANGUAGE_VERSION));
+
+			if (pgl instanceof PJOGL pjogl && pjogl.gl != null) {
+				var profile = pjogl.gl.getGLProfile();
+
+				if (profile != null) {
+					capabilities = capabilities.withJoglProfile(
+							profile.toString(),
+							profile.isHardwareRasterizer());
+				}
+			}
+
+			return capabilities;
 		} finally {
 			graphics.endPGL();
 		}

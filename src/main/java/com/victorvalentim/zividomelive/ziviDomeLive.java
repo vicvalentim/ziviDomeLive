@@ -345,6 +345,10 @@ public class ziviDomeLive implements PConstants {
 			LOGGER.info("OpenGL Version: " + capabilities.version());
 			LOGGER.info("OpenGL Vendor: " + capabilities.vendor());
 			LOGGER.info("OpenGL Renderer: " + capabilities.renderer());
+			LOGGER.info("Runtime Architecture: " + System.getProperty("os.arch"));
+			LOGGER.info("JOGL Profile: " + capabilities.joglProfile());
+			LOGGER.info("Hardware Rasterizer Known: " + capabilities.isHardwareRasterizerKnown());
+			LOGGER.info("Hardware Rasterizer: " + capabilities.isHardwareRasterizer());
 			LOGGER.info("OpenGL Texture Support: " + capabilities.supportsTexture());
 			LOGGER.info("OpenGL FBO Support: " + capabilities.supportsFramebuffer());
 			LOGGER.info("OpenGL Cubemap Support: " + capabilities.supportsCubemap());

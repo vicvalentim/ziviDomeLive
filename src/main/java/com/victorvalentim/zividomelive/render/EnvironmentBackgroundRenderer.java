@@ -1,5 +1,6 @@
 package com.victorvalentim.zividomelive.render;
 
+import com.jogamp.opengl.GL2ES3;
 import com.victorvalentim.zividomelive.render.camera.CubemapFace;
 import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.PApplet;
@@ -7,6 +8,7 @@ import processing.core.PImage;
 import processing.core.PMatrix3D;
 import processing.opengl.PGL;
 import processing.opengl.PGraphicsOpenGL;
+import processing.opengl.PJOGL;
 import processing.opengl.PShader;
 import processing.opengl.Texture;
 
@@ -37,6 +39,8 @@ public final class EnvironmentBackgroundRenderer {
 
 	private final PApplet parent;
 	private final EnvironmentState state;
+	private final NativeFullscreenTriangle fullscreenTriangle =
+	                new NativeFullscreenTriangle();
 	private final IntBuffer savedDepthFunction = IntBuffer.allocate(1);
 	private final IntBuffer savedDepthMask = IntBuffer.allocate(1);
 	private NativeEnvironmentShader cubemapShader;
@@ -309,7 +313,7 @@ public final class EnvironmentBackgroundRenderer {
 
 		try {
 			shader.bindFor(target);
-			pgl.drawArrays(PGL.TRIANGLES, 0, 3);
+			fullscreenTriangle.draw(pgl);
 			renderFailureWarningLogged = false;
 			unavailableWarningLogged = false;
 			return true;
@@ -435,6 +439,8 @@ public final class EnvironmentBackgroundRenderer {
 
 	/** Releases owned shader programs but leaves the shared borrowed state untouched. */
 	public void dispose() {
+	        fullscreenTriangle.dispose(parent);
+
 		if (cubemapShader != null) {
 			cubemapShader.disposeResources();
 			cubemapShader = null;
@@ -446,6 +452,163 @@ public final class EnvironmentBackgroundRenderer {
 		cubemapShaderLoadAttempted = false;
 		standardShaderLoadAttempted = false;
 	}
+
+
+        /**
+         * Owns the empty vertex-array object required by the native fullscreen
+         * triangle used by spherical Environment rendering.
+         *
+         * <p>The fullscreen shader derives all three vertices from
+         * {@code gl_VertexID}; therefore no VBO or vertex attributes are
+         * required. Owning an explicit VAO prevents this pass from depending
+         * on vertex-array state left behind by Processing or the GL driver.</p>
+         */
+        private static final class NativeFullscreenTriangle {
+
+                private static final int GL_VERTEX_ARRAY_BINDING = 0x85B5;
+
+                private final int[] generatedVertexArray = new int[1];
+                private final int[] savedVertexArray = new int[1];
+
+                private Object contextIdentity;
+                private int vertexArrayId;
+
+                private void draw(PGL pgl) {
+                        PJOGL pjogl = requirePjogl(pgl);
+                        GL2ES3 gl = requireGl(pjogl);
+
+                        ensureAllocated(pjogl, gl);
+
+                        savedVertexArray[0] = 0;
+                        gl.glGetIntegerv(
+                                        GL_VERTEX_ARRAY_BINDING,
+                                        savedVertexArray,
+                                        0);
+
+                        try {
+                                gl.glBindVertexArray(vertexArrayId);
+                                pgl.drawArrays(PGL.TRIANGLES, 0, 3);
+                        } finally {
+                                gl.glBindVertexArray(savedVertexArray[0]);
+                        }
+                }
+
+                private void ensureAllocated(PJOGL pjogl, GL2ES3 gl) {
+                        if (vertexArrayId != 0
+                                        && contextIdentity == pjogl.context) {
+                                return;
+                        }
+
+                        /*
+                         * VAO identifiers belong to the context that created
+                         * them. An identifier from a replaced Processing GL
+                         * context must never be reused.
+                         */
+                        abandonContext();
+
+                        generatedVertexArray[0] = 0;
+
+                        gl.glGenVertexArrays(
+                                        1,
+                                        generatedVertexArray,
+                                        0);
+
+                        if (generatedVertexArray[0] == 0) {
+                                throw new IllegalStateException(
+                                                "Could not allocate the Environment "
+                                                                + "fullscreen vertex-array object.");
+                        }
+
+                        vertexArrayId = generatedVertexArray[0];
+                        contextIdentity = pjogl.context;
+                }
+
+                private void dispose(PApplet parent) {
+                        if (vertexArrayId == 0) {
+                                abandonContext();
+                                return;
+                        }
+
+                        if (parent == null
+                                        || !(parent.g instanceof PGraphicsOpenGL graphics)) {
+                                abandonContext();
+                                return;
+                        }
+
+                        PGL activePgl = null;
+
+                        try {
+                                activePgl = graphics.beginPGL();
+
+                                if (!(activePgl instanceof PJOGL pjogl)
+                                                || pjogl.context != contextIdentity) {
+                                        return;
+                                }
+
+                                GL2ES3 gl = requireGl(pjogl);
+
+                                generatedVertexArray[0] = vertexArrayId;
+
+                                gl.glDeleteVertexArrays(
+                                                1,
+                                                generatedVertexArray,
+                                                0);
+
+                        } catch (RuntimeException error) {
+                                /*
+                                 * Processing may already be destroying its GL
+                                 * context. Context destruction reclaims native
+                                 * objects, so shutdown must not fail here.
+                                 */
+                                LOGGER.fine(
+                                                "Environment fullscreen VAO could not "
+                                                                + "be explicitly deleted: "
+                                                                + error.getMessage());
+
+                        } finally {
+                                if (activePgl != null) {
+                                        graphics.endPGL();
+                                }
+
+                                abandonContext();
+                        }
+                }
+
+                private static PJOGL requirePjogl(PGL pgl) {
+                        if (!(pgl instanceof PJOGL pjogl)
+                                        || pjogl.context == null) {
+                                throw new IllegalStateException(
+                                                "Environment fullscreen pass requires "
+                                                                + "an active JOGL context.");
+                        }
+
+                        return pjogl;
+                }
+
+                private static GL2ES3 requireGl(PJOGL pjogl) {
+                        if (pjogl.gl == null) {
+                                throw new IllegalStateException(
+                                                "Environment fullscreen pass has no "
+                                                                + "active OpenGL interface.");
+                        }
+
+                        try {
+                                return pjogl.gl.getGL2ES3();
+                        } catch (RuntimeException error) {
+                                throw new IllegalStateException(
+                                                "Environment fullscreen pass requires "
+                                                                + "a GL2ES3-compatible context.",
+                                                error);
+                        }
+                }
+
+                private void abandonContext() {
+                        vertexArrayId = 0;
+                        contextIdentity = null;
+                        generatedVertexArray[0] = 0;
+                        savedVertexArray[0] = 0;
+                }
+        }
 
 	/** Keeps Processing shader compilation while allowing a native fullscreen draw. */
 	private static final class NativeEnvironmentShader extends PShader {
