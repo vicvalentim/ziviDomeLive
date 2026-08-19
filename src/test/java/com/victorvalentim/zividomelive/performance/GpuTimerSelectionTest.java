@@ -3,6 +3,7 @@ package com.victorvalentim.zividomelive.performance;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GpuTimerSelectionTest {
 
@@ -60,7 +61,7 @@ class GpuTimerSelectionTest {
 	}
 
 	@Test
-	void architectureAwarePolicyUsesElapsedFallbackOnAppleSilicon() {
+	void architectureAwarePolicyUsesElapsedCandidateOnAppleSilicon() {
 		assertEquals(
 				GpuTimerBackend.TIME_ELAPSED_EXCLUSIVE,
 				GpuTimerPolicy.ARCHITECTURE_AWARE.selectBackend(
@@ -70,7 +71,7 @@ class GpuTimerSelectionTest {
 	}
 
 	@Test
-	void architectureAwarePolicyUsesElapsedFallbackOnAppleIntel() {
+	void architectureAwarePolicyUsesElapsedCandidateOnAppleIntel() {
 		assertEquals(
 				GpuTimerBackend.TIME_ELAPSED_EXCLUSIVE,
 				GpuTimerPolicy.ARCHITECTURE_AWARE.selectBackend(
@@ -80,41 +81,21 @@ class GpuTimerSelectionTest {
 	}
 
 	@Test
-	void architectureAwarePolicyDoesNotClaimElapsedFallbackOnLinux() {
+	void architectureAwarePolicyIsCapabilityDrivenOnLinux() {
 		assertEquals(
-				GpuTimerBackend.NONE,
+				GpuTimerBackend.TIME_ELAPSED_EXCLUSIVE,
 				GpuTimerPolicy.ARCHITECTURE_AWARE.selectBackend(
-						GpuTimerArchitecture.LINUX_ARM64,
+						GpuTimerArchitecture.LINUX_X86_64,
 						0,
 						32));
 	}
 
 	@Test
-	void architectureAwarePolicyRejectsAppleIntelWithoutTimerSupport() {
-		assertEquals(
-				GpuTimerBackend.NONE,
-				GpuTimerPolicy.ARCHITECTURE_AWARE.selectBackend(
-						GpuTimerArchitecture.APPLE_INTEL,
-						0,
-						0));
-	}
-
-	@Test
-	void safePolicyNeverClaimsElapsedQueryOwnershipOnAppleSilicon() {
+	void safePolicyNeverClaimsElapsedQueryOwnership() {
 		assertEquals(
 				GpuTimerBackend.NONE,
 				GpuTimerPolicy.SAFE.selectBackend(
 						GpuTimerArchitecture.APPLE_SILICON,
-						0,
-						32));
-	}
-
-	@Test
-	void safePolicyNeverClaimsElapsedQueryOwnershipOnAppleIntel() {
-		assertEquals(
-				GpuTimerBackend.NONE,
-				GpuTimerPolicy.SAFE.selectBackend(
-						GpuTimerArchitecture.APPLE_INTEL,
 						0,
 						32));
 	}
@@ -127,5 +108,11 @@ class GpuTimerSelectionTest {
 						GpuTimerArchitecture.WINDOWS_X86_64,
 						64,
 						32));
+	}
+
+	@Test
+	void architectureAwarePolicyAllowsQualifiedFallbackLayers() {
+		assertTrue(GpuTimerPolicy.ARCHITECTURE_AWARE.allowsElapsedFallback());
+		assertTrue(GpuTimerPolicy.ARCHITECTURE_AWARE.allowsFenceFallback());
 	}
 }

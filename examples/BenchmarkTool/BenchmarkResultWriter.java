@@ -1,3 +1,4 @@
+import com.victorvalentim.zividomelive.performance.GpuTimerBackend;
 import com.victorvalentim.zividomelive.performance.PerformanceMetric;
 import com.victorvalentim.zividomelive.performance.PerformanceSnapshot;
 
@@ -174,6 +175,7 @@ public final class BenchmarkResultWriter {
         field(json, 2, "gpuTimerPolicy", snapshot.getGpuTimerPolicy().name(), true);
         field(json, 2, "gpuTimerBackend", snapshot.getGpuTimerBackend().name(), true);
         field(json, 2, "gpuTimerArchitecture", snapshot.getGpuTimerArchitecture().name(), true);
+        field(json, 2, "gpuMeasurementKind", gpuMeasurementKind(snapshot.getGpuTimerBackend()), true);
         field(json, 2, "gpuTimings", snapshot.hasGpuTimings(), true);
         field(json, 2, "gpuMetric", snapshot.hasGpuTimings() ? "RENDER_PIPELINE" : "NONE", true);
         field(json, 2, "gpuSamples",
@@ -183,6 +185,7 @@ public final class BenchmarkResultWriter {
                 snapshot.getGpuStatistics(PerformanceMetric.RENDER_PIPELINE);
         json.append("  \"gpuPipeline\": {\n");
         field(json, 2, "metric", "RENDER_PIPELINE", true);
+        field(json, 2, "measurementKind", gpuMeasurementKind(snapshot.getGpuTimerBackend()), true);
         field(json, 2, "samples", gpuPipeline.getSampledFrames(), true);
         numberField(json, 2, "averageMs", gpuPipeline.getAverageMilliseconds(), true);
         numberField(json, 2, "p95Ms", gpuPipeline.getP95Milliseconds(), true);
@@ -264,14 +267,12 @@ public final class BenchmarkResultWriter {
         field(json, fieldsIndentation, "glVersion", environment.glVersion, true);
         field(json, fieldsIndentation, "glslVersion", environment.glslVersion, true);
         field(json, fieldsIndentation, "joglProfile", environment.joglProfile, true);
-        field(json, fieldsIndentation, "hardwareRasterizerKnown", environment.hardwareRasterizerKnown, true);
-        field(json, fieldsIndentation, "hardwareRasterizer", environment.hardwareRasterizer, true);
+        field(json, fieldsIndentation, "hardwareRasterizerKnown",
+                environment.hardwareRasterizerKnown, true);
+        field(json, fieldsIndentation, "hardwareRasterizer",
+                environment.hardwareRasterizer, true);
         field(json, fieldsIndentation, "windowWidth", environment.windowWidth, true);
         field(json, fieldsIndentation, "windowHeight", environment.windowHeight, true);
-        field(json, fieldsIndentation, "pixelDensity", environment.pixelDensity, true);
-        field(json, fieldsIndentation, "ndiState", environment.ndiState, true);
-        field(json, fieldsIndentation, "syphonState", environment.syphonState, true);
-        field(json, fieldsIndentation, "spoutState", environment.spoutState, false);field(json, fieldsIndentation, "windowHeight", environment.windowHeight, true);
         field(json, fieldsIndentation, "pixelDensity", environment.pixelDensity, true);
         field(json, fieldsIndentation, "ndiState", environment.ndiState, true);
         field(json, fieldsIndentation, "syphonState", environment.syphonState, true);
@@ -394,6 +395,16 @@ public final class BenchmarkResultWriter {
             json.append('"').append(escape(values.get(index))).append('"');
         }
         json.append(']');
+    }
+
+    private static String gpuMeasurementKind(GpuTimerBackend backend) {
+        if (backend == null || backend == GpuTimerBackend.NONE) {
+            return "NONE";
+        }
+        if (backend == GpuTimerBackend.FENCE_COMPLETION) {
+            return "GPU_COMPLETION_LATENCY";
+        }
+        return "GPU_EXECUTION_TIME";
     }
 
     private static String number(double value) {

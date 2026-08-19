@@ -159,7 +159,8 @@ class PerformanceMonitorTest {
 
 		assertEquals(PerformanceMode.CPU_GPU, snapshot.getRequestedMode());
 		assertEquals(PerformanceMode.CPU, snapshot.getEffectiveMode());
-		assertTrue(snapshot.getDiagnostics().get(0).contains("GPU timer queries"));
+		assertTrue(snapshot.getDiagnostics().stream()
+				.anyMatch(message -> message.contains("qualified GPU measurement backend")));
 		assertThrows(IllegalArgumentException.class,
 				() -> monitor.enable(PerformanceMode.CPU, 1));
 		assertThrows(IllegalArgumentException.class,
