@@ -853,3 +853,19 @@ tasks.register("deployToProcessingSketchbook") {
         }
     }
 }
+
+// BEGIN ZIVIDOMELIVE UTF-8 BUILD GUARD
+// Keep Java/Javadoc encoding deterministic across macOS, Windows and Linux,
+// even when the host locale or IDE launches Gradle with an ASCII default.
+tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
+    options.encoding = "UTF-8"
+}
+
+tasks.withType<org.gradle.api.tasks.javadoc.Javadoc>().configureEach {
+    (options as org.gradle.external.javadoc.StandardJavadocDocletOptions).apply {
+        encoding("UTF-8")
+        docEncoding("UTF-8")
+        charSet("UTF-8")
+    }
+}
+// END ZIVIDOMELIVE UTF-8 BUILD GUARD
