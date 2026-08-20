@@ -60,7 +60,10 @@ class BenchmarkController {
   int configuredMeasurementFrames = 1800;
   int configuredTransitionBaselineFrames = 120;
   int configuredTransitionPostFrames = 240;
+  int configuredBenchmarkFps = 1000;
 
+  boolean configuredBenchmarkNdi;
+  boolean benchmarkOutputDemandActive;
   boolean warmupOnly;
   boolean suiteActive;
 
@@ -766,6 +769,11 @@ class BenchmarkController {
     ViewType view =
         viewFor(mode);
 
+    boolean outputDemand =
+        suiteActive
+            && activeSuiteScenario != null
+            && activeSuiteScenario.initial.outputDemand;
+
     int resolution =
         selectedResolution();
 
@@ -809,8 +817,13 @@ class BenchmarkController {
 
       refreshOutputLabel();
 
+      clearBenchmarkOutputDemand();
       return false;
     }
+
+    applyBenchmarkOutputDemand(
+        view,
+        outputDemand);
 
     currentRun =
         createRunMetadata(
@@ -880,6 +893,7 @@ class BenchmarkController {
   void finishWarmupOnly() {
     dome.disablePerformanceProfiling();
     dome.resetPerformanceStatistics();
+    clearBenchmarkOutputDemand();
 
     state =
         BenchmarkState.READY;
@@ -906,6 +920,8 @@ class BenchmarkController {
 
     refreshEnvironment(
         currentRun);
+
+    clearBenchmarkOutputDemand();
 
     lastRun =
         currentRun;
@@ -957,10 +973,13 @@ class BenchmarkController {
       refreshStaticLabels(
           "STOPPED - warm-up samples discarded");
     }
+
+    clearBenchmarkOutputDemand();
   }
 
   void resetRun() {
     suiteActive = false;
+    clearBenchmarkOutputDemand();
 
     dome.disablePerformanceProfiling();
     dome.resetPerformanceStatistics();
@@ -1012,7 +1031,8 @@ class BenchmarkController {
             resolutions,
             previewToggle.getState(),
             configuredTransitionBaselineFrames,
-            configuredTransitionPostFrames);
+            configuredTransitionPostFrames,
+            ndiToggle.getState());
 
     suiteSession =
         new BenchmarkSuiteResultWriter.Session();
@@ -1187,7 +1207,8 @@ class BenchmarkController {
     outputs.setSyphonView(view);
     outputs.setSpoutView(view);
 
-    return applyOutput(
+    boolean outputsApplied =
+        applyOutput(
             OutputManager.OutputType.NDI,
             endpoint.ndi,
             "ndi")
@@ -1199,6 +1220,12 @@ class BenchmarkController {
             OutputManager.OutputType.SPOUT,
             endpoint.spout,
             "spout");
+
+    applyBenchmarkOutputDemand(
+        view,
+        outputsApplied && endpoint.outputDemand);
+
+    return outputsApplied;
   }
 
   void populateTransitionStatistics() {
@@ -1309,6 +1336,7 @@ class BenchmarkController {
 
   void finishSuite() {
     suiteActive = false;
+    clearBenchmarkOutputDemand();
     activeSuiteScenario = null;
 
     state =
@@ -1473,13 +1501,20 @@ class BenchmarkController {
         resolution;
 
     run.resolutionDomain =
-        outputs.isActive()
+        benchmarkOutputDemandActive
+                || outputs.isActive()
             ? "OUTPUT_BASE"
             : (
                 mode == RenderMode.STANDARD
                     ? "PREVIEW_WINDOW"
                     : "PREVIEW_CUBEMAP"
             );
+
+    run.outputDemand =
+        benchmarkOutputDemandActive;
+
+    run.benchmarkFpsTarget =
+        configuredBenchmarkFps;
 
     run.scene =
         scene.getName();
@@ -2014,6 +2049,24 @@ class BenchmarkController {
     }
   }
 
+  void applyBenchmarkOutputDemand(
+      ViewType view,
+      boolean enabled) {
+
+    benchmarkOutputDemandActive =
+        enabled;
+
+    dome.setPerformanceOutputDemand(
+        enabled
+            ? view
+            : null);
+  }
+
+  void clearBenchmarkOutputDemand() {
+    benchmarkOutputDemandActive = false;
+    dome.setPerformanceOutputDemand(null);
+  }
+
   boolean outputEnabled(
       OutputManager.OutputType type) {
 
@@ -2071,6 +2124,23 @@ class BenchmarkController {
     configuredGpuTimerPolicy =
         configuredGpuTimerPolicy();
 
+    configuredBenchmarkNdi =
+        configuredBoolean(
+            "ZIVIDOME_BENCHMARK_NDI",
+            "zividome.benchmark.ndi",
+            false);
+
+    configuredBenchmarkFps =
+        configuredInteger(
+            "ZIVIDOME_BENCHMARK_FPS",
+            "zividome.benchmark.fps",
+            configuredBenchmarkFps,
+            1,
+            1000);
+
+    app.frameRate(
+        configuredBenchmarkFps);
+
     configuredWarmupFrames =
         configuredInteger(
             "ZIVIDOME_BENCHMARK_WARMUP_FRAMES",
@@ -2120,6 +2190,9 @@ class BenchmarkController {
             "ZIVIDOME_BENCHMARK_PREVIEW",
             "zividome.benchmark.preview",
             previewToggle.getState()));
+
+    ndiToggle.setState(
+        configuredBenchmarkNdi);
 
     warmupFramesInput.setValue(
         configuredWarmupFrames);

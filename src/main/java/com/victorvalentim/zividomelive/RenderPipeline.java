@@ -40,7 +40,7 @@ final class RenderPipeline {
 	 *   <li>Apply any pending output-resolution change.</li>
 	 *   <li>Ensure preview FBOs are valid for the current window size.</li>
 	 *   <li>Resolve requirements and capture at most one master cubemap.</li>
-	 *   <li>Render and submit active external outputs.</li>
+	 *   <li>Render required output-resolution passes and submit only active external outputs.</li>
 	 *   <li>Render preview passes, reusing completed output projections when available.</li>
 	 *   <li>Composite the preview FBO onto the window.</li>
 	 *   <li>Optionally draw the floating fisheye thumbnail.</li>
@@ -78,11 +78,13 @@ final class RenderPipeline {
 			runtime.captureMasterCubemap(preview, output);
 
 			OutputManager outputManager = runtime.getOutputManager();
-			if (outputManager != null && outputManager.isActive()) {
+			if (runtime.hasOutputRenderDemand()) {
 				long outputStarted = profiling ? monitor.start() : 0L;
 				try {
 					runtime.renderOutputPipeline(output);
-					outputManager.sendOutput(finalFrameViews);
+					if (outputManager != null && outputManager.isActive()) {
+						outputManager.sendOutput(finalFrameViews);
+					}
 				} finally {
 					if (profiling) monitor.record(PerformanceMetric.OUTPUT_PIPELINE, outputStarted);
 				}

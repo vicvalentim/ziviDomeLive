@@ -33,7 +33,6 @@ void setup() {
 
   ziviDome = new ziviDomeLive(this);
   ziviDome.setup();
-  ziviDome.setTargetFrameRate(60);
 
   benchmarkScenes = createBenchmarkScenes(ziviDome);
   sceneManager = new SceneManager();

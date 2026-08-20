@@ -399,6 +399,14 @@ tasks.register<Exec>("benchmarkSuite") {
             providers.gradleProperty("benchmarkPreview").getOrElse("false")
         )
         environment(
+            "ZIVIDOME_BENCHMARK_NDI",
+            providers.gradleProperty("benchmarkNdi").getOrElse("false")
+        )
+        environment(
+            "ZIVIDOME_BENCHMARK_FPS",
+            providers.gradleProperty("benchmarkFps").getOrElse("1000")
+        )
+        environment(
             "ZIVIDOME_BENCHMARK_GPU",
             providers.gradleProperty("benchmarkGpu").getOrElse("false")
         )

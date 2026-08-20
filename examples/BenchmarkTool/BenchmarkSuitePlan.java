@@ -42,6 +42,27 @@ public final class BenchmarkSuitePlan {
             int transitionBaselineFrames,
             int transitionPostFrames) {
 
+        return create(
+                suite,
+                scene,
+                selectedResolution,
+                resolutions,
+                preview,
+                transitionBaselineFrames,
+                transitionPostFrames,
+                false);
+    }
+
+    public static List<Scenario> create(
+            Suite suite,
+            String scene,
+            int selectedResolution,
+            int[] resolutions,
+            boolean preview,
+            int transitionBaselineFrames,
+            int transitionPostFrames,
+            boolean benchmarkNdi) {
+
         if (suite == null) {
             throw new IllegalArgumentException("Suite is required.");
         }
@@ -80,14 +101,16 @@ public final class BenchmarkSuitePlan {
                     scenarios,
                     scene,
                     selectedResolution,
-                    preview);
+                    preview,
+                    benchmarkNdi);
 
         } else if (suite == Suite.MATRIX) {
             addMatrix(
                     scenarios,
                     scene,
                     selectedResolution,
-                    safeResolutions);
+                    safeResolutions,
+                    benchmarkNdi);
 
         } else if (suite == Suite.TRANSITIONS) {
             addTransitions(
@@ -95,21 +118,24 @@ public final class BenchmarkSuitePlan {
                     scene,
                     selectedResolution,
                     transitionBaselineFrames,
-                    transitionPostFrames);
+                    transitionPostFrames,
+                    benchmarkNdi);
 
         } else {
             addMatrix(
                     scenarios,
                     scene,
                     selectedResolution,
-                    safeResolutions);
+                    safeResolutions,
+                    benchmarkNdi);
 
             addTransitions(
                     scenarios,
                     scene,
                     selectedResolution,
                     transitionBaselineFrames,
-                    transitionPostFrames);
+                    transitionPostFrames,
+                    benchmarkNdi);
         }
 
         return Collections.unmodifiableList(scenarios);
@@ -119,7 +145,8 @@ public final class BenchmarkSuitePlan {
             List<Scenario> scenarios,
             String scene,
             int resolution,
-            boolean preview) {
+            boolean preview,
+            boolean benchmarkNdi) {
 
         for (String mode : List.of(
                 "STANDARD",
@@ -135,7 +162,8 @@ public final class BenchmarkSuitePlan {
                                     resolution,
                                     scene,
                                     preview,
-                                    false,
+                                    !mode.equals("STANDARD") || benchmarkNdi,
+                                    benchmarkNdi,
                                     false,
                                     false)));
         }
@@ -144,21 +172,20 @@ public final class BenchmarkSuitePlan {
     /**
      * Adds the deterministic output-resolution matrix.
      *
-     * <p>STANDARD_WINDOW remains a Processing window/preview-domain baseline.
-     * Spherical resolution buckets deliberately enable NDI so the ziviDomeLive
-     * runtime must instantiate and render the output-resolution spherical
-     * pipeline rather than silently using the preview cubemap.</p>
+     * <p>STANDARD_WINDOW remains a Processing window/preview-domain baseline unless NDI is
+     * explicitly requested. Spherical resolution buckets always carry an internal output demand
+     * so the selected resolution participates in the render graph without requiring an external
+     * transport backend.</p>
      *
-     * <p>NDI is used because it is the cross-platform output backend shared by
-     * macOS, Windows, and Linux. Preview remains disabled for spherical matrix
-     * scenarios so preview-specific rendering does not add another consumer to
-     * the workload.</p>
+     * <p>NDI is opt-in. When enabled, it is layered on top of the same output-resolution workload
+     * instead of being used as the mechanism that creates that workload.</p>
      */
     private static void addMatrix(
             List<Scenario> scenarios,
             String scene,
             int selectedResolution,
-            int[] resolutions) {
+            int[] resolutions,
+            boolean benchmarkNdi) {
 
         /*
          * STANDARD does not derive its raster dimensions from the spherical
@@ -174,15 +201,14 @@ public final class BenchmarkSuitePlan {
                                 selectedResolution,
                                 scene,
                                 false,
-                                false,
+                                benchmarkNdi,
+                                benchmarkNdi,
                                 false,
                                 false)));
 
         /*
-         * A spherical MATRIX scenario must exercise OUTPUT_BASE.
-         *
-         * Enabling NDI creates a real cross-platform output demand, causing the
-         * selected output resolution to participate in the render graph.
+         * Spherical MATRIX scenarios always exercise OUTPUT_BASE through the
+         * internal benchmark demand. NDI remains an independent opt-in cost.
          */
         for (int resolution : resolutions) {
             for (String mode : List.of(
@@ -199,6 +225,7 @@ public final class BenchmarkSuitePlan {
                                         scene,
                                         false,
                                         true,
+                                        benchmarkNdi,
                                         false,
                                         false)));
             }
@@ -210,12 +237,12 @@ public final class BenchmarkSuitePlan {
             String scene,
             int selectedResolution,
             int baselineFrames,
-            int postFrames) {
+            int postFrames,
+            boolean benchmarkNdi) {
 
         /*
-         * Resolution transitions must exercise the output-resolution domain.
-         * NDI remains enabled on both sides so the only intentional transition
-         * here is 2048 -> 4096.
+         * Resolution transitions keep the output-resolution render graph active on both sides,
+         * isolating the requested 2048 -> 4096 resource transition from external transport cost.
          */
         scenarios.add(
                 Scenario.transition(
@@ -227,6 +254,7 @@ public final class BenchmarkSuitePlan {
                                 false,
                                 true,
                                 false,
+                                false,
                                 false),
                         new Endpoint(
                                 "DOMEMASTER",
@@ -234,6 +262,7 @@ public final class BenchmarkSuitePlan {
                                 scene,
                                 false,
                                 true,
+                                false,
                                 false,
                                 false),
                         baselineFrames,
@@ -249,11 +278,13 @@ public final class BenchmarkSuitePlan {
                                 false,
                                 false,
                                 false,
+                                false,
                                 false),
                         new Endpoint(
                                 "DOMEMASTER",
                                 selectedResolution,
                                 scene,
+                                false,
                                 false,
                                 false,
                                 false,
@@ -271,12 +302,14 @@ public final class BenchmarkSuitePlan {
                                 false,
                                 false,
                                 false,
+                                false,
                                 false),
                         new Endpoint(
                                 "DOMEMASTER",
                                 selectedResolution,
                                 scene,
                                 true,
+                                false,
                                 false,
                                 false,
                                 false),
@@ -293,6 +326,7 @@ public final class BenchmarkSuitePlan {
                                 false,
                                 false,
                                 false,
+                                false,
                                 false),
                         new Endpoint(
                                 "DOMEMASTER",
@@ -301,31 +335,40 @@ public final class BenchmarkSuitePlan {
                                 false,
                                 false,
                                 false,
+                                false,
                                 false),
                         baselineFrames,
                         postFrames));
 
-        scenarios.add(
-                Scenario.transition(
-                        "NDI_OFF_TO_ON",
-                        new Endpoint(
-                                "DOMEMASTER",
-                                selectedResolution,
-                                scene,
-                                false,
-                                false,
-                                false,
-                                false),
-                        new Endpoint(
-                                "DOMEMASTER",
-                                selectedResolution,
-                                scene,
-                                false,
-                                true,
-                                false,
-                                false),
-                        baselineFrames,
-                        postFrames));
+        if (benchmarkNdi) {
+            /*
+             * Keep OUTPUT_BASE active before and after the transition so NDI_OFF_TO_ON isolates
+             * transport activation instead of also introducing the high-resolution render graph.
+             */
+            scenarios.add(
+                    Scenario.transition(
+                            "NDI_OFF_TO_ON",
+                            new Endpoint(
+                                    "DOMEMASTER",
+                                    selectedResolution,
+                                    scene,
+                                    false,
+                                    true,
+                                    false,
+                                    false,
+                                    false),
+                            new Endpoint(
+                                    "DOMEMASTER",
+                                    selectedResolution,
+                                    scene,
+                                    false,
+                                    true,
+                                    true,
+                                    false,
+                                    false),
+                            baselineFrames,
+                            postFrames));
+        }
     }
 
     public static final class Endpoint {
@@ -333,6 +376,7 @@ public final class BenchmarkSuitePlan {
         public final int resolution;
         public final String scene;
         public final boolean preview;
+        public final boolean outputDemand;
         public final boolean ndi;
         public final boolean syphon;
         public final boolean spout;
@@ -342,6 +386,7 @@ public final class BenchmarkSuitePlan {
                 int resolution,
                 String scene,
                 boolean preview,
+                boolean outputDemand,
                 boolean ndi,
                 boolean syphon,
                 boolean spout) {
@@ -365,6 +410,7 @@ public final class BenchmarkSuitePlan {
             this.resolution = resolution;
             this.scene = scene;
             this.preview = preview;
+            this.outputDemand = outputDemand;
             this.ndi = ndi;
             this.syphon = syphon;
             this.spout = spout;
@@ -375,6 +421,7 @@ public final class BenchmarkSuitePlan {
                     + " " + resolution
                     + " " + scene
                     + " preview=" + preview
+                    + " outputDemand=" + outputDemand
                     + " ndi=" + ndi
                     + " syphon=" + syphon
                     + " spout=" + spout;

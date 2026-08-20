@@ -32,6 +32,8 @@ public final class BenchmarkResultWriter {
         public String view = "unknown";
         public int resolution;
         public String resolutionDomain = "unknown";
+        public boolean outputDemand;
+        public int benchmarkFpsTarget;
         public String scene = "unknown";
         public boolean preview;
         public boolean ndiRequested;
@@ -146,6 +148,8 @@ public final class BenchmarkResultWriter {
         field(json, 2, "view", run.view, true);
         field(json, 2, "resolution", run.resolution, true);
         field(json, 2, "resolutionDomain", run.resolutionDomain, true);
+        field(json, 2, "outputDemand", run.outputDemand, true);
+        field(json, 2, "benchmarkFpsTarget", run.benchmarkFpsTarget, true);
         field(json, 2, "scene", run.scene, true);
         field(json, 2, "preview", run.preview, true);
         field(json, 2, "ndi", run.ndiRequested, true);

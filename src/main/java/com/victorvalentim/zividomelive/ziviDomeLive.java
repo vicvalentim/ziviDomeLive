@@ -139,6 +139,7 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	private ViewType currentView = ViewType.DOMEMASTER;
+	private ViewType performanceOutputDemand;
 	private RenderMode renderMode = RenderMode.FULL;
 	private StandardOutputAspectMode standardOutputAspectMode = StandardOutputAspectMode.AUTO;
 	private boolean sphericalCaptureActive = false;
@@ -836,26 +837,43 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Computes the external-output requirements for the current frame.
+	 * Computes output-resolution requirements for the current frame.
 	 *
-	 * @return cached requirements for all enabled external-output routes
+	 * <p>Enabled external routes and the optional performance-qualification demand are merged into
+	 * one minimal dependency set. The qualification demand never enables an external transport.</p>
+	 *
+	 * @return cached requirements for active output-resolution consumers
 	 */
 	RenderRequirementsPolicy.Requirements computeOutputRequirements() {
 		boolean outputsActive = outputManager != null && outputManager.isActive();
+		ViewType qualificationView = performanceMonitor.isEnabled()
+				? performanceOutputDemand
+				: null;
+		boolean qualificationActive = qualificationView != null;
 		return RenderRequirementsPolicy.forOutputs(
-				outputsActive,
-				outputsActive && outputManager.requiresView(ViewType.DOMEMASTER),
-				outputsActive && outputManager.requiresView(ViewType.EQUIRECTANGULAR),
-				outputsActive && outputManager.requiresView(ViewType.SKYBOX),
-				outputsActive && outputManager.requiresView(ViewType.STANDARD)
+				outputsActive || qualificationActive,
+				(outputsActive && outputManager.requiresView(ViewType.DOMEMASTER))
+						|| qualificationView == ViewType.DOMEMASTER,
+				(outputsActive && outputManager.requiresView(ViewType.EQUIRECTANGULAR))
+						|| qualificationView == ViewType.EQUIRECTANGULAR,
+				(outputsActive && outputManager.requiresView(ViewType.SKYBOX))
+						|| qualificationView == ViewType.SKYBOX,
+				(outputsActive && outputManager.requiresView(ViewType.STANDARD))
+						|| qualificationView == ViewType.STANDARD
 		);
+	}
+
+	boolean hasOutputRenderDemand() {
+		OutputManager manager = getOutputManager();
+		return (manager != null && manager.isActive())
+				|| (performanceMonitor.isEnabled() && performanceOutputDemand != null);
 	}
 
 	/**
 	 * Captures at most one cubemap for the current frame.
 	 *
-	 * <p>If an active output requires cubemap data, the output-resolution cubemap becomes the
-	 * master source for both output and preview projections. Otherwise, the preview-resolution
+	 * <p>If an output-resolution consumer requires cubemap data, the output-resolution cubemap
+	 * becomes the master source for both output and preview projections. Otherwise, the preview-resolution
 	 * cubemap is captured only when the window preview or floating fisheye thumbnail needs it.</p>
 	 *
 	 * @param preview preview requirements for the current frame
@@ -942,9 +960,10 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Renders only the high-resolution passes required by enabled external outputs.
+	 * Renders the high-resolution passes requested by the resolved output requirements.
 	 *
-	 * <p>All FBOs produced here belong to the output pipeline ({@code outputResolution})
+	 * <p>Requirements may originate from enabled external outputs or from the experimental
+	 * performance-qualification demand. All FBOs produced here belong to the output pipeline ({@code outputResolution})
 	 * and remain offscreen. They are never composited onto the Processing window. After this
 	 * method returns, all relevant {@code endDraw()} calls have completed and the FBOs are
 	 * ready for
@@ -959,8 +978,7 @@ public class ziviDomeLive implements PConstants {
 	 * one cubemap capture → one equirectangular samplerCube pass and one fisheye
 	 * samplerCube pass.</p>
 	 *
-	 * <p>Returns immediately when {@code outputManager} is {@code null} or inactive.
-	 * Must be called from the Processing draw thread.</p>
+	 * <p>Must be called from the Processing draw thread after requirements have been resolved.</p>
 	 */
 	void renderOutputPipeline(RenderRequirementsPolicy.Requirements output) {
 		if (output.needsCubemapSource() && !hasMasterNativeCubemap(output)) {
@@ -1898,6 +1916,23 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
+	 * Configures an offscreen output-resolution view for performance qualification.
+	 *
+	 * <p>This demand is honored only while performance profiling is enabled. It renders the
+	 * requested high-resolution output dependency chain without enabling, disabling, or sending
+	 * NDI, Syphon, or Spout. Passing {@code null} clears the qualification demand.</p>
+	 *
+	 * <p>This is an experimental benchmarking hook; normal applications should route output through
+	 * {@link OutputManager}.</p>
+	 *
+	 * @param view output-resolution view to render during profiling, or {@code null} to clear
+	 * @since 2.0.0
+	 */
+	public void setPerformanceOutputDemand(ViewType view) {
+		performanceOutputDemand = view;
+	}
+
+	/**
 	 * Checks if output is enabled.
 	 *
 	 * @return true if output is enabled, false otherwise
@@ -2238,6 +2273,7 @@ public class ziviDomeLive implements PConstants {
 	public void disablePerformanceProfiling() {
 		gpuPerformanceTimer.stop(isOnRenderThread());
 		performanceMonitor.disable();
+		performanceOutputDemand = null;
 	}
 
 	/**
