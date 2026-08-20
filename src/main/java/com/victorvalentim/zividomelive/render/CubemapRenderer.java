@@ -37,6 +37,7 @@ public class CubemapRenderer implements PConstants {
     private PGraphicsOpenGL nativeCaptureGraphics;
     private CubemapTarget nativeCubemapTarget;
     private final EnvironmentBackgroundRenderer environmentBackgroundRenderer;
+    private final SphericalEnvironmentNativePass sphericalEnvironmentPass;
     private final EnvironmentState environmentState;
     private final boolean ownsEnvironmentState;
     private int resolution;
@@ -88,6 +89,8 @@ public class CubemapRenderer implements PConstants {
         this.environmentState = environmentState;
         this.environmentBackgroundRenderer =
                 new EnvironmentBackgroundRenderer(parent, environmentState);
+        this.sphericalEnvironmentPass =
+                new SphericalEnvironmentNativePass(parent, environmentState);
         this.ownsEnvironmentState = ownsEnvironmentState;
         initializeNativeCubemapTarget();
         cachedNearPlane = DEFAULT_NEAR_PLANE;
@@ -346,7 +349,7 @@ public class CubemapRenderer implements PConstants {
 
             captureGraphics.noLights();
             captureGraphics.flush();
-            environmentBackgroundRenderer.renderScratchCubemapFace(
+            sphericalEnvironmentPass.renderScratchCubemapFace(
                     captureGraphics,
                     face,
                     environmentOrientationMatrix);
@@ -513,6 +516,7 @@ public class CubemapRenderer implements PConstants {
      * Disposes native cubemap capture resources.
      */
     public void dispose() {
+        sphericalEnvironmentPass.dispose();
         environmentBackgroundRenderer.dispose();
         if (ownsEnvironmentState) {
             environmentBackgroundRenderer.clear();
