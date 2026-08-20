@@ -33,9 +33,9 @@ class SphericalShaderResourcesTest {
 				() -> assertShader(environment.resolve(
 						"standard_equirectangular_background.frag"), true, "sampler2D"),
 				() -> assertNativeShader(environment.resolve(
-						"equirectangular_background.vert"), null),
+						"spherical_equirectangular_background.vert"), null),
 				() -> assertNativeShader(environment.resolve(
-						"equirectangular_background.frag"), "sampler2D"));
+						"spherical_equirectangular_background.frag"), "sampler2D"));
 	}
 
 	@Test
