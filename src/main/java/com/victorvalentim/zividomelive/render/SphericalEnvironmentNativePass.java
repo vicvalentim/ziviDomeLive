@@ -237,6 +237,69 @@ final class SphericalEnvironmentNativePass {
         }
     }
 
+    /**
+     * Compatibility entry point for callers that already own an active PGL lifecycle.
+     *
+     * <p>The production cubemap path uses {@link #renderScratchCubemapFace}; this overload
+     * exists only so the established public {@link EnvironmentBackgroundRenderer} surface can
+     * delegate spherical rendering without reintroducing the former PShader/native hybrid.</p>
+     */
+    boolean renderCubemapFace(
+            PGraphicsOpenGL target,
+            PGL pgl,
+            CubemapFace face,
+            PMatrix3D orientationMatrix) {
+        if (!state.isVisible() || !state.hasSource()) {
+            return false;
+        }
+        if (target == null || pgl == null || face == null) {
+            warnUnavailable("spherical face");
+            return false;
+        }
+
+        try {
+            PImage source = state.getLdrEquirectangularSource();
+            Texture texture = target.getTexture(source);
+            if (texture == null || !texture.available()) {
+                throw new IllegalStateException(
+                        "Environment source has no available Processing OpenGL texture.");
+            }
+            if (texture.glTarget != PGL.TEXTURE_2D) {
+                throw new IllegalStateException(
+                        "Environment source must resolve to GL_TEXTURE_2D, found target="
+                                + texture.glTarget);
+            }
+
+            float maxU = texture.maxTexcoordU();
+            float maxV = texture.maxTexcoordV();
+            float scaleU = texture.invertedX() ? -maxU : maxU;
+            float scaleV = texture.invertedY() ? -maxV : maxV;
+            float offsetU = texture.invertedX() ? maxU : 0.0f;
+            float offsetV = texture.invertedY() ? maxV : 0.0f;
+            PMatrix3D effectiveOrientation = orientationMatrix == null
+                    ? new PMatrix3D()
+                    : orientationMatrix;
+
+            renderNative(
+                    target,
+                    pgl,
+                    texture,
+                    face,
+                    effectiveOrientation,
+                    scaleU,
+                    scaleV,
+                    offsetU,
+                    offsetV);
+
+            renderFailureWarningLogged = false;
+            unavailableWarningLogged = false;
+            return true;
+        } catch (RuntimeException error) {
+            warnRenderFailure(error);
+            return false;
+        }
+    }
+
     private void renderNative(
             PGraphicsOpenGL target,
             PGL pgl,

@@ -36,7 +36,6 @@ public class CubemapRenderer implements PConstants {
 
     private PGraphicsOpenGL nativeCaptureGraphics;
     private CubemapTarget nativeCubemapTarget;
-    private final EnvironmentBackgroundRenderer environmentBackgroundRenderer;
     private final SphericalEnvironmentNativePass sphericalEnvironmentPass;
     private final EnvironmentState environmentState;
     private final boolean ownsEnvironmentState;
@@ -87,8 +86,6 @@ public class CubemapRenderer implements PConstants {
         this.parent = parent;
         this.resolution = initialResolution;
         this.environmentState = environmentState;
-        this.environmentBackgroundRenderer =
-                new EnvironmentBackgroundRenderer(parent, environmentState);
         this.sphericalEnvironmentPass =
                 new SphericalEnvironmentNativePass(parent, environmentState);
         this.ownsEnvironmentState = ownsEnvironmentState;
@@ -421,12 +418,12 @@ public class CubemapRenderer implements PConstants {
      * @param image Processing image, or {@code null} to clear the environment
      */
     public void setEquirectangularBackground(PImage image) {
-        environmentBackgroundRenderer.setEquirectangularImage(image);
+        environmentState.setLdrEquirectangularSource(image);
     }
 
     /** Clears the configured environment background. */
     public void clearEnvironmentBackground() {
-        environmentBackgroundRenderer.clear();
+        environmentState.clearSource();
     }
 
     /**
@@ -435,7 +432,7 @@ public class CubemapRenderer implements PConstants {
      * @return {@code true} when an equirectangular background image is available
      */
     public boolean hasEnvironmentBackground() {
-        return environmentBackgroundRenderer.hasEquirectangularImage();
+        return environmentState.hasSource();
     }
 
     /**
@@ -444,7 +441,7 @@ public class CubemapRenderer implements PConstants {
      * @param visible {@code true} to draw the background
      */
     public void setEnvironmentBackgroundVisible(boolean visible) {
-        environmentBackgroundRenderer.setVisible(visible);
+        environmentState.setVisible(visible);
     }
 
     /**
@@ -453,7 +450,7 @@ public class CubemapRenderer implements PConstants {
      * @return {@code true} when visible
      */
     public boolean isEnvironmentBackgroundVisible() {
-        return environmentBackgroundRenderer.isVisible();
+        return environmentState.isVisible();
     }
 
     /**
@@ -462,7 +459,7 @@ public class CubemapRenderer implements PConstants {
      * @param intensity non-negative multiplier
      */
     public void setEnvironmentIntensity(float intensity) {
-        environmentBackgroundRenderer.setIntensity(intensity);
+        environmentState.setIntensity(intensity);
     }
 
     /**
@@ -471,7 +468,7 @@ public class CubemapRenderer implements PConstants {
      * @return non-negative multiplier
      */
     public float getEnvironmentIntensity() {
-        return environmentBackgroundRenderer.getIntensity();
+        return environmentState.getIntensity();
     }
 
     /**
@@ -480,7 +477,7 @@ public class CubemapRenderer implements PConstants {
      * @param yawOffset rotation offset, in radians, applied to the source longitude lookup
      */
     public void setEnvironmentYawOffset(float yawOffset) {
-        environmentBackgroundRenderer.setYawOffset(yawOffset);
+        environmentState.setYawOffset(yawOffset);
     }
 
     /**
@@ -489,7 +486,7 @@ public class CubemapRenderer implements PConstants {
      * @return yaw offset in radians
      */
     public float getEnvironmentYawOffset() {
-        return environmentBackgroundRenderer.getYawOffset();
+        return environmentState.getYawOffset();
     }
 
     /**
@@ -497,7 +494,7 @@ public class CubemapRenderer implements PConstants {
      * @return logical Environment state
      */
     public EnvironmentState getEnvironmentState() {
-        return environmentBackgroundRenderer.getEnvironmentState();
+        return environmentState;
     }
 
     static Quaternion composeEnvironmentOrientation(
@@ -517,9 +514,8 @@ public class CubemapRenderer implements PConstants {
      */
     public void dispose() {
         sphericalEnvironmentPass.dispose();
-        environmentBackgroundRenderer.dispose();
         if (ownsEnvironmentState) {
-            environmentBackgroundRenderer.clear();
+            environmentState.clearSource();
         }
         disposeNativeCaptureGraphics();
         disposeNativeCubemapTarget();

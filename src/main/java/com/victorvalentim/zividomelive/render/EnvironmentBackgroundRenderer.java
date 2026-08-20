@@ -1,6 +1,5 @@
 package com.victorvalentim.zividomelive.render;
 
-import com.jogamp.opengl.GL2ES3;
 import com.victorvalentim.zividomelive.render.camera.CubemapFace;
 import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.PApplet;
@@ -8,7 +7,6 @@ import processing.core.PImage;
 import processing.core.PMatrix3D;
 import processing.opengl.PGL;
 import processing.opengl.PGraphicsOpenGL;
-import processing.opengl.PJOGL;
 import processing.opengl.PShader;
 import processing.opengl.Texture;
 
@@ -17,35 +15,27 @@ import java.util.Objects;
 import java.util.logging.Logger;
 
 /**
- * Draws a shared LDR equirectangular environment as an infinite visual background.
+ * Draws the LDR equirectangular Environment background for the Standard domain.
  *
- * <p>The renderer owns shader programs only. Its {@link EnvironmentState}, source
- * {@link PImage}, and Processing-managed {@link Texture} are borrowed. Spherical capture uses
- * a fullscreen pass; Standard draws an observer-centred sky sphere. Both run after scene
- * rendering, so scene {@code background()} calls survive while foreground depth remains
- * authoritative.</p>
+ * <p>The renderer borrows its {@link EnvironmentState}, source {@link PImage}, and
+ * Processing-managed {@link Texture}. Production spherical capture is implemented
+ * independently by {@link SphericalEnvironmentNativePass}. The spherical methods retained
+ * here are compatibility shims only and delegate to that native pass.</p>
  */
 public final class EnvironmentBackgroundRenderer {
 	private static final Logger LOGGER = LogManager.getLogger();
 	private static final int GL_DEPTH_FUNC = 0x0B74;
-	private static final String FULLSCREEN_BACKGROUND_VERT =
-			"data/shaders/environment/equirectangular_background.vert";
 	private static final String STANDARD_BACKGROUND_VERT =
 			"data/shaders/environment/standard_equirectangular_background.vert";
-	private static final String CUBEMAP_BACKGROUND_FRAG =
-			"data/shaders/environment/equirectangular_background.frag";
 	private static final String STANDARD_BACKGROUND_FRAG =
 			"data/shaders/environment/standard_equirectangular_background.frag";
 
 	private final PApplet parent;
 	private final EnvironmentState state;
-	private final NativeFullscreenTriangle fullscreenTriangle =
-	                new NativeFullscreenTriangle();
 	private final IntBuffer savedDepthFunction = IntBuffer.allocate(1);
 	private final IntBuffer savedDepthMask = IntBuffer.allocate(1);
-	private NativeEnvironmentShader cubemapShader;
 	private NativeEnvironmentShader standardShader;
-	private boolean cubemapShaderLoadAttempted;
+	private SphericalEnvironmentNativePass sphericalCompatibilityPass;
 	private boolean standardShaderLoadAttempted;
 	private boolean unavailableWarningLogged;
 	private boolean renderFailureWarningLogged;
@@ -150,7 +140,12 @@ public final class EnvironmentBackgroundRenderer {
 	}
 
 	/**
-	 * Compatibility entry point that derives the spherical matrix from a quaternion.
+	 * Compatibility entry point for spherical Environment rendering.
+	 *
+	 * <p>Production {@link CubemapRenderer} does not use this path. The method is retained
+	 * to preserve the established public surface and delegates to the same fully native
+	 * spherical pass used by the production cubemap pipeline.</p>
+	 *
 	 * @param target active Processing target
 	 * @param pgl already-active PGL context
 	 * @param face canonical cubemap face
@@ -168,58 +163,25 @@ public final class EnvironmentBackgroundRenderer {
 		Quaternion environmentOrientation = spherical
 				.multiply(state.getSceneCameraOrientation())
 				.normalize();
-		PMatrix3D orientationMatrix = environmentOrientation.toMatrix();
-		return renderCubemapFace(target, pgl, face, orientationMatrix);
+		return sphericalCompatibilityPass().renderCubemapFace(
+				target,
+				pgl,
+				face,
+				environmentOrientation.toMatrix());
 	}
 
-	/** Draws one spherical face while the caller owns the Processing draw lifecycle. */
+	/**
+	 * Compatibility entry point retained for package-local integrations.
+	 * Production {@link CubemapRenderer} calls {@link SphericalEnvironmentNativePass} directly.
+	 */
 	boolean renderScratchCubemapFace(
 			PGraphicsOpenGL target,
 			CubemapFace face,
 			PMatrix3D orientationMatrix) {
-		if (!isRenderable()) {
-			return false;
-		}
-		NativeEnvironmentShader shader = cubemapShader();
-		if (target == null || face == null || shader == null) {
-			warnUnavailable("spherical face");
-			return false;
-		}
-
-		PGL pgl = target.beginPGL();
-		try {
-			return renderCubemapFace(target, pgl, face, orientationMatrix);
-		} finally {
-			target.endPGL();
-		}
-	}
-
-	private boolean renderCubemapFace(
-			PGraphicsOpenGL target,
-			PGL pgl,
-			CubemapFace face,
-			PMatrix3D orientationMatrix) {
-		if (!isRenderable()) {
-			return false;
-		}
-		NativeEnvironmentShader shader = cubemapShader();
-		if (target == null || pgl == null || face == null || shader == null) {
-			warnUnavailable("spherical face");
-			return false;
-		}
-
-		try {
-			PMatrix3D effectiveOrientation = orientationMatrix == null
-					? new PMatrix3D()
-					: orientationMatrix;
-			shader.set("faceResolution", target.width, target.height);
-			shader.set("faceIndex", face.index());
-			shader.set("environmentRotation", effectiveOrientation);
-			return renderFullscreenBackground(target, pgl, shader);
-		} catch (RuntimeException error) {
-			warnRenderFailure(error);
-			return false;
-		}
+		return sphericalCompatibilityPass().renderScratchCubemapFace(
+				target,
+				face,
+				orientationMatrix);
 	}
 
 	/**
@@ -304,27 +266,6 @@ public final class EnvironmentBackgroundRenderer {
 		}
 	}
 
-	private boolean renderFullscreenBackground(
-			PGraphicsOpenGL target,
-			PGL pgl,
-			NativeEnvironmentShader shader) {
-		configureEnvironmentSampler(target, shader);
-		snapshotAndConfigureBackgroundState(pgl);
-
-		try {
-			shader.bindFor(target);
-			fullscreenTriangle.draw(pgl);
-			renderFailureWarningLogged = false;
-			unavailableWarningLogged = false;
-			return true;
-		} finally {
-			if (shader.bound()) {
-				shader.unbind();
-			}
-			restoreBackgroundState(pgl);
-		}
-	}
-
 	private void configureEnvironmentSampler(
 			PGraphicsOpenGL target,
 			NativeEnvironmentShader shader) {
@@ -384,24 +325,12 @@ public final class EnvironmentBackgroundRenderer {
 		return state.isVisible() && state.hasSource();
 	}
 
-	private NativeEnvironmentShader cubemapShader() {
-		if (!cubemapShaderLoadAttempted) {
-			cubemapShaderLoadAttempted = true;
-			cubemapShader = loadShader(CUBEMAP_BACKGROUND_FRAG);
-		}
-		return cubemapShader;
-	}
-
 	private NativeEnvironmentShader standardShader() {
 		if (!standardShaderLoadAttempted) {
 			standardShaderLoadAttempted = true;
 			standardShader = loadShader(STANDARD_BACKGROUND_VERT, STANDARD_BACKGROUND_FRAG);
 		}
 		return standardShader;
-	}
-
-	private NativeEnvironmentShader loadShader(String fragmentPath) {
-		return loadShader(FULLSCREEN_BACKGROUND_VERT, fragmentPath);
 	}
 
 	private NativeEnvironmentShader loadShader(String vertexPath, String fragmentPath) {
@@ -412,6 +341,14 @@ public final class EnvironmentBackgroundRenderer {
 			unavailableWarningLogged = true;
 			return null;
 		}
+	}
+
+	private SphericalEnvironmentNativePass sphericalCompatibilityPass() {
+		if (sphericalCompatibilityPass == null) {
+			sphericalCompatibilityPass =
+					new SphericalEnvironmentNativePass(parent, state);
+		}
+		return sphericalCompatibilityPass;
 	}
 
 	private void warnUnavailable(String pass) {
@@ -437,188 +374,25 @@ public final class EnvironmentBackgroundRenderer {
 		}
 	}
 
-	/** Releases owned shader programs but leaves the shared borrowed state untouched. */
+	/** Releases owned resources but leaves the shared borrowed state untouched. */
 	public void dispose() {
-	        fullscreenTriangle.dispose(parent);
-
-		if (cubemapShader != null) {
-			cubemapShader.disposeResources();
-			cubemapShader = null;
-		}
 		if (standardShader != null) {
 			standardShader.disposeResources();
 			standardShader = null;
 		}
-		cubemapShaderLoadAttempted = false;
 		standardShaderLoadAttempted = false;
+
+		if (sphericalCompatibilityPass != null) {
+			sphericalCompatibilityPass.dispose();
+			sphericalCompatibilityPass = null;
+		}
 	}
 
 
-        /**
-         * Owns the empty vertex-array object required by the native fullscreen
-         * triangle used by spherical Environment rendering.
-         *
-         * <p>The fullscreen shader derives all three vertices from
-         * {@code gl_VertexID}; therefore no VBO or vertex attributes are
-         * required. Owning an explicit VAO prevents this pass from depending
-         * on vertex-array state left behind by Processing or the GL driver.</p>
-         */
-        private static final class NativeFullscreenTriangle {
-
-                private static final int GL_VERTEX_ARRAY_BINDING = 0x85B5;
-
-                private final int[] generatedVertexArray = new int[1];
-                private final int[] savedVertexArray = new int[1];
-
-                private Object contextIdentity;
-                private int vertexArrayId;
-
-                private void draw(PGL pgl) {
-                        PJOGL pjogl = requirePjogl(pgl);
-                        GL2ES3 gl = requireGl(pjogl);
-
-                        ensureAllocated(pjogl, gl);
-
-                        savedVertexArray[0] = 0;
-                        gl.glGetIntegerv(
-                                        GL_VERTEX_ARRAY_BINDING,
-                                        savedVertexArray,
-                                        0);
-
-                        try {
-                                gl.glBindVertexArray(vertexArrayId);
-                                pgl.drawArrays(PGL.TRIANGLES, 0, 3);
-                        } finally {
-                                gl.glBindVertexArray(savedVertexArray[0]);
-                        }
-                }
-
-                private void ensureAllocated(PJOGL pjogl, GL2ES3 gl) {
-                        if (vertexArrayId != 0
-                                        && contextIdentity == pjogl.context) {
-                                return;
-                        }
-
-                        /*
-                         * VAO identifiers belong to the context that created
-                         * them. An identifier from a replaced Processing GL
-                         * context must never be reused.
-                         */
-                        abandonContext();
-
-                        generatedVertexArray[0] = 0;
-
-                        gl.glGenVertexArrays(
-                                        1,
-                                        generatedVertexArray,
-                                        0);
-
-                        if (generatedVertexArray[0] == 0) {
-                                throw new IllegalStateException(
-                                                "Could not allocate the Environment "
-                                                                + "fullscreen vertex-array object.");
-                        }
-
-                        vertexArrayId = generatedVertexArray[0];
-                        contextIdentity = pjogl.context;
-                }
-
-                private void dispose(PApplet parent) {
-                        if (vertexArrayId == 0) {
-                                abandonContext();
-                                return;
-                        }
-
-                        if (parent == null
-                                        || !(parent.g instanceof PGraphicsOpenGL graphics)) {
-                                abandonContext();
-                                return;
-                        }
-
-                        PGL activePgl = null;
-
-                        try {
-                                activePgl = graphics.beginPGL();
-
-                                if (!(activePgl instanceof PJOGL pjogl)
-                                                || pjogl.context != contextIdentity) {
-                                        return;
-                                }
-
-                                GL2ES3 gl = requireGl(pjogl);
-
-                                generatedVertexArray[0] = vertexArrayId;
-
-                                gl.glDeleteVertexArrays(
-                                                1,
-                                                generatedVertexArray,
-                                                0);
-
-                        } catch (RuntimeException error) {
-                                /*
-                                 * Processing may already be destroying its GL
-                                 * context. Context destruction reclaims native
-                                 * objects, so shutdown must not fail here.
-                                 */
-                                LOGGER.fine(
-                                                "Environment fullscreen VAO could not "
-                                                                + "be explicitly deleted: "
-                                                                + error.getMessage());
-
-                        } finally {
-                                if (activePgl != null) {
-                                        graphics.endPGL();
-                                }
-
-                                abandonContext();
-                        }
-                }
-
-                private static PJOGL requirePjogl(PGL pgl) {
-                        if (!(pgl instanceof PJOGL pjogl)
-                                        || pjogl.context == null) {
-                                throw new IllegalStateException(
-                                                "Environment fullscreen pass requires "
-                                                                + "an active JOGL context.");
-                        }
-
-                        return pjogl;
-                }
-
-                private static GL2ES3 requireGl(PJOGL pjogl) {
-                        if (pjogl.gl == null) {
-                                throw new IllegalStateException(
-                                                "Environment fullscreen pass has no "
-                                                                + "active OpenGL interface.");
-                        }
-
-                        try {
-                                return pjogl.gl.getGL2ES3();
-                        } catch (RuntimeException error) {
-                                throw new IllegalStateException(
-                                                "Environment fullscreen pass requires "
-                                                                + "a GL2ES3-compatible context.",
-                                                error);
-                        }
-                }
-
-                private void abandonContext() {
-                        vertexArrayId = 0;
-                        contextIdentity = null;
-                        generatedVertexArray[0] = 0;
-                        savedVertexArray[0] = 0;
-                }
-        }
-
-	/** Keeps Processing shader compilation while allowing a native fullscreen draw. */
+	/** Processing-managed shader used only by the Standard Environment path. */
 	private static final class NativeEnvironmentShader extends PShader {
 		private NativeEnvironmentShader(PApplet parent, String vertexPath, String fragmentPath) {
 			super(parent, vertexPath, fragmentPath);
-		}
-
-		private void bindFor(PGraphicsOpenGL target) {
-			setRenderer(target);
-			bind();
 		}
 
 		private void disposeResources() {
