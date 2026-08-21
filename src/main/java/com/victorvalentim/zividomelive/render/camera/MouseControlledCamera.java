@@ -109,9 +109,7 @@ public class MouseControlledCamera implements PConstants {
                 handleDrag(event);
                 break;
             case MouseEvent.RELEASE:
-                dragging = false;
-                lastMouseX = -1;
-                lastMouseY = -1;
+                resetInputState();
                 break;
             default:
                 break;
@@ -123,6 +121,15 @@ public class MouseControlledCamera implements PConstants {
      */
     public void resetRotation() {
         rotation = new Quaternion(0f, 0f, 0f, 1f);
+    }
+
+    /**
+     * Clears transient pointer state without changing the camera pose.
+     */
+    public void resetInputState() {
+        dragging = false;
+        lastMouseX = -1;
+        lastMouseY = -1;
     }
 
     /**

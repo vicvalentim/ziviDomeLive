@@ -82,6 +82,8 @@ class Scene1 implements Scene {
       }
     }
 
+    // O SimulatedClock reduz este passo junto com a escala de tempo para evitar
+    // translação quantizada em velocidades baixas.
     services.timeline().setFixedStep(1.0 / 120.0);
     services.timeline().setMaxSubSteps(8);
     services.timeline().setRate(1.0); // um dia simulado por segundo real
@@ -92,6 +94,7 @@ class Scene1 implements Scene {
     sceneCamera = services.camera().orbit();
     sceneCamera.setDistanceLimits(-1e6f, 1e6f);
     sceneCamera.setLerpFactor(0.1f);
+    // Mantém a manipulação direta da versão 1.5.0: mouse imediato, alvo rastreado suave.
     sceneCamera.setDragSensitivity(0.01f);
     sceneCamera.setWheelSteps(80f, 0.001f);
     services.camera().setInputEnabled(true);
@@ -125,15 +128,15 @@ class Scene1 implements Scene {
   }
 
   private void propagateSinceJ2000() {
-    propagateFromJ2000((float) clock.getDaysSinceJ2000(), true);
+    propagateFromJ2000(clock.getDaysSinceJ2000(), true);
   }
 
-  private void propagateFromJ2000(float days, boolean perturbations) {
-    if (days <= 0f) return;
+  private void propagateFromJ2000(double days, boolean perturbations) {
+    if (days <= 0.0) return;
     physicsEngine.setEnablePerturbations(perturbations);
-    float maxStep = 0.5f;
+    double maxStep = 0.5;
     int steps = (int) Math.ceil(days / maxStep);
-    float dt = days / steps;
+    double dt = days / steps;
     for (int i = 0; i < steps; i++) {
       physicsEngine.update(dt);
     }
@@ -145,11 +148,11 @@ class Scene1 implements Scene {
     if (!initialized) return;
     services.timeline().advance(
       services.frameClock().getDeltaSeconds(),
-      dt -> updateSimulation((float) dt)
+      this::updateSimulation
     );
   }
 
-  private void updateSimulation(float dtDays) {
+  private void updateSimulation(double dtDays) {
     physicsEngine.update(dtDays);
     sun.update(dtDays);
     for (Planet planet : planets) {

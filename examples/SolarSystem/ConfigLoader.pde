@@ -13,8 +13,8 @@ class ConfigLoader {
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final HashMap<String,String> textureByName = new HashMap<>();
 
-  private float sunRadiusAU = 1.0f;
-  private float sunMassSolar;
+  private double sunRadiusAU = 1.0;
+  private double sunMassSolar;
 
   // NÃO final para permitir recarregar
   private JSONObject solarCfg;       
@@ -39,7 +39,7 @@ class ConfigLoader {
     try {
       this.solarCfg    = pApplet.loadJSONObject("solar2.json");
       this.jsonSun     = requireJSONObject(solarCfg, "sun");
-      this.sunMassSolar = requireFloat     (jsonSun, "massSolar");
+      this.sunMassSolar = requireDouble    (jsonSun, "massSolar");
       this.jsonPlanets = requireJSONArray (solarCfg, "planets");
       this.jsonMoons   = requireJSONArray (solarCfg, "moons");
     } finally {
@@ -80,10 +80,10 @@ class ConfigLoader {
     try {
       try {
         // 1) lê do JSON
-        float massSolar     = requireFloat(jsonSun, "massSolar");
+        double massSolar    = requireDouble(jsonSun, "massSolar");
         this.sunMassSolar   = massSolar;          // ← garantido aqui!
-        float radiusAU      = requireFloat(jsonSun, "radiusAU");
-        float rotPeriodDays = requireFloat(jsonSun, "rotationPeriodDays");
+        double radiusAU     = requireDouble(jsonSun, "radiusAU");
+        double rotPeriodDays= requireDouble(jsonSun, "rotationPeriodDays");
         JSONArray cn        = requireJSONArray(jsonSun, "colorNorm");
         int displayColor    = pApplet.color(
           cn.getFloat(0)*255f,
@@ -124,25 +124,25 @@ class ConfigLoader {
       try {
         // ——— campos básicos ——————————————————————————————
         String name               = requireString (pd, "name");
-        float  massSolar          = requireFloat  (pd, "massSolar");
-        float  radiusAU           = requireFloat  (pd, "radiusAU");
-        float  rotationPeriodDays = requireFloat  (pd, "rotationPeriodDays");
-        float  orbitalPeriodDays  = requireFloat  (pd, "orbitalPeriodDays");
+        double massSolar          = requireDouble (pd, "massSolar");
+        double radiusAU           = requireDouble (pd, "radiusAU");
+        double rotationPeriodDays = requireDouble (pd, "rotationPeriodDays");
+        double orbitalPeriodDays  = requireDouble (pd, "orbitalPeriodDays");
 
         // ——— elementos orbitais ———————————————————————————
-        float perihelionAU        = requireFloat  (pd, "perihelionAU");
-        float aphelionAU          = requireFloat  (pd, "aphelionAU");
-        float eccentricity        = requireFloat  (pd, "eccentricity");
-        float Ω                   = requireFloat  (pd, "longitudeAscendingNodeRad");
-        float iRad                = requireFloat  (pd, "orbitInclinationRad");
+        double perihelionAU       = requireDouble (pd, "perihelionAU");
+        double aphelionAU         = requireDouble (pd, "aphelionAU");
+        double eccentricity       = requireDouble (pd, "eccentricity");
+        double Ω                  = requireDouble (pd, "longitudeAscendingNodeRad");
+        double iRad               = requireDouble (pd, "orbitInclinationRad");
         float axisTiltRad         = requireFloat  (pd, "axisTiltRad");
-        float ω                   = requireFloat  (pd, "argumentOfPeriapsisRad");
-        float M0                  = requireFloat  (pd, "meanAnomalyRad");
-        float a                   = requireFloat  (pd, "semiMajorAxisAU");
+        double ω                  = requireDouble (pd, "argumentOfPeriapsisRad");
+        double M0                 = requireDouble (pd, "meanAnomalyRad");
+        double a                  = requireDouble (pd, "semiMajorAxisAU");
 
         // ——— condição inicial via initialState com massa do Sol —————————————————
-        PVector rPlane = new PVector();
-        PVector vPlane = new PVector();
+        double[] rPlane = new double[3];
+        double[] vPlane = new double[3];
         // usa μ = G_DAY * sunMassSolar
         initialState(
           a,
@@ -154,8 +154,20 @@ class ConfigLoader {
         );
 
         // ——— aplica pipeline Ω → i → ω para referencial global (Y-up) —————————
-        PVector rGlobal = applyOrbitalPlaneToGlobal(rPlane, Ω, iRad, ω);
-        PVector vGlobal = applyOrbitalPlaneToGlobal(vPlane, Ω, iRad, ω);
+        double[] preciseGlobalPosition = new double[3];
+        double[] preciseGlobalVelocity = new double[3];
+        applyOrbitalPlaneToGlobal(rPlane, Ω, iRad, ω, preciseGlobalPosition);
+        applyOrbitalPlaneToGlobal(vPlane, Ω, iRad, ω, preciseGlobalVelocity);
+        PVector rGlobal = new PVector(
+          (float) preciseGlobalPosition[0],
+          (float) preciseGlobalPosition[1],
+          (float) preciseGlobalPosition[2]
+        );
+        PVector vGlobal = new PVector(
+          (float) preciseGlobalVelocity[0],
+          (float) preciseGlobalVelocity[1],
+          (float) preciseGlobalVelocity[2]
+        );
 
         // ——— cor & textura ————————————————————————————————
         JSONArray cn     = requireJSONArray(pd, "colorNorm");
@@ -212,24 +224,24 @@ class ConfigLoader {
                         requireString(md, "moonName"));
 
         // ── parâmetros da Lua ─────────────────────────────────────────
-        float massSolar           = requireFloat(md, "massSolar");
-        float radiusAU            = requireFloat(md, "radiusAU");
-        float rotationPeriodDays  = requireFloat(md, "rotationPeriodDays");
-        float a                   = requireFloat(md, "semiMajorAxisAU");
-        float perihelionAU        = requireFloat(md, "perihelionAU");
-        float aphelionAU          = requireFloat(md, "aphelionAU");
-        float eccentricity        = requireFloat(md, "eccentricity");
-        float iRad                = requireFloat(md, "orbitInclinationRad");
-        float ω                   = requireFloat(md, "argumentOfPeriapsisRad");
-        float Ω                   = requireFloat(md, "longitudeAscendingNodeRad");
-        float M0                  = requireFloat(md, "meanAnomalyRad");
+        double massSolar          = requireDouble(md, "massSolar");
+        double radiusAU           = requireDouble(md, "radiusAU");
+        double rotationPeriodDays = requireDouble(md, "rotationPeriodDays");
+        double a                  = requireDouble(md, "semiMajorAxisAU");
+        double perihelionAU       = requireDouble(md, "perihelionAU");
+        double aphelionAU         = requireDouble(md, "aphelionAU");
+        double eccentricity       = requireDouble(md, "eccentricity");
+        double iRad               = requireDouble(md, "orbitInclinationRad");
+        double ω                  = requireDouble(md, "argumentOfPeriapsisRad");
+        double Ω                  = requireDouble(md, "longitudeAscendingNodeRad");
+        double M0                 = requireDouble(md, "meanAnomalyRad");
         boolean alignWithAxis     = md.hasKey("alignWithPlanetAxis")
                                   && md.getBoolean("alignWithPlanetAxis");
         String moonName           = requireString(md, "moonName");
 
         // ── condição inicial via initialState COM massa do host ─────────
-        PVector rPlane = new PVector();
-        PVector vPlane = new PVector();
+        double[] rPlane = new double[3];
+        double[] vPlane = new double[3];
         // initialState(a, e, M0, massFocus, outPos, outVel)
         initialState(
           a,
@@ -241,8 +253,20 @@ class ConfigLoader {
         );
 
         // ── aplica rotações Ω→i→ω para referencial global (Y-up) ──────────
-        PVector rGlobal = applyOrbitalPlaneToGlobal(rPlane, Ω, iRad, ω);
-        PVector vGlobal = applyOrbitalPlaneToGlobal(vPlane, Ω, iRad, ω);
+        double[] preciseGlobalPosition = new double[3];
+        double[] preciseGlobalVelocity = new double[3];
+        applyOrbitalPlaneToGlobal(rPlane, Ω, iRad, ω, preciseGlobalPosition);
+        applyOrbitalPlaneToGlobal(vPlane, Ω, iRad, ω, preciseGlobalVelocity);
+        PVector rGlobal = new PVector(
+          (float) preciseGlobalPosition[0],
+          (float) preciseGlobalPosition[1],
+          (float) preciseGlobalPosition[2]
+        );
+        PVector vGlobal = new PVector(
+          (float) preciseGlobalVelocity[0],
+          (float) preciseGlobalVelocity[1],
+          (float) preciseGlobalVelocity[2]
+        );
 
         // ── desloca pelo host (posição + velocidade) ────────────────────
         rGlobal.add(host.getPositionAU());
@@ -275,8 +299,8 @@ class ConfigLoader {
         );
 
         // ── escala visual e vincula ao planeta ────────────────────────
-        moon.setRadiusPx(radiusAU / host.getRadiusAU()
-                        * host.getRadiusPx());
+        moon.setRadiusPx((float) (radiusAU / host.getRadiusAU()
+                        * host.getRadiusPx()));
         host.addMoon(moon);
         pApplet.println("[ConfigLoader]   -> associada a " + host.getName() + ": " + moon.getName());
         
@@ -342,5 +366,9 @@ class ConfigLoader {
   private float requireFloat(JSONObject obj, String key) {
     if (!obj.hasKey(key)) throw new RuntimeException("Missing '"+ key + "'");
     return obj.getFloat(key);
+  }
+  private double requireDouble(JSONObject obj, String key) {
+    if (!obj.hasKey(key)) throw new RuntimeException("Missing '"+ key + "'");
+    return obj.getDouble(key);
   }
 }

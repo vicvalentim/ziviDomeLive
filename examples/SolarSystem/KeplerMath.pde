@@ -3,21 +3,28 @@
 // Helpers de rotação, solver Kepler e projeção do plano orbital
 // ———————————————————————————————————————————————————————————————————————————————
 
-final int   KEPLER_MAX_ITER = 50;
-final float KEPLER_EPS      = 1e-6f;
+final int    KEPLER_MAX_ITER = 50;
+final double KEPLER_EPS      = 1e-13;
+final double TWO_PI_DOUBLE   = Math.PI * 2.0;
 
 // ———————————————————————————————————————————————————————————————————————————————
 // Resolve M = E - e·sin(E) para E via Newton–Raphson.
 // ———————————————————————————————————————————————————————————————————————————————
-float solveKeplerEquation(float M, float e) {
-  float E = M;
+double normalizeRadians(double angle) {
+  double normalized = angle % TWO_PI_DOUBLE;
+  return normalized < 0.0 ? normalized + TWO_PI_DOUBLE : normalized;
+}
+
+double solveKeplerEquation(double M, double e) {
+  // Reduzir o argumento evita perda de precisão trigonométrica após longos períodos.
+  double normalizedM = Math.IEEEremainder(M, TWO_PI_DOUBLE);
+  double E = e < 0.8 ? normalizedM : Math.copySign(Math.PI, normalizedM);
   for (int i = 0; i < KEPLER_MAX_ITER; i++) {
-    float f  = E - e * cos(E) * 0 - e * sin(E) * 0; // This line is incorrect; correct is below
-    // Correction:
-    f = E - e * sin(E) - M;
-    float df = 1 - e * cos(E);
-    E -= f / df;
-    if (abs(f) < KEPLER_EPS) {
+    double f = E - e * Math.sin(E) - normalizedM;
+    double df = 1.0 - e * Math.cos(E);
+    double correction = f / df;
+    E -= correction;
+    if (Math.abs(correction) <= KEPLER_EPS) {
       break;
     }
   }
@@ -71,28 +78,40 @@ PVector rotateVecZ(PVector v, float θ) {
  * @param rOrb       saída: posição no plano orbital XZ (AU)
  * @param vOrb       saída: velocidade no plano orbital XZ (AU/dia)
  */
-void initialState(float a,
-                  float e,
-                  float M0,
-                  float massFocus,
+void initialState(double a,
+                  double e,
+                  double M0,
+                  double massFocus,
                   PVector rOrb,
                   PVector vOrb) {
-  // 1) resolve E
-  float E    = solveKeplerEquation(M0, e);
-  float cosE = cos(E), sinE = sin(E);
+  double[] precisePosition = new double[3];
+  double[] preciseVelocity = new double[3];
+  initialState(a, e, M0, massFocus, precisePosition, preciseVelocity);
+  rOrb.set((float) precisePosition[0], 0f, (float) precisePosition[2]);
+  vOrb.set((float) preciseVelocity[0], 0f, (float) preciseVelocity[2]);
+}
 
-  // 2) posição no plano XZ
-  float x = a * (cosE - e);
-  float z = a * sqrt(1 - e*e) * sinE;
-  rOrb.set(x, 0, z);
+void initialState(double a,
+                  double e,
+                  double M0,
+                  double massFocus,
+                  double[] rOrb,
+                  double[] vOrb) {
+  double E = solveKeplerEquation(M0, e);
+  double cosE = Math.cos(E);
+  double sinE = Math.sin(E);
+  double oneMinusESquared = 1.0 - e * e;
 
-  // 3) velocidade no plano XZ, usando μ = G_DAY * massFocus
-  float mu        = G_DAY * massFocus;
-  float rMag      = a * (1 - e * cosE);
-  float sqrt_mu_a = sqrt(mu * a);
-  float vx = - sinE * sqrt_mu_a / rMag;
-  float vz =   cosE * sqrt_mu_a * sqrt(1 - e*e) / rMag;
-  vOrb.set(vx, 0, vz);
+  rOrb[0] = a * (cosE - e);
+  rOrb[1] = 0.0;
+  rOrb[2] = a * Math.sqrt(oneMinusESquared) * sinE;
+
+  double mu = G_DAY * massFocus;
+  double rMag = a * (1.0 - e * cosE);
+  double sqrtMuA = Math.sqrt(mu * a);
+  vOrb[0] = -sinE * sqrtMuA / rMag;
+  vOrb[1] = 0.0;
+  vOrb[2] = cosE * sqrtMuA * Math.sqrt(oneMinusESquared) / rMag;
 }
 
 // ———————————————————————————————————————————————————————————————————————————————
@@ -108,48 +127,86 @@ PVector applyOrbitalPlaneToGlobal(PVector vPlane,
   return rotateVecY(v2, ω);
 }
 
+void applyOrbitalPlaneToGlobal(double[] source,
+                               double ascendingNode,
+                               double inclination,
+                               double periapsis,
+                               double[] destination) {
+  double cosNode = Math.cos(ascendingNode);
+  double sinNode = Math.sin(ascendingNode);
+  double x1 = cosNode * source[0] + sinNode * source[2];
+  double y1 = source[1];
+  double z1 = -sinNode * source[0] + cosNode * source[2];
+
+  double cosInclination = Math.cos(inclination);
+  double sinInclination = Math.sin(inclination);
+  double x2 = x1;
+  double y2 = cosInclination * y1 - sinInclination * z1;
+  double z2 = sinInclination * y1 + cosInclination * z1;
+
+  double cosPeriapsis = Math.cos(periapsis);
+  double sinPeriapsis = Math.sin(periapsis);
+  destination[0] = cosPeriapsis * x2 + sinPeriapsis * z2;
+  destination[1] = y2;
+  destination[2] = -sinPeriapsis * x2 + cosPeriapsis * z2;
+}
+
 // ———————————————————————————————————————————————————————————————————————————————
 // Solver Kepleriano: dado foco, elementos e Δt em dias, atualiza pos e vel.
 // ———————————————————————————————————————————————————————————————————————————————
 void keplerSolve(PVector focusPos,
                  PVector pos,
                  PVector vel,
-                 float periAU,
-                 float apheAU,
-                 float e,
-                 float incRad,
-                 float raanRad,
-                 float argPerRad,
-                 float meanAnomaly0,
-                 float dtDays,
-                 float massFocus) {
+                 double periAU,
+                 double apheAU,
+                 double e,
+                 double incRad,
+                 double raanRad,
+                 double argPerRad,
+                 double meanAnomaly0,
+                 double dtDays,
+                 double massFocus,
+                 double[] rOrb,
+                 double[] vOrb,
+                 double[] rEcl,
+                 double[] vEcl) {
 
   // 1) parâmetros
-  float a  = 0.5f * (periAU + apheAU);
-  float μ  = G_DAY * massFocus;
-  float n  = sqrt(μ / (a * a * a));
+  double a = 0.5 * (periAU + apheAU);
+  double mu = G_DAY * massFocus;
+  double n = Math.sqrt(mu / (a * a * a));
 
   // 2) anomalia média no tempo t = M0 + n · dt
-  float M = meanAnomaly0 + n * dtDays;
-  float E = solveKeplerEquation(M, e);
+  double M = meanAnomaly0 + n * dtDays;
+  double E = solveKeplerEquation(M, e);
 
   // 3) coordenadas no plano orbital XZ
-  float cosE = cos(E), sinE = sin(E);
-  float xOrb = a * (cosE - e);
-  float zOrb = a * sqrt(1 - e * e) * sinE;
-  float r    = a * (1 - e * cosE);
+  double cosE = Math.cos(E);
+  double sinE = Math.sin(E);
+  double oneMinusESquared = 1.0 - e * e;
+  double xOrb = a * (cosE - e);
+  double zOrb = a * Math.sqrt(oneMinusESquared) * sinE;
+  double r = a * (1.0 - e * cosE);
 
   // 4) velocidades no plano XZ
-  float vxOrb = -sinE * sqrt(μ * a) / r;
-  float vzOrb =  cosE * sqrt(μ * a * (1 - e * e)) / r;
+  double vxOrb = -sinE * Math.sqrt(mu * a) / r;
+  double vzOrb = cosE * Math.sqrt(mu * a * oneMinusESquared) / r;
 
-  PVector rOrb = new PVector(xOrb, 0, zOrb);
-  PVector vOrb = new PVector(vxOrb, 0, vzOrb);
+  rOrb[0] = xOrb;
+  rOrb[1] = 0.0;
+  rOrb[2] = zOrb;
+  vOrb[0] = vxOrb;
+  vOrb[1] = 0.0;
+  vOrb[2] = vzOrb;
 
   // 5) rotaciona para o referencial global e soma ao foco
-  PVector rEcl = applyOrbitalPlaneToGlobal(rOrb,   raanRad, incRad, argPerRad);
-  PVector vEcl = applyOrbitalPlaneToGlobal(vOrb,   raanRad, incRad, argPerRad);
+  applyOrbitalPlaneToGlobal(rOrb, raanRad, incRad, argPerRad, rEcl);
+  applyOrbitalPlaneToGlobal(vOrb, raanRad, incRad, argPerRad, vEcl);
 
-  pos.set(PVector.add(focusPos, rEcl));
-  vel.set(vEcl);
+  pos.set(
+    (float) (focusPos.x + rEcl[0]),
+    (float) (focusPos.y + rEcl[1]),
+    (float) (focusPos.z + rEcl[2])
+  );
+  vel.set((float) vEcl[0], (float) vEcl[1], (float) vEcl[2]);
 }

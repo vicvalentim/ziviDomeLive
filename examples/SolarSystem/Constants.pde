@@ -1,7 +1,7 @@
 // —————————————————————————— Constantes Físicas ——————————————————————————
 
 final float SOL_MASS = 1.0f;          // Massa do Sol (normalizada)
-public static final float G_DAY = 2.9591220828559093e-4f;
+public static final double G_DAY = 2.9591220828559093e-4;
 
 // —————————————————————————— Conversão de Unidades ——————————————————————————
 

@@ -22,26 +22,34 @@ public class Planet implements CelestialBody {
     private final boolean hasRings;
 
     // ——————————————— Campos de física ———————————————
-    private final float massSolar;
-    private final float radiusAU;
-    private final float rotationPeriodDays;
+    private final double massSolar;
+    private final double radiusAU;
+    private final double rotationPeriodDays;
     private final PVector positionAU;
     private final PVector velocityAU;
     private CelestialBody centralBody;
 
     // elementos orbitais
-    private final float perihelionAU;
-    private final float aphelionAU;
-    private final float eccentricity;
-    private final float orbitInclinationRad;
-    private final float argumentOfPeriapsisRad;
-    private final float semiMajorAxisAU;  
-    private final float longitudeAscendingNodeRad; 
-    private final float meanAnomalyRad;           
-    private final float orbitalPeriodDays;
-    private final float orbitalVelocityAUperDay;
+    private final double perihelionAU;
+    private final double aphelionAU;
+    private final double eccentricity;
+    private final double orbitInclinationRad;
+    private final double argumentOfPeriapsisRad;
+    private final double semiMajorAxisAU;
+    private final double longitudeAscendingNodeRad;
+    private final double meanAnomalyRad;
+    private final double orbitalPeriodDays;
+    private final double orbitalVelocityAUperDay;
     private final float axisTiltRad;
-    private float currentMeanAnomalyRad;
+    // Mantida em double: incrementar um ângulo float pequeno fazia movimentos
+    // lentos desaparecerem até acumular um salto visível.
+    private double currentMeanAnomalyRad;
+    private double elapsedOrbitDays;
+    private double elapsedOrbitCompensation;
+    private final double[] preciseOrbitalPosition = new double[3];
+    private final double[] preciseOrbitalVelocity = new double[3];
+    private final double[] preciseGlobalPosition = new double[3];
+    private final double[] preciseGlobalVelocity = new double[3];
 
     // luas
     private final List<Moon> moons = new ArrayList<>();
@@ -58,27 +66,27 @@ public class Planet implements CelestialBody {
 
     /** Construtor */
     public Planet(PApplet pApplet,
-                  float massSolar,
-                  float radiusAU,
-                  float sunRadiusAU,
-                  float rotationPeriodDays,
+                  double massSolar,
+                  double radiusAU,
+                  double sunRadiusAU,
+                  double rotationPeriodDays,
                   PVector initialPosAU,
                   PVector initialVelAU,
                   int displayColor,
                   String name,
                   PImage texture,
                   PImage ringTexture,
-                  float orbitInclinationRad,
+                  double orbitInclinationRad,
                   float axisTiltRad,
-                  float perihelionAU,
-                  float aphelionAU,
-                  float eccentricity,
-                  float argumentOfPeriapsisRad,
-                  float longitudeAscendingNodeRad,
-                  float meanAnomalyRad,
-                  float orbitalPeriodDays,
-                  float orbitalVelocityAUperDay,
-                  float semiMajorAxisAU) {
+                  double perihelionAU,
+                  double aphelionAU,
+                  double eccentricity,
+                  double argumentOfPeriapsisRad,
+                  double longitudeAscendingNodeRad,
+                  double meanAnomalyRad,
+                  double orbitalPeriodDays,
+                  double orbitalVelocityAUperDay,
+                  double semiMajorAxisAU) {
 
         this.pApplet                   = pApplet;
         this.massSolar                 = massSolar;
@@ -104,8 +112,8 @@ public class Planet implements CelestialBody {
         this.orbitalVelocityAUperDay   = orbitalVelocityAUperDay;
         this.semiMajorAxisAU           = semiMajorAxisAU;
 
-        this.rotationSpeed = PApplet.TWO_PI / rotationPeriodDays;
-        this.baseRatio     = radiusAU / sunRadiusAU;
+        this.rotationSpeed = (float) (PApplet.TWO_PI / rotationPeriodDays);
+        this.baseRatio     = (float) (radiusAU / sunRadiusAU);
         this.hasRings      = "Saturn".equals(name);
         this.currentMeanAnomalyRad = meanAnomalyRad;
 
@@ -123,32 +131,29 @@ public class Planet implements CelestialBody {
     // ——————————————— Implementação CelestialBody ———————————————
     @Override public PVector getPositionAU()               { return positionAU; }
     @Override public PVector getVelocityAU()               { return velocityAU; }
-    @Override public float   getMassSolar()                { return massSolar; }
+    @Override public double  getMassSolar()                { return massSolar; }
     @Override public CelestialBody getCentralBody()        { return centralBody; }
     @Override public void    setCentralBody(CelestialBody c){ this.centralBody = c; }
-    @Override public float getPerihelionAU()               { return perihelionAU; }
-    @Override public float getAphelionAU()                 { return aphelionAU; }
-    @Override public float getEccentricity()               { return eccentricity; }
-    @Override public float getOrbitInclinationRad()        { return orbitInclinationRad; }
-    @Override public float getArgumentOfPeriapsisRad()     { return argumentOfPeriapsisRad; }
-    @Override public float getSemiMajorAxisAU()            { return semiMajorAxisAU; }
-    @Override public float getLongitudeAscendingNodeRad()  { return longitudeAscendingNodeRad; }
-    @Override public float getMeanAnomalyRad()             { return meanAnomalyRad; }
-    @Override public float getRadiusAU()                   { return radiusAU; }
-    @Override public float getRotationPeriodDays()         { return rotationPeriodDays; }
+    @Override public double getPerihelionAU()              { return perihelionAU; }
+    @Override public double getAphelionAU()                { return aphelionAU; }
+    @Override public double getEccentricity()              { return eccentricity; }
+    @Override public double getOrbitInclinationRad()       { return orbitInclinationRad; }
+    @Override public double getArgumentOfPeriapsisRad()    { return argumentOfPeriapsisRad; }
+    @Override public double getSemiMajorAxisAU()           { return semiMajorAxisAU; }
+    @Override public double getLongitudeAscendingNodeRad() { return longitudeAscendingNodeRad; }
+    @Override public double getMeanAnomalyRad()            { return meanAnomalyRad; }
+    @Override public double getRadiusAU()                  { return radiusAU; }
+    @Override public double getRotationPeriodDays()        { return rotationPeriodDays; }
 
     @Override
-    public void propagateKepler(float dtDays) {
+    public void propagateKepler(double dtDays) {
         if (centralBody != null) {
-            // 1) calcule semi-eixo e n (como antes)
-            float a  = 0.5f * (perihelionAU + aphelionAU);
-            float mu = G_DAY * centralBody.getMassSolar();
-            float n  = PApplet.sqrt(mu/(a*a*a));
+            double a = 0.5 * (perihelionAU + aphelionAU);
+            double mu = G_DAY * centralBody.getMassSolar();
+            double n = Math.sqrt(mu / (a * a * a));
 
-            // 2) avance a anomalia média
-            currentMeanAnomalyRad += n * dtDays;
-            // opcional: force 0 <= currentMeanAnomalyRad < TWO_PI
-            currentMeanAnomalyRad %= PApplet.TWO_PI;
+            advanceOrbitTime(dtDays);
+            currentMeanAnomalyRad = normalizeRadians(meanAnomalyRad + n * elapsedOrbitDays);
 
             // 3) chame o solver com essa nova anomalia
             keplerSolve(
@@ -162,10 +167,22 @@ public class Planet implements CelestialBody {
                 longitudeAscendingNodeRad,
                 argumentOfPeriapsisRad,
                 currentMeanAnomalyRad,
-                0f,                        // já contei todo dt em currentMeanAnomalyRad
-                centralBody.getMassSolar()
+                0.0,                       // já contei todo dt em currentMeanAnomalyRad
+                centralBody.getMassSolar(),
+                preciseOrbitalPosition,
+                preciseOrbitalVelocity,
+                preciseGlobalPosition,
+                preciseGlobalVelocity
             );
         }
+    }
+
+    /** Soma de Kahan: preserva deltas temporais muito pequenos em execuções longas. */
+    private void advanceOrbitTime(double dtDays) {
+        double correctedDelta = dtDays - elapsedOrbitCompensation;
+        double nextElapsed = elapsedOrbitDays + correctedDelta;
+        elapsedOrbitCompensation = (nextElapsed - elapsedOrbitDays) - correctedDelta;
+        elapsedOrbitDays = nextElapsed;
     }
 
     // ——————————————— Luas ———————————————
@@ -174,14 +191,14 @@ public class Planet implements CelestialBody {
     public float getAxisTiltRad() { return axisTiltRad; }
 
     // ——————————————— Animação e Renderização ———————————————
-    public void updateRotation(float dtDays) {
+    public void updateRotation(double dtDays) {
         rotationAngle += rotationSpeed * dtDays;
         if (hasRings) {
             ringRotationAngle += ringRotationSpeed * dtDays;
         }
     }
 
-    public void update(float dtDays) {
+    public void update(double dtDays) {
         updateRotation(dtDays);
     }
 
@@ -356,6 +373,8 @@ public class Planet implements CelestialBody {
         positionAU.set(initialPosAU);
         velocityAU.set(initialVelAU);
         currentMeanAnomalyRad = meanAnomalyRad;
+        elapsedOrbitDays = 0.0;
+        elapsedOrbitCompensation = 0.0;
     }
 
     public void dispose() {

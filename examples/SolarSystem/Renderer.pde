@@ -60,22 +60,21 @@ class Renderer {
       shp.stroke(200, 200, 255, 150);
       shp.strokeWeight(1);
 
-      float peri = p.getPerihelionAU();
-      float aphe = p.getAphelionAU();
-      float e    = p.getEccentricity();
-      float Ω    = p.getLongitudeAscendingNodeRad();
-      float i    = p.getOrbitInclinationRad();
-      float ω    = p.getArgumentOfPeriapsisRad();
-      float a    = 0.5f * (peri + aphe);
-      float b    = a * sqrt(1 - e*e);
+      double peri = p.getPerihelionAU();
+      double aphe = p.getAphelionAU();
+      double e    = p.getEccentricity();
+      double Ω    = p.getLongitudeAscendingNodeRad();
+      double i    = p.getOrbitInclinationRad();
+      double ω    = p.getArgumentOfPeriapsisRad();
+      double a    = 0.5 * (peri + aphe);
+      double b    = a * Math.sqrt(1.0 - e * e);
 
       for (int j = 0; j < segments; j++) {
-        float θ  = TWO_PI * j / segments;
-        float xp = a * (cos(θ) - e);
-        float zp = b * sin(θ);
-        PVector vPlane = new PVector(xp, 0, zp);
-        PVector v3d = applyOrbitalPlaneToGlobal(vPlane, Ω, i, ω);
-        shp.vertex(v3d.x, v3d.y, v3d.z);
+        double θ = TWO_PI_DOUBLE * j / segments;
+        double[] vPlane = { a * (Math.cos(θ) - e), 0.0, b * Math.sin(θ) };
+        double[] v3d = new double[3];
+        applyOrbitalPlaneToGlobal(vPlane, Ω, i, ω, v3d);
+        shp.vertex((float) v3d[0], (float) v3d[1], (float) v3d[2]);
       }
 
       shp.endShape();

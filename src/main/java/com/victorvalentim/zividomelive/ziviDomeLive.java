@@ -1672,6 +1672,14 @@ public class ziviDomeLive implements PConstants {
 			activeScene.mouseEvent(event);
 		}
 
+		// UI gestures remain UI-only; clear any prior drag anchor before returning.
+		if (controlManager != null
+				&& showControlPanel
+				&& controlManager.isMouseOverControls()) {
+			resetCameraInputState();
+			return;
+		}
+
 		// Route navigation to exactly one camera to avoid double orbit/zoom in Standard view.
 		if (sceneCameraInputEnabled) {
 			sceneCamera.mouseEvent(event);
@@ -2162,7 +2170,18 @@ public class ziviDomeLive implements PConstants {
 	 * @param enabled true to let the library drive the scene camera from mouse input
 	 */
 	public void setSceneCameraInputEnabled(boolean enabled) {
+		if (sceneCameraInputEnabled != enabled) {
+			resetCameraInputState();
+		}
 		this.sceneCameraInputEnabled = enabled;
+	}
+
+	/** Clears transient drag anchors for whichever camera owns navigation input. */
+	private void resetCameraInputState() {
+		sceneCamera.resetInputState();
+		if (standardRenderer != null) {
+			standardRenderer.getCam().resetInputState();
+		}
 	}
 
 	/**
@@ -2475,6 +2494,7 @@ public class ziviDomeLive implements PConstants {
 			return;
 		}
 		LOGGER.info("Pausing processes...");
+		resetCameraInputState();
 		paused = true;
 		if (outputManager != null) {
 			resumeNdiOutput = outputManager.isNdiEnabled();
@@ -2502,6 +2522,7 @@ public class ziviDomeLive implements PConstants {
 		}
 		disposed = true;
 		LOGGER.info("Disposing resources...");
+		resetCameraInputState();
 		clearPausedOutputState();
 		gpuPerformanceTimer.dispose(isOnRenderThread());
 

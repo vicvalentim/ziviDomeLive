@@ -12,44 +12,44 @@ public interface CelestialBody {
   PVector getVelocityAU();
 
   /** Massa em massas solares (M☉). */
-  float   getMassSolar();
+  double  getMassSolar();
 
   /** Corpo-foco (Sol → planetas, planeta → luas). */
   CelestialBody getCentralBody();
   void          setCentralBody(CelestialBody c);
 
   /** Propaga a órbita por <code>dtDays</code> usando o solver Kepleriano. */
-  void propagateKepler(float dtDays);
+  void propagateKepler(double dtDays);
 
   // ───────────────────────────── Elementos orbitais ─────────────────────────
   /** Semi-eixo maior <i>a</i> em AU. */                         // ★ novo
-  float getSemiMajorAxisAU();
+  double getSemiMajorAxisAU();
 
   /** Distância de periélio (q = a·(1-e)) em AU. */
-  float getPerihelionAU();
+  double getPerihelionAU();
 
   /** Distância de afélio (Q = a·(1+e)) em AU. */
-  float getAphelionAU();
+  double getAphelionAU();
 
   /** Excentricidade e. */
-  float getEccentricity();
+  double getEccentricity();
 
   /** Inclinação orbital <i>i</i> (rad).  */
-  float getOrbitInclinationRad();
+  double getOrbitInclinationRad();
 
   /** Longitude do nó ascendente Ω (rad). */                       // ★ novo
-  float getLongitudeAscendingNodeRad();
+  double getLongitudeAscendingNodeRad();
 
   /** Argumento do periastro ω (rad). */
-  float getArgumentOfPeriapsisRad();
+  double getArgumentOfPeriapsisRad();
 
   /** Anomalia média <i>M</i> no epoch J2000 (rad). */             // ★ novo
-  float getMeanAnomalyRad();
+  double getMeanAnomalyRad();
 
   // ───────────────────────────── Auxiliares de render ───────────────────────
   /** Raio físico (AU). */
-  float getRadiusAU();
+  double getRadiusAU();
 
   /** Período de rotação sideral (dias). */
-  float getRotationPeriodDays();
+  double getRotationPeriodDays();
 }

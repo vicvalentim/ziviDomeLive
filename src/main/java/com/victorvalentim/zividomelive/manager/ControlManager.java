@@ -398,6 +398,16 @@ public class ControlManager {
         }
     }
 
+    /**
+     * Returns whether the visible ControlP5 panel currently owns the mouse pointer.
+     * Camera navigation uses this to avoid reacting to UI gestures.
+     *
+     * @return true when the pointer is over a visible control
+     */
+    public boolean isMouseOverControls() {
+        return cp5.isVisible() && cp5.isMouseOver();
+    }
+
     void makeEditable(Numberbox n) {
         final NumberboxInput nin = new NumberboxInput(n, p);
         numberboxInputs.add(nin);

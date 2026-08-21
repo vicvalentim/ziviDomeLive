@@ -19,18 +19,18 @@ public class Sun implements CelestialBody {
     private int renderingMode = 2;
 
     // ——————————————— Física ———————————————
-    private final float massSolar;
-    private final float radiusAU;
-    private final float rotationPeriodDays;
+    private final double massSolar;
+    private final double radiusAU;
+    private final double rotationPeriodDays;
     private final PVector positionAU = new PVector(0, 0, 0);
     private final PVector velocityAU = new PVector(0, 0, 0);
 
     // ——————————————— Construtor ———————————————
     public Sun(PApplet pApplet,
                float radiusPx,
-               float massSolar,
-               float radiusAU,
-               float rotationPeriodDays,
+               double massSolar,
+               double radiusAU,
+               double rotationPeriodDays,
                PVector initialPixelPos,
                color displayColor,
                PImage texture) {
@@ -40,7 +40,7 @@ public class Sun implements CelestialBody {
         this.massSolar = massSolar;
         this.radiusAU = radiusAU;
         this.rotationPeriodDays = rotationPeriodDays;
-        this.rotationSpeed = PApplet.TWO_PI / rotationPeriodDays;
+        this.rotationSpeed = (float) (PApplet.TWO_PI / rotationPeriodDays);
         this.position = initialPixelPos.copy();
         this.col = displayColor;
         this.texture = texture;
@@ -52,7 +52,7 @@ public class Sun implements CelestialBody {
     }
 
     // ——————————————— Atualização ———————————————
-    public void update(float dtDays) {
+    public void update(double dtDays) {
         rotationAngle += rotationSpeed * dtDays;
     }
 
@@ -118,7 +118,7 @@ public class Sun implements CelestialBody {
         return radiusPx;
     }
 
-    public float getMass() {
+    public double getMass() {
         return massSolar;
     }
 
@@ -129,18 +129,18 @@ public class Sun implements CelestialBody {
     // ——————————————— Implementação de CelestialBody ———————————————
     @Override public PVector getPositionAU() { return positionAU; }
     @Override public PVector getVelocityAU() { return velocityAU; }
-    @Override public float getMassSolar() { return massSolar; }
+    @Override public double getMassSolar() { return massSolar; }
     @Override public CelestialBody getCentralBody() { return null; }
     @Override public void setCentralBody(CelestialBody c) { /* não aplicável ao Sol */ }
-    @Override public void propagateKepler(float dtDays) { /* não se move */ }
-    @Override public float getPerihelionAU() { return 0; }
-    @Override public float getAphelionAU() { return 0; }
-    @Override public float getEccentricity() { return 0; }
-    @Override public float getOrbitInclinationRad() { return 0; }
-    @Override public float getArgumentOfPeriapsisRad() { return 0; }
-    @Override public float getRadiusAU() { return radiusAU; }
-    @Override public float getRotationPeriodDays() { return rotationPeriodDays; }
-    @Override public float getSemiMajorAxisAU()           { return 0; }
-    @Override public float getLongitudeAscendingNodeRad()  { return 0; }
-    @Override public float getMeanAnomalyRad()             { return 0; }
+    @Override public void propagateKepler(double dtDays) { /* não se move */ }
+    @Override public double getPerihelionAU() { return 0.0; }
+    @Override public double getAphelionAU() { return 0.0; }
+    @Override public double getEccentricity() { return 0.0; }
+    @Override public double getOrbitInclinationRad() { return 0.0; }
+    @Override public double getArgumentOfPeriapsisRad() { return 0.0; }
+    @Override public double getRadiusAU() { return radiusAU; }
+    @Override public double getRotationPeriodDays() { return rotationPeriodDays; }
+    @Override public double getSemiMajorAxisAU()          { return 0.0; }
+    @Override public double getLongitudeAscendingNodeRad(){ return 0.0; }
+    @Override public double getMeanAnomalyRad()            { return 0.0; }
 }

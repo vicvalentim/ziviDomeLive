@@ -12,12 +12,15 @@ public final class SceneCameraService implements AutoCloseable {
 
     private final ziviDomeLive parent;
     private final OrbitCamera orbitCamera;
+    private final boolean previousInputEnabled;
     private Supplier<PVector> targetSupplier;
+    private boolean inputConfigured;
     private boolean closed;
 
     SceneCameraService(ziviDomeLive parent) {
         this.parent = Objects.requireNonNull(parent, "parent");
         this.orbitCamera = parent.getSceneCamera();
+        this.previousInputEnabled = parent.isSceneCameraInputEnabled();
     }
 
     /** @return shared scene-space orbit camera */
@@ -42,6 +45,7 @@ public final class SceneCameraService implements AutoCloseable {
      */
     public void setInputEnabled(boolean enabled) {
         ensureOpen();
+        inputConfigured = true;
         parent.setSceneCameraInputEnabled(enabled);
     }
 
@@ -82,7 +86,10 @@ public final class SceneCameraService implements AutoCloseable {
             return;
         }
         targetSupplier = null;
-        parent.setSceneCameraInputEnabled(false);
+        orbitCamera.resetInputState();
+        if (inputConfigured) {
+            parent.setSceneCameraInputEnabled(previousInputEnabled);
+        }
         closed = true;
     }
 

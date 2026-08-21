@@ -3,10 +3,15 @@
  */
 class SimulatedClock {
   static final double JD_J2000 = 2451545.0;
+  // Mantém aproximadamente duas atualizações físicas por frame a 60 Hz quando
+  // o tempo está lento, sem ultrapassar o passo máximo usado em velocidade normal.
+  static final double MAX_PHYSICS_STEP_DAYS = 1.0 / 120.0;
+  static final double PHYSICS_STEPS_PER_REAL_SECOND = 120.0;
   private final SimulationTimeline timeline;
 
   SimulatedClock(SimulationTimeline timeline) {
     this.timeline = timeline;
+    configurePhysicsStep(timeline.getRate());
   }
 
   double getCurrentJulianDate() {
@@ -32,6 +37,20 @@ class SimulatedClock {
 
   void setTimeScale(double timeScale) {
     timeline.setRate(timeScale);
+    configurePhysicsStep(timeScale);
+  }
+
+  private void configurePhysicsStep(double timeScale) {
+    if (timeScale <= 0.0) return;
+
+    double stepForSmoothMotion = Math.max(
+      Double.MIN_NORMAL,
+      timeScale / PHYSICS_STEPS_PER_REAL_SECOND
+    );
+    timeline.setFixedStep(Math.min(MAX_PHYSICS_STEP_DAYS, stepForSmoothMotion));
+    // Um novo passo não deve herdar a fração do passo anterior, pois isso produz
+    // um salto isolado justamente no frame em que a velocidade é alterada.
+    timeline.resetAccumulator();
   }
 
   boolean isPaused() {

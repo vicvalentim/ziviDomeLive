@@ -377,6 +377,24 @@ class ZividomeliveLifecycleTest {
 	}
 
 	@Test
+	void sceneCameraServiceRestoresTheInputStateItTemporarilyOwned() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		ServiceAwareScene scene = new ServiceAwareScene();
+		ServiceAwareScene next = new ServiceAwareScene();
+		lib.setScene(scene);
+		lib.registerScene(next);
+
+		scene.services.camera().setInputEnabled(true);
+		assertTrue(lib.isSceneCameraInputEnabled());
+
+		lib.getSceneManager().nextScene();
+
+		assertFalse(lib.isSceneCameraInputEnabled(),
+				"Closing a scene activation must restore the input state it replaced");
+		lib.dispose();
+	}
+
+	@Test
 	void requestedReloadIsExecutedAtFrameBoundaryWithFreshServices() throws Exception {
 		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		ServiceAwareScene scene = new ServiceAwareScene();

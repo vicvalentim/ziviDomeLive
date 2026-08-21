@@ -27,9 +27,9 @@ import processing.opengl.PGraphicsOpenGL;
  * }
  * </pre>
  *
- * <p>Rotations use unit quaternions (gimbal-lock free) and every target,
- * orientation and distance change is smoothly interpolated (SLERP/LERP) for
- * fluid motion. Mouse handling is built in: drag to orbit, wheel to fly in/out.</p>
+ * <p>Rotations use unit quaternions (gimbal-lock free). Programmatic pose changes
+ * are smoothly interpolated (SLERP/LERP), while direct mouse manipulation is
+ * applied immediately so drag and wheel gestures remain attached to the pointer.</p>
  */
 public class OrbitCamera implements PConstants {
 
@@ -185,6 +185,16 @@ public class OrbitCamera implements PConstants {
     }
 
     /**
+     * Changes the current distance immediately and keeps its interpolation goal synchronized.
+     * This is intended for direct manipulation such as mouse-wheel navigation.
+     *
+     * @param amount distance delta (positive flies away, negative flies in)
+     */
+    public void zoomImmediate(float amount) {
+        setDistanceImmediate(distance + amount);
+    }
+
+    /**
      * Handles mouse input: drag to orbit, wheel to fly in/out.
      *
      * @param event the mouse event
@@ -197,9 +207,7 @@ public class OrbitCamera implements PConstants {
                 lastMouseY = event.getY();
                 break;
             case MouseEvent.RELEASE:
-                dragging = false;
-                lastMouseX = -1;
-                lastMouseY = -1;
+                resetInputState();
                 break;
             case MouseEvent.DRAG:
                 handleDrag(event);
@@ -207,7 +215,7 @@ public class OrbitCamera implements PConstants {
             case MouseEvent.WHEEL:
                 float scroll = event.getCount();
                 boolean isPad = Math.abs(scroll) < 1f;
-                zoom(isPad ? scroll * wheelPadStep : scroll * wheelStep);
+                zoomImmediate(isPad ? scroll * wheelPadStep : scroll * wheelStep);
                 break;
             default:
                 break;
@@ -215,7 +223,7 @@ public class OrbitCamera implements PConstants {
     }
 
     private void handleDrag(MouseEvent event) {
-        if (lastMouseX < 0 || lastMouseY < 0) {
+        if (!dragging || lastMouseX < 0 || lastMouseY < 0) {
             dragging = true;
             lastMouseX = event.getX();
             lastMouseY = event.getY();
@@ -226,8 +234,18 @@ public class OrbitCamera implements PConstants {
         lastMouseX = event.getX();
         lastMouseY = event.getY();
         if (dx == 0 && dy == 0) return;
-        rotateAround(0f, 1f, 0f, dx); // yaw around world up
-        rotateAround(1f, 0f, 0f, dy); // pitch around world right
+        rotateAroundImmediate(0f, 1f, 0f, dx); // yaw around world up
+        rotateAroundImmediate(1f, 0f, 0f, dy); // pitch around world right
+    }
+
+    /**
+     * Clears transient pointer state without changing the camera pose.
+     * The next drag starts from a fresh anchor instead of reusing stale coordinates.
+     */
+    public void resetInputState() {
+        dragging = false;
+        lastMouseX = -1;
+        lastMouseY = -1;
     }
 
     // -------------------------------------------------------------------------
