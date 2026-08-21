@@ -20,6 +20,9 @@ public final class SimulationTimeline {
     private int maxSubSteps = 8;
     private boolean paused;
 
+    SimulationTimeline() {
+    }
+
     /**
      * Advances this timeline using a bounded number of fixed steps.
      *

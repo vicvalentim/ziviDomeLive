@@ -36,7 +36,7 @@
 - Processing hooks are registered by the facade constructor. Initialization is split between `setup()` and lazy renderer initialization in `post()`.
 - `pre()` is the authoritative frame and render-thread boundary:
   1. begin performance tracking and synchronize the active scene;
-  2. bind/drain the activation render queue;
+  2. bind/drain the activation render queue and bounded external-input ports;
   3. tick `FrameClock`;
   4. consume a pending reload or call `Scene.update()`;
   5. refresh a tracked scene-camera target;
@@ -56,15 +56,16 @@
   - `actions()`: named key/mouse actions while retaining raw Scene callbacks;
   - `camera()`: scene-space orbit camera, input, and target tracking;
   - `environment()`: activation-owned environment overrides;
+  - `ports()`: bounded activation-owned bindings for optional external message adapters;
   - `requestReload()`: deferred reload at a safe frame boundary.
-- `parent()`, `scene()`, `renderQueue()`, `onDispose()`, `isClosed()`, and public `close()` exist today but expose runtime ownership. Treat them as transition liabilities: do not teach, broaden, or build new features on them without an explicit compatibility requirement.
-- The same applies to public lifecycle controls on child services: `tick`, `reset`, `drain`, `dispatch`, raw caches, constructors, and `close`. The deliberate 2.0 Services refactor should align Java visibility with ownership and update compatibility tests intentionally.
+- `parent()`, `scene()`, `renderQueue()`, `onDispose()`, `isClosed()`, and `close()` are not artist-facing. Keep runtime ownership internal rather than restoring these escape hatches.
+- Lifecycle controls on child services—construction, clock ticking, queue draining, input dispatch, raw caches, and closure—are internal. `SimulationTimeline` controls remain scene-facing because simulation position and policy belong to the scene.
 - Keep the hierarchy shallow: `Scene -> SceneServices -> focused concrete service`. Do not add a dependency-injection framework, global internal service locator, deep interface hierarchy, or duplicate aliases.
 
 ## Service ownership rules
 - Runtime-owned: service construction/closure, frame ticking, queue binding/draining, input dispatch, deactivation cancellation, camera update, environment restoration, cache shutdown, and reload execution.
 - Scene-controlled: simulation rate/position, task submission, asset requests, action bindings, camera pose/configuration, optional mouse enablement, target tracking, and activation environment values.
-- A scene must never be required to close a runtime-supplied service. Current public `AutoCloseable` implementations do not transfer ownership to artist code.
+- A scene never closes a runtime-supplied service. Only the input/output port provider SPI exposes `AutoCloseable`, so adapter authors can implement lifecycle while `ScenePorts` retains activation ownership.
 - `SceneTaskGroup` uses the shared `ThreadManager`; never create an executor per scene. The bounded NDI sender worker is an intentional output-specific exception.
 - Background work must not call Processing/OpenGL APIs. Render-thread publication belongs to the activation queue, and old-activation work must not reach a new activation of the same scene.
 - `SceneAssets` creates Processing/GPU-facing assets on the bound render thread. Borrowed resources drop references on disposal; owned native/GPU resources need deterministic disposers.
@@ -115,7 +116,7 @@
 - `OutputManager` coordinates NDI, Syphon, and Spout with independent view routing. Outputs start opt-in/disabled after setup; do not reintroduce automatic publication.
 - Syphon is macOS-gated, Spout is Windows-gated, and NDI initializes when enabled and supported. Linux has reduced local texture-sharing support.
 - Keep bounded non-blocking output workers and explicit shutdown. Never perform external I/O on the OpenGL thread.
-- Future MIDI/OSC/device control belongs behind an optional integration/provider boundary, not in `OutputManager` and not as a core dependency. External-thread input must be bounded and delivered at a frame boundary to the correct activation.
+- MIDI/OSC/device control connects through the protocol-agnostic `ScenePorts` SPI, not through `OutputManager` or a core protocol dependency. Real adapters remain optional; external-thread input is bounded and delivered at a frame boundary to the correct activation.
 
 ## Public API governance for 2.0
 - Optimize for a didactic Processing API: few concepts, concrete names, direct calls, safe defaults, and teachable examples.

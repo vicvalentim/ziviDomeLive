@@ -267,6 +267,24 @@ class ZividomeliveLifecycleTest {
 	}
 
 	@Test
+	void adoptingDetachedManagerConfiguresItsFirstSceneBeforeSetup() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		SceneManager replacement = new SceneManager();
+		ServiceAwareScene scene = new ServiceAwareScene();
+		replacement.registerScene(scene);
+
+		assertEquals(0, scene.setupCount,
+				"A detached manager cannot start a service-aware activation");
+
+		lib.setSceneManager(replacement);
+
+		assertEquals(1, scene.configureCount);
+		assertEquals(1, scene.setupCount);
+		assertSame(scene.services, scene.servicesSeenDuringSetup);
+		lib.dispose();
+	}
+
+	@Test
 	void pauseBlocksSceneUpdatesUntilResume() throws Exception {
 		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		TrackingScene scene = new TrackingScene("Paused");
@@ -317,6 +335,48 @@ class ZividomeliveLifecycleTest {
 
 		assertEquals(1, scene.disposeCount);
 		assertTrue(activation.isClosed());
+	}
+
+	@Test
+	void failedSetupStillDisposesSceneAndClosesItsActivation() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		FailingSetupScene scene = new FailingSetupScene();
+		ServiceAwareScene activation = scene;
+
+		assertThrows(IllegalStateException.class, () -> lib.setScene(scene));
+
+		assertNotNull(activation.services);
+		assertTrue(activation.services.isClosed());
+		assertEquals(1, activation.disposeCount);
+		lib.dispose();
+	}
+
+	@Test
+	void failedConfigureStillDisposesSceneAndClosesItsActivation() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		FailingConfigureScene scene = new FailingConfigureScene();
+
+		assertThrows(IllegalStateException.class, () -> lib.setScene(scene));
+
+		assertNotNull(scene.services);
+		assertTrue(scene.services.isClosed());
+		assertEquals(0, scene.setupCount);
+		assertEquals(1, scene.disposeCount);
+		lib.dispose();
+	}
+
+	@Test
+	void failedSceneDisposeStillClosesItsActivation() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		FailingDisposeScene scene = new FailingDisposeScene();
+		ServiceAwareScene activation = scene;
+		lib.setScene(scene);
+		SceneServices services = activation.services;
+
+		assertDoesNotThrow(lib::dispose);
+
+		assertEquals(1, activation.disposeCount);
+		assertTrue(services.isClosed());
 	}
 
 	@Test
@@ -411,6 +471,26 @@ class ZividomeliveLifecycleTest {
 		assertTrue(firstActivation.isClosed());
 		assertNotSame(firstActivation, scene.services);
 		assertFalse(scene.services.isClosed());
+		lib.dispose();
+	}
+
+	@Test
+	void portInputThatSwitchesSceneDoesNotUpdateTheDisposedActivation() throws Exception {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		TestInputPort<Integer> input = new TestInputPort<>();
+		PortSwitchingScene first = new PortSwitchingScene(lib, input);
+		TrackingScene second = new TrackingScene("Second");
+		lib.setScene(first);
+		lib.registerScene(second);
+		setInitState(lib, ziviDomeLive.InitState.MANAGERS_READY);
+
+		input.emit(1);
+		assertDoesNotThrow(lib::pre);
+
+		assertSame(second, lib.getSceneManager().getCurrentScene());
+		assertEquals(0, first.updateCount);
+		assertTrue(first.services.isClosed());
+		assertEquals(1, input.closeCount);
 		lib.dispose();
 	}
 
@@ -597,6 +677,98 @@ class ZividomeliveLifecycleTest {
 		@Override
 		public void dispose() {
 			disposeCount++;
+		}
+	}
+
+	private static final class FailingSetupScene extends ServiceAwareScene {
+		@Override
+		public void setupScene() {
+			super.setupScene();
+			throw new IllegalStateException("setup failed");
+		}
+	}
+
+	private static final class FailingConfigureScene implements Scene {
+		private SceneServices services;
+		private int setupCount;
+		private int disposeCount;
+
+		@Override
+		public void configure(SceneServices services) {
+			this.services = services;
+			throw new IllegalStateException("configure failed");
+		}
+
+		@Override
+		public void setupScene() {
+			setupCount++;
+		}
+
+		@Override
+		public void sceneRender(processing.opengl.PGraphicsOpenGL pg) {
+		}
+
+		@Override
+		public void dispose() {
+			disposeCount++;
+		}
+	}
+
+	private static final class FailingDisposeScene extends ServiceAwareScene {
+		@Override
+		public void dispose() {
+			super.dispose();
+			throw new IllegalStateException("dispose failed");
+		}
+	}
+
+	private static final class PortSwitchingScene implements Scene {
+		private final ziviDomeLive lib;
+		private final TestInputPort<Integer> input;
+		private SceneServices services;
+		private int updateCount;
+
+		private PortSwitchingScene(ziviDomeLive lib, TestInputPort<Integer> input) {
+			this.lib = lib;
+			this.input = input;
+		}
+
+		@Override
+		public void configure(SceneServices services) {
+			this.services = services;
+		}
+
+		@Override
+		public void setupScene() {
+			services.ports().connectInput(input, ignored -> lib.getSceneManager().nextScene());
+		}
+
+		@Override
+		public void update() {
+			updateCount++;
+		}
+
+		@Override
+		public void sceneRender(PGraphicsOpenGL pg) {
+		}
+	}
+
+	private static final class TestInputPort<T> implements SceneInputPort<T> {
+		private java.util.function.Consumer<? super T> receiver;
+		private int closeCount;
+
+		@Override
+		public void start(java.util.function.Consumer<? super T> receiver) {
+			this.receiver = receiver;
+		}
+
+		private void emit(T value) {
+			receiver.accept(value);
+		}
+
+		@Override
+		public void close() {
+			closeCount++;
 		}
 	}
 

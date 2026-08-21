@@ -3,8 +3,6 @@ package com.victorvalentim.zividomelive;
 import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.PApplet;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -17,7 +15,7 @@ import java.util.logging.Logger;
  * {@link Scene#update()}, and closes it after {@link Scene#dispose()}. Existing scenes remain
  * source compatible; service-aware scenes receive it through {@link Scene#configure(SceneServices)}.</p>
  */
-public final class SceneServices implements AutoCloseable {
+public final class SceneServices {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
@@ -26,12 +24,12 @@ public final class SceneServices implements AutoCloseable {
     private final FrameClock frameClock = new FrameClock();
     private final SimulationTimeline timeline = new SimulationTimeline();
     private final RenderThreadQueue renderQueue;
-    private final SceneTaskGroup tasks = new SceneTaskGroup();
+    private final SceneTaskGroup tasks;
     private final SceneAssets assets;
     private final SceneActionMap actions = new SceneActionMap();
     private final SceneCameraService camera;
     private final SceneEnvironmentService environment;
-    private final Deque<Runnable> cleanup = new ArrayDeque<>();
+    private final ScenePorts ports;
     private final AtomicBoolean reloadRequested = new AtomicBoolean();
     private volatile boolean preparedForDispose;
     private volatile boolean closed;
@@ -40,24 +38,17 @@ public final class SceneServices implements AutoCloseable {
         this.parent = Objects.requireNonNull(parent, "parent");
         this.scene = Objects.requireNonNull(scene, "scene");
         this.renderQueue = new RenderThreadQueue(Objects.requireNonNull(renderThread, "renderThread"));
+        this.tasks = new SceneTaskGroup(renderQueue);
         this.assets = new SceneAssets(parent.getPApplet(), renderQueue);
         this.camera = new SceneCameraService(parent);
         this.environment = new SceneEnvironmentService(parent);
-    }
-
-    /** @return facade that owns this activation */
-    public ziviDomeLive parent() {
-        return parent;
+        this.ports = new ScenePorts(renderQueue);
     }
 
     /** @return Processing applet that owns the facade */
     public PApplet applet() {
+        ensureOpen();
         return parent.getPApplet();
-    }
-
-    /** @return scene that owns this activation */
-    public Scene scene() {
-        return scene;
     }
 
     /** @return monotonic activation-scoped frame clock */
@@ -70,12 +61,6 @@ public final class SceneServices implements AutoCloseable {
     public SimulationTimeline timeline() {
         ensureOpen();
         return timeline;
-    }
-
-    /** @return activation-scoped Processing/OpenGL thread queue */
-    public RenderThreadQueue renderQueue() {
-        ensureOpen();
-        return renderQueue;
     }
 
     /** @return bounded activation-scoped task group */
@@ -108,37 +93,50 @@ public final class SceneServices implements AutoCloseable {
         return environment;
     }
 
+    /** @return activation-scoped boundary for optional external message adapters */
+    public ScenePorts ports() {
+        ensureOpen();
+        return ports;
+    }
+
     /** Defers a full dispose/setup cycle of the active scene to the next frame boundary. */
     public void requestReload() {
         ensureOpen();
         reloadRequested.set(true);
     }
 
-    /**
-     * Registers additional cleanup in last-in/first-out order.
-     *
-     * @param cleanupAction cleanup callback
-     */
-    public synchronized void onDispose(Runnable cleanupAction) {
-        ensureOpen();
-        cleanup.push(Objects.requireNonNull(cleanupAction, "cleanupAction"));
+    boolean isClosed() {
+        return preparedForDispose || closed;
     }
 
-    /** @return whether this activation context has completed cleanup */
-    public boolean isClosed() {
-        return closed;
-    }
-
-    void beginFrame() {
+    boolean beginFrame() {
         ensureOpen();
         renderQueue.bindToCurrentThread();
         renderQueue.drain();
+        if (isClosed()) {
+            return false;
+        }
+        ports.drain();
+        if (isClosed()) {
+            return false;
+        }
         frameClock.tick();
+        return true;
     }
 
     void endFrame() {
         ensureOpen();
         camera.updateTarget();
+    }
+
+    void pause() {
+        ensureOpen();
+        ports.pause();
+    }
+
+    void resume() {
+        ensureOpen();
+        ports.resume();
     }
 
     boolean consumeReloadRequest() {
@@ -151,36 +149,37 @@ public final class SceneServices implements AutoCloseable {
         }
         preparedForDispose = true;
         reloadRequested.set(false);
-        actions.close();
-        tasks.close();
-        renderQueue.close();
-        camera.close();
+        ports.stopAccepting();
+        closeService("scene actions", actions::close);
+        closeService("scene tasks", tasks::close);
+        closeService("render-thread queue", renderQueue::close);
+        closeService("scene camera", camera::close);
     }
 
-    @Override
-    public synchronized void close() {
+    synchronized void close() {
         if (closed) {
             return;
         }
         prepareForDispose();
-
-        while (!cleanup.isEmpty()) {
-            try {
-                cleanup.pop().run();
-            } catch (RuntimeException error) {
-                LOGGER.log(Level.WARNING, "Scene cleanup action failed", error);
-            }
-        }
-        environment.close();
-        assets.close();
-        timeline.reset();
-        frameClock.reset();
+        closeService("scene ports", ports::close);
+        closeService("scene environment", environment::close);
+        closeService("scene assets", assets::close);
+        closeService("simulation timeline", timeline::reset);
+        closeService("frame clock", frameClock::reset);
         closed = true;
     }
 
     private void ensureOpen() {
-        if (closed) {
+        if (preparedForDispose || closed) {
             throw new IllegalStateException("Scene services are closed for " + scene.getName() + ".");
+        }
+    }
+
+    private static void closeService(String label, Runnable cleanup) {
+        try {
+            cleanup.run();
+        } catch (RuntimeException | LinkageError error) {
+            LOGGER.log(Level.WARNING, "Failed to close " + label, error);
         }
     }
 }

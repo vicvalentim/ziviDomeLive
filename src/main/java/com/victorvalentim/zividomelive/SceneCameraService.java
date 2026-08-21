@@ -8,7 +8,7 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 /** Scene-scoped access to the shared orbit camera and optional target tracking. */
-public final class SceneCameraService implements AutoCloseable {
+public final class SceneCameraService {
 
     private final ziviDomeLive parent;
     private final OrbitCamera orbitCamera;
@@ -61,11 +61,13 @@ public final class SceneCameraService implements AutoCloseable {
 
     /** Stops automatic target tracking without changing the current camera target. */
     public void clearTargetTracking() {
+        ensureOpen();
         targetSupplier = null;
     }
 
     /** @return whether a dynamic target supplier is configured */
     public boolean isTrackingTarget() {
+        ensureOpen();
         return targetSupplier != null;
     }
 
@@ -80,8 +82,7 @@ public final class SceneCameraService implements AutoCloseable {
         }
     }
 
-    @Override
-    public void close() {
+    void close() {
         if (closed) {
             return;
         }

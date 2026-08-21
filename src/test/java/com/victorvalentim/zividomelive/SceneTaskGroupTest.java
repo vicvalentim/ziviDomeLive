@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -65,5 +66,58 @@ class SceneTaskGroupTest {
         release.countDown();
         first.get(2, TimeUnit.SECONDS);
         group.close();
+    }
+
+    @Test
+    void completedResultIsPublishedOnlyAtTheSceneFrameBoundary() throws Exception {
+        RenderThreadQueue queue = new RenderThreadQueue();
+        SceneTaskGroup group = new SceneTaskGroup(1, queue);
+        AtomicReference<String> result = new AtomicReference<>();
+        AtomicReference<Thread> callbackThread = new AtomicReference<>();
+        CountDownLatch workFinished = new CountDownLatch(1);
+
+        assertTrue(group.submitIfIdle("load", () -> {
+            workFinished.countDown();
+            return "ready";
+        }, value -> {
+            result.set(value);
+            callbackThread.set(Thread.currentThread());
+        }));
+
+        assertTrue(workFinished.await(2, TimeUnit.SECONDS));
+        assertNull(result.get());
+        awaitPending(queue);
+        queue.drain();
+        assertEquals("ready", result.get());
+        assertSame(Thread.currentThread(), callbackThread.get());
+        group.close();
+        queue.close();
+    }
+
+    @Test
+    void completedResultFromClosedActivationIsDiscarded() throws Exception {
+        RenderThreadQueue queue = new RenderThreadQueue();
+        SceneTaskGroup group = new SceneTaskGroup(1, queue);
+        AtomicReference<String> result = new AtomicReference<>();
+        CountDownLatch workFinished = new CountDownLatch(1);
+
+        assertTrue(group.submitIfIdle("load", () -> {
+            workFinished.countDown();
+            return "stale";
+        }, result::set));
+
+        assertTrue(workFinished.await(2, TimeUnit.SECONDS));
+        group.close();
+        queue.close();
+        assertEquals(0, queue.getPendingCount());
+        assertNull(result.get());
+    }
+
+    private static void awaitPending(RenderThreadQueue queue) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+        while (queue.getPendingCount() == 0 && System.nanoTime() < deadline) {
+            Thread.onSpinWait();
+        }
+        assertEquals(1, queue.getPendingCount());
     }
 }

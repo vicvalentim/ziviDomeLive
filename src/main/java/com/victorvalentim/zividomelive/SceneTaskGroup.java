@@ -13,36 +13,37 @@ import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * Bounded scene-owned task group backed by the library's shared {@link ThreadManager}.
  */
-public final class SceneTaskGroup implements AutoCloseable {
+public final class SceneTaskGroup {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
     private final Map<String, FutureTask<?>> tasks = new ConcurrentHashMap<>();
     private final AtomicLong sequence = new AtomicLong();
     private final int maxInFlight;
+    private final RenderThreadQueue renderQueue;
     private volatile boolean closed;
 
-    /** Creates a task group allowing at most 32 concurrent/queued scene tasks. */
-    public SceneTaskGroup() {
-        this(32);
+    SceneTaskGroup(RenderThreadQueue renderQueue) {
+        this(32, renderQueue);
     }
 
-    /**
-     * Creates a task group with a custom in-flight budget.
-     *
-     * @param maxInFlight positive maximum number of queued or running tasks
-     */
-    public SceneTaskGroup(int maxInFlight) {
+    SceneTaskGroup(int maxInFlight) {
+        this(maxInFlight, new RenderThreadQueue());
+    }
+
+    SceneTaskGroup(int maxInFlight, RenderThreadQueue renderQueue) {
         if (maxInFlight < 1) {
             throw new IllegalArgumentException("Maximum in-flight task count must be positive.");
         }
         this.maxInFlight = maxInFlight;
+        this.renderQueue = Objects.requireNonNull(renderQueue, "renderQueue");
     }
 
     /**
@@ -70,6 +71,29 @@ public final class SceneTaskGroup implements AutoCloseable {
         return trySubmit(key, () -> {
             task.run();
             return null;
+        }).isPresent();
+    }
+
+    /**
+     * Runs keyed work in the shared background pool and publishes its result at the next
+     * frame boundary of this activation.
+     *
+     * @param key stable task key
+     * @param task background work that must not call Processing/OpenGL APIs
+     * @param onResult result handler executed on the Processing render thread
+     * @param <T> result type
+     * @return true when submitted
+     */
+    public <T> boolean submitIfIdle(
+            String key,
+            Callable<T> task,
+            Consumer<? super T> onResult) {
+        Objects.requireNonNull(task, "task");
+        Objects.requireNonNull(onResult, "onResult");
+        return trySubmit(key, () -> {
+            T result = task.call();
+            publishResult(() -> onResult.accept(result));
+            return result;
         }).isPresent();
     }
 
@@ -126,13 +150,12 @@ public final class SceneTaskGroup implements AutoCloseable {
     }
 
     /** @return whether the group rejects new work */
-    public boolean isClosed() {
+    boolean isClosed() {
         return closed;
     }
 
     /** Cancels every scene-owned task and rejects future submissions. */
-    @Override
-    public synchronized void close() {
+    synchronized void close() {
         if (closed) {
             return;
         }
@@ -146,6 +169,25 @@ public final class SceneTaskGroup implements AutoCloseable {
     private void ensureOpen() {
         if (closed) {
             throw new IllegalStateException("Scene task group is closed.");
+        }
+    }
+
+    private void publishResult(Runnable callback) {
+        synchronized (this) {
+            if (closed) {
+                return;
+            }
+            try {
+                renderQueue.enqueue(() -> {
+                    if (!closed) {
+                        callback.run();
+                    }
+                });
+            } catch (IllegalStateException error) {
+                if (!closed) {
+                    throw error;
+                }
+            }
         }
     }
 

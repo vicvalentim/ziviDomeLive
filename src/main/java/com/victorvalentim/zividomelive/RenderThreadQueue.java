@@ -7,14 +7,14 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 /**
  * Scene-scoped queue for work that must execute on the Processing/OpenGL thread.
  */
-public final class RenderThreadQueue implements AutoCloseable {
+final class RenderThreadQueue {
 
     private final Queue<Runnable> pending = new ConcurrentLinkedQueue<>();
     private volatile Thread renderThread;
     private volatile boolean closed;
 
     /** Binds a standalone queue to the thread that constructs it. */
-    public RenderThreadQueue() {
+    RenderThreadQueue() {
         this(Thread.currentThread());
     }
 
@@ -36,7 +36,7 @@ public final class RenderThreadQueue implements AutoCloseable {
      *
      * @param work work to execute on the bound render thread
      */
-    public void enqueue(Runnable work) {
+    void enqueue(Runnable work) {
         Objects.requireNonNull(work, "work");
         ensureOpen();
         pending.add(work);
@@ -47,7 +47,7 @@ public final class RenderThreadQueue implements AutoCloseable {
      *
      * @param work work to execute or enqueue
      */
-    public void executeOrEnqueue(Runnable work) {
+    void executeOrEnqueue(Runnable work) {
         Objects.requireNonNull(work, "work");
         ensureOpen();
         if (isRenderThread()) {
@@ -62,7 +62,7 @@ public final class RenderThreadQueue implements AutoCloseable {
      *
      * @return number of work items executed
      */
-    public int drain() {
+    int drain() {
         requireRenderThread();
         ensureOpen();
         int limit = pending.size();
@@ -79,29 +79,28 @@ public final class RenderThreadQueue implements AutoCloseable {
     }
 
     /** Throws when called outside the Processing/OpenGL thread. */
-    public void requireRenderThread() {
+    void requireRenderThread() {
         if (!isRenderThread()) {
             throw new IllegalStateException("This operation must run on the Processing render thread.");
         }
     }
 
     /** @return whether the caller is the currently bound render thread */
-    public boolean isRenderThread() {
+    boolean isRenderThread() {
         return Thread.currentThread() == renderThread;
     }
 
     /** @return approximate number of queued work items */
-    public int getPendingCount() {
+    int getPendingCount() {
         return pending.size();
     }
 
     /** @return whether the queue rejects new work */
-    public boolean isClosed() {
+    boolean isClosed() {
         return closed;
     }
 
-    @Override
-    public void close() {
+    void close() {
         closed = true;
         pending.clear();
     }

@@ -19,6 +19,7 @@ public class SceneManager {
 
 	private final List<Scene> scenes; // List of registered scenes
 	private int currentSceneIndex = -1; // Index of the current scene (-1 when no scene is active)
+	private boolean currentSceneActive;
 	private LifecycleListener lifecycleListener;
 	private static final Logger LOGGER = LogManager.getLogger();
 	/**
@@ -39,7 +40,7 @@ public class SceneManager {
 			return;
 		}
 
-		if (scenes.contains(scene)) {
+		if (indexOfIdentity(scene) >= 0) {
 			LOGGER.warning("Scene already registered: " + scene.getName());
 			return;
 		}
@@ -66,15 +67,19 @@ public class SceneManager {
 			return;
 		}
 
-		int index = scenes.indexOf(scene);
+		int index = indexOfIdentity(scene);
 		if (index == -1) {
 			scenes.add(scene);
 			index = scenes.size() - 1;
 			LOGGER.info("Scene auto-registered during activation: " + scene.getName());
 		}
 
-		if (currentSceneIndex == index) {
+		if (currentSceneIndex == index && currentSceneActive) {
 			LOGGER.info("Scene already active, skipping reinitialization: " + scene.getName());
+			return;
+		}
+		if (currentSceneIndex == index) {
+			setupScene(scene);
 			return;
 		}
 
@@ -93,7 +98,7 @@ public class SceneManager {
 	 * @return true if scene is already managed
 	 */
 	public boolean containsScene(Scene scene) {
-		return scenes.contains(scene);
+		return indexOfIdentity(scene) >= 0;
 	}
 
 	/**
@@ -171,7 +176,10 @@ public class SceneManager {
 		}
 
 		if (currentSceneIndex == index) {
-			return; // already active, do not reinitialize
+			if (!currentSceneActive) {
+				setupScene(getCurrentScene());
+			}
+			return;
 		}
 
 		int previousIndex = currentSceneIndex;
@@ -190,20 +198,34 @@ public class SceneManager {
 	 * @param index index of the scene to dispose; ignored if out of range
 	 */
 	private void disposeScene(int index) {
-		if (index < 0 || index >= scenes.size()) {
+		if (index < 0 || index >= scenes.size() || !currentSceneActive) {
 			return;
 		}
-		Scene scene = scenes.get(index);
+		currentSceneActive = false;
+		disposeActivation(scenes.get(index));
+	}
+
+	private void disposeActivation(Scene scene) {
 		if (lifecycleListener != null) {
-			lifecycleListener.beforeDispose(scene);
+			try {
+				lifecycleListener.beforeDispose(scene);
+			} catch (RuntimeException | LinkageError error) {
+				LOGGER.warning("Error preparing scene disposal " + scene.getName()
+						+ ": " + error.getMessage());
+			}
 		}
 		try {
 			scene.dispose();
-		} catch (RuntimeException e) {
-			LOGGER.warning("Error disposing scene " + scene.getName() + ": " + e.getMessage());
+		} catch (RuntimeException | LinkageError error) {
+			LOGGER.warning("Error disposing scene " + scene.getName() + ": " + error.getMessage());
 		} finally {
 			if (lifecycleListener != null) {
-				lifecycleListener.afterDispose(scene);
+				try {
+					lifecycleListener.afterDispose(scene);
+				} catch (RuntimeException | LinkageError error) {
+					LOGGER.warning("Error releasing scene " + scene.getName()
+							+ ": " + error.getMessage());
+				}
 			}
 		}
 	}
@@ -215,7 +237,7 @@ public class SceneManager {
 	 * @return true when an active scene was reloaded
 	 */
 	public boolean reloadCurrentScene() {
-		if (currentSceneIndex < 0 || currentSceneIndex >= scenes.size()) {
+		if (currentSceneIndex < 0 || currentSceneIndex >= scenes.size() || !currentSceneActive) {
 			return false;
 		}
 		Scene scene = scenes.get(currentSceneIndex);
@@ -241,16 +263,50 @@ public class SceneManager {
 	void detachScenes() {
 		scenes.clear();
 		currentSceneIndex = -1;
+		currentSceneActive = false;
 	}
 
 	void setLifecycleListener(LifecycleListener lifecycleListener) {
+		if (this.lifecycleListener == lifecycleListener) {
+			return;
+		}
+		if (this.lifecycleListener != null && currentSceneActive) {
+			disposeScene(currentSceneIndex);
+		}
 		this.lifecycleListener = lifecycleListener;
+		if (lifecycleListener != null && !currentSceneActive) {
+			Scene current = getCurrentScene();
+			if (current != null) {
+				setupScene(current);
+			}
+		}
 	}
 
 	private void setupScene(Scene scene) {
-		if (lifecycleListener != null) {
-			lifecycleListener.beforeSetup(scene);
+		if (lifecycleListener == null) {
+			return;
 		}
-		scene.setupScene();
+		try {
+			lifecycleListener.beforeSetup(scene);
+			scene.setupScene();
+			currentSceneActive = true;
+		} catch (RuntimeException | LinkageError error) {
+			currentSceneActive = false;
+			disposeActivation(scene);
+			throw error;
+		}
+	}
+
+	boolean isCurrentSceneActive() {
+		return currentSceneActive;
+	}
+
+	private int indexOfIdentity(Scene target) {
+		for (int index = 0; index < scenes.size(); index++) {
+			if (scenes.get(index) == target) {
+				return index;
+			}
+		}
+		return -1;
 	}
 }

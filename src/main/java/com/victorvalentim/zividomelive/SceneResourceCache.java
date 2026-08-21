@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 /**
  * Typed scene cache with explicit borrowed/owned resource semantics.
  */
-public final class SceneResourceCache<T> implements AutoCloseable {
+final class SceneResourceCache<T> {
 
     /** Defines whether closing the cache invokes a resource disposer. */
     public enum Ownership {
@@ -145,8 +145,7 @@ public final class SceneResourceCache<T> implements AutoCloseable {
         entries.clear();
     }
 
-    @Override
-    public synchronized void close() {
+    synchronized void close() {
         if (closed) {
             return;
         }

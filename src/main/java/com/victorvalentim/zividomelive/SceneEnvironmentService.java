@@ -5,7 +5,7 @@ import processing.core.PImage;
 import java.util.Objects;
 
 /** Scene-scoped Environment configuration that restores the state it replaced. */
-public final class SceneEnvironmentService implements AutoCloseable {
+public final class SceneEnvironmentService {
 
     private final ziviDomeLive parent;
     private PImage previousSource;
@@ -109,8 +109,7 @@ public final class SceneEnvironmentService implements AutoCloseable {
         return parent.getEnvironmentBackgroundYawOffset();
     }
 
-    @Override
-    public void close() {
+    void close() {
         if (closed) {
             return;
         }

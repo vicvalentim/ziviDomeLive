@@ -68,10 +68,10 @@ The floating domemaster may add a spherical requirement while the global mode is
 
 - `SceneServices` belongs to one activation and is retained only until its matching `dispose()`.
 - Artist-facing entry points are `applet`, `frameClock`, `timeline`, `tasks`, `assets`,
-  `actions`, `camera`, `environment`, and deferred `requestReload`.
+  `actions`, `camera`, `environment`, `ports`, and deferred `requestReload`.
 - The runtime owns service closure, ticking, queue drain, dispatch, cancellation, and restoration.
-  Current public `close`, raw queue/cache, `parent`, and lifecycle methods are transition
-  liabilities, not patterns to teach or expand.
+  `close`, raw queues/caches, `parent`, and lifecycle methods remain internal and must not be
+  restored as artist-facing shortcuts.
 - Keep service usage direct and Processing-like. Do not introduce a DI framework, generic event
   bus, global internal service locator, or an interface hierarchy for every service.
 - Direct camera manipulation is immediate; tracked/programmatic camera goals may be smooth.
@@ -117,8 +117,9 @@ The NDI worker is the intentional exception to the general `ThreadManager` rule 
 
 The facade registers Processing hooks in its constructor. The sketch calls `setup()` once but does not call `ziviDome.draw()`.
 
-`pre()` binds the current Processing/OpenGL thread, begins activation services, ticks the frame
-clock, updates the Scene once, refreshes tracked camera state, and advances camera smoothing.
+`pre()` binds the current Processing/OpenGL thread, drains activation work and bounded external
+input, ticks the frame clock, updates the Scene once, refreshes tracked camera state, and advances
+camera smoothing.
 
 `pause()` records active publications and shuts outputs down. `resume()` attempts to restore
 them. `dispose()` is terminal and idempotently releases owned outputs, controls, scene

@@ -11,13 +11,16 @@ import java.util.function.Consumer;
 /**
  * Named, action-based scene input bindings with raw Scene callbacks retained for compatibility.
  */
-public final class SceneActionMap implements AutoCloseable {
+public final class SceneActionMap {
 
     private final Map<String, Runnable> actions = new LinkedHashMap<>();
     private final Map<Character, String> pressedKeys = new LinkedHashMap<>();
     private final Map<Integer, String> pressedKeyCodes = new LinkedHashMap<>();
     private final Map<Integer, MouseBinding> mouseActions = new LinkedHashMap<>();
     private boolean closed;
+
+    SceneActionMap() {
+    }
 
     /**
      * Registers or replaces a named action.
@@ -77,6 +80,7 @@ public final class SceneActionMap implements AutoCloseable {
      * @return true when a registered action ran
      */
     public synchronized boolean trigger(String name) {
+        ensureOpen();
         Runnable action = actions.get(requireName(name));
         if (action == null) {
             return false;
@@ -91,7 +95,7 @@ public final class SceneActionMap implements AutoCloseable {
      * @param event Processing key event
      * @return true when a binding ran
      */
-    public synchronized boolean dispatch(KeyEvent event) {
+    synchronized boolean dispatch(KeyEvent event) {
         Objects.requireNonNull(event, "event");
         if (closed || event.getAction() != KeyEvent.PRESS) {
             return false;
@@ -109,7 +113,7 @@ public final class SceneActionMap implements AutoCloseable {
      * @param event Processing mouse event
      * @return true when a binding ran
      */
-    public synchronized boolean dispatch(MouseEvent event) {
+    synchronized boolean dispatch(MouseEvent event) {
         Objects.requireNonNull(event, "event");
         if (closed) {
             return false;
@@ -128,6 +132,7 @@ public final class SceneActionMap implements AutoCloseable {
      * @param name action name to remove
      */
     public synchronized void unregister(String name) {
+        ensureOpen();
         String normalized = requireName(name);
         actions.remove(normalized);
         pressedKeys.values().removeIf(normalized::equals);
@@ -137,20 +142,28 @@ public final class SceneActionMap implements AutoCloseable {
 
     /** @return number of named runnable actions plus mouse bindings */
     public synchronized int size() {
+        ensureOpen();
         return actions.size() + mouseActions.size();
     }
 
     /** Removes every action and binding. */
     public synchronized void clear() {
+        ensureOpen();
+        clearState();
+    }
+
+    private void clearState() {
         actions.clear();
         pressedKeys.clear();
         pressedKeyCodes.clear();
         mouseActions.clear();
     }
 
-    @Override
-    public synchronized void close() {
-        clear();
+    synchronized void close() {
+        if (closed) {
+            return;
+        }
+        clearState();
         closed = true;
     }
 

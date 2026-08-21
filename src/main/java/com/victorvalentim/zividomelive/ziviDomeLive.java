@@ -240,8 +240,8 @@ public class ziviDomeLive implements PConstants {
 	 * Registers a scene with the facade-owned manager without activating it when another user
 	 * scene is already active. The first registered user scene replaces the bootstrap fallback.
 	 *
-	 * <p>Unlike constructing a detached {@link SceneManager}, this path guarantees that
-	 * {@link Scene#configure(SceneServices)} runs before the first setup.</p>
+	 * <p>The facade lifecycle guarantees that {@link Scene#configure(SceneServices)} runs
+	 * before the first setup.</p>
 	 *
 	 * @param scene scene to register
 	 */
@@ -1447,7 +1447,7 @@ public class ziviDomeLive implements PConstants {
 	 * @param scene scene whose current activation owns the services
 	 * @return services for the scene's current activation, or {@code null} when inactive
 	 */
-	public synchronized SceneServices getSceneServices(Scene scene) {
+	synchronized SceneServices getSceneServices(Scene scene) {
 		if (disposed) {
 			throw new IllegalStateException("Cannot access scene services after facade disposal.");
 		}
@@ -1455,16 +1455,6 @@ public class ziviDomeLive implements PConstants {
 			throw new IllegalArgumentException("Scene cannot be null.");
 		}
 		return sceneServices.get(scene);
-	}
-
-	/**
-	 * Returns services for the active scene.
-	 *
-	 * @return current activation services, or {@code null} when no scene is active
-	 */
-	public synchronized SceneServices getCurrentSceneServices() {
-		Scene current = getCurrentScene();
-		return current != null ? getSceneServices(current) : null;
 	}
 
 	private synchronized void prepareSceneServices(Scene scene) {
@@ -2344,10 +2334,9 @@ public class ziviDomeLive implements PConstants {
 	/**
 	 * Sets the SceneManager instance for managing multiple scenes.
 	 *
-	 * <p>The incoming manager is already responsible for activating its first registered scene.
-	 * This facade adopts lifecycle ownership: replacing the manager or disposing the facade clears
-	 * its registrations and disposes its active scene. Configured Standard renderers are synchronized
-	 * immediately; all other render paths query the manager directly.</p>
+	 * <p>A detached manager selects, but does not set up, its first registered scene. Attaching it
+	 * here begins that activation with facade-owned services. Replacing the manager disposes the
+	 * previously owned activation first.</p>
 	 *
 	 * @param sceneManager the SceneManager instance to manage scenes
 	 */
@@ -2365,22 +2354,12 @@ public class ziviDomeLive implements PConstants {
 			return;
 		}
 
-		Scene previousScene = getCurrentScene();
-		Scene nextScene = sceneManager.getCurrentScene();
 		if (this.sceneManager != null) {
-			if (previousScene == nextScene) {
-				this.sceneManager.detachScenes();
-			} else {
-				this.sceneManager.clearScenes();
-			}
+			this.sceneManager.clearScenes();
 		}
 		this.sceneManager = sceneManager;
 		this.sceneManager.setLifecycleListener(sceneLifecycle);
 		bootstrapScene = null;
-		Scene adoptedScene = this.sceneManager.getCurrentScene();
-		if (adoptedScene != null) {
-			prepareSceneServices(adoptedScene);
-		}
 		syncCurrentSceneToRenderers();
 	}
 
@@ -2412,10 +2391,14 @@ public class ziviDomeLive implements PConstants {
 		gpuPerformanceTimer.maintain();
 		syncCurrentSceneToRenderers();
 		Scene activeScene = getCurrentScene();
-		if (activeScene != null) {
+		if (activeScene != null && sceneManager.isCurrentSceneActive()) {
 			SceneServices services = getOrCreateSceneServices(activeScene);
-			services.beginFrame();
-			if (services.consumeReloadRequest()) {
+			boolean activationStillCurrent = services.beginFrame()
+					&& activeScene == getCurrentScene()
+					&& sceneManager.isCurrentSceneActive();
+			if (!activationStillCurrent) {
+				syncCurrentSceneToRenderers();
+			} else if (services.consumeReloadRequest()) {
 				sceneManager.reloadCurrentScene();
 				syncCurrentSceneToRenderers();
 			} else {
@@ -2482,6 +2465,11 @@ public class ziviDomeLive implements PConstants {
 				outputManager.toggleOutput("syphon");
 			}
 		}
+		Scene activeScene = getCurrentScene();
+		SceneServices services = activeScene != null ? getSceneServices(activeScene) : null;
+		if (services != null && !services.isClosed()) {
+			services.resume();
+		}
 		clearPausedOutputState();
 		LOGGER.info("Processes resumed.");
 	}
@@ -2495,6 +2483,11 @@ public class ziviDomeLive implements PConstants {
 		}
 		LOGGER.info("Pausing processes...");
 		resetCameraInputState();
+		Scene activeScene = getCurrentScene();
+		SceneServices services = activeScene != null ? getSceneServices(activeScene) : null;
+		if (services != null && !services.isClosed()) {
+			services.pause();
+		}
 		paused = true;
 		if (outputManager != null) {
 			resumeNdiOutput = outputManager.isNdiEnabled();

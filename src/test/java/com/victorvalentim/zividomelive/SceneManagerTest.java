@@ -21,6 +21,19 @@ class SceneManagerTest {
     @BeforeEach
     void setUp() {
         manager = new SceneManager();
+        manager.setLifecycleListener(new SceneManager.LifecycleListener() {
+            @Override
+            public void beforeSetup(Scene scene) {
+            }
+
+            @Override
+            public void beforeDispose(Scene scene) {
+            }
+
+            @Override
+            public void afterDispose(Scene scene) {
+            }
+        });
     }
 
     // -----------------------------------------------------------------------
@@ -56,6 +69,48 @@ class SceneManagerTest {
         assertSame(scene, manager.getCurrentScene());
         assertEquals(1, scene.setupCount,
                 "registerScene should call setupScene() on the first scene");
+    }
+
+    @Test
+    void detachedManagerDefersFirstSetupUntilLifecycleIsAttached() {
+        SceneManager detached = new SceneManager();
+        FakeScene scene = new FakeScene("Deferred");
+
+        detached.registerScene(scene);
+
+        assertSame(scene, detached.getCurrentScene());
+        assertEquals(0, scene.setupCount);
+
+        detached.setLifecycleListener(new SceneManager.LifecycleListener() {
+            @Override
+            public void beforeSetup(Scene configuredScene) {
+            }
+
+            @Override
+            public void beforeDispose(Scene configuredScene) {
+            }
+
+            @Override
+            public void afterDispose(Scene configuredScene) {
+            }
+        });
+
+        assertEquals(1, scene.setupCount);
+    }
+
+    @Test
+    void registrationUsesInstanceIdentityInsteadOfEquals() {
+        FakeScene first = new EqualScene("A");
+        FakeScene second = new EqualScene("B");
+
+        manager.registerScene(first);
+        manager.registerScene(second);
+
+        assertEquals(2, manager.getSceneCount());
+        assertTrue(manager.containsScene(first));
+        assertTrue(manager.containsScene(second));
+        manager.activateScene(second);
+        assertSame(second, manager.getCurrentScene());
     }
 
     @Test
@@ -370,6 +425,22 @@ class SceneManagerTest {
         @Override
         public String getName() {
             return name;
+        }
+    }
+
+    private static final class EqualScene extends FakeScene {
+        private EqualScene(String name) {
+            super(name);
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof EqualScene;
+        }
+
+        @Override
+        public int hashCode() {
+            return 1;
         }
     }
 }

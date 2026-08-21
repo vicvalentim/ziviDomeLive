@@ -13,15 +13,16 @@ import java.util.function.Supplier;
  *
  * <p>Images, shaders, and shapes are created only on the bound render thread. The default
  * loaders keep borrowed Processing objects and release their Java references at scene
- * disposal; custom GPU/native resources can use the owned cache API with a disposer.</p>
+ * disposal.</p>
  */
-public final class SceneAssets implements AutoCloseable {
+public final class SceneAssets {
 
     private final PApplet applet;
     private final RenderThreadQueue renderQueue;
     private final SceneResourceCache<PImage> images = new SceneResourceCache<>();
     private final SceneResourceCache<PShader> shaders = new SceneResourceCache<>();
     private final SceneResourceCache<PShape> shapes = new SceneResourceCache<>();
+    private boolean closed;
 
     SceneAssets(PApplet applet, RenderThreadQueue renderQueue) {
         this.applet = Objects.requireNonNull(applet, "applet");
@@ -35,6 +36,7 @@ public final class SceneAssets implements AutoCloseable {
      * @return loaded image, or null when Processing cannot load it
      */
     public PImage loadImage(String path) {
+        ensureOpen();
         renderQueue.requireRenderThread();
         PImage cached = images.get(path);
         if (cached != null) {
@@ -54,6 +56,7 @@ public final class SceneAssets implements AutoCloseable {
      * @return loaded shader, or null when Processing cannot load it
      */
     public PShader loadShader(String fragmentPath) {
+        ensureOpen();
         renderQueue.requireRenderThread();
         PShader cached = shaders.get(fragmentPath);
         if (cached != null) {
@@ -75,6 +78,7 @@ public final class SceneAssets implements AutoCloseable {
      * @return loaded shader, or null when Processing cannot load it
      */
     public PShader loadShader(String key, String fragmentPath, String vertexPath) {
+        ensureOpen();
         renderQueue.requireRenderThread();
         PShader cached = shaders.get(key);
         if (cached != null) {
@@ -95,29 +99,50 @@ public final class SceneAssets implements AutoCloseable {
      * @return cached or newly created shape
      */
     public PShape getOrCreateShape(String key, Supplier<? extends PShape> factory) {
+        ensureOpen();
         renderQueue.requireRenderThread();
         return shapes.getOrCreateBorrowed(key, factory);
     }
 
-    /** @return activation-scoped image cache */
-    public SceneResourceCache<PImage> images() {
-        return images;
+    /**
+     * Stores or replaces one borrowed retained shape.
+     *
+     * @param key stable shape key
+     * @param shape retained Processing shape
+     * @return the supplied shape
+     */
+    public PShape cacheShape(String key, PShape shape) {
+        ensureOpen();
+        renderQueue.requireRenderThread();
+        shapes.putBorrowed(key, shape);
+        return shape;
     }
 
-    /** @return activation-scoped shader cache */
-    public SceneResourceCache<PShader> shaders() {
-        return shaders;
+    /**
+     * Invalidates retained shapes whose keys start with the supplied prefix.
+     *
+     * @param prefix key prefix used to select retained shapes
+     * @return number of removed shapes
+     */
+    public int removeShapesByPrefix(String prefix) {
+        ensureOpen();
+        renderQueue.requireRenderThread();
+        return shapes.removeByPrefix(prefix);
     }
 
-    /** @return activation-scoped retained-shape cache */
-    public SceneResourceCache<PShape> shapes() {
-        return shapes;
-    }
-
-    @Override
-    public void close() {
+    void close() {
+        if (closed) {
+            return;
+        }
         shapes.close();
         shaders.close();
         images.close();
+        closed = true;
+    }
+
+    private void ensureOpen() {
+        if (closed) {
+            throw new IllegalStateException("Scene assets are closed.");
+        }
     }
 }

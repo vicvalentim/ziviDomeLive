@@ -55,7 +55,7 @@ public class ShapeManager {
       (mode != 0)           // Use OpenGL para modos sólidos e texturizados; wireframe usa o padrão
     );
 
-    assets.shapes().putBorrowed(key, shape);
+    assets.cacheShape(key, shape);
   }
 
   /**
@@ -104,7 +104,7 @@ public class ShapeManager {
   }
 
   public void clearCache(int mode) {
-    assets.shapes().removeByPrefix("solar:shape:" + mode + ":");
+    assets.removeShapesByPrefix("solar:shape:" + mode + ":");
   }
 
   public void clearUnused(boolean keepWire, boolean keepSolid, boolean keepTextured) {
@@ -117,7 +117,7 @@ public class ShapeManager {
     this.lowDetail = low;
     this.mediumDetail = medium;
     this.highDetail = high;
-    assets.shapes().removeByPrefix("solar:shape:");
+    assets.removeShapesByPrefix("solar:shape:");
   }
 
   public void dispose() {

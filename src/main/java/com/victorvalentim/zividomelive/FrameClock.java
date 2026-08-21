@@ -21,7 +21,7 @@ public final class FrameClock {
     private long frameIndex;
 
     /** Creates a clock backed by {@link System#nanoTime()}. */
-    public FrameClock() {
+    FrameClock() {
         this(System::nanoTime);
     }
 
@@ -35,7 +35,7 @@ public final class FrameClock {
      *
      * @return clamped seconds elapsed since the previous tick
      */
-    public synchronized double tick() {
+    synchronized double tick() {
         long now = nanoTime.getAsLong();
         if (!started) {
             previousNanos = now;
@@ -52,7 +52,7 @@ public final class FrameClock {
     }
 
     /** Resets elapsed time and makes the next tick establish a new baseline. */
-    public synchronized void reset() {
+    synchronized void reset() {
         previousNanos = 0L;
         started = false;
         deltaSeconds = 0.0;

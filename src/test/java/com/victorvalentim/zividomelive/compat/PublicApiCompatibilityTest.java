@@ -2,14 +2,15 @@ package com.victorvalentim.zividomelive.compat;
 
 import com.victorvalentim.zividomelive.FrameViews;
 import com.victorvalentim.zividomelive.FrameClock;
-import com.victorvalentim.zividomelive.RenderThreadQueue;
 import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.SceneActionMap;
 import com.victorvalentim.zividomelive.SceneAssets;
 import com.victorvalentim.zividomelive.SceneCameraService;
 import com.victorvalentim.zividomelive.SceneEnvironmentService;
+import com.victorvalentim.zividomelive.SceneInputPort;
 import com.victorvalentim.zividomelive.SceneManager;
-import com.victorvalentim.zividomelive.SceneResourceCache;
+import com.victorvalentim.zividomelive.SceneOutputPort;
+import com.victorvalentim.zividomelive.ScenePorts;
 import com.victorvalentim.zividomelive.SceneServices;
 import com.victorvalentim.zividomelive.SceneTaskGroup;
 import com.victorvalentim.zividomelive.SimulationTimeline;
@@ -168,15 +169,16 @@ class PublicApiCompatibilityTest {
 				FrameViews.class,
 				FrameClock.class,
 				SimulationTimeline.class,
-				RenderThreadQueue.class,
 				Scene.class,
 				SceneServices.class,
 				SceneTaskGroup.class,
-				SceneResourceCache.class,
 				SceneAssets.class,
 				SceneActionMap.class,
 				SceneCameraService.class,
 				SceneEnvironmentService.class,
+				ScenePorts.class,
+				SceneInputPort.class,
+				SceneOutputPort.class,
 				SceneManager.class,
 				OutputManager.class,
 				CubemapRenderer.class,
@@ -218,8 +220,6 @@ class PublicApiCompatibilityTest {
 		assertMethod("registerScene", Scene.class);
 		assertMethod("setCurrentScene", Scene.class);
 		assertMethod("setSceneManager", SceneManager.class);
-		assertMethod("getSceneServices", Scene.class);
-		assertMethod("getCurrentSceneServices");
 		assertMethod("getRenderMode");
 		assertMethod("setRenderMode", RenderMode.class);
 		assertMethod("resetOrientation");
@@ -279,6 +279,80 @@ class PublicApiCompatibilityTest {
 		Method render = Scene.class.getMethod("sceneRender", PGraphicsOpenGL.class);
 		assertEquals(void.class, render.getReturnType());
 		assertTrue(Modifier.isAbstract(render.getModifiers()));
+	}
+
+	@Test
+	void sceneServicesExposeOnlyArtistFacingActivationEntryPoints() throws Exception {
+		assertFalse(AutoCloseable.class.isAssignableFrom(SceneServices.class));
+		assertEquals(
+				java.util.Set.of(
+						"actions",
+						"applet",
+						"assets",
+						"camera",
+						"environment",
+						"frameClock",
+						"ports",
+						"requestReload",
+						"tasks",
+						"timeline"),
+				Arrays.stream(SceneServices.class.getDeclaredMethods())
+						.filter(method -> Modifier.isPublic(method.getModifiers()))
+						.map(Method::getName)
+						.collect(java.util.stream.Collectors.toSet()));
+		assertEquals(ScenePorts.class, SceneServices.class.getMethod("ports").getReturnType());
+	}
+
+	@Test
+	void runtimeOwnedServiceLifecycleIsNotPublic() throws Exception {
+		for (Class<?> type : Arrays.asList(
+				FrameClock.class,
+				SimulationTimeline.class,
+				SceneTaskGroup.class,
+				SceneAssets.class,
+				SceneActionMap.class,
+				SceneCameraService.class,
+				SceneEnvironmentService.class,
+				ScenePorts.class)) {
+			assertFalse(Arrays.stream(type.getDeclaredConstructors())
+					.anyMatch(constructor -> Modifier.isPublic(constructor.getModifiers())),
+					type.getSimpleName() + " construction must remain runtime-owned");
+			assertFalse(Arrays.stream(type.getDeclaredMethods())
+					.anyMatch(method -> method.getName().equals("close")
+							&& Modifier.isPublic(method.getModifiers())),
+					type.getSimpleName() + ".close must not be artist-facing");
+		}
+		assertFalse(Modifier.isPublic(Class.forName(
+				"com.victorvalentim.zividomelive.RenderThreadQueue").getModifiers()));
+		assertFalse(Modifier.isPublic(Class.forName(
+				"com.victorvalentim.zividomelive.SceneResourceCache").getModifiers()));
+		assertFalse(Modifier.isPublic(ziviDomeLive.class
+				.getDeclaredMethod("getSceneServices", Scene.class).getModifiers()));
+		assertThrows(NoSuchMethodException.class,
+				() -> ziviDomeLive.class.getMethod("getCurrentSceneServices"));
+		assertThrows(NoSuchMethodException.class,
+				() -> FrameClock.class.getMethod("tick"));
+		assertThrows(NoSuchMethodException.class,
+				() -> SceneActionMap.class.getMethod("dispatch", KeyEvent.class));
+		assertThrows(NoSuchMethodException.class,
+				() -> SceneAssets.class.getMethod("images"));
+		assertThrows(NoSuchMethodException.class,
+				() -> SceneAssets.class.getMethod("shaders"));
+		assertThrows(NoSuchMethodException.class,
+				() -> SceneAssets.class.getMethod("shapes"));
+	}
+
+	@Test
+	void optionalScenePortSpiRemainsSmallAndProtocolAgnostic() throws Exception {
+		assertTrue(SceneInputPort.class.isInterface());
+		assertTrue(SceneOutputPort.class.isInterface());
+		assertNotNull(SceneInputPort.class.getMethod("start", java.util.function.Consumer.class));
+		assertEquals(boolean.class,
+				SceneOutputPort.class.getMethod("offer", Object.class).getReturnType());
+		assertNotNull(ScenePorts.class.getMethod(
+				"connectInput", SceneInputPort.class, java.util.function.Consumer.class));
+		assertEquals(SceneOutputPort.class,
+				ScenePorts.class.getMethod("connectOutput", SceneOutputPort.class).getReturnType());
 	}
 
 	@Test
