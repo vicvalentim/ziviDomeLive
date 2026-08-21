@@ -1,56 +1,152 @@
-# AGENTS Guide for ziviDomeLive
+# AGENTS Guide for ziviDomeLive 2.0
 
-## Scope and source priority
-- This repo is a Processing 4 Java library for fulldome, spherical and immersive rendering (`README.md`, `src/main/java/com/victorvalentim/zividomelive/zividomelive.java`).
-- Prefer source-of-truth in this order: `src/main/java` -> `build.gradle.kts` + `.github/workflows` -> `README.md` -> `examples/`.
-- Canonical agent guidance is this `AGENTS.md`; `.github/copilot-instructions.md` provides supplementary architecture context, and no `CLAUDE.md` is present.
+## Scope, authority, and current state
+- This repository is a Processing 4 / Java 17 library for fulldome, spherical, and immersive rendering. The public facade is `com.victorvalentim.zividomelive.ziviDomeLive`.
+- Treat sources of truth in this order: `src/main/java` -> `src/test/java` -> executable examples -> `build.gradle.kts` and workflows -> README/docs.
+- Documentation is behind the 2.0 code. Do not preserve a stale API solely because it is documented, and do not rewrite broad docs before the code contract is settled.
+- This file is canonical. `.github/copilot-instructions.md` is a rendering/release supplement and must not contradict it.
+- This guide distinguishes protected behavior from known public-surface liabilities. Do not describe a planned refactor as implemented until source and tests prove it.
+- Preserve unrelated user changes in a dirty worktree. Use `apply_patch` for edits and keep changes scoped.
 
-## Big-picture architecture
-- Entrypoint: `zividomelive` orchestrates setup, lifecycle hooks, rendering, controls, and outputs.
-- Scene boundary: `Scene` is the extension contract; `SceneManager` registers/switches scenes and calls `setupScene()` on activation.
-- Rendering pipeline is layered:
-  - `render/CubemapRenderer.java`: renders 6 faces from camera orientations.
-  - `render/modes/EquirectangularRenderer.java`: cubemap -> equirectangular shader pass.
-  - `render/modes/FisheyeDomemaster.java`: equirectangular -> domemaster shader pass.
-  - Optional viewers: `StandardRenderer` and `CubemapViewRenderer`.
-- Service managers:
-  - `manager/ControlManager.java`: ControlP5 UI, output toggles, resolution/view selectors.
-  - `manager/OutputManager.java`: NDI (Devolay), Syphon (macOS), Spout (Windows).
-  - `support/ThreadManager.java` + `support/LogManager.java`: shared executor and logging.
+## Processing-facing programming model
+- Keep artist code close to ordinary Processing: configure in `setupScene()`, mutate once in `update()`, draw in `sceneRender(...)`, and receive `keyEvent(...)`/`mouseEvent(...)` when direct callbacks are simplest.
+- `Scene` is the extension contract. Its only required abstract method is `sceneRender(PGraphicsOpenGL)`; lifecycle, input, disposal, and naming methods remain defaults.
+- `Scene.configure(SceneServices)` is optional and must run before the matching `setupScene()` for every activation.
+- A `Scene` instance may be activated repeatedly. `dispose()` ends one activation; it does not necessarily mean the Java object will never be used again.
+- Mutable simulation state advances in `Scene.update()`, once per Processing frame. Spherical capture may invoke `sceneRender(...)` multiple times in that frame, so rendering must not advance physics, timelines, counters, or mutable randomness shared by cubemap faces.
+- The library owns the supplied target's `beginDraw()`/`endDraw()`. Scenes must not call them and must not retain the callback target as scene-owned graphics state.
 
-## Runtime flow that matters
-- Processing hooks are auto-registered in constructor (`pre`, `draw`, `post`, `mouseEvent`, `keyEvent`, etc.).
-- Initialization is split: `setup()` creates `OutputManager` + splash/default scene; `post()` lazily initializes render managers once.
-- `draw()` is gated by `initialized`; it clears to black and returns until `post()` calls `initializeManagers()`, flips `initialized`, and unregisters `post()`.
-- Per-frame flow (`renderContent()`): clear -> pending graphics reset -> cubemap capture -> projection render -> output send -> optional preview -> control panel.
-- Scene updates happen in `pre()` via `currentScene.update()` before drawing.
+## Facade and scene lifecycle authority
+- `ziviDomeLive` owns the authoritative `SceneManager`, Processing hooks, activation services, renderer synchronization, input routing, outputs, and terminal disposal.
+- The facade attaches a `SceneManager.LifecycleListener` so services are prepared before setup, prepared for shutdown before scene disposal, and released afterward.
+- The activation order is contractual:
+  1. create activation-scoped services;
+  2. call `Scene.configure(services)`;
+  3. call `Scene.setupScene()`;
+  4. run frame/input callbacks;
+  5. stop accepting activation work;
+  6. call `Scene.dispose()`;
+  7. release activation resources.
+- Reload performs a complete dispose/setup cycle and supplies fresh `SceneServices` to the same scene instance.
+- Every path must honor the same order: first registration, `setScene`, `registerScene`, next/previous, index selection, reload, manager replacement, clear, and facade disposal.
+- Services are currently stored in an `IdentityHashMap`. Scene registration, lookup, activation, and release must use a consistent instance-identity policy; do not mix identity ownership with `equals()`-based management.
+- Prefer facade-owned registration. A detached/replacement `SceneManager` must be attached to the facade lifecycle before it performs the first setup.
 
-## Project-specific conventions to preserve
-- Keep `zividomelive.ViewType` enum order stable; dropdowns map by index (`ControlManager` uses `ViewType.values()[selectedIndex]`).
-- Resolution changes are deferred (`resetGraphics` sets `pendingReset`; actual renderer reallocation occurs inside draw loop).
-- Shader paths are loaded from packaged data paths (`data/shaders/*.vert|*.frag`), and `build.gradle.kts` copies `shaders/` into the JAR at `data/shaders`.
-- Use `LogManager.getLogger()` instead of ad-hoc loggers; logs also go to `/tmp/zividomelive/logs` on non-Windows.
-- Threaded tasks should use `ThreadManager` (shared fixed pool), not new executors per feature. The dedicated bounded NDI sender worker in `OutputManager` is the intentional exception.
+## Per-frame runtime order
+- Processing hooks are registered by the facade constructor. Initialization is split between `setup()` and lazy renderer initialization in `post()`.
+- `pre()` is the authoritative frame and render-thread boundary:
+  1. begin performance tracking and synchronize the active scene;
+  2. bind/drain the activation render queue;
+  3. tick `FrameClock`;
+  4. consume a pending reload or call `Scene.update()`;
+  5. refresh a tracked scene-camera target;
+  6. advance camera interpolation once;
+  7. publish camera orientation to the environment state.
+- `draw()`/`RenderPipeline` render the already-updated state, produce requested projections, publish enabled outputs, draw preview, and finally draw the ControlP5 panel.
+- Until managers are ready, drawing is gated and clears safely instead of running a partial pipeline.
 
-## Build, test, docs, and release workflows
-- Main CI mirrors local build: `./gradlew build` (`.github/workflows/gradle.yml`).
-- Run tests with JUnit 5: `./gradlew test`.
-- Non-obvious dependency bootstrap: `compileJava` depends on `downloadDependencies`; `download_dependencies.sh` fetches `Syphon.jar`, `controlP5.jar`, `spout.jar` into `src/main/libs` when empty.
-- Release artifacts: `./gradlew buildReleaseArtifacts` then package emits `release/ziviDomeLive.zip`, `.pdex`, `.txt` (`release.yml` publishes these on `v*` tags).
-- Processing-local install task: `./gradlew deployToProcessingSketchbook`.
-- Docs site: `mkdocs build` using Material + `mkdocs-static-i18n`; bilingual files use suffix mode (`*.md` + `*.pt.md`) in `docs/`.
-- Docs CI/deploy: `.github/workflows/deploy_website.yml` builds docs on `main` and deploys `site/` to `gh-pages`; `.github/workflows/pr_preview.yml` publishes PR previews under `gh-pages/pr-preview`.
+## Current SceneServices contract
+- `SceneServices` belongs to exactly one activation. The facade creates, advances, and closes it; scenes receive it through `configure`.
+- Processing-facing entry points currently are:
+  - `applet()`: owning `PApplet`;
+  - `frameClock()`: monotonic per-frame timing;
+  - `timeline()`: bounded fixed-step simulation;
+  - `tasks()`: activation-scoped background work on the shared executor;
+  - `assets()`: Processing images, shaders, and retained shapes;
+  - `actions()`: named key/mouse actions while retaining raw Scene callbacks;
+  - `camera()`: scene-space orbit camera, input, and target tracking;
+  - `environment()`: activation-owned environment overrides;
+  - `requestReload()`: deferred reload at a safe frame boundary.
+- `parent()`, `scene()`, `renderQueue()`, `onDispose()`, `isClosed()`, and public `close()` exist today but expose runtime ownership. Treat them as transition liabilities: do not teach, broaden, or build new features on them without an explicit compatibility requirement.
+- The same applies to public lifecycle controls on child services: `tick`, `reset`, `drain`, `dispatch`, raw caches, constructors, and `close`. The deliberate 2.0 Services refactor should align Java visibility with ownership and update compatibility tests intentionally.
+- Keep the hierarchy shallow: `Scene -> SceneServices -> focused concrete service`. Do not add a dependency-injection framework, global internal service locator, deep interface hierarchy, or duplicate aliases.
 
-## Testing patterns in this repo
-- Tests are intentionally lightweight and avoid GPU contexts when possible:
-  - `SceneManagerTest` uses a `FakeScene` stub and asserts lifecycle semantics.
-  - `CameraManagerTest` validates exact cubemap orientation vectors.
-  - `QuaternionTest` validates math-only behavior.
-- When adding renderer features, prefer isolating pure math/state logic into testable units first.
+## Service ownership rules
+- Runtime-owned: service construction/closure, frame ticking, queue binding/draining, input dispatch, deactivation cancellation, camera update, environment restoration, cache shutdown, and reload execution.
+- Scene-controlled: simulation rate/position, task submission, asset requests, action bindings, camera pose/configuration, optional mouse enablement, target tracking, and activation environment values.
+- A scene must never be required to close a runtime-supplied service. Current public `AutoCloseable` implementations do not transfer ownership to artist code.
+- `SceneTaskGroup` uses the shared `ThreadManager`; never create an executor per scene. The bounded NDI sender worker is an intentional output-specific exception.
+- Background work must not call Processing/OpenGL APIs. Render-thread publication belongs to the activation queue, and old-activation work must not reach a new activation of the same scene.
+- `SceneAssets` creates Processing/GPU-facing assets on the bound render thread. Borrowed resources drop references on disposal; owned native/GPU resources need deterministic disposers.
+- `SceneEnvironmentService` restores only values it touched and only when facade state still matches the value it applied, so a later owner is not overwritten.
 
-## Integration and platform boundaries
-- Output behavior is OS-gated in `OutputManager`: Syphon on macOS, Spout on Windows, NDI where native libs load.
-- `OutputManager` constructor auto-initializes Syphon/Spout on supported OS and enables that output by default; NDI initializes only when `toggleOutput("ndi")` is called.
-- Linux has reduced external-output support per `README.md` known issues.
-- Keyboard conventions in runtime: `h` toggles control panel, `m` cycles view mode, Left/Right arrows switch scenes (`zividomelive.keyEvent`).
-- Metadata is not fully consistent across files (example: `README.md` says GPL-2.0, `mkdocs.yml` footer says MIT); verify before changing licensing/version fields.
+## Mouse and scene-camera regression contract
+- The SolarSystem controller from v1.5.0 is the behavioral reference for direct orbit navigation, not delayed generic smoothing.
+- Direct manipulation is immediate; programmatic movement may be smooth:
+  - drag synchronizes current and goal orientation;
+  - wheel synchronizes current and goal distance;
+  - `setTarget`, `goTo`, and tracked targets may interpolate.
+- SolarSystem coefficients are contractual unless deliberately redesigned: `0.01` radians/pixel, Y-axis yaw, X-axis pitch, `80` standard wheel units, and the existing `0.001` trackpad setting.
+- Route a gesture to exactly one navigation camera. Do not restore historical double-routing between scene and Standard cameras.
+- Named mouse actions and raw `Scene.mouseEvent` callbacks remain compatible; built-in navigation is routed afterward.
+- A visible ControlP5 control under the pointer owns its gesture; UI interaction must not orbit or zoom the scene camera.
+- Clear drag anchors on release, input-owner changes, scene switch/reload, pause, and terminal disposal. Service-owned input restores the state it replaced.
+- `OrbitCamera` works in scene space inside `sceneRender(...)`; dome yaw/pitch/roll/FOV remain separate projection controls.
+- Preserve numerical `OrbitCameraTest` coverage for immediate drag/wheel, synchronized goals, smooth programmatic motion, and stale-anchor cleanup.
+
+## Time and simulation contract
+- `FrameClock` and `SimulationTimeline` use `double`; do not introduce service-layer casts to `float`.
+- `SimulationTimeline` is a bounded fixed-step accumulator. It limits catch-up work and records dropped units after stalls.
+- Step policy belongs to each scene. Do not globally force a rate-dependent step because simulations have different stability/performance requirements.
+- SolarSystem is a regression example for very slow rates:
+  - its physics step scales down with time rate to avoid hold-and-jump translation;
+  - the normal maximum step remains `1/120` simulated day;
+  - JSON orbital parameters, time, anomaly, Kepler/Newton calculations, and perturbation intermediates use `double`;
+  - elapsed orbital time uses compensated summation;
+- each computed state is published into Processing's float-based `PVector`; do not move float conversion earlier into time, anomaly, solver, or perturbation calculations;
+  - reusable physics buffers avoid per-step GC jitter.
+- Keep SolarSystem stable at `1x`, `0.1x`, `0.01x`, and lower rates. Do not trade slow-motion smoothness for global timeline complexity.
+
+## Rendering and graphics invariants
+- The projection pipeline remains:
+  - `render/CubemapRenderer.java`: six native cubemap faces;
+  - `render/modes/EquirectangularRenderer.java`: cubemap to equirectangular;
+  - `render/modes/FisheyeDomemaster.java`: equirectangular to domemaster;
+  - `StandardRenderer` and `CubemapViewRenderer`: optional viewers.
+- `ViewType` and `RenderMode` are top-level public enums. Keep `ViewType` declaration order stable because ControlP5 dropdowns map by index.
+- Resolution changes are deferred: setters record a pending reset; renderer/FBO allocation happens at a safe draw boundary.
+- Shader resources are packaged under `data/shaders`; keep Gradle copying and runtime paths aligned.
+- Preserve environment infinity: camera rotation affects the environment, while target translation and orbit distance do not.
+- Prefer pure math/state extraction for renderer tests and avoid OpenGL contexts when behavior can be tested independently.
+
+## Input, controls, outputs, and integrations
+- Built-in keys remain: `h` toggles the panel, `m` cycles `ViewType`, and Left/Right switch scenes when ControlP5 text input is inactive.
+- `ControlManager` owns ControlP5 widgets. Guard ControlP5 2.2.6 key-code indexing through `ControlP5KeyEventBridge`.
+- `OutputManager` coordinates NDI, Syphon, and Spout with independent view routing. Outputs start opt-in/disabled after setup; do not reintroduce automatic publication.
+- Syphon is macOS-gated, Spout is Windows-gated, and NDI initializes when enabled and supported. Linux has reduced local texture-sharing support.
+- Keep bounded non-blocking output workers and explicit shutdown. Never perform external I/O on the OpenGL thread.
+- Future MIDI/OSC/device control belongs behind an optional integration/provider boundary, not in `OutputManager` and not as a core dependency. External-thread input must be bounded and delivered at a frame boundary to the correct activation.
+
+## Public API governance for 2.0
+- Optimize for a didactic Processing API: few concepts, concrete names, direct calls, safe defaults, and teachable examples.
+- Protect `Scene` before simplifying services. Do not add required Scene methods or move runtime cleanup into scenes.
+- Prefer the smallest visibility/lifecycle fix over a broad rewrite. Avoid event buses, generic dependency containers, interface explosions, and unrelated renderer/output changes.
+- Before removing/internalizing a public method, characterize current use, add lifecycle tests, and update `PublicApiCompatibilityTest` deliberately. Do not keep unsafe duplicate aliases indefinitely.
+- Public surface and runtime ownership must eventually agree; documentation alone is not sufficient protection.
+- Keep protocol adapters outside the core; add only a small registration/binding SPI when integrations are explicitly in scope.
+
+## Surgical-change discipline
+- Every implementation task must name the contract being changed and the contracts that must remain untouched before editing code.
+- Change the fewest production files and public symbols that can completely solve the verified problem. A nearby imperfection is not automatically in scope.
+- Do not combine lifecycle sanitation with opportunistic renames, formatting sweeps, package moves, renderer cleanup, output changes, example rewrites, or documentation expansion.
+- Cross a subsystem boundary only when evidence shows the fix cannot be correct inside the original boundary. State that reason in the task summary and add a regression test at the boundary.
+- Prefer characterization test -> minimal production patch -> focused test -> full relevant validation. Do not pre-build abstractions for hypothetical consumers.
+- Preserve existing behavior by default. Any intentional behavior or source-compatibility change must be isolated, named, tested, and justified as part of the 2.0 contract.
+- Examples should change only when they exercise the affected public contract or contain the bug itself. Never use example migration as permission to redesign unrelated example code.
+- Review the final diff for contamination: unrelated imports, visibility changes, renamed concepts, generated files, broad comments, and incidental formatting should be removed.
+- If a clean solution would require a materially broader redesign, stop at the safe boundary, document the follow-up, and do not silently expand scope.
+
+## Testing and validation
+- Main CI: `./gradlew build`; focused tests: `./gradlew test`; preferred full validation after API/lifecycle changes: `./gradlew clean test build`.
+- Important suites cover SceneManager/lifecycle, public API compatibility, camera/quaternion math, timeline/clock, output lifecycle, and render-state logic.
+- Any Services change must cover configure-before-setup, first activation, switch, reload, fresh services, disposal order, old-task isolation, state restoration, and idempotence.
+- Compile Processing examples affected by PDE changes. SolarSystem:
+  `processing-java --sketch=examples/SolarSystem --output=/tmp/zividomelive-solarsystem-build --force --build`.
+- Run `git diff --check` and inspect the final public surface. Build success alone does not prove lifecycle or artist-facing API quality.
+
+## Build, packaging, docs, and release
+- `compileJava` depends on `downloadDependencies`; its script fills `src/main/libs` when needed.
+- Release artifacts: `./gradlew buildReleaseArtifacts`; sketchbook deployment: `./gradlew deployToProcessingSketchbook`.
+- Docs use MkDocs Material with bilingual suffix files, but defer broad rewrites until the 2.0 public contract is stable.
+- Use `LogManager.getLogger()`; debug logs are also written under `/tmp/zividomelive/logs` on non-Windows.
+- Licensing/version metadata is not fully consistent across files; verify authoritative release metadata before changing it.
