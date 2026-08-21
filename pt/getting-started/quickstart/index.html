@@ -1374,7 +1374,7 @@
 </span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>
 </span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="nf">getName</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;Main&quot;</span><span class="p">;</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="s">"Main"</span><span class="p">;</span>
 </span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="p">}</span>
 </span></code></pre></div>
@@ -1419,7 +1419,7 @@
 <p>Outputs começam desabilitados:</p>
 <div class="language-java highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">OutputManager</span><span class="w"> </span><span class="n">outputs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ziviDome</span><span class="p">.</span><span class="na">getOutputManager</span><span class="p">();</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">outputs</span><span class="p">.</span><span class="na">setNdiView</span><span class="p">(</span><span class="n">zividomelive</span><span class="p">.</span><span class="na">ViewType</span><span class="p">.</span><span class="na">EQUIRECTANGULAR</span><span class="p">);</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">outputs</span><span class="p">.</span><span class="na">toggleOutput</span><span class="p">(</span><span class="s">&quot;ndi&quot;</span><span class="p">);</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">outputs</span><span class="p">.</span><span class="na">toggleOutput</span><span class="p">(</span><span class="s">"ndi"</span><span class="p">);</span>
 </span></code></pre></div>
 <p>Consulte estado e diagnóstico sem confundir disponibilidade com demanda de renderização:</p>
 <div class="language-java highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">println</span><span class="p">(</span><span class="n">outputs</span><span class="p">.</span><span class="na">getOutputState</span><span class="p">(</span><span class="n">OutputManager</span><span class="p">.</span><span class="na">OutputType</span><span class="p">.</span><span class="na">NDI</span><span class="p">));</span>

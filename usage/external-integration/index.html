@@ -1449,9 +1449,9 @@ setup before enabling it.</p>
 </span></code></pre></div>
 <p>Only the platform-valid local texture backend is available: Syphon on macOS or Spout on Windows.</p>
 <h2 id="toggle-publication">Toggle Publication<a class="headerlink" href="#toggle-publication" title="Permanent link">&para;</a></h2>
-<div class="language-java highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">output</span><span class="p">.</span><span class="na">toggleOutput</span><span class="p">(</span><span class="s">&quot;ndi&quot;</span><span class="p">);</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">output</span><span class="p">.</span><span class="na">toggleOutput</span><span class="p">(</span><span class="s">&quot;syphon&quot;</span><span class="p">);</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">output</span><span class="p">.</span><span class="na">toggleOutput</span><span class="p">(</span><span class="s">&quot;spout&quot;</span><span class="p">);</span>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">output</span><span class="p">.</span><span class="na">toggleOutput</span><span class="p">(</span><span class="s">"ndi"</span><span class="p">);</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">output</span><span class="p">.</span><span class="na">toggleOutput</span><span class="p">(</span><span class="s">"syphon"</span><span class="p">);</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">output</span><span class="p">.</span><span class="na">toggleOutput</span><span class="p">(</span><span class="s">"spout"</span><span class="p">);</span>
 </span></code></pre></div>
 <p>Unsupported local backends ignore the request. A repeated toggle disables an enabled backend. After an initialization failure, another explicit enable toggle retries initialization.</p>
 <h2 id="inspect-lifecycle">Inspect Lifecycle<a class="headerlink" href="#inspect-lifecycle" title="Permanent link">&para;</a></h2>

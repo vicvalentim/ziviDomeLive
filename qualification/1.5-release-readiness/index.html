@@ -1401,7 +1401,7 @@ the complete JUnit suite in a single headless fork and writes:</p>
 <li><code>build/test-results/qualification/</code> for standard JUnit XML consumers.</li>
 </ul>
 <p>Use Gradle's native filter for a focused investigation, for example:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>./gradlew<span class="w"> </span>qualificationTests<span class="w"> </span>--tests<span class="w"> </span><span class="s1">&#39;*CameraManagerTest&#39;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>./gradlew<span class="w"> </span>qualificationTests<span class="w"> </span>--tests<span class="w"> </span><span class="s1">'*CameraManagerTest'</span>
 </span></code></pre></div>
 <p>Focused runs are diagnostic only. Release acceptance requires an unfiltered
 <code>qualificationTests</code> run. Test sources and generated reports are development

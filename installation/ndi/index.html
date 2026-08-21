@@ -1459,7 +1459,7 @@ its license during installation.</p>
    directory containing <code>libndi.so.6</code>.</li>
 <li>Before launching Processing from that terminal, point Devolay to the runtime:</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">NDI_RUNTIME_DIR_V6</span><span class="o">=</span><span class="s2">&quot;/absolute/path/to/the/directory-containing-libndi.so.6&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">NDI_RUNTIME_DIR_V6</span><span class="o">=</span><span class="s2">"/absolute/path/to/the/directory-containing-libndi.so.6"</span>
 </span></code></pre></div>
 <ol>
 <li>Start Processing from the same environment and verify the sender with a
@@ -1473,7 +1473,7 @@ package.</p>
 <h2 id="verify-from-a-sketch">Verify From A Sketch<a class="headerlink" href="#verify-from-a-sketch" title="Permanent link">&para;</a></h2>
 <p>NDI initialization is lazy and begins only when publication is enabled:</p>
 <div class="language-java highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">OutputManager</span><span class="w"> </span><span class="n">outputs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ziviDome</span><span class="p">.</span><span class="na">getOutputManager</span><span class="p">();</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">outputs</span><span class="p">.</span><span class="na">toggleOutput</span><span class="p">(</span><span class="s">&quot;ndi&quot;</span><span class="p">);</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">outputs</span><span class="p">.</span><span class="na">toggleOutput</span><span class="p">(</span><span class="s">"ndi"</span><span class="p">);</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">println</span><span class="p">(</span><span class="n">outputs</span><span class="p">.</span><span class="na">getOutputState</span><span class="p">(</span><span class="n">OutputManager</span><span class="p">.</span><span class="na">OutputType</span><span class="p">.</span><span class="na">NDI</span><span class="p">));</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">println</span><span class="p">(</span><span class="n">outputs</span><span class="p">.</span><span class="na">getOutputFailureReason</span><span class="p">(</span><span class="n">OutputManager</span><span class="p">.</span><span class="na">OutputType</span><span class="p">.</span><span class="na">NDI</span><span class="p">));</span>
