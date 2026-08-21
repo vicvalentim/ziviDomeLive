@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 public class ControlManager {
 
     private final ControlP5 cp5;
+    private final ControlP5KeyEventBridge controlP5KeyEventBridge;
     private final ControlListener parentControlListener;
     private boolean numberboxActive = false;
     private final ziviDomeLive parent;
@@ -45,6 +46,9 @@ public class ControlManager {
         this.p = p;
         this.parent = parent;
         cp5 = new ControlP5(p);
+        controlP5KeyEventBridge = new ControlP5KeyEventBridge(cp5);
+        p.unregisterMethod("keyEvent", cp5.getWindow());
+        p.registerMethod("keyEvent", this);
 
         addGlobalControls();
         addSphericalControls();
@@ -447,9 +451,23 @@ public class ControlManager {
     }
 
     /**
+     * Guards ControlP5 keyboard dispatch from platform key codes outside its
+     * fixed 1024-entry key-state array.
+     *
+     * <p>This method must remain public because Processing invokes registered
+     * methods reflectively.</p>
+     *
+     * @param event Processing key event
+     */
+    public void keyEvent(KeyEvent event) {
+        controlP5KeyEventBridge.dispatch(event);
+    }
+
+    /**
      * Disposes of the ControlManager by releasing all resources and clearing the ControlP5 instance.
      */
     public void dispose() {
+        p.unregisterMethod("keyEvent", this);
         for (NumberboxInput input : numberboxInputs) {
             try {
                 p.unregisterMethod("keyEvent", input);
