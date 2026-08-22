@@ -1,0 +1,36 @@
+ziviDomeLive 2.0 documentation — image capture plan
+STATUS: EDITORIAL WORKING FILE — remove before final documentation freeze.
+
+EXISTING PLACEHOLDER PNG FILES TO REPLACE IN PLACE
+1. hero-overview.png
+   Final: real ziviDomeLive output montage suitable for the home hero.
+2. architecture-domains.png
+   Final: clean technical diagram of Standard Domain + Spherical Domain.
+3. render-modes-overview.png
+   Final: same representative scene shown as Standard, Domemaster, Equirectangular and Skybox.
+4. preview-output-routing.png
+   Final: diagram/capture explaining independent Preview vs external Output routing.
+5. external-outputs.png
+   Final: output-routing diagram for NDI, Syphon and Spout with platform boundaries.
+6. spherical-calibration.png
+   Final: real CalibrationTool/Domemaster capture that makes Pitch/Yaw/Roll, FOV and Size% legible.
+
+INLINE EDITORIAL PLACEHOLDERS TO REPLACE WITH FINAL ASSETS
+7. docs/en|pt/examples/basic.md
+   Suggested asset: learning-examples-foundations.png
+   Final: montage of EmptyProject, Basic and SphereParticle.
+8. docs/en|pt/examples/advanced.md
+   Suggested asset: learning-examples-advanced.png
+   Final: montage of InfiniteBackground, FulldomePBR and SolarSystem.
+9. docs/en|pt/qualification/calibration-tool.md
+   Suggested asset: calibration-tool-overview.png
+   Final: current CalibrationTool Scene 1 + Scene 2, preferably with active state visible.
+10. docs/en|pt/qualification/benchmark-guide.md
+    Suggested asset: benchmark-tool-interface.png
+    Final: BenchmarkTool interface with benchmark controls and ziviDomeLive panel visible.
+
+FINAL FREEZE RULE
+- Replace every raster placeholder and every .zd-image-placeholder block.
+- Remove this IMAGE-CAPTURE-PLAN.txt file.
+- Re-run MkDocs strict, link validation and the documentation visual review.
+- Captures used as release evidence must come from the actual qualified build/package, not a mockup.
