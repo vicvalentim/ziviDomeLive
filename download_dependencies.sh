@@ -31,20 +31,14 @@ download_and_extract() {
   local archive_sha256="$3"
   local jar_path="$4"
   local jar_sha256="$5"
-  local use_github_api="${6:-false}"
   local archive="$deps_temp_dir/$name.zip"
   local extract_dir="$deps_temp_dir/$name"
   local destination="$libs_dir/$(basename -- "$jar_path")"
   local actual_sha256
 
   echo "Downloading pinned $name dependency..."
-  if [[ "$use_github_api" == "true" ]]; then
-    curl --fail --location --silent --show-error --retry 3 --retry-all-errors \
-      -H "Accept: application/octet-stream" "$url" -o "$archive"
-  else
-    curl --fail --location --silent --show-error --retry 3 --retry-all-errors \
-      "$url" -o "$archive"
-  fi
+  curl --fail --location --silent --show-error --retry 3 --retry-all-errors \
+    "$url" -o "$archive"
 
   actual_sha256="$(sha256_file "$archive")"
   if [[ "$actual_sha256" != "$archive_sha256" ]]; then
@@ -67,14 +61,13 @@ download_and_extract() {
 
 mkdir -p "$libs_dir"
 
-# Syphon for Processing 4.0, immutable GitHub release asset 59352362.
+# Syphon for Processing 4.0, checksum-pinned public GitHub release asset.
 download_and_extract \
   "Syphon-4.0" \
-  "https://api.github.com/repos/Syphon/Processing/releases/assets/59352362" \
+  "https://github.com/Syphon/Processing/releases/download/latest/Syphon.zip" \
   "0842c04d2332e3bfc0b601ae6dafb467b9ba8157934d584df378789750648798" \
   "Syphon/library/Syphon.jar" \
-  "546af773807bb0329bc53cc9a9df44a9ed521eb839045fd2077a58625f4150c6" \
-  "true"
+  "546af773807bb0329bc53cc9a9df44a9ed521eb839045fd2077a58625f4150c6"
 
 # ControlP5 2.2.6, versioned release asset.
 download_and_extract \
@@ -84,13 +77,12 @@ download_and_extract \
   "controlP5/library/controlP5.jar" \
   "69e160f9cee979d631a4a9674f3d3b2016b66eb3e6f353918cda2b325ef3cc75"
 
-# Spout for Processing 2.0.8.0, immutable GitHub release asset 188539046.
+# Spout for Processing 2.0.8.0, checksum-pinned public GitHub release asset.
 download_and_extract \
   "Spout-2.0.8.0" \
-  "https://api.github.com/repos/leadedge/SpoutProcessing/releases/assets/188539046" \
+  "https://github.com/leadedge/SpoutProcessing/releases/download/latest/spout.zip" \
   "65fff0a2779833073dbcd54fbbe862f43b2505cb04dd2a4fcb52b0d80c95b4ca" \
   "spout/library/spout.jar" \
-  "74c6a8422590dc00ffc7a207c3c408f4b09f6da9390aae7718452095ea974cef" \
-  "true"
+  "74c6a8422590dc00ffc7a207c3c408f4b09f6da9390aae7718452095ea974cef"
 
 echo "Pinned Processing dependencies installed successfully."
