@@ -21,7 +21,7 @@ Construa fluxos visuais **fulldome, esféricos e imersivos em tempo real** a par
 </div>
 <div class="zd-hero__image">
 <div class="zd-splash-stage" data-zd-splash>
-<canvas class="zd-splash-canvas" data-zd-splash-canvas width="566" height="358" role="img" aria-label="Esfera animada do splash do ziviDomeLive com cubos wireframe orbitais">Esfera animada do splash do ziviDomeLive</canvas>
+<canvas class="zd-splash-canvas" data-zd-splash-canvas width="566" height="480" role="img" aria-label="Esfera animada do splash do ziviDomeLive com cubos wireframe orbitais">Esfera animada do splash do ziviDomeLive</canvas>
 </div>
 </div>
 </div>

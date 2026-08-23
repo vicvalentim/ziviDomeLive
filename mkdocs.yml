@@ -196,6 +196,20 @@ markdown_extensions:
 
 extra:
   generator: false
+  consent:
+    title: Cookie preferences
+    description: >-
+      This documentation stores essential interface and consent preferences in
+      your browser. Optional GitHub repository data is loaded only if you enable
+      it. You can change this choice at any time from the Cookies tab.
+    cookies:
+      github:
+        name: GitHub repository data
+        checked: false
+    actions:
+      - accept
+      - reject
+      - manage
   status:
     stable: Stable API
     advanced: Advanced Stable API

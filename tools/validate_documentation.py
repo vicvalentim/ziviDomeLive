@@ -561,18 +561,27 @@ def check_editorial_system(root,c):
             if token not in home: c.error(f'homepage splash animation hook missing from {rel}: {token}')
         if 'splash.jpg' in home or 'hero-overview.png' in home:
             c.error(f'homepage still uses an opaque splash/hero image: {rel}')
+        if 'width="566" height="480"' not in home:
+            c.error(f'homepage splash canvas does not preserve the expanded safe frame: {rel}')
     for token in (
+            'const BASE_HEIGHT = 480', 'const PROJECTION_HEIGHT = 358',
             'const SPHERE_RADIUS = 120', 'const ORBIT_RADIUS = 160',
             'const RINGS = 16', 'const SEGMENTS = 32', 'const CUBE_COUNT = 13',
-            'const STATIC_FRAME_TIME = 1800',
+            'const INITIAL_FRAME_TIME = 1800',
             'time * 0.02 * DEG_TO_RAD', 'time * 0.015 * DEG_TO_RAD',
             'time * 0.01 * DEG_TO_RAD', '0.0008 + (Math.random() - 0.5) * 0.0004',
-            'IntersectionObserver', 'ResizeObserver', 'prefers-reduced-motion',
+            'drawOrbitingCubes(false)', 'drawOrbitingCubes(true)',
+            'IntersectionObserver', 'ResizeObserver',
             'visibilitychange', 'getContext("2d", { alpha: true })',
             '--zd-splash-ring-start', '--zd-splash-ring-end', '--zd-splash-cube'):
         if token not in splash_script: c.error(f'homepage splash fidelity/runtime guard missing: {token}')
-    for forbidden in ('drawBackground()', 'fillText("ziviDomeLive"'):
-        if forbidden in splash_script: c.error(f'homepage splash must remain transparent and untitled: {forbidden}')
+    for forbidden in ('drawBackground()', 'fillText("ziviDomeLive"', 'prefers-reduced-motion'):
+        if forbidden in splash_script: c.error(f'homepage splash transparency/title/forced-motion contract violated: {forbidden}')
+    docs_script=read(root/'docs/assets/js/extra.js')
+    for token in ('data-zd-cookie-settings', 'Gerenciar preferências de cookies', 'GitHub repository data'):
+        if token not in docs_script: c.error(f'cookie preferences integration missing: {token}')
+    for token in ('consent:', 'cookies:', 'github:', '- accept', '- reject', '- manage'):
+        if token not in mk: c.error(f'MkDocs cookie consent contract missing: {token}')
     outputs=read(root/'docs/en/usage/external-integration.md')
     if '=== "NDI"' not in outputs: c.error('external outputs page is missing backend content tabs')
     requirements=read(root/'requirements-docs.txt')

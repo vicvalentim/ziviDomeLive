@@ -3,18 +3,21 @@
     "use strict";
 
     const BASE_WIDTH = 566;
-    const BASE_HEIGHT = 358;
+    const BASE_HEIGHT = 480;
+    const PROJECTION_HEIGHT = 358;
     const CENTER_X = BASE_WIDTH / 2;
     const CENTER_Y = BASE_HEIGHT / 2;
-    const CAMERA_Z = CENTER_Y / Math.tan(Math.PI / 6);
+    // Preserve the Processing splash perspective while adding vertical breathing room.
+    const CAMERA_Z = PROJECTION_HEIGHT / 2 / Math.tan(Math.PI / 6);
     const SPHERE_RADIUS = 120;
     const ORBIT_RADIUS = 160;
     const RINGS = 16;
     const SEGMENTS = 32;
     const CUBE_COUNT = 13;
     const CUBE_HALF_SIZE = 4;
+    const CUBE_STATE_SIZE = 4;
     const MAX_PIXEL_RATIO = 2;
-    const STATIC_FRAME_TIME = 1800;
+    const INITIAL_FRAME_TIME = 1800;
     const DEG_TO_RAD = Math.PI / 180;
 
     const cubeVertices = new Float32Array([
@@ -85,8 +88,8 @@
 
         const ringProjection = new Float32Array((SEGMENTS + 1) * 2);
         const cubeProjection = new Float32Array(8 * 2);
-        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-        const animationStart = performance.now();
+        const cubeStates = new Float32Array(CUBE_COUNT * CUBE_STATE_SIZE);
+        const animationStart = performance.now() - INITIAL_FRAME_TIME;
         let palette = readPalette();
         let resizeObserver = null;
         let intersectionObserver = null;
@@ -207,19 +210,33 @@
             }
         }
 
-        function drawOrbitingCubes(time) {
+        function updateCubeStates(time) {
+            for (let cube = 0; cube < CUBE_COUNT; cube += 1) {
+                const rotationOffset = Math.PI * 2 * cube / CUBE_COUNT;
+                const zOffset = (cube % 2 === 0 ? 1 : -1) * ORBIT_RADIUS * 0.2;
+                const angle = time * speeds[cube] + rotationOffset;
+                const state = cube * CUBE_STATE_SIZE;
+
+                cubeStates[state] = ORBIT_RADIUS * Math.cos(angle);
+                cubeStates[state + 1] = ORBIT_RADIUS * Math.sin(angle) + zOffset;
+                cubeStates[state + 2] = Math.cos(rotationOffset);
+                cubeStates[state + 3] = Math.sin(rotationOffset);
+            }
+        }
+
+        function drawOrbitingCubes(frontLayer) {
             context.lineWidth = 1.5;
             context.strokeStyle = `rgb(${palette.cube.red}, ${palette.cube.green}, ${palette.cube.blue})`;
 
             for (let cube = 0; cube < CUBE_COUNT; cube += 1) {
-                const rotationOffset = Math.PI * 2 * cube / CUBE_COUNT;
-                const initialAngleOffset = rotationOffset;
-                const zOffset = (cube % 2 === 0 ? 1 : -1) * ORBIT_RADIUS * 0.2;
-                const angle = time * speeds[cube] + initialAngleOffset;
-                const orbitY = ORBIT_RADIUS * Math.cos(angle);
-                const orbitZ = ORBIT_RADIUS * Math.sin(angle) + zOffset;
-                const cosZ = Math.cos(rotationOffset);
-                const sinZ = Math.sin(rotationOffset);
+                const state = cube * CUBE_STATE_SIZE;
+                const orbitY = cubeStates[state];
+                const orbitZ = cubeStates[state + 1];
+                if ((orbitZ >= 0) !== frontLayer) {
+                    continue;
+                }
+                const cosZ = cubeStates[state + 2];
+                const sinZ = cubeStates[state + 3];
 
                 for (let vertex = 0; vertex < 8; vertex += 1) {
                     const source = vertex * 3;
@@ -247,8 +264,11 @@
 
         function draw(time) {
             prepareContext();
+            updateCubeStates(time);
+            // Canvas has no P3D depth buffer: split the orbit around the sphere instead.
+            drawOrbitingCubes(false);
             drawSphere(time);
-            drawOrbitingCubes(time);
+            drawOrbitingCubes(true);
 
             if (!hasRendered) {
                 hasRendered = true;
@@ -259,8 +279,7 @@
         function shouldAnimate() {
             return !isDestroyed
                 && isVisible
-                && document.visibilityState === "visible"
-                && !reducedMotion.matches;
+                && document.visibilityState === "visible";
         }
 
         function renderFrame(time) {
@@ -290,28 +309,17 @@
             updateAnimation();
         }
 
-        function handleMotionPreference() {
-            if (reducedMotion.matches) {
-                draw(STATIC_FRAME_TIME);
-            }
-            updateAnimation();
-        }
-
         function handleResize() {
             canvasNeedsResize = true;
             if (!shouldAnimate()) {
-                draw(reducedMotion.matches
-                    ? STATIC_FRAME_TIME
-                    : Math.max(0, performance.now() - animationStart));
+                draw(Math.max(0, performance.now() - animationStart));
             }
         }
 
         function handlePaletteChange() {
             palette = readPalette();
             if (!shouldAnimate()) {
-                draw(reducedMotion.matches
-                    ? STATIC_FRAME_TIME
-                    : Math.max(0, performance.now() - animationStart));
+                draw(Math.max(0, performance.now() - animationStart));
             }
         }
 
@@ -327,7 +335,6 @@
             resizeObserver?.disconnect();
             intersectionObserver?.disconnect();
             paletteObserver?.disconnect();
-            reducedMotion.removeEventListener?.("change", handleMotionPreference);
             document.removeEventListener("visibilitychange", handleVisibility);
             window.removeEventListener("resize", handleResize);
             controllers.delete(controller);
@@ -335,7 +342,6 @@
 
         const controller = { canvas, destroy };
         document.addEventListener("visibilitychange", handleVisibility);
-        reducedMotion.addEventListener?.("change", handleMotionPreference);
         window.addEventListener("resize", handleResize, { passive: true });
 
         if ("ResizeObserver" in window) {
@@ -359,7 +365,7 @@
             });
         }
 
-        draw(reducedMotion.matches ? STATIC_FRAME_TIME : 0);
+        draw(INITIAL_FRAME_TIME);
         updateAnimation();
         return controller;
     }
