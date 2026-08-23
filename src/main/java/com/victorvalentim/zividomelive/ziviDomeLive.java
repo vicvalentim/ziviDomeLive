@@ -3,11 +3,6 @@ package com.victorvalentim.zividomelive;
 import com.victorvalentim.zividomelive.manager.*;
 import com.victorvalentim.zividomelive.render.*;
 import com.victorvalentim.zividomelive.render.camera.*;
-import com.victorvalentim.zividomelive.render.gl.*;
-import com.victorvalentim.zividomelive.render.modes.*;
-import com.victorvalentim.zividomelive.support.*;
-import com.victorvalentim.zividomelive.internal.performance.GpuPerformanceTimer;
-import com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor;
 import com.victorvalentim.zividomelive.performance.*;
 import processing.core.*;
 import processing.event.*;
@@ -18,6 +13,8 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
+
+import static processing.core.PConstants.*;
 
 /**
  * The `ziviDomeLive` class manages rendering and control of a live dome visualization.
@@ -30,12 +27,12 @@ import java.util.logging.Logger;
  * handle mouse and key events, and render different views. The class also supports toggling
  * output methods (NDI, Spout, Syphon) and managing the current scene and view type.</p>
  */
-public class ziviDomeLive implements PConstants {
+public class ziviDomeLive {
 
 	/**
 	 * Enum representing the initialization state of the library.
 	 */
-	public enum InitState {
+	enum InitState {
 		/** Instance created but setup has not started yet. */
 		NOT_INITIALIZED,
 		/** setup() completed, waiting for managers initialization in post(). */
@@ -321,7 +318,7 @@ public class ziviDomeLive implements PConstants {
 		// Load DefaultScene through SceneManager when no user scene was selected before setup.
 		if (getCurrentScene() == null) {
 			try {
-				bootstrapScene = new com.victorvalentim.zividomelive.scene.DefaultScene(p);
+				bootstrapScene = new DefaultScene(p);
 				sceneManager.registerScene(bootstrapScene);
 				LOGGER.info("DefaultScene loaded successfully as the initial scene.");
 			} catch (Exception e) {
@@ -340,7 +337,7 @@ public class ziviDomeLive implements PConstants {
 	 *
 	 * @param p the PApplet instance used for rendering
 	 */
-	public void printOpenGLInfo(PApplet p) {
+	void printOpenGLInfo(PApplet p) {
 		ProcessingGlCapabilities capabilities = ProcessingGlAdapter.getDefault().queryCapabilities(p);
 		if (capabilities.isOpenGlRenderer()) {
 			LOGGER.info("OpenGL Version: " + capabilities.version());
@@ -380,7 +377,7 @@ public class ziviDomeLive implements PConstants {
 	 * Processing thread, after the OpenGL context is active. Preparing Syphon or Spout does not
 	 * enable frame publication; the corresponding UI toggle controls only the enabled state.</p>
 	 */
-	public void initializeManagers() {
+	void initializeManagers() {
 		if (disposed) {
 			LOGGER.warning("Manager initialization ignored after disposal.");
 			return;
@@ -1238,7 +1235,7 @@ public class ziviDomeLive implements PConstants {
 	 * <p>{@code renderPreviewPipeline()} guarantees the fisheye FBO is populated before
 	 * this method is called whenever {@code showPreview} is {@code true}.</p>
 	 */
-	public void drawFloatingPreview() {
+	void drawFloatingPreview() {
 		if (previewFisheyeDomemaster == null) {
 			return;
 		}
@@ -1916,7 +1913,7 @@ public class ziviDomeLive implements PConstants {
 	 *
 	 * @param fisheyeDomemaster the new FisheyeDomemaster instance
 	 */
-	public void setFisheyeDomemaster(FisheyeDomemaster fisheyeDomemaster) {
+	void setFisheyeDomemaster(FisheyeDomemaster fisheyeDomemaster) {
 		this.fisheyeDomemaster = fisheyeDomemaster;
 		if (this.fisheyeDomemaster != null) {
 			this.fisheyeDomemaster.setSizePercentage(fishSize);
@@ -1928,7 +1925,7 @@ public class ziviDomeLive implements PConstants {
 	 *
 	 * @return the current FisheyeDomemaster instance
 	 */
-	public FisheyeDomemaster getFisheyeDomemaster() {
+	FisheyeDomemaster getFisheyeDomemaster() {
 		return fisheyeDomemaster;
 	}
 
@@ -1936,7 +1933,7 @@ public class ziviDomeLive implements PConstants {
 	 * Returns the instance of the EquirectangularRenderer.
 	 * @return the EquirectangularRenderer instance.
 	 */
-	public EquirectangularRenderer getEquirectangularRenderer() {
+	EquirectangularRenderer getEquirectangularRenderer() {
 		return equirectangularRenderer;
 	}
 
@@ -1944,7 +1941,7 @@ public class ziviDomeLive implements PConstants {
 	 * Returns the instance of the CubemapViewRenderer.
 	 * @return the CubemapViewRenderer instance.
 	 */
-	public CubemapViewRenderer getCubemapViewRenderer() {
+	CubemapViewRenderer getCubemapViewRenderer() {
 		return cubemapViewRenderer;
 	}
 
@@ -1952,7 +1949,7 @@ public class ziviDomeLive implements PConstants {
 	 * Returns the instance of the StandardRenderer.
 	 * @return the StandardRenderer instance.
 	 */
-	public StandardRenderer getStandardRenderer() {
+	StandardRenderer getStandardRenderer() {
 		return standardRenderer;
 	}
 
@@ -2142,24 +2139,6 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Gets the width of the PApplet window.
-	 *
-	 * @return the width of the PApplet window
-	 */
-	public int getWidth() {
-		return p.width;
-	}
-
-	/**
-	 * Gets the height of the PApplet window.
-	 *
-	 * @return the height of the PApplet window
-	 */
-	public int getHeight() {
-		return p.height;
-	}
-
-	/**
 	 * Checks if the instance is initialized and ready to render.
 	 *
 	 * @return true if the instance is initialized and managers are ready, false otherwise
@@ -2250,6 +2229,16 @@ public class ziviDomeLive implements PConstants {
 		return performanceMonitor.snapshot();
 	}
 
+	/**
+	 * Returns a read-only diagnostic report for the active Processing graphics renderer.
+	 *
+	 * @return current graphics capability report
+	 * @since 2.0.0
+	 */
+	public GraphicsCapabilities getGraphicsCapabilities() {
+		return ProcessingGlAdapter.getDefault().queryCapabilities(p);
+	}
+
 	PerformanceMonitor performanceMonitor() {
 		return performanceMonitor;
 	}
@@ -2271,7 +2260,7 @@ public class ziviDomeLive implements PConstants {
 	 *
 	 * @return the current InitState
 	 */
-	public InitState getInitState() {
+	InitState getInitState() {
 		return initState;
 	}
 

@@ -1,6 +1,5 @@
 package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.support.LogManager;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;

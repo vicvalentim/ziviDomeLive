@@ -1,6 +1,5 @@
 package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.support.LogManager;
 import processing.core.PApplet;
 
 import java.util.Objects;

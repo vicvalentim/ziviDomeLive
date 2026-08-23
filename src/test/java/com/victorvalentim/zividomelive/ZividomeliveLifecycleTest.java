@@ -1,8 +1,6 @@
 package com.victorvalentim.zividomelive;
 
 import com.victorvalentim.zividomelive.manager.OutputManager;
-import com.victorvalentim.zividomelive.render.modes.FisheyeDomemaster;
-import com.victorvalentim.zividomelive.render.modes.StandardRenderer;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
 import processing.core.PImage;

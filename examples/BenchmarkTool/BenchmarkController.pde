@@ -1581,10 +1581,8 @@ class BenchmarkController {
     environment.processingVersion =
         processingVersion();
 
-    ProcessingGlCapabilities capabilities =
-        ProcessingGlAdapter
-            .getDefault()
-            .queryCapabilities(app);
+    GraphicsCapabilities capabilities =
+        dome.getGraphicsCapabilities();
 
     environment.glVendor =
         known(

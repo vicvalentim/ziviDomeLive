@@ -11,7 +11,7 @@ import processing.opengl.PGraphicsOpenGL;
  * @since 2.0.0
  */
 @FunctionalInterface
-public interface FrameViews {
+interface FrameViews {
 
 	/**
 	 * Returns the completed graphics target for a logical view.

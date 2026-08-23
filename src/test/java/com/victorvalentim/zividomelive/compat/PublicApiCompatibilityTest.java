@@ -1,8 +1,8 @@
 package com.victorvalentim.zividomelive.compat;
 
-import com.victorvalentim.zividomelive.FrameViews;
 import com.victorvalentim.zividomelive.FrameClock;
 import com.victorvalentim.zividomelive.LogMode;
+import com.victorvalentim.zividomelive.RenderMode;
 import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.SceneActionMap;
 import com.victorvalentim.zividomelive.SceneAssets;
@@ -15,447 +15,261 @@ import com.victorvalentim.zividomelive.ScenePorts;
 import com.victorvalentim.zividomelive.SceneServices;
 import com.victorvalentim.zividomelive.SceneTaskGroup;
 import com.victorvalentim.zividomelive.SimulationTimeline;
-import com.victorvalentim.zividomelive.RenderMode;
 import com.victorvalentim.zividomelive.ViewType;
 import com.victorvalentim.zividomelive.manager.OutputManager;
+import com.victorvalentim.zividomelive.performance.GpuTimerArchitecture;
+import com.victorvalentim.zividomelive.performance.GpuTimerBackend;
+import com.victorvalentim.zividomelive.performance.GpuTimerPolicy;
+import com.victorvalentim.zividomelive.performance.GraphicsCapabilities;
 import com.victorvalentim.zividomelive.performance.PerformanceMetric;
 import com.victorvalentim.zividomelive.performance.PerformanceMode;
 import com.victorvalentim.zividomelive.performance.PerformanceSnapshot;
-import com.victorvalentim.zividomelive.performance.GpuTimerPolicy;
-import com.victorvalentim.zividomelive.render.CubemapRenderer;
-import com.victorvalentim.zividomelive.render.EnvironmentBackgroundRenderer;
 import com.victorvalentim.zividomelive.render.Quaternion;
 import com.victorvalentim.zividomelive.render.SphericalOrientation;
-import com.victorvalentim.zividomelive.render.camera.CameraManager;
-import com.victorvalentim.zividomelive.render.camera.CubemapFace;
-import com.victorvalentim.zividomelive.render.camera.MouseControlledCamera;
 import com.victorvalentim.zividomelive.render.camera.OrbitCamera;
-import com.victorvalentim.zividomelive.render.gl.CubemapTarget;
-import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
-import com.victorvalentim.zividomelive.render.gl.ProcessingGlCapabilities;
-import com.victorvalentim.zividomelive.render.modes.CubemapViewRenderer;
-import com.victorvalentim.zividomelive.render.modes.EquirectangularRenderer;
-import com.victorvalentim.zividomelive.render.modes.FisheyeDomemaster;
-import com.victorvalentim.zividomelive.render.modes.StandardRenderer;
-import com.victorvalentim.zividomelive.support.LibraryMetadata;
 import com.victorvalentim.zividomelive.ziviDomeLive;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
-import processing.core.PImage;
-import processing.event.KeyEvent;
-import processing.event.MouseEvent;
 import processing.opengl.PGraphicsOpenGL;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Protects the new 2.0 public baseline rather than the removed 1.x surface. */
 class PublicApiCompatibilityTest {
 
+	private static final Class<?>[] STABLE_TYPES = {
+			ziviDomeLive.class,
+			Scene.class,
+			SceneManager.class,
+			RenderMode.class,
+			ViewType.class,
+			LogMode.class
+	};
+
+	private static final Class<?>[] ADVANCED_STABLE_TYPES = {
+			SceneServices.class,
+			FrameClock.class,
+			SimulationTimeline.class,
+			SceneTaskGroup.class,
+			SceneAssets.class,
+			SceneActionMap.class,
+			SceneCameraService.class,
+			SceneEnvironmentService.class,
+			ScenePorts.class,
+			SceneInputPort.class,
+			SceneOutputPort.class,
+			OutputManager.class,
+			Quaternion.class,
+			SphericalOrientation.class,
+			OrbitCamera.class
+	};
+
+	private static final Class<?>[] EXPERIMENTAL_TYPES = {
+			PerformanceMode.class,
+			PerformanceMetric.class,
+			PerformanceSnapshot.class,
+			GraphicsCapabilities.class,
+			GpuTimerPolicy.class,
+			GpuTimerBackend.class,
+			GpuTimerArchitecture.class
+	};
+
+	private static final String[] REMOVED_ENGINE_TYPES = {
+			"com.victorvalentim.zividomelive.support.ThreadManager",
+			"com.victorvalentim.zividomelive.support.LibraryMetadata",
+			"com.victorvalentim.zividomelive.support.LogManager",
+			"com.victorvalentim.zividomelive.support.SplashScreen",
+			"com.victorvalentim.zividomelive.scene.DefaultScene",
+			"com.victorvalentim.zividomelive.manager.ControlManager",
+			"com.victorvalentim.zividomelive.manager.ControlP5KeyEventBridge",
+			"com.victorvalentim.zividomelive.manager.ControlPanelLayout",
+			"com.victorvalentim.zividomelive.manager.ControlScope",
+			"com.victorvalentim.zividomelive.render.CubemapRenderer",
+			"com.victorvalentim.zividomelive.render.EnvironmentBackgroundRenderer",
+			"com.victorvalentim.zividomelive.render.EnvironmentState",
+			"com.victorvalentim.zividomelive.render.SphericalEnvironmentNativePass",
+			"com.victorvalentim.zividomelive.render.camera.CameraManager",
+			"com.victorvalentim.zividomelive.render.camera.CameraOrientation",
+			"com.victorvalentim.zividomelive.render.camera.CubemapFace",
+			"com.victorvalentim.zividomelive.render.camera.MouseControlledCamera",
+			"com.victorvalentim.zividomelive.render.gl.CubemapTarget",
+			"com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter",
+			"com.victorvalentim.zividomelive.render.gl.ProcessingGlCapabilities",
+			"com.victorvalentim.zividomelive.render.gl.ProcessingGpuMeasurementSession",
+			"com.victorvalentim.zividomelive.render.modes.CubemapViewRenderer",
+			"com.victorvalentim.zividomelive.render.modes.EquirectangularRenderer",
+			"com.victorvalentim.zividomelive.render.modes.FisheyeDomemaster",
+			"com.victorvalentim.zividomelive.render.modes.StandardRenderer",
+			"com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor",
+			"com.victorvalentim.zividomelive.internal.performance.GpuPerformanceTimer",
+			"com.victorvalentim.zividomelive.internal.performance.GpuTimerQualification"
+	};
+
+	private static final String[] ROOT_INTERNAL_TYPES = {
+			"com.victorvalentim.zividomelive.RenderThreadQueue",
+			"com.victorvalentim.zividomelive.SharedTaskExecutor",
+			"com.victorvalentim.zividomelive.OutputManagerImpl",
+			"com.victorvalentim.zividomelive.NdiOutputBackend",
+			"com.victorvalentim.zividomelive.CubemapRenderer",
+			"com.victorvalentim.zividomelive.CubemapTarget",
+			"com.victorvalentim.zividomelive.ProcessingGlAdapter",
+			"com.victorvalentim.zividomelive.PerformanceMonitor",
+			"com.victorvalentim.zividomelive.ControlManager"
+	};
+
 	@Test
-	void publicFacadeClassNameAndConstructorRemainStable() throws Exception {
-		assertEquals("com.victorvalentim.zividomelive.ziviDomeLive", ziviDomeLive.class.getName());
-		assertTrue(Modifier.isPublic(ziviDomeLive.class.getModifiers()));
+	void finalApiTypesRemainJavaPublic() throws Exception {
+		for (Class<?> type : concat(STABLE_TYPES, ADVANCED_STABLE_TYPES, EXPERIMENTAL_TYPES)) {
+			assertTrue(Modifier.isPublic(type.getModifiers()), type.getName());
+		}
 		assertNotNull(ziviDomeLive.class.getConstructor(PApplet.class));
+		assertTrue(PerformanceSnapshot.class.isInterface());
+		assertEquals(0, PerformanceSnapshot.class.getConstructors().length);
 	}
 
 	@Test
-	void viewTypeIsTopLevelWithFinalNamesAndOrder() {
-		assertEquals("com.victorvalentim.zividomelive.ViewType", ViewType.class.getName());
-		assertTrue(Modifier.isPublic(ViewType.class.getModifiers()));
+	void stableEnumNamesAndOrderAreFrozen() {
 		assertArrayEquals(new ViewType[]{
-				ViewType.STANDARD,
-				ViewType.DOMEMASTER,
-				ViewType.EQUIRECTANGULAR,
-				ViewType.SKYBOX
+				ViewType.STANDARD, ViewType.DOMEMASTER,
+				ViewType.EQUIRECTANGULAR, ViewType.SKYBOX
 		}, ViewType.values());
-		assertFalse(Arrays.stream(ziviDomeLive.class.getDeclaredClasses())
-				.anyMatch(type -> type.getSimpleName().equals("ViewType")));
-	}
-
-	@Test
-	void viewRoutingMethodsUseTopLevelViewType() throws Exception {
-		assertEquals(ViewType.class, ziviDomeLive.class.getMethod("getCurrentView").getReturnType());
-		assertNotNull(ziviDomeLive.class.getMethod("setCurrentView", ViewType.class));
-		assertEquals(ViewType.class, OutputManager.class
-				.getMethod("getViewForOutput", OutputManager.OutputType.class)
-				.getReturnType());
-		assertNotNull(OutputManager.class.getMethod(
-				"setViewForOutput", OutputManager.OutputType.class, ViewType.class));
-		assertNotNull(OutputManager.class.getMethod("setNdiView", ViewType.class));
-		assertNotNull(OutputManager.class.getMethod("setSpoutView", ViewType.class));
-		assertNotNull(OutputManager.class.getMethod("setSyphonView", ViewType.class));
-		assertNotNull(OutputManager.class.getMethod("setLocalTextureView", ViewType.class));
-		assertNotNull(OutputManager.class.getMethod(
-				"setOutputEnabled", OutputManager.OutputType.class, boolean.class));
-		assertNotNull(OutputManager.class.getMethod(
-				"isOutputEnabled", OutputManager.OutputType.class));
-		assertNotNull(OutputManager.class.getMethod(
-				"toggleOutput", OutputManager.OutputType.class));
-	}
-
-	@Test
-	void outputManagerDoesNotExposeFrameProducerOperations() {
-		assertTrue(OutputManager.class.isInterface());
-		for (String internalMethod : Arrays.asList(
-				"sendOutput",
-				"initializeLocalTextureOutput",
-				"notifyResolutionChanged",
-				"shutdownOutputs",
-				"stopOutput",
-				"requiresView",
-				"refreshCachedGraphics",
-				"setView")) {
-			assertFalse(Arrays.stream(OutputManager.class.getMethods())
-					.anyMatch(method -> method.getName().equals(internalMethod)), internalMethod);
-		}
-		assertFalse(Arrays.stream(OutputManager.class.getMethods())
-				.anyMatch(method -> method.getParameterCount() == 1
-						&& method.getParameterTypes()[0] == String.class));
-	}
-
-	@Test
-	void publicEnumsRemainSourceCompatible() {
 		assertArrayEquals(new RenderMode[]{
-				RenderMode.FULL,
-				RenderMode.STANDARD,
-				RenderMode.DOMEMASTER,
-				RenderMode.EQUIRECTANGULAR,
-				RenderMode.SKYBOX
+				RenderMode.FULL, RenderMode.STANDARD, RenderMode.DOMEMASTER,
+				RenderMode.EQUIRECTANGULAR, RenderMode.SKYBOX
 		}, RenderMode.values());
-		assertArrayEquals(new ziviDomeLive.InitState[]{
-				ziviDomeLive.InitState.NOT_INITIALIZED,
-				ziviDomeLive.InitState.SETUP_COMPLETE,
-				ziviDomeLive.InitState.MANAGERS_READY,
-				ziviDomeLive.InitState.READY
-		}, ziviDomeLive.InitState.values());
-		assertArrayEquals(new ziviDomeLive.StandardOutputAspectMode[]{
-				ziviDomeLive.StandardOutputAspectMode.AUTO,
-				ziviDomeLive.StandardOutputAspectMode.ASPECT_16_9,
-				ziviDomeLive.StandardOutputAspectMode.ASPECT_16_10,
-				ziviDomeLive.StandardOutputAspectMode.ASPECT_4_3,
-				ziviDomeLive.StandardOutputAspectMode.ASPECT_1_1
-		}, ziviDomeLive.StandardOutputAspectMode.values());
-		assertArrayEquals(new OutputManager.OutputType[]{
-				OutputManager.OutputType.NDI,
-				OutputManager.OutputType.SPOUT,
-				OutputManager.OutputType.SYPHON
-		}, OutputManager.OutputType.values());
-		assertArrayEquals(new OutputManager.OutputState[]{
-				OutputManager.OutputState.UNAVAILABLE,
-				OutputManager.OutputState.AVAILABLE,
-				OutputManager.OutputState.INITIALIZED,
-				OutputManager.OutputState.ENABLED,
-				OutputManager.OutputState.STOPPING
-		}, OutputManager.OutputState.values());
-		assertArrayEquals(new LogMode[]{
-				LogMode.DEBUG,
-				LogMode.RELEASE
-		}, LogMode.values());
-		assertArrayEquals(new PerformanceMode[]{
-				PerformanceMode.OFF,
-				PerformanceMode.CPU,
-				PerformanceMode.CPU_GPU
-		}, PerformanceMode.values());
+		assertArrayEquals(new LogMode[]{LogMode.DEBUG, LogMode.RELEASE}, LogMode.values());
 	}
 
 	@Test
-	void experimentalPerformanceApiExposesOnlyDataAndControlTypes() throws Exception {
-		assertTrue(Modifier.isPublic(PerformanceMode.class.getModifiers()));
-		assertTrue(Modifier.isPublic(PerformanceMetric.class.getModifiers()));
-		assertTrue(Modifier.isPublic(PerformanceSnapshot.class.getModifiers()));
-		assertMethod("enablePerformanceProfiling", PerformanceMode.class);
-		assertMethod("enablePerformanceProfiling", PerformanceMode.class, int.class);
-		assertMethod("enablePerformanceProfiling", PerformanceMode.class, int.class, GpuTimerPolicy.class);
-		assertMethod("disablePerformanceProfiling");
-		assertMethod("resetPerformanceStatistics");
-		assertEquals(PerformanceSnapshot.class,
-				ziviDomeLive.class.getMethod("getPerformanceSnapshot").getReturnType());
-	}
-
-	@Test
-	void primaryPublicTypesRemainAvailable() {
-		Class<?>[] publicTypes = {
-				RenderMode.class,
-				ViewType.class,
-				FrameViews.class,
-				FrameClock.class,
-				SimulationTimeline.class,
-				Scene.class,
-				SceneServices.class,
-				SceneTaskGroup.class,
-				SceneAssets.class,
-				SceneActionMap.class,
-				SceneCameraService.class,
-				SceneEnvironmentService.class,
-				ScenePorts.class,
-				SceneInputPort.class,
-				SceneOutputPort.class,
-				SceneManager.class,
-				OutputManager.class,
-				CubemapRenderer.class,
-				EnvironmentBackgroundRenderer.class,
-				Quaternion.class,
-				SphericalOrientation.class,
-				CameraManager.class,
-				CubemapFace.class,
-				CubemapTarget.class,
-				ProcessingGlAdapter.class,
-				ProcessingGlCapabilities.class,
-				MouseControlledCamera.class,
-				OrbitCamera.class,
-				CubemapViewRenderer.class,
-				EquirectangularRenderer.class,
-				FisheyeDomemaster.class,
-				StandardRenderer.class,
-				LibraryMetadata.class
-		};
-
-		for (Class<?> type : publicTypes) {
-			assertTrue(Modifier.isPublic(type.getModifiers()), type.getName() + " must remain public");
-		}
-	}
-
-	@Test
-	void facadeOperationalMethodsRemainAvailable() throws Exception {
-		assertMethod("setup");
-		assertMethod("draw");
-		assertMethod("pre");
-		assertMethod("post");
-		assertMethod("pause");
-		assertMethod("resume");
-		assertMethod("stop");
-		assertMethod("dispose");
-		assertMethod("setScene", Scene.class);
-		assertMethod("registerScene", Scene.class);
-		assertMethod("setCurrentScene", Scene.class);
-		assertMethod("setSceneManager", SceneManager.class);
-		assertMethod("getRenderMode");
-		assertMethod("setRenderMode", RenderMode.class);
-		assertMethod("resetOrientation");
-		assertMethod("keyEvent", KeyEvent.class);
-		assertMethod("mouseEvent", MouseEvent.class);
-		assertControlEventMethod();
-	}
-
-	@Test
-	void facadeRendererCameraAndOutputAccessorsRemainAvailable() throws Exception {
-		assertMethod("getOutputManager");
-		assertMethod("getFisheyeDomemaster");
-		assertMethod("getEquirectangularRenderer");
-		assertMethod("getCubemapViewRenderer");
-		assertMethod("getStandardRenderer");
-		assertMethod("getSceneCamera");
-		assertMethod("setSceneCameraInputEnabled", boolean.class);
-		assertMethod("isSceneCameraInputEnabled");
-		assertMethod("setEquirectangularBackground", PImage.class);
-		assertMethod("setEquirectangularBackground", String.class);
-		assertMethod("clearEnvironmentBackground");
-		assertMethod("hasEnvironmentBackground");
-		assertMethod("setEnvironmentBackgroundVisible", boolean.class);
-		assertMethod("isEnvironmentBackgroundVisible");
-		assertMethod("setEnvironmentBackgroundIntensity", float.class);
-		assertMethod("getEnvironmentBackgroundIntensity");
-		assertMethod("setEnvironmentBackgroundYawOffset", float.class);
-		assertMethod("getEnvironmentBackgroundYawOffset");
-	}
-
-	@Test
-	void outputLifecycleAndTelemetryMethodsRemainAvailable() throws Exception {
-		assertNotNull(OutputManager.class.getMethod(
-				"getOutputState", OutputManager.OutputType.class));
-		assertNotNull(OutputManager.class.getMethod(
-				"getOutputFailureReason", OutputManager.OutputType.class));
-		assertNotNull(OutputManager.class.getMethod("getNdiCapturedFrames"));
-		assertNotNull(OutputManager.class.getMethod("getNdiSentFrames"));
-		assertNotNull(OutputManager.class.getMethod("getNdiDroppedFrames"));
-		assertNotNull(OutputManager.class.getMethod("getNdiFailedFrames"));
-	}
-
-	@Test
-	void pre20RenderConvenienceMethodsAreRemoved() {
-		for (String name : Arrays.asList(
-				"renderFisheyeDomemaster",
-				"renderEquirectangular",
-				"renderCubemap",
-				"renderStandard")) {
-			assertFalse(Arrays.stream(ziviDomeLive.class.getMethods())
-					.anyMatch(method -> method.getName().equals(name)), name + " must be absent");
-		}
-	}
-
-	@Test
-	void sceneContractSignatureRemainsPGraphicsOpenGL() throws Exception {
+	void sceneContractKeepsOneRequiredRenderMethod() throws Exception {
 		Method render = Scene.class.getMethod("sceneRender", PGraphicsOpenGL.class);
-		assertEquals(void.class, render.getReturnType());
 		assertTrue(Modifier.isAbstract(render.getModifiers()));
+		assertTrue(Scene.class.getMethod("configure", SceneServices.class).isDefault());
+		assertTrue(Scene.class.getMethod("setupScene").isDefault());
+		assertTrue(Scene.class.getMethod("update").isDefault());
+		assertTrue(Scene.class.getMethod("dispose").isDefault());
+		assertFalse(publicMethodNames(Scene.class).contains("controlEvent"));
 	}
 
 	@Test
-	void sceneServicesExposeOnlyArtistFacingActivationEntryPoints() throws Exception {
-		assertFalse(AutoCloseable.class.isAssignableFrom(SceneServices.class));
-		assertEquals(
-				java.util.Set.of(
-						"actions",
-						"applet",
-						"assets",
-						"camera",
-						"environment",
-						"frameClock",
-						"ports",
-						"requestReload",
-						"tasks",
-						"timeline"),
-				Arrays.stream(SceneServices.class.getDeclaredMethods())
-						.filter(method -> Modifier.isPublic(method.getModifiers()))
-						.map(Method::getName)
-						.collect(java.util.stream.Collectors.toSet()));
-		assertEquals(ScenePorts.class, SceneServices.class.getMethod("ports").getReturnType());
+	void activationServicesExposeConsumersButNotOwnershipControls() {
+		assertEquals(Set.of(
+				"actions", "applet", "assets", "camera", "environment", "frameClock",
+				"ports", "requestReload", "tasks", "timeline"
+		), declaredPublicMethodNames(SceneServices.class));
+		assertEquals(0, SceneServices.class.getConstructors().length);
+		assertFalse(publicMethodNames(SceneServices.class).contains("close"));
 	}
 
 	@Test
-	void runtimeOwnedServiceLifecycleIsNotPublic() throws Exception {
-		for (Class<?> type : Arrays.asList(
-				FrameClock.class,
-				SimulationTimeline.class,
-				SceneTaskGroup.class,
-				SceneAssets.class,
-				SceneActionMap.class,
-				SceneCameraService.class,
-				SceneEnvironmentService.class,
-				ScenePorts.class)) {
-			assertFalse(Arrays.stream(type.getDeclaredConstructors())
-					.anyMatch(constructor -> Modifier.isPublic(constructor.getModifiers())),
-					type.getSimpleName() + " construction must remain runtime-owned");
-			assertFalse(Arrays.stream(type.getDeclaredMethods())
-					.anyMatch(method -> method.getName().equals("close")
-							&& Modifier.isPublic(method.getModifiers())),
-					type.getSimpleName() + ".close must not be artist-facing");
+	void taskApiIsCallbackBasedAndNeverReturnsFuture() {
+		assertEquals(Set.of("getInFlightCount", "getMaxInFlight", "isBusy", "submitIfIdle"),
+				declaredPublicMethodNames(SceneTaskGroup.class));
+		assertTrue(Arrays.stream(SceneTaskGroup.class.getDeclaredMethods())
+				.filter(method -> Modifier.isPublic(method.getModifiers()))
+				.noneMatch(method -> java.util.concurrent.Future.class
+						.isAssignableFrom(method.getReturnType())));
+		assertFalse(publicMethodNames(SceneTaskGroup.class).contains("submit"));
+		assertFalse(publicMethodNames(SceneTaskGroup.class).contains("trySubmit"));
+	}
+
+	@Test
+	void portsExposeBackpressureTelemetryWithoutRuntimeDrainControls() {
+		assertEquals(Set.of("connectInput", "connectOutput", "getDroppedInputCount", "getPendingInputCount"),
+				declaredPublicMethodNames(ScenePorts.class));
+		assertFalse(publicMethodNames(ScenePorts.class).contains("drain"));
+		assertFalse(publicMethodNames(ScenePorts.class).contains("close"));
+	}
+
+	@Test
+	void outputManagerIsTypedAndDoesNotExposeProducerOperations() {
+		assertTrue(OutputManager.class.isInterface());
+		assertNotNull(method(OutputManager.class, "setOutputEnabled",
+				OutputManager.OutputType.class, boolean.class));
+		assertNotNull(method(OutputManager.class, "isOutputEnabled", OutputManager.OutputType.class));
+		assertNotNull(method(OutputManager.class, "toggleOutput", OutputManager.OutputType.class));
+		for (String internal : Set.of(
+				"sendOutput", "initializeLocalTextureOutput", "notifyResolutionChanged",
+				"shutdownOutputs", "stopOutput", "requiresView", "refreshCachedGraphics", "setView")) {
+			assertFalse(publicMethodNames(OutputManager.class).contains(internal), internal);
 		}
-		assertFalse(Modifier.isPublic(Class.forName(
-				"com.victorvalentim.zividomelive.RenderThreadQueue").getModifiers()));
-		assertFalse(Modifier.isPublic(Class.forName(
-				"com.victorvalentim.zividomelive.SceneResourceCache").getModifiers()));
-		assertFalse(Modifier.isPublic(ziviDomeLive.class
-				.getDeclaredMethod("getSceneServices", Scene.class).getModifiers()));
-		assertThrows(NoSuchMethodException.class,
-				() -> ziviDomeLive.class.getMethod("getCurrentSceneServices"));
-		assertThrows(NoSuchMethodException.class,
-				() -> FrameClock.class.getMethod("tick"));
-		assertThrows(NoSuchMethodException.class,
-				() -> SceneActionMap.class.getMethod("dispatch", KeyEvent.class));
-		assertThrows(NoSuchMethodException.class,
-				() -> SceneAssets.class.getMethod("images"));
-		assertThrows(NoSuchMethodException.class,
-				() -> SceneAssets.class.getMethod("shaders"));
-		assertThrows(NoSuchMethodException.class,
-				() -> SceneAssets.class.getMethod("shapes"));
+		assertTrue(Arrays.stream(OutputManager.class.getMethods())
+				.noneMatch(candidate -> Arrays.asList(candidate.getParameterTypes()).contains(String.class)));
 	}
 
 	@Test
-	void optionalScenePortSpiRemainsSmallAndProtocolAgnostic() throws Exception {
-		assertTrue(SceneInputPort.class.isInterface());
-		assertTrue(SceneOutputPort.class.isInterface());
-		assertNotNull(SceneInputPort.class.getMethod("start", java.util.function.Consumer.class));
-		assertEquals(boolean.class,
-				SceneOutputPort.class.getMethod("offer", Object.class).getReturnType());
-		assertNotNull(ScenePorts.class.getMethod(
-				"connectInput", SceneInputPort.class, java.util.function.Consumer.class));
-		assertEquals(SceneOutputPort.class,
-				ScenePorts.class.getMethod("connectOutput", SceneOutputPort.class).getReturnType());
-		assertEquals(int.class, ScenePorts.class.getMethod("getPendingInputCount").getReturnType());
-		assertEquals(long.class, ScenePorts.class.getMethod("getDroppedInputCount").getReturnType());
-	}
-
-	@Test
-	void sceneTasksExposeOnlyNonBlockingCallbackSubmission() throws Exception {
-		assertEquals(boolean.class, SceneTaskGroup.class.getMethod(
-				"submitIfIdle", String.class, Runnable.class).getReturnType());
-		assertEquals(boolean.class, SceneTaskGroup.class.getMethod(
-				"submitIfIdle",
-				String.class,
-				java.util.concurrent.Callable.class,
-				java.util.function.Consumer.class).getReturnType());
-		assertEquals(boolean.class, SceneTaskGroup.class.getMethod(
-				"submitIfIdle",
-				String.class,
-				java.util.concurrent.Callable.class,
-				java.util.function.Consumer.class,
-				java.util.function.Consumer.class).getReturnType());
-		assertThrows(NoSuchMethodException.class,
-				() -> SceneTaskGroup.class.getMethod("submit", java.util.concurrent.Callable.class));
-		assertThrows(NoSuchMethodException.class,
-				() -> SceneTaskGroup.class.getMethod(
-						"trySubmit", String.class, java.util.concurrent.Callable.class));
-	}
-
-	@Test
-	void quaternionAndOrbitCameraAreImmutableFinalContracts() throws Exception {
-		assertTrue(Modifier.isFinal(Quaternion.class.getModifiers()));
-		assertTrue(Modifier.isFinal(OrbitCamera.class.getModifiers()));
-		for (String component : Arrays.asList("x", "y", "z", "w")) {
-			assertEquals(float.class, Quaternion.class.getMethod(component).getReturnType());
-			assertFalse(Modifier.isPublic(Quaternion.class.getDeclaredField(component).getModifiers()));
+	void facadeDoesNotExposeConcreteRenderGraphOrCompatibilityCommands() {
+		assertFalse(processing.core.PConstants.class.isAssignableFrom(ziviDomeLive.class));
+		assertFalse(processing.core.PConstants.class.isAssignableFrom(OrbitCamera.class));
+		Set<String> names = publicMethodNames(ziviDomeLive.class);
+		for (String removed : Set.of(
+				"getFisheyeDomemaster", "setFisheyeDomemaster", "getEquirectangularRenderer",
+				"getCubemapViewRenderer", "getStandardRenderer", "getWidth", "getHeight",
+				"getInitState", "renderFisheyeDomemaster", "renderEquirectangular",
+				"renderCubemap", "renderStandard")) {
+			assertFalse(names.contains(removed), removed);
 		}
-		assertEquals(Quaternion.class, Quaternion.class.getMethod("normalized").getReturnType());
-		assertThrows(NoSuchMethodException.class,
-				() -> Quaternion.class.getMethod("normalize"));
-		assertEquals(Quaternion.class, OrbitCamera.class.getMethod("getOrientation").getReturnType());
 	}
 
 	@Test
-	void cubemapCaptureCompatibilityOverloadsRemainAvailable() throws Exception {
-		assertPublicMethod(
-				CubemapRenderer.class,
-				"captureCubemap",
-				float.class,
-				float.class,
-				float.class,
-				CameraManager.class,
-				Scene.class);
-		assertPublicMethod(
-				CubemapRenderer.class,
-				"captureCubemap",
-				float.class,
-				float.class,
-				float.class,
-				Scene.class);
-		assertPublicMethod(
-				CubemapRenderer.class,
-				"captureCubemap",
-				Quaternion.class,
-				CameraManager.class,
-				Scene.class);
-		assertPublicMethod(
-				CubemapRenderer.class,
-				"captureCubemap",
-				Quaternion.class,
-				Scene.class);
+	void removedEnginePackagesCannotReturnAsPublicApi() {
+		for (String className : REMOVED_ENGINE_TYPES) {
+			assertThrows(ClassNotFoundException.class, () -> Class.forName(className), className);
+		}
 	}
 
-	private static void assertMethod(String name, Class<?>... parameterTypes) throws Exception {
-		Method method = ziviDomeLive.class.getMethod(name, parameterTypes);
-		assertTrue(Modifier.isPublic(method.getModifiers()), name + " must remain public");
+	@Test
+	void rootEngineImplementationsRemainPackagePrivate() throws Exception {
+		for (String className : ROOT_INTERNAL_TYPES) {
+			Class<?> type = Class.forName(className);
+			assertFalse(Modifier.isPublic(type.getModifiers()), className);
+		}
 	}
 
-	private static void assertPublicMethod(
-			Class<?> owner,
-			String name,
-			Class<?>... parameterTypes) throws Exception {
-		Method method = owner.getMethod(name, parameterTypes);
-		assertTrue(
-				Modifier.isPublic(method.getModifiers()),
-				owner.getSimpleName() + "." + name + " must remain public");
+	@Test
+	void activationServicesCannotBeConstructedOrClosedBySketches() {
+		for (Class<?> type : new Class<?>[]{
+				SceneServices.class, FrameClock.class, SceneTaskGroup.class, SceneAssets.class,
+				SceneActionMap.class, SceneCameraService.class, SceneEnvironmentService.class,
+				ScenePorts.class
+		}) {
+			assertEquals(0, Arrays.stream(type.getDeclaredConstructors())
+					.filter(constructor -> Modifier.isPublic(constructor.getModifiers())).count(), type.getName());
+			assertFalse(publicMethodNames(type).contains("close"), type.getName());
+		}
 	}
 
-	private static void assertControlEventMethod() {
-		boolean found = Arrays.stream(ziviDomeLive.class.getMethods())
-				.anyMatch(method -> method.getName().equals("controlEvent")
-						&& Modifier.isPublic(method.getModifiers())
-						&& method.getParameterCount() == 1
-						&& method.getParameterTypes()[0].getName().equals("controlP5.ControlEvent"));
-		assertTrue(found, "controlEvent(ControlEvent) must remain public");
+	private static Method method(Class<?> owner, String name, Class<?>... parameters) {
+		try {
+			return owner.getMethod(name, parameters);
+		} catch (NoSuchMethodException exception) {
+			throw new AssertionError(exception);
+		}
+	}
+
+	private static Set<String> publicMethodNames(Class<?> type) {
+		return Arrays.stream(type.getMethods()).map(Method::getName).collect(Collectors.toSet());
+	}
+
+	private static Set<String> declaredPublicMethodNames(Class<?> type) {
+		return Arrays.stream(type.getDeclaredMethods())
+				.filter(method -> Modifier.isPublic(method.getModifiers()))
+				.map(Method::getName)
+				.collect(Collectors.toSet());
+	}
+
+	private static Class<?>[] concat(Class<?>[]... groups) {
+		return Arrays.stream(groups).flatMap(Arrays::stream).toArray(Class<?>[]::new);
 	}
 }

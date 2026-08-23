@@ -1,7 +1,6 @@
 package com.victorvalentim.zividomelive;
 
 import com.victorvalentim.zividomelive.manager.OutputManager;
-import com.victorvalentim.zividomelive.support.LogManager;
 import me.walkerknapp.devolay.DevolayFrameFormatType;
 import me.walkerknapp.devolay.DevolayFrameFourCCType;
 import processing.opengl.PGraphicsOpenGL;

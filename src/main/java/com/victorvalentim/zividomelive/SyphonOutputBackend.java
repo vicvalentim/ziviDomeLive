@@ -2,8 +2,6 @@ package com.victorvalentim.zividomelive;
 
 import com.victorvalentim.zividomelive.manager.OutputManager;
 import codeanticode.syphon.SyphonServer;
-import com.victorvalentim.zividomelive.support.LogManager;
-import com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor;
 import com.victorvalentim.zividomelive.performance.PerformanceMetric;
 import processing.core.PApplet;
 import processing.opengl.PGraphicsOpenGL;

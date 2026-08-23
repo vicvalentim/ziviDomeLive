@@ -2,10 +2,12 @@ package com.victorvalentim.zividomelive.render.camera;
 
 import com.victorvalentim.zividomelive.render.Quaternion;
 import processing.core.PApplet;
-import processing.core.PConstants;
 import processing.core.PVector;
 import processing.event.MouseEvent;
 import processing.opengl.PGraphicsOpenGL;
+
+import static processing.core.PConstants.LEFT;
+import static processing.core.PConstants.RIGHT;
 
 /**
  * Scene-space quaternion orbit camera provided as a native ziviDomeLive service.
@@ -31,7 +33,7 @@ import processing.opengl.PGraphicsOpenGL;
  * are smoothly interpolated (SLERP/LERP), while direct mouse manipulation is
  * applied immediately so drag and wheel gestures remain attached to the pointer.</p>
  */
-public final class OrbitCamera implements PConstants {
+public final class OrbitCamera {
 
     /** Point the camera looks at (current, interpolated). */
     private final PVector target = new PVector(0, 0, 0);

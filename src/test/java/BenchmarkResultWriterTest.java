@@ -1,6 +1,7 @@
 import com.victorvalentim.zividomelive.performance.PerformanceMetric;
 import com.victorvalentim.zividomelive.performance.PerformanceMode;
 import com.victorvalentim.zividomelive.performance.PerformanceSnapshot;
+import com.victorvalentim.zividomelive.PerformanceSnapshotFixture;
 import com.victorvalentim.zividomelive.performance.GpuTimerArchitecture;
 import com.victorvalentim.zividomelive.performance.GpuTimerBackend;
 import com.victorvalentim.zividomelive.performance.GpuTimerPolicy;
@@ -136,7 +137,7 @@ class BenchmarkResultWriterTest {
         gpuDurations[PerformanceMetric.RENDER_PIPELINE.ordinal()][1] = 7_000_000L;
         gpuCalls[PerformanceMetric.RENDER_PIPELINE.ordinal()][0] = 1;
         gpuCalls[PerformanceMetric.RENDER_PIPELINE.ordinal()][1] = 1;
-        return new PerformanceSnapshot(
+        return PerformanceSnapshotFixture.create(
                 PerformanceMode.CPU_GPU,
                 PerformanceMode.CPU_GPU,
                 2L,

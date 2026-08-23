@@ -1,8 +1,6 @@
 package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor;
 import com.victorvalentim.zividomelive.performance.PerformanceMetric;
-import com.victorvalentim.zividomelive.support.LogManager;
 import java.util.Objects;
 import java.util.logging.Logger;
 

@@ -1,6 +1,5 @@
 package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.support.LogManager;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -18,7 +17,7 @@ import java.util.logging.Logger;
 final class SceneResourceCache<T> {
 
     /** Defines whether closing the cache invokes a resource disposer. */
-    public enum Ownership {
+    enum Ownership {
         /** Cache clears only its Java reference. */
         BORROWED,
         /** Cache invokes the registered disposer before clearing its reference. */
