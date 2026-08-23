@@ -1,5 +1,6 @@
-package com.victorvalentim.zividomelive.manager;
+package com.victorvalentim.zividomelive;
 
+import com.victorvalentim.zividomelive.manager.OutputManager;
 import com.victorvalentim.zividomelive.support.LogManager;
 import com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor;
 import com.victorvalentim.zividomelive.performance.PerformanceMetric;
@@ -74,7 +75,7 @@ final class SpoutOutputBackend {
 				} catch (Exception | LinkageError cleanupError) {
 					logger.warning(
 							"Failed to release Spout after initialization error: "
-									+ OutputManager.rootCauseMessage(cleanupError)
+									+ OutputManagerImpl.rootCauseMessage(cleanupError)
 					);
 				}
 			}
@@ -87,8 +88,15 @@ final class SpoutOutputBackend {
 		}
 	}
 
-	/** Toggles publication without destroying or recreating the native sender. */
-	void toggle(PGraphicsOpenGL graphics, int initialResolution) {
+	/** Enables or disables publication without destroying the native sender. */
+	void setEnabled(boolean requested, PGraphicsOpenGL graphics, int initialResolution) {
+		if (!requested) {
+			enabled = false;
+			return;
+		}
+		if (!supported || isEnabled()) {
+			return;
+		}
 		if (sender == null) {
 			prepareRetry();
 			initialize(graphics, initialResolution);
@@ -104,8 +112,8 @@ final class SpoutOutputBackend {
 			return;
 		}
 
-		enabled = !enabled;
-		logger.info("Spout frame publication " + (enabled ? "enabled." : "disabled."));
+		enabled = true;
+		logger.info("Spout frame publication enabled.");
 	}
 
 	/** Publishes a completed Processing texture with no CPU readback. */
@@ -128,7 +136,7 @@ final class SpoutOutputBackend {
 			failureReason = "";
 		} catch (Exception | LinkageError error) {
 			enabled = false;
-			failureReason = OutputManager.rootCauseMessage(error);
+			failureReason = OutputManagerImpl.rootCauseMessage(error);
 			logger.warning(
 					"Spout frame publication failed and was disabled without destroying the backend: "
 							+ failureReason
@@ -157,7 +165,7 @@ final class SpoutOutputBackend {
 			failureReason = "";
 		} catch (Exception | LinkageError error) {
 			enabled = false;
-			failureReason = OutputManager.rootCauseMessage(error);
+			failureReason = OutputManagerImpl.rootCauseMessage(error);
 			logger.warning(
 					"Spout resolution update failed; publication was disabled without "
 							+ "destroying the sender: "
@@ -183,7 +191,7 @@ final class SpoutOutputBackend {
 				currentSender.dispose();
 				logger.info("Spout backend released.");
 			} catch (Exception | LinkageError error) {
-				failureReason = OutputManager.rootCauseMessage(error);
+				failureReason = OutputManagerImpl.rootCauseMessage(error);
 				logger.warning("Failed to dispose the Spout sender: " + failureReason);
 			}
 		}
@@ -191,7 +199,7 @@ final class SpoutOutputBackend {
 
 	private void markUnavailable(Throwable error) {
 		unavailable = true;
-		failureReason = OutputManager.rootCauseMessage(error);
+		failureReason = OutputManagerImpl.rootCauseMessage(error);
 		logger.warning("Spout backend initialization failed: " + failureReason);
 	}
 
@@ -209,7 +217,7 @@ final class SpoutOutputBackend {
 	}
 
 	OutputManager.OutputState state(boolean effectivelyEnabled) {
-		return OutputManager.resolveOutputState(
+		return OutputManagerImpl.resolveOutputState(
 				supported, unavailable, sender != null, effectivelyEnabled, false);
 	}
 

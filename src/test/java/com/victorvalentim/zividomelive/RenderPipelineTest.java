@@ -1,6 +1,5 @@
 package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.manager.OutputManager;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
 import processing.opengl.PGraphicsOpenGL;
@@ -126,6 +125,11 @@ class RenderPipelineTest {
 		}
 
 		@Override
+		boolean hasOutputRenderDemand() {
+			return true;
+		}
+
+		@Override
 		void captureMasterCubemap(
 				RenderRequirementsPolicy.Requirements preview,
 				RenderRequirementsPolicy.Requirements output) {
@@ -171,12 +175,12 @@ class RenderPipelineTest {
 		}
 
 		@Override
-		public OutputManager getOutputManager() {
+		OutputManagerImpl outputManagerInternal() {
 			return outputManager;
 		}
 	}
 
-	private static final class RecordingOutputManager extends OutputManager {
+	private static final class RecordingOutputManager extends OutputManagerImpl {
 		private final List<String> calls;
 		private boolean receivedFrameViews;
 
@@ -191,7 +195,7 @@ class RenderPipelineTest {
 		}
 
 		@Override
-		public void sendOutput(FrameViews frameViews) {
+		void sendOutput(FrameViews frameViews) {
 			receivedFrameViews = frameViews != null;
 			calls.add("send-output");
 		}

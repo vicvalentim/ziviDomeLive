@@ -138,7 +138,7 @@ class ZividomeliveLifecycleTest {
 	void setupStartsWithOutputsDisabled() {
 		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		lib.setup();
-		assertFalse(lib.isEnableOutput(), "Outputs should remain opt-in after setup");
+		assertFalse(lib.getOutputManager().isActive(), "Outputs should remain opt-in after setup");
 	}
 
 	@Test
@@ -189,16 +189,6 @@ class ZividomeliveLifecycleTest {
 		assertFalse(outputs.spoutEnabled);
 		assertTrue(outputs.syphonEnabled);
 		assertEquals(2, outputs.toggleCalls, "Repeated resume must not toggle restored outputs off");
-	}
-
-	@Test
-	void isEnableOutputDelegatesToOutputManager() {
-		ziviDomeLive lib = new ziviDomeLive(new PApplet());
-		lib.setup();
-
-		OutputManagerState state = readOutputState(lib);
-		assertEquals(state.anyEnabled, lib.isEnableOutput(),
-				"isEnableOutput must mirror the OutputManager enabled flags");
 	}
 
 	@Test
@@ -521,9 +511,7 @@ class ZividomeliveLifecycleTest {
 		lib.dispose();
 	}
 
-	private record OutputManagerState(boolean anyEnabled) {}
-
-	private static void setOutputManager(ziviDomeLive lib, OutputManager outputManager) throws Exception {
+	private static void setOutputManager(ziviDomeLive lib, OutputManagerImpl outputManager) throws Exception {
 		Field field = ziviDomeLive.class.getDeclaredField("outputManager");
 		field.setAccessible(true);
 		field.set(lib, outputManager);
@@ -545,12 +533,6 @@ class ZividomeliveLifecycleTest {
 		Field field = StandardRenderer.class.getDeclaredField("currentScene");
 		field.setAccessible(true);
 		return (Scene) field.get(renderer);
-	}
-
-	private OutputManagerState readOutputState(ziviDomeLive lib) {
-		var om = lib.getOutputManager();
-		assertNotNull(om, "OutputManager must be created during setup");
-		return new OutputManagerState(om.isNdiEnabled() || om.isSpoutEnabled() || om.isSyphonEnabled());
 	}
 
 	private static class StubApplet extends PApplet {
@@ -758,7 +740,7 @@ class ZividomeliveLifecycleTest {
 		}
 	}
 
-	private static class FakeOutputManager extends OutputManager {
+	private static class FakeOutputManager extends OutputManagerImpl {
 		private boolean ndiEnabled;
 		private boolean spoutEnabled;
 		private boolean syphonEnabled;
@@ -785,7 +767,7 @@ class ZividomeliveLifecycleTest {
 		}
 
 		@Override
-		public void shutdownOutputs() {
+		void disableAll() {
 			shutdownCalls++;
 			ndiEnabled = false;
 			spoutEnabled = false;
@@ -793,20 +775,18 @@ class ZividomeliveLifecycleTest {
 		}
 
 		@Override
-		public void toggleOutput(String method) {
+		public void setOutputEnabled(OutputManager.OutputType outputType, boolean enabled) {
 			toggleCalls++;
-			switch (method) {
-				case "ndi":
-					ndiEnabled = !ndiEnabled;
+			switch (outputType) {
+				case NDI:
+					ndiEnabled = enabled;
 					break;
-				case "spout":
-					spoutEnabled = !spoutEnabled;
+				case SPOUT:
+					spoutEnabled = enabled;
 					break;
-				case "syphon":
-					syphonEnabled = !syphonEnabled;
+				case SYPHON:
+					syphonEnabled = enabled;
 					break;
-				default:
-					throw new IllegalArgumentException("Unexpected output: " + method);
 			}
 		}
 	}

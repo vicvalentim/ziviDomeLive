@@ -1,7 +1,6 @@
-package com.victorvalentim.zividomelive.manager;
+package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.ViewType;
-import com.victorvalentim.zividomelive.ziviDomeLive;
+import com.victorvalentim.zividomelive.manager.OutputManager;
 import me.walkerknapp.devolay.DevolayFrameFormatType;
 import me.walkerknapp.devolay.DevolayFrameFourCCType;
 import org.junit.jupiter.api.Test;
@@ -27,22 +26,22 @@ class OutputManagerHardeningTest {
 	void lifecycleStateKeepsAvailabilityInitializationAndPublicationDistinct() {
 		assertAll(
 				() -> assertEquals(OutputManager.OutputState.UNAVAILABLE,
-						OutputManager.resolveOutputState(false, false, false, false, false)),
+						OutputManagerImpl.resolveOutputState(false, false, false, false, false)),
 				() -> assertEquals(OutputManager.OutputState.UNAVAILABLE,
-						OutputManager.resolveOutputState(true, true, true, false, false)),
+						OutputManagerImpl.resolveOutputState(true, true, true, false, false)),
 				() -> assertEquals(OutputManager.OutputState.AVAILABLE,
-						OutputManager.resolveOutputState(true, false, false, false, false)),
+						OutputManagerImpl.resolveOutputState(true, false, false, false, false)),
 				() -> assertEquals(OutputManager.OutputState.INITIALIZED,
-						OutputManager.resolveOutputState(true, false, true, false, false)),
+						OutputManagerImpl.resolveOutputState(true, false, true, false, false)),
 				() -> assertEquals(OutputManager.OutputState.ENABLED,
-						OutputManager.resolveOutputState(true, false, true, true, false)),
+						OutputManagerImpl.resolveOutputState(true, false, true, true, false)),
 				() -> assertEquals(OutputManager.OutputState.STOPPING,
-						OutputManager.resolveOutputState(true, false, true, false, true)));
+						OutputManagerImpl.resolveOutputState(true, false, true, false, true)));
 	}
 
 	@Test
 	void defaultStatesReflectPlatformWithoutEnablingPublication() {
-		OutputManager manager = new OutputManager(new ziviDomeLive(new PApplet()));
+		OutputManagerImpl manager = new OutputManagerImpl(new ziviDomeLive(new PApplet()));
 
 		assertEquals(OutputManager.OutputState.AVAILABLE,
 				manager.getOutputState(OutputManager.OutputType.NDI));
@@ -82,7 +81,7 @@ class OutputManagerHardeningTest {
 		};
 		ByteBuffer rgba = ByteBuffer.allocateDirect(16);
 
-		OutputManager.writeArgbAsRgba(twoByTwoArgb, twoByTwoArgb.length, rgba);
+		OutputManagerImpl.writeArgbAsRgba(twoByTwoArgb, twoByTwoArgb.length, rgba);
 
 		byte[] encoded = new byte[rgba.remaining()];
 		rgba.get(encoded);
@@ -98,13 +97,13 @@ class OutputManagerHardeningTest {
 	void ndiMetadataUsesPackedProgressiveRgba() {
 		assertAll(
 				() -> assertEquals(DevolayFrameFourCCType.RGBA,
-						OutputManager.NDI_FRAME_FOUR_CC_TYPE),
+						OutputManagerImpl.NDI_FRAME_FOUR_CC_TYPE),
 				() -> assertEquals(DevolayFrameFormatType.PROGRESSIVE,
-						OutputManager.NDI_FRAME_FORMAT_TYPE),
-				() -> assertEquals(4, OutputManager.ndiLineStride(1)),
-				() -> assertEquals(7680, OutputManager.ndiLineStride(1920)),
+						OutputManagerImpl.NDI_FRAME_FORMAT_TYPE),
+				() -> assertEquals(4, OutputManagerImpl.ndiLineStride(1)),
+				() -> assertEquals(7680, OutputManagerImpl.ndiLineStride(1920)),
 				() -> assertThrows(IllegalArgumentException.class,
-						() -> OutputManager.ndiLineStride(0)));
+						() -> OutputManagerImpl.ndiLineStride(0)));
 	}
 
 	@Test
@@ -121,7 +120,7 @@ class OutputManagerHardeningTest {
 	}
 
 	@Test
-	void ndiShutdownIsBoundedAndDefersCleanupUntilWorkerStops() throws Exception {
+	void ndiNormalStopReturnsImmediatelyAndTerminalShutdownOwnsTheBoundedWait() throws Exception {
 		NdiOutputBackend backend = new NdiOutputBackend(60, 25);
 		CountDownLatch started = new CountDownLatch(1);
 		CountDownLatch release = new CountDownLatch(1);
@@ -145,25 +144,27 @@ class OutputManagerHardeningTest {
 
 		try {
 			long startedAt = System.nanoTime();
-			backend.shutdown();
+			backend.requestStop();
 			Duration elapsed = Duration.ofNanos(System.nanoTime() - startedAt);
 
-			assertTrue(elapsed.compareTo(Duration.ofMillis(500)) < 0, elapsed.toString());
+			assertTrue(elapsed.compareTo(Duration.ofMillis(100)) < 0, elapsed.toString());
 			assertEquals(OutputManager.OutputState.STOPPING,
 					backend.state());
-			assertTrue(backend.failureReason()
-					.contains("native cleanup was deferred"));
+			assertEquals("", backend.failureReason());
 
 			long repeatedAt = System.nanoTime();
-			backend.shutdown();
+			backend.requestStop();
 			Duration repeated = Duration.ofNanos(System.nanoTime() - repeatedAt);
 			assertTrue(repeated.compareTo(Duration.ofMillis(100)) < 0, repeated.toString());
+
+			backend.shutdownTerminal();
+			assertTrue(backend.failureReason().contains("native cleanup was deferred"));
 		} finally {
 			release.countDown();
 			worker.join(1_000);
 		}
 
-		backend.shutdown();
+		backend.shutdownTerminal();
 		assertEquals(OutputManager.OutputState.AVAILABLE,
 				backend.state());
 	}
@@ -171,7 +172,7 @@ class OutputManagerHardeningTest {
 	@Test
 	void constructorRejectsInvalidShutdownTimeout() {
 		ziviDomeLive dome = new ziviDomeLive(new PApplet());
-		assertThrows(IllegalArgumentException.class, () -> new OutputManager(dome, 0));
+		assertThrows(IllegalArgumentException.class, () -> new OutputManagerImpl(dome, 0));
 	}
 
 	private static void setField(Object target, String fieldName, Object value) throws Exception {

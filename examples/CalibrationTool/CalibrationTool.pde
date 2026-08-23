@@ -84,6 +84,6 @@ void printCalibrationState() {
       + " yaw=" + nf(degrees(ziviDome.getYaw()), 0, 1)
       + " roll=" + nf(degrees(ziviDome.getRoll()), 0, 1)
       + " floatingPreview=" + ziviDome.isShowPreview()
-      + " outputEnabled=" + ziviDome.isEnableOutput()
+      + " outputEnabled=" + ziviDome.getOutputManager().isActive()
       + " outputResolution=" + ziviDome.getOutputResolution());
 }

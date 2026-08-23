@@ -1,8 +1,6 @@
-package com.victorvalentim.zividomelive.manager;
+package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.RenderMode;
-import com.victorvalentim.zividomelive.ViewType;
-import com.victorvalentim.zividomelive.ziviDomeLive;
+import com.victorvalentim.zividomelive.manager.OutputManager;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
 
@@ -15,7 +13,7 @@ class RenderModeOutputRoutingTest {
 	@Test
 	void everyDedicatedModeOverridesEffectiveRouteWithoutErasingConfiguration() {
 		ziviDomeLive dome = new ziviDomeLive(new PApplet());
-		OutputManager outputs = new OutputManager(dome);
+		OutputManagerImpl outputs = new OutputManagerImpl(dome);
 		outputs.setNdiView(ViewType.EQUIRECTANGULAR);
 
 		RenderMode[] modes = {
@@ -57,7 +55,7 @@ class RenderModeOutputRoutingTest {
 		assertFalse(outputs.requiresView(ViewType.STANDARD));
 	}
 
-	private static final class EnabledNdiOutputManager extends OutputManager {
+	private static final class EnabledNdiOutputManager extends OutputManagerImpl {
 		private EnabledNdiOutputManager(ziviDomeLive parent) {
 			super(parent);
 		}

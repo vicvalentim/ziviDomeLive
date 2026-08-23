@@ -1,16 +1,11 @@
-package com.victorvalentim.zividomelive.manager;
+package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.FrameViews;
-import com.victorvalentim.zividomelive.RenderMode;
-import com.victorvalentim.zividomelive.ViewType;
-import com.victorvalentim.zividomelive.ziviDomeLive;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
 import processing.opengl.PGraphicsOpenGL;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -19,7 +14,7 @@ class FrameViewsRoutingTest {
 	@Test
 	void resolvesCompletedFrameWithoutInspectingFacadeRenderers() {
 		ziviDomeLive dome = new ziviDomeLive(new PApplet());
-		OutputManager outputs = new OutputManager(dome);
+		OutputManagerImpl outputs = new OutputManagerImpl(dome);
 		PGraphicsOpenGL expected = new PGraphicsOpenGL();
 		AtomicReference<ViewType> requestedView = new AtomicReference<>();
 		FrameViews frameViews = view -> {
@@ -38,7 +33,7 @@ class FrameViewsRoutingTest {
 	void dedicatedRenderModeSelectsTheEffectiveFinalView() {
 		ziviDomeLive dome = new ziviDomeLive(new PApplet());
 		dome.setRenderMode(RenderMode.SKYBOX);
-		OutputManager outputs = new OutputManager(dome);
+		OutputManagerImpl outputs = new OutputManagerImpl(dome);
 		AtomicReference<ViewType> requestedView = new AtomicReference<>();
 		FrameViews frameViews = view -> {
 			requestedView.set(view);
@@ -52,7 +47,7 @@ class FrameViewsRoutingTest {
 
 	@Test
 	void missingOrFailingFrameContractIsSafelyIgnored() {
-		OutputManager outputs = new OutputManager(new ziviDomeLive(new PApplet()));
+		OutputManagerImpl outputs = new OutputManagerImpl(new ziviDomeLive(new PApplet()));
 
 		assertNull(outputs.resolveGraphics(null, ViewType.STANDARD));
 		assertNull(outputs.resolveGraphics(
@@ -62,26 +57,4 @@ class FrameViewsRoutingTest {
 				ViewType.STANDARD));
 	}
 
-	@Test
-	void frameAwareSendPreservesLegacyNoArgumentOverride() {
-		LegacySendOutputManager outputs = new LegacySendOutputManager(
-				new ziviDomeLive(new PApplet()));
-
-		outputs.sendOutput(view -> null);
-
-		assertEquals(1, outputs.sendCalls);
-	}
-
-	private static final class LegacySendOutputManager extends OutputManager {
-		private int sendCalls;
-
-		private LegacySendOutputManager(ziviDomeLive parent) {
-			super(parent);
-		}
-
-		@Override
-		public void sendOutput() {
-			sendCalls++;
-		}
-	}
 }

@@ -26,7 +26,7 @@ class ControlManagerScopeTest {
 		graphics.setSize(640, 640);
 		applet.g = graphics;
 		ziviDomeLive dome = new ziviDomeLive(applet);
-		OutputManager outputs = new OutputManager(dome);
+		OutputManager outputs = createOutputManager(dome);
 		outputs.setNdiView(ViewType.EQUIRECTANGULAR);
 		outputs.setSpoutView(ViewType.STANDARD);
 		outputs.setSyphonView(ViewType.SKYBOX);
@@ -68,7 +68,7 @@ class ControlManagerScopeTest {
 	void panelVisibilityTracksRenderModeCapabilities() throws Exception {
 		PApplet applet = configuredApplet();
 		ziviDomeLive dome = new ziviDomeLive(applet);
-		setOutputManager(dome, new OutputManager(dome));
+		setOutputManager(dome, createOutputManager(dome));
 		ControlManager controls = new ControlManager(applet, dome, 1024);
 		try {
 			Object cp5 = readControlP5(controls);
@@ -119,7 +119,7 @@ class ControlManagerScopeTest {
 	void pitchYawAndRollSlidersScrollCyclically() throws Exception {
 		PApplet applet = configuredApplet();
 		ziviDomeLive dome = new ziviDomeLive(applet);
-		setOutputManager(dome, new OutputManager(dome));
+		setOutputManager(dome, createOutputManager(dome));
 		ControlManager controls = new ControlManager(applet, dome, 1024);
 		try {
 			Object cp5 = readControlP5(controls);
@@ -243,5 +243,13 @@ class ControlManagerScopeTest {
 		Field field = ziviDomeLive.class.getDeclaredField("outputManager");
 		field.setAccessible(true);
 		field.set(dome, outputManager);
+	}
+
+	private static OutputManager createOutputManager(ziviDomeLive dome) throws Exception {
+		Class<?> implementation = Class.forName(
+				"com.victorvalentim.zividomelive.OutputManagerImpl");
+		var constructor = implementation.getDeclaredConstructor(ziviDomeLive.class);
+		constructor.setAccessible(true);
+		return (OutputManager) constructor.newInstance(dome);
 	}
 }

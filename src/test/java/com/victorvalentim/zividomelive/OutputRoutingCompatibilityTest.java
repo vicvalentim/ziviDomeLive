@@ -1,7 +1,6 @@
-package com.victorvalentim.zividomelive.manager;
+package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.ViewType;
-import com.victorvalentim.zividomelive.ziviDomeLive;
+import com.victorvalentim.zividomelive.manager.OutputManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
@@ -10,11 +9,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class OutputRoutingCompatibilityTest {
 
-	private OutputManager outputManager;
+	private OutputManagerImpl outputManager;
 
 	@BeforeEach
 	void createOutputManager() {
-		outputManager = new OutputManager(new ziviDomeLive(new PApplet()));
+		outputManager = new OutputManagerImpl(new ziviDomeLive(new PApplet()));
 	}
 
 	@Test
@@ -48,20 +47,4 @@ class OutputRoutingCompatibilityTest {
 		assertFalse(outputManager.isActive());
 	}
 
-	@Test
-	@SuppressWarnings("deprecation")
-	void deprecatedSingleViewSetterDoesNotMutatePerOutputRouting() {
-		outputManager.setNdiView(ViewType.EQUIRECTANGULAR);
-		outputManager.setSpoutView(ViewType.SKYBOX);
-		outputManager.setSyphonView(ViewType.STANDARD);
-
-		outputManager.setView(ViewType.DOMEMASTER);
-
-		assertEquals(ViewType.EQUIRECTANGULAR,
-				outputManager.getViewForOutput(OutputManager.OutputType.NDI));
-		assertEquals(ViewType.SKYBOX,
-				outputManager.getViewForOutput(OutputManager.OutputType.SPOUT));
-		assertEquals(ViewType.STANDARD,
-				outputManager.getViewForOutput(OutputManager.OutputType.SYPHON));
-	}
 }

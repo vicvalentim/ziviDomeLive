@@ -1,5 +1,6 @@
-package com.victorvalentim.zividomelive.manager;
+package com.victorvalentim.zividomelive;
 
+import com.victorvalentim.zividomelive.manager.OutputManager;
 import codeanticode.syphon.SyphonServer;
 import com.victorvalentim.zividomelive.support.LogManager;
 import com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor;
@@ -52,7 +53,7 @@ final class SyphonOutputBackend {
 				} catch (Exception | LinkageError cleanupError) {
 					logger.warning(
 							"Failed to release Syphon after initialization error: "
-									+ OutputManager.rootCauseMessage(cleanupError)
+									+ OutputManagerImpl.rootCauseMessage(cleanupError)
 					);
 				}
 			}
@@ -63,8 +64,15 @@ final class SyphonOutputBackend {
 		}
 	}
 
-	/** Toggles publication without destroying or recreating the native server. */
-	void toggle() {
+	/** Enables or disables publication without destroying the native server. */
+	void setEnabled(boolean requested) {
+		if (!requested) {
+			enabled = false;
+			return;
+		}
+		if (!supported || isEnabled()) {
+			return;
+		}
 		if (server == null) {
 			prepareRetry();
 			initialize();
@@ -80,8 +88,8 @@ final class SyphonOutputBackend {
 			return;
 		}
 
-		enabled = !enabled;
-		logger.info("Syphon frame publication " + (enabled ? "enabled." : "disabled."));
+		enabled = true;
+		logger.info("Syphon frame publication enabled.");
 	}
 
 	/** Publishes a completed Processing texture with no CPU readback. */
@@ -98,7 +106,7 @@ final class SyphonOutputBackend {
 			failureReason = "";
 		} catch (Exception | LinkageError error) {
 			enabled = false;
-			failureReason = OutputManager.rootCauseMessage(error);
+			failureReason = OutputManagerImpl.rootCauseMessage(error);
 			logger.warning(
 					"Syphon frame publication failed and was disabled without destroying the backend: "
 							+ failureReason
@@ -119,7 +127,7 @@ final class SyphonOutputBackend {
 				currentServer.stop();
 				logger.info("Syphon backend released.");
 			} catch (Exception | LinkageError error) {
-				failureReason = OutputManager.rootCauseMessage(error);
+				failureReason = OutputManagerImpl.rootCauseMessage(error);
 				logger.warning("Failed to stop the Syphon server: " + failureReason);
 			}
 		}
@@ -127,7 +135,7 @@ final class SyphonOutputBackend {
 
 	private void markUnavailable(Throwable error) {
 		unavailable = true;
-		failureReason = OutputManager.rootCauseMessage(error);
+		failureReason = OutputManagerImpl.rootCauseMessage(error);
 		logger.warning("Syphon backend initialization failed: " + failureReason);
 	}
 
@@ -145,7 +153,7 @@ final class SyphonOutputBackend {
 	}
 
 	OutputManager.OutputState state(boolean effectivelyEnabled) {
-		return OutputManager.resolveOutputState(
+		return OutputManagerImpl.resolveOutputState(
 				supported, unavailable, server != null, effectivelyEnabled, false);
 	}
 

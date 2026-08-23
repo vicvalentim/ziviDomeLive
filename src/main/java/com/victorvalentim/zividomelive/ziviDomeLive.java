@@ -96,7 +96,7 @@ public class ziviDomeLive implements PConstants {
 	private final OrbitCamera sceneCamera = new OrbitCamera();
 	private boolean sceneCameraInputEnabled = false;
 	private final EnvironmentState environmentState = new EnvironmentState();
-	private OutputManager outputManager;
+	private OutputManagerImpl outputManager;
 	private boolean resumeNdiOutput;
 	private boolean resumeSpoutOutput;
 	private boolean resumeSyphonOutput;
@@ -304,7 +304,7 @@ public class ziviDomeLive implements PConstants {
 		}
 
 		try {
-			outputManager = new OutputManager(this);
+			outputManager = new OutputManagerImpl(this);
 			LOGGER.info("OutputManager initialized without active outputs.");
 		} catch (Exception e) {
 			LOGGER.severe("Error initializing OutputManager: " + e.getMessage());
@@ -479,7 +479,7 @@ public class ziviDomeLive implements PConstants {
 		}
 		releaseGraphicsResources();
 		if (outputManager != null) {
-			outputManager.shutdownOutputs();
+			outputManager.shutdownOutputsTerminal();
 		}
 	}
 
@@ -864,7 +864,7 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	boolean hasOutputRenderDemand() {
-		OutputManager manager = getOutputManager();
+		OutputManagerImpl manager = outputManager;
 		return (manager != null && manager.isActive())
 				|| (performanceMonitor.isEnabled() && performanceOutputDemand != null);
 	}
@@ -1674,6 +1674,10 @@ public class ziviDomeLive implements PConstants {
 		return outputManager;
 	}
 
+	OutputManagerImpl outputManagerInternal() {
+		return outputManager;
+	}
+
 	/**
 	 * Gets the current fish size.
 	 *
@@ -1880,18 +1884,6 @@ public class ziviDomeLive implements PConstants {
 	 */
 	public void setPerformanceOutputDemand(ViewType view) {
 		performanceOutputDemand = view;
-	}
-
-	/**
-	 * Checks if output is enabled.
-	 *
-	 * @return true if output is enabled, false otherwise
-	 */
-	public boolean isEnableOutput() {
-		return outputManager != null
-				&& (outputManager.isNdiEnabled()
-				|| outputManager.isSpoutEnabled()
-				|| outputManager.isSyphonEnabled());
 	}
 
 	/**
@@ -2408,13 +2400,13 @@ public class ziviDomeLive implements PConstants {
 		LOGGER.info("Resuming processes...");
 		if (outputManager != null) {
 			if (resumeNdiOutput && !outputManager.isNdiEnabled()) {
-				outputManager.toggleOutput("ndi");
+				outputManager.setOutputEnabled(OutputManager.OutputType.NDI, true);
 			}
 			if (resumeSpoutOutput && !outputManager.isSpoutEnabled()) {
-				outputManager.toggleOutput("spout");
+				outputManager.setOutputEnabled(OutputManager.OutputType.SPOUT, true);
 			}
 			if (resumeSyphonOutput && !outputManager.isSyphonEnabled()) {
-				outputManager.toggleOutput("syphon");
+				outputManager.setOutputEnabled(OutputManager.OutputType.SYPHON, true);
 			}
 		}
 		Scene activeScene = getCurrentScene();
@@ -2445,7 +2437,7 @@ public class ziviDomeLive implements PConstants {
 			resumeNdiOutput = outputManager.isNdiEnabled();
 			resumeSpoutOutput = outputManager.isSpoutEnabled();
 			resumeSyphonOutput = outputManager.isSyphonEnabled();
-			outputManager.stopOutput();
+			outputManager.disableAll();
 		}
 		LOGGER.info("Processes paused.");
 	}
@@ -2473,7 +2465,7 @@ public class ziviDomeLive implements PConstants {
 
 		if (outputManager != null) {
 			try {
-				outputManager.shutdownOutputs();
+				outputManager.shutdownOutputsTerminal();
 			} catch (Exception | LinkageError error) {
 				LOGGER.warning("OutputManager disposal failed: " + error.getMessage());
 			}

@@ -145,7 +145,7 @@ public class ControlManager {
                 .setPaddingX(5)
                 .setText("Enable NDI");
         ndiToggle.onChange(event -> {
-            parent.getOutputManager().toggleOutput("ndi");
+            parent.getOutputManager().toggleOutput(OutputManager.OutputType.NDI);
             toggleDropdownVisibility();
         });
 
@@ -163,7 +163,7 @@ public class ControlManager {
                     .setPaddingX(5)
                     .setText("Enable Spout");
             spoutToggle.onChange(event -> {
-                parent.getOutputManager().toggleOutput("spout");
+                parent.getOutputManager().toggleOutput(OutputManager.OutputType.SPOUT);
                 toggleDropdownVisibility();
             });
         } else if (localOutput == ControlPanelLayout.LocalOutput.SYPHON) {
@@ -178,7 +178,7 @@ public class ControlManager {
                     .setPaddingX(5)
                     .setText("Enable Syphon");
             syphonToggle.onChange(event -> {
-                parent.getOutputManager().toggleOutput("syphon");
+                parent.getOutputManager().toggleOutput(OutputManager.OutputType.SYPHON);
                 toggleDropdownVisibility();
             });
         }

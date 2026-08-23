@@ -1,9 +1,9 @@
-package com.victorvalentim.zividomelive.manager;
+package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.ViewType;
-import com.victorvalentim.zividomelive.ziviDomeLive;
+import com.victorvalentim.zividomelive.manager.OutputManager;
 import me.walkerknapp.devolay.DevolayFrameFormatType;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
@@ -14,14 +14,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class OutputManagerTest {
 
-	private OutputManager outputManager;
+	private OutputManagerImpl outputManager;
 
 	@BeforeEach
 	void createOutputManager() {
 		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 
 		try {
-			outputManager = new OutputManager(lib);
+			outputManager = new OutputManagerImpl(lib);
 		} catch (Throwable t) {
 			/*
 			 * If OutputManager itself cannot be constructed because a required
@@ -39,6 +39,13 @@ class OutputManagerTest {
 		}
 	}
 
+	@AfterEach
+	void releaseOutputs() {
+		if (outputManager != null) {
+			outputManager.shutdownOutputsTerminal();
+		}
+	}
+
 	@Test
 	void outputsAreDisabledByDefault() {
 		assertFalse(outputManager.isNdiEnabled());
@@ -47,23 +54,23 @@ class OutputManagerTest {
 	}
 
 	@Test
-	void toggleOutputIgnoresEmptyMethod() {
-		assertDoesNotThrow(() -> outputManager.toggleOutput(""));
-		assertDoesNotThrow(() -> outputManager.toggleOutput("   "));
-		assertDoesNotThrow(() -> outputManager.toggleOutput(null));
+	void typedOutputControlRejectsNull() {
+		assertThrows(IllegalArgumentException.class,
+				() -> outputManager.toggleOutput(null));
+		assertThrows(IllegalArgumentException.class,
+				() -> outputManager.setOutputEnabled(null, true));
+		assertThrows(IllegalArgumentException.class,
+				() -> outputManager.isOutputEnabled(null));
 	}
 
 	@Test
-	void toggleOutputIgnoresUnknownMethod() {
-		boolean ndiBefore = outputManager.isNdiEnabled();
-		boolean spoutBefore = outputManager.isSpoutEnabled();
-		boolean syphonBefore = outputManager.isSyphonEnabled();
-
-		assertDoesNotThrow(() -> outputManager.toggleOutput("unknown-output"));
-
-		assertEquals(ndiBefore, outputManager.isNdiEnabled());
-		assertEquals(spoutBefore, outputManager.isSpoutEnabled());
-		assertEquals(syphonBefore, outputManager.isSyphonEnabled());
+	void typedEnabledQueriesMatchDedicatedQueries() {
+		assertEquals(outputManager.isNdiEnabled(),
+				outputManager.isOutputEnabled(OutputManager.OutputType.NDI));
+		assertEquals(outputManager.isSpoutEnabled(),
+				outputManager.isOutputEnabled(OutputManager.OutputType.SPOUT));
+		assertEquals(outputManager.isSyphonEnabled(),
+				outputManager.isOutputEnabled(OutputManager.OutputType.SYPHON));
 	}
 
 	@Test
@@ -76,7 +83,7 @@ class OutputManagerTest {
 		);
 
 		assertDoesNotThrow(
-				() -> outputManager.toggleOutput("spout"),
+				() -> outputManager.toggleOutput(OutputManager.OutputType.SPOUT),
 				"Spout toggle must not throw on any platform"
 		);
 
@@ -108,7 +115,7 @@ class OutputManagerTest {
 		 */
 		if (enabledAfterToggle) {
 			assertDoesNotThrow(
-					() -> outputManager.toggleOutput("spout"),
+					() -> outputManager.toggleOutput(OutputManager.OutputType.SPOUT),
 					"Spout must toggle off cleanly on Windows"
 			);
 
@@ -129,7 +136,7 @@ class OutputManagerTest {
 		);
 
 		assertDoesNotThrow(
-				() -> outputManager.toggleOutput("syphon"),
+				() -> outputManager.toggleOutput(OutputManager.OutputType.SYPHON),
 				"Syphon toggle must not throw on any platform"
 		);
 
@@ -161,7 +168,7 @@ class OutputManagerTest {
 		 */
 		if (enabledAfterToggle) {
 			assertDoesNotThrow(
-					() -> outputManager.toggleOutput("syphon"),
+					() -> outputManager.toggleOutput(OutputManager.OutputType.SYPHON),
 					"Syphon must toggle off cleanly on macOS"
 			);
 
@@ -176,7 +183,7 @@ class OutputManagerTest {
 	void ndiToggleEnablesAndDisablesWhenAvailable() {
 		boolean before = outputManager.isNdiEnabled();
 
-		outputManager.toggleOutput("ndi");
+		outputManager.toggleOutput(OutputManager.OutputType.NDI);
 
 		boolean after = outputManager.isNdiEnabled();
 
@@ -185,7 +192,7 @@ class OutputManagerTest {
 			 * NDI natives are available: toggling back must restore the
 			 * previous state.
 			 */
-			outputManager.toggleOutput("ndi");
+			outputManager.setOutputEnabled(OutputManager.OutputType.NDI, false);
 
 			assertEquals(
 					before,
@@ -229,7 +236,7 @@ class OutputManagerTest {
 
 		lib.setTargetFrameRate(30);
 
-		OutputManager manager = new OutputManager(lib);
+		OutputManagerImpl manager = new OutputManagerImpl(lib);
 
 		assertEquals(
 				30,
@@ -243,7 +250,7 @@ class OutputManagerTest {
 
 		assertEquals(
 				DevolayFrameFormatType.PROGRESSIVE,
-				OutputManager.NDI_FRAME_FORMAT_TYPE
+				OutputManagerImpl.NDI_FRAME_FORMAT_TYPE
 		);
 	}
 
@@ -281,12 +288,12 @@ class OutputManagerTest {
 
 		assertEquals(
 				24,
-				lib.getOutputManager().ndiFrameRateNumerator()
+				lib.outputManagerInternal().ndiFrameRateNumerator()
 		);
 
 		assertEquals(
 				1,
-				lib.getOutputManager().ndiFrameRateDenominator()
+				lib.outputManagerInternal().ndiFrameRateDenominator()
 		);
 	}
 

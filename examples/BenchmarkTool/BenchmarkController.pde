@@ -796,16 +796,13 @@ class BenchmarkController {
 
     if (!applyOutput(
             OutputManager.OutputType.NDI,
-            ndiToggle.getState(),
-            "ndi")
+            ndiToggle.getState())
         || !applyOutput(
             OutputManager.OutputType.SYPHON,
-            syphonToggle.getState(),
-            "syphon")
+            syphonToggle.getState())
         || !applyOutput(
             OutputManager.OutputType.SPOUT,
-            spoutToggle.getState(),
-            "spout")) {
+            spoutToggle.getState())) {
 
       state =
           BenchmarkState.FAILED;
@@ -837,8 +834,7 @@ class BenchmarkController {
 
   boolean applyOutput(
       OutputManager.OutputType type,
-      boolean desired,
-      String toggleName) {
+      boolean desired) {
 
     OutputManager.OutputState before =
         outputs.getOutputState(type);
@@ -854,8 +850,9 @@ class BenchmarkController {
         outputEnabled(type);
 
     if (enabled != desired) {
-      outputs.toggleOutput(
-          toggleName);
+      outputs.setOutputEnabled(
+          type,
+          desired);
     }
 
     OutputManager.OutputState after =
@@ -1210,16 +1207,13 @@ class BenchmarkController {
     boolean outputsApplied =
         applyOutput(
             OutputManager.OutputType.NDI,
-            endpoint.ndi,
-            "ndi")
+            endpoint.ndi)
         && applyOutput(
             OutputManager.OutputType.SYPHON,
-            endpoint.syphon,
-            "syphon")
+            endpoint.syphon)
         && applyOutput(
             OutputManager.OutputType.SPOUT,
-            endpoint.spout,
-            "spout");
+            endpoint.spout);
 
     applyBenchmarkOutputDemand(
         view,

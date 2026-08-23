@@ -1,5 +1,6 @@
-package com.victorvalentim.zividomelive.manager;
+package com.victorvalentim.zividomelive;
 
+import com.victorvalentim.zividomelive.manager.OutputManager;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
 
@@ -30,11 +31,11 @@ class OutputBackendSeparationTest {
 	@Test
 	void eachNativeResourceIsOwnedOnlyByItsConcreteBackend() throws Exception {
 		assertEquals(NdiOutputBackend.class,
-				OutputManager.class.getDeclaredField("ndiBackend").getType());
+				OutputManagerImpl.class.getDeclaredField("ndiBackend").getType());
 		assertEquals(SpoutOutputBackend.class,
-				OutputManager.class.getDeclaredField("spoutBackend").getType());
+				OutputManagerImpl.class.getDeclaredField("spoutBackend").getType());
 		assertEquals(SyphonOutputBackend.class,
-				OutputManager.class.getDeclaredField("syphonBackend").getType());
+				OutputManagerImpl.class.getDeclaredField("syphonBackend").getType());
 
 		assertTrue(hasFieldWithTypeName(
 				NdiOutputBackend.class, "me.walkerknapp.devolay.DevolaySender"));
@@ -43,10 +44,10 @@ class OutputBackendSeparationTest {
 				SyphonOutputBackend.class, "codeanticode.syphon.SyphonServer"));
 
 		assertFalse(hasFieldWithTypeName(
-				OutputManager.class, "me.walkerknapp.devolay.DevolaySender"));
-		assertFalse(hasFieldWithTypeName(OutputManager.class, "spout.Spout"));
+				OutputManagerImpl.class, "me.walkerknapp.devolay.DevolaySender"));
+		assertFalse(hasFieldWithTypeName(OutputManagerImpl.class, "spout.Spout"));
 		assertFalse(hasFieldWithTypeName(
-				OutputManager.class, "codeanticode.syphon.SyphonServer"));
+				OutputManagerImpl.class, "codeanticode.syphon.SyphonServer"));
 	}
 
 	@Test

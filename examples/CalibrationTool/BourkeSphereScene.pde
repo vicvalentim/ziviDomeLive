@@ -145,7 +145,7 @@ class BourkeSphereScene implements Scene {
   }
 
   private void loadPatternForCurrentResolution() {
-    boolean outputEnabled = dome.isEnableOutput();
+    boolean outputEnabled = dome.getOutputManager().isActive();
     int referenceResolution = outputEnabled
       ? dome.getOutputResolution()
       : max(1, min(dome.getPApplet().width, dome.getPApplet().height));

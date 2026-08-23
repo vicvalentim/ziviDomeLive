@@ -1,6 +1,5 @@
 package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.manager.OutputManager;
 import com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor;
 import com.victorvalentim.zividomelive.performance.PerformanceMetric;
 import com.victorvalentim.zividomelive.support.LogManager;
@@ -77,7 +76,7 @@ final class RenderPipeline {
 			}
 			runtime.captureMasterCubemap(preview, output);
 
-			OutputManager outputManager = runtime.getOutputManager();
+			OutputManagerImpl outputManager = runtime.outputManagerInternal();
 			if (runtime.hasOutputRenderDemand()) {
 				long outputStarted = profiling ? monitor.start() : 0L;
 				try {

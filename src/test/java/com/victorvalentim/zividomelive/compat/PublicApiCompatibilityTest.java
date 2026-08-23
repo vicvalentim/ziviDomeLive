@@ -88,17 +88,32 @@ class PublicApiCompatibilityTest {
 		assertNotNull(OutputManager.class.getMethod("setSpoutView", ViewType.class));
 		assertNotNull(OutputManager.class.getMethod("setSyphonView", ViewType.class));
 		assertNotNull(OutputManager.class.getMethod("setLocalTextureView", ViewType.class));
-		assertNotNull(OutputManager.class.getMethod("requiresView", ViewType.class));
+		assertNotNull(OutputManager.class.getMethod(
+				"setOutputEnabled", OutputManager.OutputType.class, boolean.class));
+		assertNotNull(OutputManager.class.getMethod(
+				"isOutputEnabled", OutputManager.OutputType.class));
+		assertNotNull(OutputManager.class.getMethod(
+				"toggleOutput", OutputManager.OutputType.class));
 	}
 
 	@Test
-	void frameViewsExposeOnlyCompletedTargetsByLogicalView() throws Exception {
-		assertTrue(Modifier.isPublic(FrameViews.class.getModifiers()));
-		assertTrue(FrameViews.class.isInterface());
-		assertEquals(PGraphicsOpenGL.class,
-				FrameViews.class.getMethod("getFrame", ViewType.class).getReturnType());
-		assertNotNull(OutputManager.class.getMethod("sendOutput", FrameViews.class));
-		assertNotNull(OutputManager.class.getMethod("sendOutput"));
+	void outputManagerDoesNotExposeFrameProducerOperations() {
+		assertTrue(OutputManager.class.isInterface());
+		for (String internalMethod : Arrays.asList(
+				"sendOutput",
+				"initializeLocalTextureOutput",
+				"notifyResolutionChanged",
+				"shutdownOutputs",
+				"stopOutput",
+				"requiresView",
+				"refreshCachedGraphics",
+				"setView")) {
+			assertFalse(Arrays.stream(OutputManager.class.getMethods())
+					.anyMatch(method -> method.getName().equals(internalMethod)), internalMethod);
+		}
+		assertFalse(Arrays.stream(OutputManager.class.getMethods())
+				.anyMatch(method -> method.getParameterCount() == 1
+						&& method.getParameterTypes()[0] == String.class));
 	}
 
 	@Test

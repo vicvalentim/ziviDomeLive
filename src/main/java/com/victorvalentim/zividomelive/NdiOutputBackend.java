@@ -1,5 +1,6 @@
-package com.victorvalentim.zividomelive.manager;
+package com.victorvalentim.zividomelive;
 
+import com.victorvalentim.zividomelive.manager.OutputManager;
 import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
 import com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor;
 import com.victorvalentim.zividomelive.performance.PerformanceMetric;
@@ -123,7 +124,7 @@ final class NdiOutputBackend {
 			releaseResourcesLocked();
 
 			ndiUnavailable = true;
-			ndiFailureReason = OutputManager.rootCauseMessage(error);
+			ndiFailureReason = OutputManagerImpl.rootCauseMessage(error);
 
 			logger.warning(
 					"NDI unavailable on "
@@ -197,7 +198,7 @@ final class NdiOutputBackend {
 			}
 		} catch (RuntimeException error) {
 			ndiFailedFrames.incrementAndGet();
-			logger.warning("NDI frame capture failed: " + OutputManager.rootCauseMessage(error));
+			logger.warning("NDI frame capture failed: " + OutputManagerImpl.rootCauseMessage(error));
 		} finally {
 			if (!queued) {
 				ndiFreeSlots.offer(slot);
@@ -304,7 +305,7 @@ final class NdiOutputBackend {
 
 	/** Records a worker failure without closing native objects still owned by that worker. */
 	private void markWorkerUnavailable(Thread worker, Throwable error) {
-		String failureReason = OutputManager.rootCauseMessage(error);
+		String failureReason = OutputManagerImpl.rootCauseMessage(error);
 		synchronized (lifecycleLock) {
 			if (ndiWorkerThread != worker) {
 				return;
@@ -351,8 +352,8 @@ final class NdiOutputBackend {
 		ndiFrameRateDenominator = denominator;
 	}
 
-	/** Stops the worker before releasing its native sender and frame resources. */
-	void shutdown() {
+	/** Requests worker shutdown and returns without waiting for sender cleanup. */
+	void requestStop() {
 		Thread worker;
 		synchronized (lifecycleLock) {
 			ndiEnabled = false;
@@ -374,11 +375,20 @@ final class NdiOutputBackend {
 			}
 
 			worker.interrupt();
-			if (worker == Thread.currentThread() || ndiShutdownPending) {
-				ndiShutdownPending = true;
+			ndiShutdownPending = true;
+		}
+	}
+
+	/** Waits only during terminal disposal; normal disable always uses {@link #requestStop()}. */
+	void shutdownTerminal() {
+		requestStop();
+		Thread worker;
+		synchronized (lifecycleLock) {
+			ndiRestartRequested = false;
+			worker = ndiWorkerThread;
+			if (worker == null || !worker.isAlive() || worker == Thread.currentThread()) {
 				return;
 			}
-			ndiShutdownPending = true;
 		}
 
 		boolean stopped = waitForWorker(worker, shutdownTimeoutMillis);
@@ -436,7 +446,7 @@ final class NdiOutputBackend {
 				try {
 					slot.close();
 				} catch (RuntimeException | LinkageError error) {
-					String failureReason = OutputManager.rootCauseMessage(error);
+					String failureReason = OutputManagerImpl.rootCauseMessage(error);
 					if (ndiFailureReason.isEmpty()) {
 						ndiFailureReason = failureReason;
 					}
@@ -454,7 +464,7 @@ final class NdiOutputBackend {
 			try {
 				sender.close();
 			} catch (RuntimeException | LinkageError error) {
-				String failureReason = OutputManager.rootCauseMessage(error);
+				String failureReason = OutputManagerImpl.rootCauseMessage(error);
 				if (ndiFailureReason.isEmpty()) {
 					ndiFailureReason = failureReason;
 				}
@@ -468,7 +478,7 @@ final class NdiOutputBackend {
 	}
 
 	OutputManager.OutputState state(boolean effectivelyEnabled) {
-		return OutputManager.resolveOutputState(
+		return OutputManagerImpl.resolveOutputState(
 				true,
 				ndiUnavailable,
 				ndiSender != null || ndiWorkerThread != null,
