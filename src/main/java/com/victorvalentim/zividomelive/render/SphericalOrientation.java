@@ -88,12 +88,12 @@ public final class SphericalOrientation {
     }
 
     /**
-     * Returns a defensive copy of the current unit quaternion.
+     * Returns the current immutable unit quaternion.
      *
      * @return current spherical orientation
      */
     public Quaternion getQuaternion() {
-        return new Quaternion(orientation.x, orientation.y, orientation.z, orientation.w);
+        return orientation;
     }
 
     /** Restores the identity quaternion and zeroes all control accumulators. */
@@ -109,7 +109,7 @@ public final class SphericalOrientation {
             return;
         }
         Quaternion delta = Quaternion.fromAxisAngle(axisX, axisY, axisZ, angle);
-        orientation = orientation.multiply(delta).normalize();
+        orientation = orientation.multiply(delta).normalized();
     }
 
     private static float normalizeAngle(float angle) {

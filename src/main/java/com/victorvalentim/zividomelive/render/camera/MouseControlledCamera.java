@@ -189,7 +189,7 @@ public class MouseControlledCamera implements PConstants {
                 -dy * DRAG_SENSITIVITY);
 
         // Apply yaw in world space (pre-multiply), pitch in local space (post-multiply)
-        rotation = yawDelta.multiply(rotation).multiply(pitchDelta).normalize();
+        rotation = yawDelta.multiply(rotation).multiply(pitchDelta).normalized();
     }
 
     /**

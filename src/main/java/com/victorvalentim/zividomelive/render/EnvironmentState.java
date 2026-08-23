@@ -109,23 +109,15 @@ public final class EnvironmentState {
 			sceneCameraOrientation = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
 			return;
 		}
-		sceneCameraOrientation = new Quaternion(
-				orientation.x,
-				orientation.y,
-				orientation.z,
-				orientation.w).normalize();
+		sceneCameraOrientation = orientation.normalized();
 	}
 
 	/**
-	 * Returns a defensive copy of the scene-camera orientation used by the Environment lookup.
+	 * Returns the immutable scene-camera orientation used by the Environment lookup.
 	 *
 	 * @return current unit orientation quaternion
 	 */
 	public Quaternion getSceneCameraOrientation() {
-		return new Quaternion(
-				sceneCameraOrientation.x,
-				sceneCameraOrientation.y,
-				sceneCameraOrientation.z,
-				sceneCameraOrientation.w);
+		return sceneCameraOrientation;
 	}
 }

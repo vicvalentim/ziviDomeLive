@@ -506,7 +506,7 @@ public class CubemapRenderer implements PConstants {
         Quaternion sceneCamera = sceneCameraOrientation == null
                 ? new Quaternion(0.0f, 0.0f, 0.0f, 1.0f)
                 : sceneCameraOrientation;
-        return spherical.multiply(sceneCamera).normalize();
+        return spherical.multiply(sceneCamera).normalized();
     }
 
     /**

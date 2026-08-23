@@ -147,6 +147,18 @@ class OrbitCameraTest {
 	}
 
 	@Test
+	void defaultWheelStepsMatchTheSolarSystemNavigationContract() throws Exception {
+		OrbitCamera wheelCamera = new OrbitCamera(100f);
+		wheelCamera.setDistanceLimits(-1000f, 1000f);
+		wheelCamera.mouseEvent(mouseEvent(MouseEvent.WHEEL, 0, 0, 0, 1));
+		assertEquals(180f, wheelCamera.getDistance(), EPSILON);
+
+		java.lang.reflect.Field trackpadStep = OrbitCamera.class.getDeclaredField("wheelPadStep");
+		trackpadStep.setAccessible(true);
+		assertEquals(0.001f, trackpadStep.getFloat(wheelCamera), EPSILON);
+	}
+
+	@Test
 	void mouseDragChangesOrientationImmediatelyAndKeepsGoalSynchronized() {
 		OrbitCamera camera = new OrbitCamera(100f);
 		camera.setDragSensitivity(0.01f);
@@ -156,7 +168,7 @@ class OrbitCameraTest {
 
 		Quaternion expected = Quaternion.fromAxisAngle(1f, 0f, 0f, 0.05f)
 				.multiply(Quaternion.fromAxisAngle(0f, 1f, 0f, 0.10f))
-				.normalize();
+				.normalized();
 		assertQuaternionEquivalent(expected, camera.getOrientation());
 		camera.update();
 		assertQuaternionEquivalent(expected, camera.getOrientation());
@@ -200,10 +212,10 @@ class OrbitCameraTest {
 		assertEquals(0f, camera.getTarget().y, EPSILON);
 		assertEquals(0f, camera.getTarget().z, EPSILON);
 		Quaternion orientation = camera.getOrientation();
-		assertEquals(0f, orientation.x, EPSILON);
-		assertEquals(0f, orientation.y, EPSILON);
-		assertEquals(0f, orientation.z, EPSILON);
-		assertEquals(1f, Math.abs(orientation.w), EPSILON);
+		assertEquals(0f, orientation.x(), EPSILON);
+		assertEquals(0f, orientation.y(), EPSILON);
+		assertEquals(0f, orientation.z(), EPSILON);
+		assertEquals(1f, Math.abs(orientation.w()), EPSILON);
 	}
 
 	private static void settle(OrbitCamera camera) {
@@ -218,10 +230,10 @@ class OrbitCameraTest {
 
 	private static void assertQuaternionEquivalent(Quaternion expected, Quaternion actual) {
 		float dot = Math.abs(
-				expected.x * actual.x
-						+ expected.y * actual.y
-						+ expected.z * actual.z
-						+ expected.w * actual.w);
+				expected.x() * actual.x()
+						+ expected.y() * actual.y()
+						+ expected.z() * actual.z()
+						+ expected.w() * actual.w());
 		assertEquals(1f, dot, EPSILON);
 	}
 }

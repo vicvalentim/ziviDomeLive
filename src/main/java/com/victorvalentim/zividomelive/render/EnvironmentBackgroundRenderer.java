@@ -162,7 +162,7 @@ public final class EnvironmentBackgroundRenderer {
 				: sphericalOrientation;
 		Quaternion environmentOrientation = spherical
 				.multiply(state.getSceneCameraOrientation())
-				.normalize();
+				.normalized();
 		return sphericalCompatibilityPass().renderCubemapFace(
 				target,
 				pgl,

@@ -29,12 +29,12 @@ class CubemapRendererTest {
 		Quaternion sceneCamera = Quaternion.fromAxisAngle(0f, 1f, 0f, -0.6f);
 
 		Quaternion composed = CubemapRenderer.composeEnvironmentOrientation(dome, sceneCamera);
-		Quaternion expected = dome.multiply(sceneCamera).normalize();
+		Quaternion expected = dome.multiply(sceneCamera).normalized();
 		float dot = Math.abs(
-				expected.x * composed.x
-						+ expected.y * composed.y
-						+ expected.z * composed.z
-						+ expected.w * composed.w);
+				expected.x() * composed.x()
+						+ expected.y() * composed.y()
+						+ expected.z() * composed.z()
+						+ expected.w() * composed.w());
 
 		assertEquals(1f, dot, EPSILON);
 	}

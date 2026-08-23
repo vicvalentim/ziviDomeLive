@@ -377,6 +377,20 @@ class PublicApiCompatibilityTest {
 	}
 
 	@Test
+	void quaternionAndOrbitCameraAreImmutableFinalContracts() throws Exception {
+		assertTrue(Modifier.isFinal(Quaternion.class.getModifiers()));
+		assertTrue(Modifier.isFinal(OrbitCamera.class.getModifiers()));
+		for (String component : Arrays.asList("x", "y", "z", "w")) {
+			assertEquals(float.class, Quaternion.class.getMethod(component).getReturnType());
+			assertFalse(Modifier.isPublic(Quaternion.class.getDeclaredField(component).getModifiers()));
+		}
+		assertEquals(Quaternion.class, Quaternion.class.getMethod("normalized").getReturnType());
+		assertThrows(NoSuchMethodException.class,
+				() -> Quaternion.class.getMethod("normalize"));
+		assertEquals(Quaternion.class, OrbitCamera.class.getMethod("getOrientation").getReturnType());
+	}
+
+	@Test
 	void cubemapCaptureCompatibilityOverloadsRemainAvailable() throws Exception {
 		assertPublicMethod(
 				CubemapRenderer.class,

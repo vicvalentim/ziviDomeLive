@@ -31,7 +31,7 @@ import processing.opengl.PGraphicsOpenGL;
  * are smoothly interpolated (SLERP/LERP), while direct mouse manipulation is
  * applied immediately so drag and wheel gestures remain attached to the pointer.</p>
  */
-public class OrbitCamera implements PConstants {
+public final class OrbitCamera implements PConstants {
 
     /** Point the camera looks at (current, interpolated). */
     private final PVector target = new PVector(0, 0, 0);
@@ -66,9 +66,9 @@ public class OrbitCamera implements PConstants {
     /** Drag sensitivity in radians per pixel. */
     private float dragSensitivity = 0.01f;
     /** Distance change per standard wheel notch. */
-    private float wheelStep = 120f;
+    private float wheelStep = 80f;
     /** Distance change per fractional (trackpad) wheel notch. */
-    private float wheelPadStep = 4f;
+    private float wheelPadStep = 0.001f;
 
     private int lastMouseX = -1;
     private int lastMouseY = -1;
@@ -136,7 +136,7 @@ public class OrbitCamera implements PConstants {
      */
     public void rotateAround(float ax, float ay, float az, float angle) {
         Quaternion delta = Quaternion.fromAxisAngle(ax, ay, az, angle);
-        goalOrientation = delta.multiply(goalOrientation).normalize();
+        goalOrientation = delta.multiply(goalOrientation).normalized();
     }
 
     /**
@@ -160,8 +160,8 @@ public class OrbitCamera implements PConstants {
      */
     public void rotateAroundImmediate(float ax, float ay, float az, float angle) {
         Quaternion delta = Quaternion.fromAxisAngle(ax, ay, az, angle);
-        orientation = delta.multiply(orientation).normalize();
-        goalOrientation = copyOf(orientation);
+        orientation = delta.multiply(orientation).normalized();
+        goalOrientation = orientation;
     }
 
     /**
@@ -318,7 +318,7 @@ public class OrbitCamera implements PConstants {
         target.set(tx, ty, tz);
         goalTarget.set(tx, ty, tz);
         orientation = normalizedCopyOf(q);
-        goalOrientation = copyOf(orientation);
+        goalOrientation = orientation;
         distance = guardDistance(d, d);
         goalDistance = distance;
     }
@@ -353,7 +353,7 @@ public class OrbitCamera implements PConstants {
      */
     public void setOrientationImmediate(Quaternion orientation) {
         this.orientation = normalizedCopyOf(orientation);
-        goalOrientation = copyOf(this.orientation);
+        goalOrientation = this.orientation;
     }
 
     /**
@@ -490,15 +490,11 @@ public class OrbitCamera implements PConstants {
         return orientation;
     }
 
-    private static Quaternion copyOf(Quaternion quaternion) {
+    private static Quaternion normalizedCopyOf(Quaternion quaternion) {
         if (quaternion == null) {
             throw new IllegalArgumentException("Orientation cannot be null.");
         }
-        return new Quaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
-    }
-
-    private static Quaternion normalizedCopyOf(Quaternion quaternion) {
-        return copyOf(quaternion).normalize();
+        return quaternion.normalized();
     }
 
     private static void requireVector(PVector vector, String label) {
