@@ -7,10 +7,15 @@ icon: material/monitor-share
 
 Preview e output são **consumidores independentes das views renderizadas**. Tamanho da janela, política de preview e resolução do output externo resolvem problemas distintos.
 
-<figure markdown="span">
-  ![Preview and output routing](../../img/preview-output-routing.png)
-  <figcaption>Em FULL, preview e destinos externos podem solicitar ViewTypes diferentes do mesmo frame.</figcaption>
-</figure>
+```mermaid
+flowchart LR
+  R[ziviDomeLive<br/>RenderMode.FULL] --> P[Preview<br/>ViewType salvo]
+  R --> N[NDI<br/>ViewType salvo]
+  R --> L[Textura local<br/>ViewType salvo]
+  P --> W[Janela Processing]
+  N --> NR[Receiver de rede]
+  L --> LR[Receiver Syphon ou Spout]
+```
 
 <div class="grid cards" markdown>
 

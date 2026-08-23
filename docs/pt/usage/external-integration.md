@@ -7,22 +7,27 @@ icon: material/video-wireless-outline
 
 Outputs externos são opcionais. Primeiro escolha **qual representação** o destino deve receber; depois habilite apenas o backend necessário à instalação e verifique seu estado real no receiver.
 
-<figure markdown="span">
-  ![Rotas de output externo](../../img/external-outputs.png)
-  <figcaption>ViewType seleciona a representação; o backend define como essa representação sai da aplicação.</figcaption>
-</figure>
+```mermaid
+flowchart LR
+  V[ViewType final] --> N[NDI<br/>vídeo em rede]
+  V --> Y[Syphon<br/>GPU sharing macOS]
+  V --> S[Spout<br/>GPU sharing Windows]
+  N --> Q1[Qualificação com receiver]
+  Y --> Q2[Qualificação com receiver]
+  S --> Q3[Qualificação com receiver]
+```
 
 === "NDI"
 
     **O que é?** Output de vídeo em rede.  
     **Plataforma:** a disponibilidade depende de runtime nativo Devolay/NDI compatível e qualificação com receiver.  
     **Selecione uma view:** `setNdiView(ViewType...)`.  
-    **Habilite/desabilite:** `toggleOutput("ndi")`.
+    **Habilite/desabilite:** `setOutputEnabled(OutputType.NDI, boolean)`.
 
     ```java
     OutputManager outputs = dome.getOutputManager();
     outputs.setNdiView(ViewType.EQUIRECTANGULAR);
-    outputs.toggleOutput("ndi");
+    outputs.setOutputEnabled(OutputManager.OutputType.NDI, true);
 
     println(outputs.getOutputState(OutputManager.OutputType.NDI));
     println(outputs.getOutputFailureReason(OutputManager.OutputType.NDI));
@@ -35,7 +40,7 @@ Outputs externos são opcionais. Primeiro escolha **qual representação** o des
 
     **O que é?** Compartilhamento local de textura GPU no macOS.  
     **Selecione uma view:** `setSyphonView(ViewType...)`.  
-    **Habilite/desabilite:** `toggleOutput("syphon")`.
+    **Habilite/desabilite:** `setOutputEnabled(OutputType.SYPHON, boolean)`.
 
     Disponibilidade não equivale a inicialização bem-sucedida nem a qualificação com receiver.
 
@@ -43,7 +48,7 @@ Outputs externos são opcionais. Primeiro escolha **qual representação** o des
 
     **O que é?** Compartilhamento local de textura GPU no Windows.  
     **Selecione uma view:** `setSpoutView(ViewType...)`.  
-    **Habilite/desabilite:** `toggleOutput("spout")`.
+    **Habilite/desabilite:** `setOutputEnabled(OutputType.SPOUT, boolean)`.
 
     Teste com um receiver real na configuração Windows que será declarada como qualificada.
 

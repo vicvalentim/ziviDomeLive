@@ -7,10 +7,15 @@ icon: material/view-dashboard-outline
 
 ziviDomeLive separa **como a aplicação está trabalhando agora** de **qual representação um destino recebe**. Manter essas decisões distintas é a chave para um roteamento previsível de preview/output.
 
-<figure markdown="span">
-  ![RenderMode and ViewType overview](../../img/render-modes-overview.png)
-  <figcaption>RenderMode altera o modo de trabalho atual; ViewType seleciona a representação solicitada por um destino.</figcaption>
-</figure>
+```mermaid
+flowchart LR
+  M[RenderMode<br/>política do runtime] --> F{FULL?}
+  F -->|sim| P[ViewType salvo<br/>por destino]
+  F -->|modo dedicado| O[View efetiva temporária]
+  P --> A[Preview]
+  P --> B[NDI]
+  P --> C[Syphon / Spout]
+```
 
 <div class="grid cards" markdown>
 

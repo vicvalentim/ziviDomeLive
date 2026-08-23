@@ -7,22 +7,27 @@ icon: material/video-wireless-outline
 
 External outputs are optional. First choose **which representation** a destination should receive, then enable only the backend required by the installation and verify its real receiver state.
 
-<figure markdown="span">
-  ![External output routes](../../img/external-outputs.png)
-  <figcaption>ViewType selects the representation; the backend selects how that representation leaves the application.</figcaption>
-</figure>
+```mermaid
+flowchart LR
+  V[Final ViewType] --> N[NDI<br/>network video]
+  V --> Y[Syphon<br/>macOS GPU sharing]
+  V --> S[Spout<br/>Windows GPU sharing]
+  N --> Q1[Receiver qualification]
+  Y --> Q2[Receiver qualification]
+  S --> Q3[Receiver qualification]
+```
 
 === "NDI"
 
     **What is it?** Network video output.  
     **Platform:** availability depends on compatible Devolay/NDI native runtime and receiver qualification.  
     **Select a view:** `setNdiView(ViewType...)`.  
-    **Enable/disable:** `toggleOutput("ndi")`.
+    **Enable/disable:** `setOutputEnabled(OutputType.NDI, boolean)`.
 
     ```java
     OutputManager outputs = dome.getOutputManager();
     outputs.setNdiView(ViewType.EQUIRECTANGULAR);
-    outputs.toggleOutput("ndi");
+    outputs.setOutputEnabled(OutputManager.OutputType.NDI, true);
 
     println(outputs.getOutputState(OutputManager.OutputType.NDI));
     println(outputs.getOutputFailureReason(OutputManager.OutputType.NDI));
@@ -35,7 +40,7 @@ External outputs are optional. First choose **which representation** a destinati
 
     **What is it?** Platform-local GPU texture sharing on macOS.  
     **Select a view:** `setSyphonView(ViewType...)`.  
-    **Enable/disable:** `toggleOutput("syphon")`.
+    **Enable/disable:** `setOutputEnabled(OutputType.SYPHON, boolean)`.
 
     Availability is not the same as successful initialization or receiver qualification.
 
@@ -43,7 +48,7 @@ External outputs are optional. First choose **which representation** a destinati
 
     **What is it?** Platform-local GPU texture sharing on Windows.  
     **Select a view:** `setSpoutView(ViewType...)`.  
-    **Enable/disable:** `toggleOutput("spout")`.
+    **Enable/disable:** `setOutputEnabled(OutputType.SPOUT, boolean)`.
 
     Test with a real receiver on the Windows configuration that will be claimed as qualified.
 

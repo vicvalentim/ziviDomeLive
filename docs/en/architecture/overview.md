@@ -7,10 +7,19 @@ icon: material/source-branch
 
 ziviDomeLive 2.0 organizes rendering into **two domains** that can be required independently or in the same Processing frame. This separation is the central architectural fact behind routing and reuse.
 
-<figure markdown="span">
-  ![Standard and spherical rendering domains](../../img/architecture-domains.png)
-  <figcaption>Standard rendering remains independent; spherical final views share one cubemap capture.</figcaption>
-</figure>
+```mermaid
+flowchart LR
+  S[Updated Scene state] --> SD[Standard domain]
+  S --> CD[Spherical cubemap capture]
+  SD --> ST[Standard final view]
+  CD --> DM[Domemaster]
+  CD --> EQ[Equirectangular]
+  CD --> SB[Skybox]
+  ST --> C[Preview / outputs]
+  DM --> C
+  EQ --> C
+  SB --> C
+```
 
 <div class="grid cards" markdown>
 
@@ -22,7 +31,7 @@ ziviDomeLive 2.0 organizes rendering into **two domains** that can be required i
 
 - :material-earth: **Spherical Domain**
 
-    `Scene` → cubemap capture → `CubemapTarget` → Domemaster / Equirectangular / Skybox.
+    `Scene` → internal cubemap capture → Domemaster / Equirectangular / Skybox.
 
     [Spherical Domain →](spherical-domain.md)
 

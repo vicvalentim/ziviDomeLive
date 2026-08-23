@@ -7,10 +7,15 @@ icon: material/axis-arrow
 
 Pitch/Yaw/Roll, FOV e Size% resolvem **problemas de calibração diferentes**. Mantê-los separados evita confundir orientação, campo de visão e ajuste físico da imagem com o movimento da câmera da Scene.
 
-<figure markdown="span">
-  ![Spherical calibration controls](../../img/spherical-calibration.png)
-  <figcaption>Orientação esférica compartilhada e controles específicos de calibração do Domemaster.</figcaption>
-</figure>
+```mermaid
+flowchart LR
+  O[Orientação esférica compartilhada] --> P[Pitch]
+  O --> Y[Yaw]
+  O --> R[Roll]
+  D[Calibração Domemaster] --> F[FOV<br/>cobertura angular]
+  D --> S[Size percent<br/>ajuste físico do círculo]
+  C[Câmera da Scene] -. separada .-> O
+```
 
 <div class="grid cards" markdown>
 

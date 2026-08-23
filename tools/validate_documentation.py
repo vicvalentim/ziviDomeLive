@@ -20,6 +20,29 @@ VIEW_TYPES = {"STANDARD", "DOMEMASTER", "EQUIRECTANGULAR", "SKYBOX"}
 EXAMPLES = {"EmptyProject", "Basic", "SphereParticle", "InfiniteBackground", "FulldomePBR", "SolarSystem", "CalibrationTool", "BenchmarkTool"}
 CUSTOM_TASKS = {"qualificationTests", "buildReleaseArtifacts", "verifyReleaseTag"}
 STANDARD_GRADLE_TASKS = {"clean", "test", "build", "javadoc", "check", "assemble"}
+API_LEVELS = {
+    "Stable": {
+        "ziviDomeLive", "StandardOutputAspectMode", "Scene", "SceneManager",
+        "RenderMode", "ViewType", "LogMode",
+    },
+    "Advanced Stable": {
+        "SceneServices", "FrameClock", "SimulationTimeline", "SceneTaskGroup",
+        "SceneAssets", "SceneActionMap", "SceneCameraService",
+        "SceneEnvironmentService", "ScenePorts", "SceneInputPort",
+        "SceneOutputPort", "OutputManager", "OutputType", "OutputState",
+        "Quaternion", "SphericalOrientation", "OrbitCamera",
+    },
+    "Experimental": {
+        "PerformanceMode", "PerformanceMetric", "PerformanceSnapshot",
+        "MetricStatistics", "GraphicsCapabilities", "GpuTimerPolicy",
+        "GpuTimerBackend", "GpuTimerArchitecture",
+    },
+}
+REMOVED_PLACEHOLDER_IMAGES = {
+    "architecture-domains.png", "external-outputs.png",
+    "preview-output-routing.png", "render-modes-overview.png",
+    "spherical-calibration.png",
+}
 
 class Check:
     def __init__(self): self.errors=[]; self.warnings=[]
@@ -47,7 +70,15 @@ def public_text_files(root: Path):
             yield p
 
 def check_required(root,c):
-    for rel in ['README.md','mkdocs.yml','library.properties','CITATION.cff','.zenodo.json','examples','src/main/java','docs/en','docs/pt']:
+    for rel in [
+        'README.md', 'CHANGELOG.md', 'THIRD_PARTY.md', 'mkdocs.yml',
+        'requirements-docs.txt', 'library.properties', 'CITATION.cff',
+        '.zenodo.json', 'examples', 'src/main/java', 'docs/en', 'docs/pt',
+        'docs/en/research-software.md', 'docs/pt/research-software.md',
+        'docs/en/release-notes/2.0.0.md', 'docs/pt/release-notes/2.0.0.md',
+        'docs/en/tags.md', 'docs/pt/tags.md',
+        'docs/img/hero-overview.svg', 'docs/img/hero-overview.png',
+    ]:
         if not (root/rel).exists(): c.error(f"required path missing: {rel}")
 
 def normalize_property_value(value: str) -> str:
@@ -128,8 +159,99 @@ def check_claims(root,c):
         if 'setOutputResolution(' in txt: c.error(f'nonexistent API name setOutputResolution documented in {p.relative_to(root)}')
         if 'SPHERICAL_MIRROR' in txt: c.error(f'non-release RenderMode/ViewType documented in {p.relative_to(root)}')
         if 'zivito.github.io' in txt: c.error(f'stale zivito.github.io link in {p.relative_to(root)}')
+        if 'toggleOutput("' in txt: c.error(f'legacy string output toggle documented in {p.relative_to(root)}')
+        if 'zd-image-placeholder' in txt: c.error(f'provisional image block remains in {p.relative_to(root)}')
+        if re.search(r'(?i)image placeholder|placeholder de imagem', txt):
+            c.error(f'placeholder image prose remains in {p.relative_to(root)}')
     manifest=root/'docs/img/PLACEHOLDERS.txt'
     if manifest.exists(): c.error('docs/img/PLACEHOLDERS.txt exists: replace provisional images and remove the manifest before tagging')
+    capture_plan=root/'docs/img/IMAGE-CAPTURE-PLAN.txt'
+    if capture_plan.exists(): c.error('docs/img/IMAGE-CAPTURE-PLAN.txt exists: provisional capture work is not release evidence')
+    for name in sorted(REMOVED_PLACEHOLDER_IMAGES):
+        if (root/'docs/img'/name).exists(): c.error(f'obsolete raster placeholder remains: docs/img/{name}')
+
+def check_processing_homepage(root,c):
+    text=read(root/'README.md')
+    headings = [
+        '## Overview', '## Statement of need', '## Requirements',
+        '## Installation', '## Examples', '## Documentation',
+        '## Citation', '## License',
+    ]
+    for heading in headings:
+        if heading not in text: c.error(f'Processing homepage section missing: {heading}')
+    required_tokens = [
+        'Processing 4', 'Java 17', 'pixelDensity(1)', 'P3D',
+        '2026-08-23', 'library.keywords', 'ziviDomeLive.zip',
+        'ziviDomeLive.txt', 'ziviDomeLive.pdex', 'reference/index.html',
+    ]
+    for token in required_tokens:
+        if token not in text: c.error(f'Processing homepage information missing: {token}')
+    for example in sorted(EXAMPLES):
+        if example not in text: c.error(f'Processing homepage does not list example/tool: {example}')
+    if not all(token in text for token in ('tested.platform', 'tested.processingVersion', 'qualification')):
+        c.error('Processing homepage does not distinguish tested metadata from pending qualification')
+    if not re.search(r'(?is)2\.0\.0.*untagged|untagged.*2\.0\.0', text):
+        c.error('Processing homepage does not disclose that 2.0.0 is currently untagged')
+    if not re.search(r'(?is)(?:latest published stable|published stable).*1\.5\.0', text):
+        c.error('Processing homepage does not identify the latest published stable release')
+
+def check_api_levels(root,c):
+    surfaces = {
+        'README.md': read(root/'README.md'),
+        'docs/en/api/overview.md': read(root/'docs/en/api/overview.md'),
+    }
+    for rel, text in surfaces.items():
+        for level, names in API_LEVELS.items():
+            if level not in text: c.error(f'{rel} does not label the {level} API level')
+            for name in sorted(names):
+                if not re.search(r'`[^`]*\b'+re.escape(name)+r'\b[^`]*`', text):
+                    c.error(f'{rel} omits {level} type `{name}`')
+    readme=surfaces['README.md']
+    for label in ('Processing callbacks', 'Internal'):
+        if label not in readme: c.error(f'README API boundary missing: {label}')
+    pt=read(root/'docs/pt/api/overview.md')
+    for label in ('Stable', 'Advanced Stable', 'Experimental', 'callbacks Processing', 'Internal'):
+        if label not in pt: c.error(f'Portuguese API boundary missing: {label}')
+    scene=read(root/'src/main/java/com/victorvalentim/zividomelive/Scene.java')
+    if 'controlEvent(' in scene: c.error('Scene reintroduces the removed ControlP5 controlEvent callback')
+
+def check_research_readiness(root,c):
+    requirements = {
+        'docs/en/research-software.md': [
+            'Statement of need', 'State of the field', 'Research impact',
+            'Evidence matrix', 'AI-assisted work', 'does not claim submission',
+            '```mermaid',
+        ],
+        'docs/pt/research-software.md': [
+            'Declaração de necessidade', 'Estado da área', 'Impacto de pesquisa',
+            'Matriz de evidências', 'Trabalho assistido por IA',
+            'Não alega submissão', '```mermaid',
+        ],
+    }
+    for rel, tokens in requirements.items():
+        text=read(root/rel)
+        for token in tokens:
+            if token not in text: c.error(f'research-readiness page {rel} is missing: {token}')
+        if not re.search(r'(?i)incomplete|incomplet', text):
+            c.error(f'research-readiness page {rel} does not mark incomplete evidence')
+
+def check_release_documents(root,c):
+    changelog=read(root/'CHANGELOG.md')
+    for token in [
+        '## [2.0.0] - Unreleased', '### Public API freeze',
+        '### Breaking changes', '### Added — Scene lifecycle and services',
+        '### Performance and allocation work',
+        '### Documentation and research-software readiness',
+        '### Validation', '### Release gates still open',
+        '### Not included in 2.0.0', '## [1.5.0]', '## [1.4.0]',
+    ]:
+        if token not in changelog: c.error(f'CHANGELOG 2.0/history detail missing: {token}')
+    for rel in ('docs/en/release-notes/2.0.0.md', 'docs/pt/release-notes/2.0.0.md'):
+        text=read(root/rel)
+        if len(text.splitlines()) < 180: c.error(f'release notes are not sufficiently detailed: {rel}')
+        release_status = 'Unreleased' if rel.startswith('docs/en/') else 'Não lançada'
+        for token in ('2.0.0', '```mermaid', 'SceneServices', 'OutputType', release_status):
+            if token not in text: c.error(f'release notes {rel} are missing: {token}')
 
 def enum_constants(src, enum_name):
     txt=read(src)
@@ -186,6 +308,8 @@ def check_package(path: Path,c):
     def any_suffix(s): return any(n.endswith(s) for n in names)
     for suffix in ['/library.properties','/reference/index.html']:
         if not any_suffix(suffix): c.error(f'package missing {suffix.lstrip("/")}')
+    for suffix in ['/README.md', '/CHANGELOG.md', '/CITATION.cff', '/THIRD_PARTY.md']:
+        if not any_suffix(suffix): c.error(f'package missing {suffix.lstrip("/")}')
     if not any('/library/' in n for n in names): c.error('package missing library/ content')
     if not any('/src/' in n for n in names): c.error('package missing src/ content')
     for ex in EXAMPLES:
@@ -209,7 +333,12 @@ def check_editorial_system(root,c):
     mk=read(root/'mkdocs.yml')
     css=root/'docs/assets/css/material-editorial.css'
     if not css.exists(): c.error('Material editorial stylesheet missing')
-    for token in ['pymdownx.emoji','material-editorial.css']:
+    for token in [
+        'pymdownx.emoji', 'pymdownx.superfences', 'custom_fences',
+        'name: mermaid', 'material-editorial.css', '- tags:', '- social:',
+        'callback:', 'internal:', 'Advanced Stable API', 'Removed 1.x API',
+        'Internal Boundary', 'Research Software and JOSS Readiness',
+    ]:
         if token not in mk: c.error(f'Material editorial configuration missing: {token}')
     if 'navigation.instant' in mk:
         c.error('navigation.instant is incompatible with the configured mkdocs-static-i18n contextual language switcher')
@@ -221,6 +350,32 @@ def check_editorial_system(root,c):
     if 'grid cards' not in en_home or 'md-button' not in en_home: c.error('homepage is missing Material card/button composition')
     outputs=read(root/'docs/en/usage/external-integration.md')
     if '=== "NDI"' not in outputs: c.error('external outputs page is missing backend content tabs')
+    requirements=read(root/'requirements-docs.txt')
+    if 'mkdocs-material[imaging]' not in requirements:
+        c.error('documentation dependencies do not include Material social-card imaging support')
+    for rel in [
+        'docs/en/architecture/overview.md', 'docs/pt/architecture/overview.md',
+        'docs/en/architecture/testing.md', 'docs/pt/architecture/testing.md',
+        'docs/en/usage/basic-usage.md', 'docs/pt/usage/basic-usage.md',
+        'docs/en/usage/external-integration.md', 'docs/pt/usage/external-integration.md',
+        'docs/en/usage/spherical-calibration.md', 'docs/pt/usage/spherical-calibration.md',
+    ]:
+        if '```mermaid' not in read(root/rel): c.error(f'MkDocs Mermaid diagram missing: {rel}')
+    publication = read(root/'docs/en/qualification/processing-publication.md')
+    for token in [
+        '## Official-guideline mapping', '### Project homepage',
+        '### Package and reference', 'reference/index.html',
+        'library.keywords', 'ziviDomeLive.zip', 'ziviDomeLive.txt',
+        'ziviDomeLive.pdex', 'CITATION.cff', 'THIRD_PARTY.md',
+    ]:
+        if token not in publication: c.error(f'Processing publication checklist is missing: {token}')
+    testing = read(root/'docs/en/architecture/testing.md')
+    for token in [
+        '## Evidence levels', '## Automated contract', '## Package installation',
+        '## GPU visual and calibration', '## Benchmark', '## Native output',
+        '## Research-quality reporting',
+    ]:
+        if token not in testing: c.error(f'research-quality testing guide is missing: {token}')
 
 def main():
     ap=argparse.ArgumentParser()
@@ -230,7 +385,17 @@ def main():
     ap.add_argument('--release-evidence',action='store_true')
     ap.add_argument('--skip-links',action='store_true')
     args=ap.parse_args(); root=Path(args.root).resolve(); c=Check()
-    check_required(root,c);check_metadata(root,c);check_claims(root,c);check_api(root,c);check_examples(root,c);check_language_parity(root,c);check_editorial_system(root,c)
+    check_required(root,c)
+    check_metadata(root,c)
+    check_claims(root,c)
+    check_processing_homepage(root,c)
+    check_api(root,c)
+    check_api_levels(root,c)
+    check_examples(root,c)
+    check_language_parity(root,c)
+    check_research_readiness(root,c)
+    check_release_documents(root,c)
+    check_editorial_system(root,c)
     if not args.skip_links: check_local_links(root,c)
     if args.package: check_package(args.package,c)
     if args.release_dir: check_release_dir(args.release_dir,c)

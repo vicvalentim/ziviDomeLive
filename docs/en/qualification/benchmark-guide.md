@@ -8,11 +8,8 @@ You do not need OpenGL knowledge to get started. Run a quick test first; once it
 with the full qualification suite.
 
 
-<div class="zd-image-placeholder" markdown>
-**IMAGE PLACEHOLDER — BenchmarkTool interface**
-Final capture: BenchmarkTool running with the ziviDomeLive panel and benchmark controls visible.
-Suggested final asset: `docs/img/benchmark-tool-interface.png`
-</div>
+!!! warning "Capture must be reproducible evidence"
+    A final interface capture must come from the installed package and accompany the benchmark report containing version/commit, platform, Processing/Java, CPU/GPU, resolution, routes, mode, warm-up and duration. A staged UI image is not benchmark evidence.
 
 !!! note "A graphical session is required"
     The benchmark opens a Processing window and uses the machine's real GPU. It is not a headless

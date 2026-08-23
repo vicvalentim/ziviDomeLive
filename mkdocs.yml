@@ -2,10 +2,10 @@ site_name: ziviDomeLive - Processing Library Documentation
 site_url: https://vicvalentim.github.io/ziviDomeLive/
 repo_url: https://github.com/vicvalentim/ziviDomeLive
 repo_name: GitHub
-edit_uri: edit/release/2.0.0/docs/
+edit_uri: edit/main/docs/
 site_description: Technical documentation for ziviDomeLive real-time fulldome, spherical and immersive rendering workflows in Processing
 site_author: Victor Valentim
-copyright: Copyright &copy; 2024 Victor Valentim - GPL-2.0-only
+copyright: Copyright &copy; 2024-2026 Victor Valentim - GPL-2.0-only
 docs_dir: docs
 site_dir: site
 use_directory_urls: true
@@ -55,6 +55,7 @@ theme:
     - content.action.view
     - content.code.copy
     - content.code.annotate
+    - content.code.select
     - content.tabs.link
     - content.tooltips
   icon:
@@ -65,6 +66,15 @@ theme:
 
 plugins:
   - search
+  - tags:
+      listings_toc: true
+  - social:
+      enabled: !ENV [CI, false]
+      concurrency: 1
+      cards_layout: default/variant
+      cards_layout_options:
+        background_color: "#0b1026"
+        color: "#ffffff"
   - i18n:
       reconfigure_material: true
       reconfigure_search: true
@@ -131,10 +141,10 @@ plugins:
             Artist API Map: Mapa da API para Artistas
             Rendering: Renderização
             Outputs: Outputs
-            Advanced API: API Avançada
+            Advanced Stable API: API Advanced Stable
             Experimental API: API Experimental
-            Deprecated API: API Deprecated
-            Engine-facing Public API: API Pública Engine-facing
+            Removed 1.x API: API 1.x Removida
+            Internal Boundary: Fronteira Internal
             Advanced Projects: Projetos Avançados
             Time and Simulation: Tempo e Simulação
             Assets: Assets
@@ -152,6 +162,8 @@ plugins:
             Qualification Tools: Ferramentas de Qualificação
             Maintainer: Manutenção
             Citation: Citação
+            Research Software and JOSS Readiness: Software de Pesquisa e Prontidão JOSS
+            Topics: Tópicos
 
 markdown_extensions:
   - abbr
@@ -167,7 +179,11 @@ markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.inlinehilite
   - pymdownx.keys
   - pymdownx.tasklist:
@@ -182,10 +198,11 @@ markdown_extensions:
 extra:
   generator: false
   status:
-    stable: Stable artist-facing API
-    advanced: Advanced public API
+    stable: Stable API
+    advanced: Advanced Stable API
     experimental: Experimental public API
-    engine: Engine-facing public API
+    callback: Processing callback surface
+    internal: Internal implementation or migration boundary
     qualification: Qualification or release evidence
   social:
     - icon: fontawesome/brands/github
@@ -231,10 +248,10 @@ nav:
       - Helper Functions: api/helper-functions.md
       - Rendering: api/rendering.md
       - Outputs: api/outputs.md
-      - Advanced API: api/advanced.md
+      - Advanced Stable API: api/advanced.md
       - Experimental API: api/experimental.md
-      - Deprecated API: api/deprecated.md
-      - Engine-facing Public API: api/engine-facing.md
+      - Removed 1.x API: api/deprecated.md
+      - Internal Boundary: api/engine-facing.md
       - Generated Javadocs: api/javadocs.md
   - Examples:
       - Learning Examples:
@@ -261,6 +278,8 @@ nav:
           - Version 1.5.0: release-notes/1.5.0.md
       - Known Issues: known-issues.md
       - Roadmap: roadmap.md
+      - Research Software and JOSS Readiness: research-software.md
+      - Topics: tags.md
       - Citation: citation.md
       - Author: author.md
       - License: license.md

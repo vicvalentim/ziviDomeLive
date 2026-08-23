@@ -7,11 +7,8 @@ status: qualification
 
 `CalibrationTool` é o **instrumento visual corrente de qualificação** do ziviDomeLive. Não é um exemplo de aprendizagem e não substitui o protocolo histórico da 1.5. Use-o para inspecionar orientação esférica, mapeamento das projeções, foco, cor, controles de calibração e comportamento dos outputs no sistema real de destino.
 
-<div class="zd-image-placeholder" markdown>
-**PLACEHOLDER DE IMAGEM — CalibrationTool da release corrente**  
-Captura final: composição da Cena 1 e da Cena 2 do `CalibrationTool` instalado, com ViewType/estado de calibração visível.  
-Asset final sugerido: `docs/img/calibration-tool-overview.png`
-</div>
+!!! warning "A captura deve ser evidência"
+    A imagem final desta página deve vir do pacote 2.0 instalado e qualificado, registrando cena ativa, `ViewType`, resolução e estado de calibração. Mockup editorial não vale como evidência de qualificação.
 
 ## Cena 1 — Cube Focus and Color
 

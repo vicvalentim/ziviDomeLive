@@ -7,11 +7,8 @@ status: qualification
 
 `CalibrationTool` is the **current visual qualification instrument** for ziviDomeLive. It is not a learning example and it is not a substitute for the historical 1.5 protocol. Use it to inspect spherical orientation, projection mapping, focus, color, calibration controls and output behavior on the actual target system.
 
-<div class="zd-image-placeholder" markdown>
-**IMAGE PLACEHOLDER — CalibrationTool current release**  
-Final capture: compose Scene 1 and Scene 2 from the installed `CalibrationTool`, with the active ViewType/calibration state visible.  
-Suggested final asset: `docs/img/calibration-tool-overview.png`
-</div>
+!!! warning "Capture must be evidence"
+    A final image for this page must be captured from the installed, qualified 2.0 package and record the active scene, `ViewType`, resolution and calibration state. No editorial mockup is accepted as qualification evidence.
 
 ## Scene 1 — Cube Focus and Color
 
