@@ -34,7 +34,7 @@ Build real-time **fulldome, spherical and immersive visual workflows** from one 
 
     Conventional perspective rendering for the Processing window and standard visual outputs.
 
-- :material-fisheye: **Domemaster**
+- :material-panorama-fisheye: **Domemaster**
 
     Circular fisheye representation for fulldome projection and dome calibration.
 

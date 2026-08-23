@@ -34,7 +34,7 @@ Construa fluxos visuais **fulldome, esféricos e imersivos em tempo real** a par
 
     Renderização em perspectiva para a janela do Processing e outputs visuais convencionais.
 
-- :material-fisheye: **Domemaster**
+- :material-panorama-fisheye: **Domemaster**
 
     Representação fisheye circular para projeção fulldome e calibração do domo.
 
