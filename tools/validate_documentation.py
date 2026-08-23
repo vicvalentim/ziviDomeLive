@@ -509,7 +509,7 @@ def check_editorial_system(root,c):
     if not css.exists(): c.error('Material editorial stylesheet missing')
     for token in [
         'pymdownx.emoji', 'pymdownx.superfences', 'custom_fences',
-        'name: mermaid', 'material-editorial.css', '- tags:', '- social:',
+        'name: mermaid', 'material-editorial.css', 'splash-sphere.js', '- tags:', '- social:',
         'callback:', 'internal:', 'Advanced Stable API', 'Removed 1.x API',
         'Internal Boundary', 'Research Software and JOSS Readiness',
     ]:
@@ -554,6 +554,25 @@ def check_editorial_system(root,c):
     # Core surfaces should exercise the semantic components intentionally.
     en_home=read(root/'docs/en/index.md')
     if 'grid cards' not in en_home or 'md-button' not in en_home: c.error('homepage is missing Material card/button composition')
+    pt_home=read(root/'docs/pt/index.md')
+    splash_script=read(root/'docs/assets/js/splash-sphere.js')
+    for rel,home in [('docs/en/index.md',en_home),('docs/pt/index.md',pt_home)]:
+        for token in ('data-zd-splash', 'data-zd-splash-canvas'):
+            if token not in home: c.error(f'homepage splash animation hook missing from {rel}: {token}')
+        if 'splash.jpg' in home or 'hero-overview.png' in home:
+            c.error(f'homepage still uses an opaque splash/hero image: {rel}')
+    for token in (
+            'const SPHERE_RADIUS = 120', 'const ORBIT_RADIUS = 160',
+            'const RINGS = 16', 'const SEGMENTS = 32', 'const CUBE_COUNT = 13',
+            'const STATIC_FRAME_TIME = 1800',
+            'time * 0.02 * DEG_TO_RAD', 'time * 0.015 * DEG_TO_RAD',
+            'time * 0.01 * DEG_TO_RAD', '0.0008 + (Math.random() - 0.5) * 0.0004',
+            'IntersectionObserver', 'ResizeObserver', 'prefers-reduced-motion',
+            'visibilitychange', 'getContext("2d", { alpha: true })',
+            '--zd-splash-ring-start', '--zd-splash-ring-end', '--zd-splash-cube'):
+        if token not in splash_script: c.error(f'homepage splash fidelity/runtime guard missing: {token}')
+    for forbidden in ('drawBackground()', 'fillText("ziviDomeLive"'):
+        if forbidden in splash_script: c.error(f'homepage splash must remain transparent and untitled: {forbidden}')
     outputs=read(root/'docs/en/usage/external-integration.md')
     if '=== "NDI"' not in outputs: c.error('external outputs page is missing backend content tabs')
     requirements=read(root/'requirements-docs.txt')

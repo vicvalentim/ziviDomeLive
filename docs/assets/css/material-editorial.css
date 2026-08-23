@@ -438,11 +438,47 @@ body {
   line-height: 1.72;
 }
 
-.zd-hero__image img {
+.zd-hero__image {
+  min-width: 0;
+}
+
+.zd-hero__image > img {
   width: 100%;
   border: 1px solid var(--zd-border-strong);
   border-radius: var(--zd-radius-md);
   box-shadow: 0 1.2rem 3rem rgba(0, 49, 18, .20);
+}
+
+.zd-splash-stage {
+  --zd-splash-ring-start: #007827;
+  --zd-splash-ring-end: #059d2c;
+  --zd-splash-cube: #007844;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  aspect-ratio: 566 / 358;
+  overflow: hidden;
+  background: transparent;
+  contain: layout paint;
+}
+
+.zd-splash-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .22s ease;
+}
+
+.zd-splash-stage[data-zd-splash-ready="true"] .zd-splash-canvas {
+  opacity: 1;
+}
+
+[data-md-color-scheme="slate"] .zd-splash-stage {
+  --zd-splash-ring-start: #8ff080;
+  --zd-splash-ring-end: #4cd837;
+  --zd-splash-cube: #6fe4bd;
 }
 
 /* Buttons and actions */

@@ -213,6 +213,7 @@ extra_css:
   - assets/css/material-editorial.css
 extra_javascript:
   - assets/js/extra.js
+  - assets/js/splash-sphere.js
 
 nav:
   - Home: index.md
