@@ -13,7 +13,7 @@ A scene may receive services, run setup, update/render, and later receive `dispo
 
 ## Graphics targets
 
-Output-target recreation is requested through `resetGraphics(int)` and applied at the appropriate render/draw boundary. Code using public renderer/target implementations directly must respect target invalidation/recreation.
+Output-target recreation is requested through `resetGraphics(int)` and applied at the appropriate render/draw boundary. Renderer/target implementation remains internal, so sketches cannot retain invalidated render resources.
 
 ## Ownership rule
 

@@ -2,11 +2,8 @@
 
 These examples show larger creative-project patterns while preserving the same Scene and render-thread contracts introduced by the foundation examples.
 
-<div class="zd-image-placeholder" markdown>
-**IMAGE PLACEHOLDER — Advanced learning examples**
-Final capture: montage of `InfiniteBackground`, `FulldomePBR` and `SolarSystem` from the installed library.
-Suggested final asset: `docs/img/learning-examples-advanced.png`
-</div>
+!!! note "Visual evidence policy"
+    Final example captures belong to installed-package qualification. Until that evidence exists, this page describes the executable sketches without publishing a mock screenshot.
 
 ## InfiniteBackground
 

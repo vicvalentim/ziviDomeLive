@@ -1,50 +1,80 @@
 ---
-title: "Scene Services"
-icon: material/api
+title: Scene Services
+icon: material/layers-triple-outline
 status: advanced
+tags:
+  - API
+  - Lifecycle
+  - Concorrência
 ---
+
 # Scene Services
 
-## Eu realmente preciso disso?
-
-Para uma cena simples, **não**. Implemente `Scene`, mantenha estado em `update()`, desenhe em `sceneRender()` e use a fachada principal `ziviDomeLive`.
-
-Use `SceneServices` quando o projeto precisar de recursos associados ao lifecycle que devam ser criados/configurados com uma ativação de cena e liberados com ela.
-
-## Adoção progressiva
-
-Uma cena que usa services pode receber os serviços da ativação corrente por:
+`SceneServices` é um conjunto de capacidades **Advanced Stable** pertencente a uma ativação. `ziviDomeLive` o cria, avança e fecha, fornecendo-o antes de cada `setupScene()`.
 
 ```java
-public void configure(SceneServices services) {
-  // Retenha apenas as referências de serviço realmente necessárias.
+class ServiceScene implements Scene {
+  SceneServices services;
+
+  public void configure(SceneServices services) {
+    this.services = services;
+  }
+
+  public void sceneRender(PGraphicsOpenGL pg) {
+    services.camera().apply(pg);
+    // desenho
+  }
 }
 ```
 
-Os acessores exatos pertencem aos Javadocs gerados. Não torne Scene Services dependência de exemplos que não precisam deles.
+## Mapa de serviços
 
-## Necessidades típicas
+| Accessor | Foco | A cena controla | O runtime controla |
+|---|---|---|---|
+| `applet()` | Host Processing | Uso comum do applet na thread correta | Lifetime do applet |
+| `frameClock()` | Tempo de frame | Delta máximo aceito | Tick e índice monotônico |
+| `timeline()` | Simulação | Rate, position, fixed step, catch-up, pause | Nenhuma política de step da cena |
+| `tasks()` | CPU/I/O em background | Submissão nomeada limitada, callbacks de resultado/erro | Executor compartilhado, cancelamento, publicação na fronteira do frame |
+| `assets()` | Imagens/shaders/shapes | Requests e shapes retidos | Criação na render thread e shutdown do cache |
+| `actions()` | Input nomeado | Bind, trigger, unregister | Ordem de dispatch e limpeza da ativação |
+| `camera()` | Navegação scene-space | Pose, input, tracking | Update uma vez por frame e reset de âncoras |
+| `environment()` | Overrides de background | Imagem, visibilidade, intensidade, yaw | Restauração condicional ao desativar |
+| `ports()` | Adapters opcionais | Conectar ports bounded de input/output | Limite de drain, telemetria e fechamento |
+| `requestReload()` | Lifecycle | Solicitar reload | Executar em fronteira segura de frame |
 
-### Frame/tempo
+## Restrições de ownership
 
-Use clock/timeline quando simulação ou agendamento exigir fonte temporal explícita em lugar de contadores ad hoc.
+Cenas não podem construir nem fechar serviços fornecidos pelo runtime. `parent`, `scene`, filas raw de render, dispose hooks arbitrários e métodos `close()` dos serviços estão ausentes intencionalmente.
 
-### Assets
+Somente `SceneInputPort` e `SceneOutputPort` estendem `AutoCloseable`; isso é SPI para providers de adapter. `ScenePorts` ainda retém o ownership da ativação e fecha adapters conectados.
 
-Use recursos de assets associados ao lifecycle quando ownership/carregamento deve acompanhar a ativação da cena, e não estado global do sketch.
+## Contrato de task em background
 
-### Trabalho em background e render thread
+`SceneTaskGroup.submitIfIdle(key, ...)` é limitado e baseado em callbacks. Não retorna `Future`, não expõe executor e não aceita trabalho ilimitado.
 
-Tasks em background não podem assumir ownership do contexto OpenGL do Processing. Trabalho que toca estado gráfico controlado pelo renderer deve retornar pelo mecanismo de render thread documentado pela API corrente.
+```java
+services.tasks().submitIfIdle(
+    "mesh",
+    () -> buildCpuOnlyMeshData(),
+    data -> publishOnFrameBoundary(data),
+    error -> report(error));
+```
 
-### Actions e coordenação
+- callable/runnable não pode chamar Processing/OpenGL;
+- consumers de resultado e erro rodam somente para a ativação que submeteu;
+- trabalho antigo de ativação descartada não publica numa ativação posterior da mesma instância `Scene`;
+- `getInFlightCount()` e `getMaxInFlight()` expõem telemetria bounded.
 
-Use actions/queues quando o projeto se beneficiar de coordenação explícita em lugar de mutação direta entre threads.
+## Contrato de ports
 
-### Câmera e Environment
+`connectInput(port, consumer)` recebe dados de thread externa numa fila bounded da ativação. O runtime entrega quantidade limitada numa fronteira de frame. `getPendingInputCount()` e `getDroppedInputCount()` tornam backpressure observável.
 
-Camera tracking e Environment podem acompanhar o lifecycle da cena quando necessário. Os conceitos continuam distintos: câmera transforma o espaço da cena; orientação esférica calibra a representação esférica.
+`connectOutput(port)` retém o provider e seu contrato não bloqueante `offer(value)`. Adapters MIDI, OSC ou device reais continuam opcionais e fora do core.
 
-## Cleanup
+## Restauração de Environment
 
-Uma ativação pode terminar por troca, limpeza, substituição ou liberação da fachada. Libere recursos da cena em `dispose()` e não retenha targets do renderer além do lifetime documentado.
+O serviço restaura somente valores que alterou e apenas enquanto o estado da facade ainda corresponde ao valor aplicado. Limpeza antiga nunca sobrescreve um owner posterior.
+
+## Reload
+
+`requestReload()` adia o pedido. A próxima fronteira segura executa stop-work → `dispose()` → liberação dos serviços → serviços novos → `configure()` → `setupScene()`.

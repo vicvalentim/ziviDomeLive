@@ -18,7 +18,7 @@ mkdocs build --strict
 - Do not call `beginDraw()` or `endDraw()` inside a `Scene`.
 - Preserve deferred output-resolution reset.
 - Use `LogManager` for library logging.
-- Use `ThreadManager` for shared background tasks.
+- Use activation-scoped `SceneServices.tasks()` for scene background work; do not expose or create another executor.
 - Keep Syphon/Spout on the `PGraphicsOpenGL` path.
 - Do not reintroduce the removed `PGraphicsOpenGL[]` spherical capture path.
 
@@ -27,7 +27,7 @@ GPU or output changes require the [CalibrationTool](qualification/calibration-to
 `qualificationTests` is the canonical automated test run. Its summary, HTML,
 and JUnit XML evidence is written under `build/reports/qualification/` and
 `build/test-results/qualification/`. You can diagnose one class with
-`./gradlew qualificationTests --tests '*CameraManagerTest'`, but release
+`./gradlew qualificationTests --tests '*OrbitCameraTest'`, but release
 acceptance requires the complete unfiltered suite. Test sources stay in Git and
 are excluded from Processing packages and sketchbook deployment.
 

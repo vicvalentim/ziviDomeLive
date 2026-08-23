@@ -47,7 +47,7 @@ Each orientation row also includes an editable number box. Numeric entry and dir
 - **Enable NDI/Syphon/Spout** changes publication state.
 - **NDI/Syphon/Spout View** changes only that output route in `FULL`.
 
-Publication toggles own backend state changes. Scene `controlEvent()` receives the resulting ControlP5 event once; it must not toggle the same backend again unless the scene intentionally wants a second state transition.
+Publication toggles own backend state changes. The facade receives the ControlP5 callback and routes it to the internal panel controller; `Scene` deliberately has no `controlEvent()` in 2.0. Use facade getters/setters or `SceneActionMap` for application behavior.
 
 ## Keyboard Shortcuts
 

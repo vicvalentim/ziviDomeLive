@@ -18,7 +18,7 @@ mkdocs build --strict
 - Não chame `beginDraw()` nem `endDraw()` dentro de uma `Scene`.
 - Preserve o reset adiado da resolução de output.
 - Use `LogManager` para logging da biblioteca.
-- Use `ThreadManager` para tarefas compartilhadas em background.
+- Use `SceneServices.tasks()` pertencente à ativação para trabalho da cena em background; não exponha nem crie outro executor.
 - Mantenha Syphon/Spout no caminho `PGraphicsOpenGL`.
 - Não reintroduza o caminho removido de captura esférica `PGraphicsOpenGL[]`.
 
@@ -27,7 +27,7 @@ Mudanças de GPU ou output exigem o protocolo visual [CalibrationTool](qualifica
 `qualificationTests` é a execução automatizada canônica. O resumo, o relatório
 HTML e os resultados JUnit XML ficam em `build/reports/qualification/` e
 `build/test-results/qualification/`. Para investigar uma classe, use
-`./gradlew qualificationTests --tests '*CameraManagerTest'`, mas a aceitação de
+`./gradlew qualificationTests --tests '*OrbitCameraTest'`, mas a aceitação de
 release exige a suíte completa sem filtros. Os fontes de teste permanecem no
 Git e são excluídos dos pacotes Processing e do deploy no sketchbook.
 

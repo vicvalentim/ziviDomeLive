@@ -2,11 +2,8 @@
 
 These examples form the first learning path for the library. Qualification tools are documented separately because their purpose is to test a release or hardware configuration rather than teach the basic project model.
 
-<div class="zd-image-placeholder" markdown>
-**IMAGE PLACEHOLDER — Foundation learning examples**
-Final capture: a compact montage of `EmptyProject`, `Basic` and `SphereParticle` running from the installed library.
-Suggested final asset: `docs/img/learning-examples-foundations.png`
-</div>
+!!! note "Visual evidence policy"
+    Screenshots used as release evidence must come from the installed, qualified package. This learning page uses source behavior as its authority and does not substitute an editorial mockup for a real capture.
 
 ## EmptyProject
 
@@ -31,7 +28,7 @@ Use Left/Right arrows to switch between the rotating pillars and the static six-
 
 ## SphereParticle
 
-A larger scene example that runs at most one simulation task through the shared `ThreadManager`, cancels scene-owned work during disposal, and keeps graphics calls on the render thread. Click or drag to add particles.
+A larger scene example that runs bounded simulation work through `SceneServices.tasks()`, isolates results to the current activation, and keeps graphics calls on the render thread. Click or drag to add particles.
 
 All learning examples preserve `sceneRender(PGraphicsOpenGL)` and never call `ziviDome.draw()` manually.
 

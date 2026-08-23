@@ -1,13 +1,12 @@
 # Event Handling
 
-The `ziviDomeLive` constructor registers `keyEvent` and `mouseEvent` Processing hooks. The built-in ControlP5 panel registers one listener that forwards relevant events to the active scene.
+The `ziviDomeLive` constructor registers Processing `keyEvent` and `mouseEvent` hooks. The built-in ControlP5 panel remains facade-owned and does not expose its events through `Scene`.
 
 Implement callbacks on the scene:
 
 ```java
 public void keyEvent(processing.event.KeyEvent event) {}
 public void mouseEvent(processing.event.MouseEvent event) {}
-public void controlEvent(controlP5.ControlEvent event) {}
 ```
 
 Do not add main-sketch forwarding such as `ziviDome.keyEvent(event)`. That delivers the same event twice.
@@ -22,8 +21,8 @@ services.actions().trigger("reset-camera");
 ```
 
 The runtime dispatches action bindings before the raw scene callback. The raw
-callback still runs for compatibility, so avoid performing the same operation in
-both paths. Bindings are cleared automatically when the scene leaves ownership.
+callback still runs, so avoid performing the same operation in both paths.
+Bindings are cleared automatically when the scene leaves ownership.
 
 ## Global Shortcuts
 
@@ -31,7 +30,7 @@ both paths. Bindings are cleared automatically when the scene leaves ownership.
 - `m`: cycle the configured preview view
 - Left/Right arrows: previous/next scene
 
-Global shortcuts run before the event reaches the scene.
+Global shortcuts are processed by the facade without requiring sketch forwarding.
 
 ## Camera Input
 

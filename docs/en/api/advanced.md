@@ -1,22 +1,41 @@
 ---
-title: "Advanced Public API"
-icon: material/api
+title: Advanced Stable API
+icon: material/layers-triple-outline
 status: advanced
+tags:
+  - API
 ---
-# Advanced Public API
 
-Advanced public API is **supported as callable public Java surface**, but it is not required for a first ziviDomeLive scene.
+# Advanced Stable API
 
-## Scene services
+Advanced Stable is supported public surface with stricter lifecycle or conceptual prerequisites. It is not an invitation to bypass the facade.
 
-`SceneServices` provides lifecycle-aware services to scenes that opt into them through `Scene.configure(SceneServices)`. Simple scenes can ignore it completely.
+## Activation services
 
-Related public facilities include frame/time services such as `FrameClock` and `SimulationTimeline`, plus service-backed project facilities documented in the Scene Services guide.
+| Group | Types | Main guarantee |
+|---|---|---|
+| Time | `FrameClock`, `SimulationTimeline` | `double` time, bounded deltas and fixed-step catch-up telemetry |
+| Work | `SceneTaskGroup` | Bounded keyed background work on a shared executor |
+| Assets | `SceneAssets` | Render-thread Processing asset creation and activation cleanup |
+| Input | `SceneActionMap` | Named bindings compatible with raw Scene callbacks |
+| Camera | `SceneCameraService` | One scene-space orbit camera and target tracking |
+| Environment | `SceneEnvironmentService` | Activation-owned overrides with safe restoration |
+| Integration | `ScenePorts`, `SceneInputPort`, `SceneOutputPort` | Bounded protocol-agnostic adapter SPI |
 
-## Camera and orientation helpers
+All are reached through `SceneServices`; none of the concrete service objects has a public constructor or scene-facing `close()`.
 
-`OrbitCamera` is an optional scene-space camera helper. `SphericalOrientation` represents spherical orientation/calibration state. Keep those concepts separate: moving the scene camera is not equivalent to rotating the spherical representation.
+## Output control
 
-## Public renderer implementations
+`OutputManager` is a public interface returned by the facade. Its typed `OutputType` and `OutputState` surface controls intent and diagnostics, while producer operations remain internal. See [Outputs API](outputs.md).
 
-Renderer classes such as the Standard, cubemap and projection renderers are exposed for compatibility/advanced integration. Direct use makes lifecycle and graphics-target ownership the caller's concern. Prefer the `ziviDomeLive` facade unless direct renderer control is genuinely required.
+## Math and navigation
+
+- `Quaternion` is immutable and exposes normalized composition, spherical interpolation and matrix publication;
+- `SphericalOrientation` keeps cyclic pitch/yaw/roll control values and one normalized attitude;
+- `OrbitCamera` performs immediate direct manipulation and optionally smooth programmatic movement.
+
+Scene-space camera motion and dome calibration are independent: changing orbit target/distance does not redefine pitch/yaw/roll or domemaster FOV.
+
+## Compatibility promise
+
+Advanced Stable types are included in the exact 2.0 API snapshot. Their lifecycle restrictions, enum order and absence of mutable public fields are tested. New engine implementation types will not be added to this level merely because a caller requests raw access.

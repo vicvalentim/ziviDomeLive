@@ -2,11 +2,8 @@
 
 Estes exemplos apresentam padrões de projetos criativos maiores, preservando os mesmos contratos de Scene e render thread introduzidos pelos exemplos fundamentais.
 
-<div class="zd-image-placeholder" markdown>
-**PLACEHOLDER DE IMAGEM — Exemplos avançados de aprendizagem**
-Captura final: montagem de `InfiniteBackground`, `FulldomePBR` e `SolarSystem` a partir da biblioteca instalada.
-Asset final sugerido: `docs/img/learning-examples-advanced.png`
-</div>
+!!! note "Política de evidência visual"
+    Capturas finais dos exemplos pertencem à qualificação do pacote instalado. Até existir essa evidência, esta página descreve os sketches executáveis sem publicar screenshot simulada.
 
 ## InfiniteBackground
 

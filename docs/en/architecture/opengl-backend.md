@@ -9,7 +9,7 @@ The 2.0 spherical renderer uses an OpenGL cubemap target and samplerCube-based p
 
 ## Boundary with Processing
 
-`ProcessingGlAdapter` centralizes the Processing/OpenGL boundary used by the renderer. `CubemapTarget` encapsulates the cubemap/FBO/depth resource role. These are engine-facing public types, not artist prerequisites.
+An internal Processing/OpenGL adapter concentrates graphics allocation, framebuffer operations, cubemap binding, readback and capability discovery. An internal cubemap target owns texture/FBO/depth resources. These implementation types are described here for maintenance and are not public API.
 
 ## State and ownership
 

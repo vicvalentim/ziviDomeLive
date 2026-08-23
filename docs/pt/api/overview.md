@@ -1,42 +1,72 @@
 ---
-title: "Visão Geral da API"
+title: Visão Geral da API
 icon: material/api
+status: stable
+tags:
+  - API
+  - Arquitetura
 ---
+
 # Visão Geral da API
 
-A superfície Java pública é documentada deliberadamente por **público e papel de estabilidade**, não apenas pelo modificador `public`.
+ziviDomeLive 2.0 possui uma entrada criativa deliberadamente pequena e libera mais controle de forma progressiva. Os níveis abaixo fazem parte do contrato documental e são verificados contra a superfície Java por testes automatizados.
 
-## Artist-facing stable
+```mermaid
+flowchart TB
+  S[Stable<br/>sketches comuns] --> A[Advanced Stable<br/>projetos com lifecycle]
+  A --> E[Experimental<br/>medição e qualificação]
+  P[Callbacks Processing<br/>pontos de entrada do framework] -. invoca .-> S
+  I[Internal<br/>renderer · GL · UI · workers] -. implementa .-> S
+  I -. implementa .-> A
+```
 
-Comece aqui em projetos Processing comuns:
+## Nível 1 — Stable
 
-- `ziviDomeLive`
-- `Scene`
-- `SceneManager`
-- `RenderMode`
-- `ViewType`
-- `OutputManager`
+API recomendada para sketches Processing comuns:
 
-Esses tipos definem o fluxo normal de cena, renderização, calibração, preview e output.
+| Tipo | Papel |
+|---|---|
+| `ziviDomeLive` | Facade do runtime, ownership de cenas, configuração e integração Processing |
+| `ziviDomeLive.StandardOutputAspectMode` | Política de aspecto do output Standard |
+| `Scene` | Contrato de extensão; apenas `sceneRender(PGraphicsOpenGL)` é obrigatório |
+| `SceneManager` | Registro e troca de cenas por identidade |
+| `RenderMode` | Modo de trabalho corrente do runtime |
+| `ViewType` | Representação roteada a um destino |
+| `LogMode` | Política de logging debug/release |
 
-## Advanced public
+Comece e permaneça aqui até uma necessidade concreta indicar o próximo nível.
 
-Recursos públicos para projetos que exigem mais controle de lifecycle, tempo, tasks, câmera ou renderers incluem `SceneServices`, `FrameClock`, `SimulationTimeline`, `OrbitCamera`, `SphericalOrientation` e implementações públicas de renderers. Permanecem API pública chamável, mas não são pré-requisitos de uma cena simples.
+## Nível 2 — Advanced Stable
 
-## Experimental public
+Contratos públicos suportados para projetos lifecycle-aware ou tecnicamente exigentes:
 
-A instrumentação de performance é experimental e orientada a qualificação. Trate os Javadocs gerados e a página Performance Profiling como contrato das métricas efetivamente implementadas. CPU wall time e GPU elapsed time são medidas diferentes.
+- serviços de ativação: `SceneServices`, `FrameClock`, `SimulationTimeline`, `SceneTaskGroup`, `SceneAssets`, `SceneActionMap`, `SceneCameraService`, `SceneEnvironmentService`, `ScenePorts`, `SceneInputPort`, `SceneOutputPort`;
+- controle de output: `OutputManager`, `OutputType`, `OutputState`;
+- matemática/navegação reutilizável: `Quaternion`, `SphericalOrientation`, `OrbitCamera`.
 
-## Engine-facing public
+Advanced stable significa chamável e suportado, não pertencente à cena. Serviços fornecidos pelo runtime não podem ser construídos nem fechados pelo sketch.
 
-Alguns tipos são públicos porque componentes do renderer/output precisam de uma fronteira chamável. Exemplos: `FrameViews`, `CubemapTarget` e `ProcessingGlAdapter`. Eles são documentados para contribuidores e integrações avançadas, não como percurso inicial do artista.
+## Nível 3 — Experimental
 
-## Superfície deprecated de compatibilidade
+A camada de reporting/qualificação contém `PerformanceMode`, `PerformanceMetric`, `PerformanceSnapshot`, `MetricStatistics`, `GraphicsCapabilities`, `GpuTimerPolicy`, `GpuTimerBackend` e `GpuTimerArchitecture`.
 
-Métodos deprecated continuam documentados enquanto existirem para permitir migração de sketches. Novos exemplos não devem usar convenience methods deprecated quando houver rota corrente.
+Métricas experimentais são evidência útil, mas seu vocabulário pode evoluir mais rapidamente que a API criativa. Tempo de parede na CPU e tempo decorrido na GPU não são intercambiáveis.
 
-## Arquitetura interna não é API pública
+## Superfície de callbacks Processing
 
-Tipos package-private da política/pipeline de renderização podem ser explicados no Developer Guide sem serem apresentados como API chamável.
+`pre`, `draw`, `post`, `keyEvent`, `mouseEvent`, `pause`, `resume`, `stop`, `dispose` e `controlEvent` são métodos públicos da facade porque Processing ou ControlP5 os invoca. São pontos de integração, não uma segunda API que o sketch deva encaminhar manualmente.
 
-Para assinaturas exatas, use sempre os Javadocs gerados. Se prosa e Javadocs divergirem, implementação/Javadocs prevalecem e a prosa deve ser corrigida.
+`Scene` deliberadamente não possui `controlEvent`. O painel ControlP5 pertence ao runtime; cenas recebem callbacks de teclado/mouse do Processing ou usam `SceneActionMap`.
+
+## Fronteira Internal
+
+Implementações de renderer, targets de cubemap, containers finais de frame, adapters Processing/GL, managers de UI, filas, executores e produtores de output são implementação package-private. Pastas físicas `_internal/` os categorizam para manutenção sem alterar seu modelo de colaboração package-private.
+
+!!! warning "Não deduza pela visibilidade"
+    Um nome de classe no texto de arquitetura não autoriza sua instanciação. Somente os tipos listados em Stable, Advanced Stable e Experimental são API pública 2.0.
+
+## Nenhuma superfície deprecated em 2.0
+
+O contrato final 2.0 não contém camada de compatibilidade `@Deprecated`. Entradas antigas de 1.x aparecem em [API 1.x Removida](deprecated.md) apenas para migração e preservação histórica.
+
+Para métodos, construtores e retornos exatos, consulte os [Javadocs gerados](javadocs.md). `PublicApiCompatibilityTest` é o freeze executável.

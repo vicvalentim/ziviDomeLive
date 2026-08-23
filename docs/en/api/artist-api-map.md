@@ -1,60 +1,83 @@
 ---
 title: Artist API Map
-icon: material/api
+icon: material/map-outline
 status: stable
+tags:
+  - API
+  - Creative coding
 ---
 
 # Artist API Map
 
-This map identifies the public surface intended for ordinary Processing sketches. Use it to decide **where to start**; use generated Javadocs for exact signatures, overloads and lifecycle notes.
+Choose the shallowest level that completely solves the work. A larger project can adopt one advanced service without adopting all of them.
 
 <div class="grid cards" markdown>
 
-- :material-application-braces-outline: **`ziviDomeLive`**
+- :material-application-braces-outline: **Runtime**
 
-    Main runtime facade associated with the Processing sketch.
+    Construct `ziviDomeLive`, call `setup()`, then configure scenes and representations.
 
-- :material-palette-outline: **`Scene`**
+- :material-palette-outline: **Scene**
 
-    Defines state update and drawing behavior through `update()` and `sceneRender()`.
+    Mutate in `update()` and draw in `sceneRender()`.
 
-- :material-view-dashboard-outline: **`RenderMode` + `ViewType`**
+- :material-view-dashboard-outline: **Representation**
 
-    Separate current working mode from per-destination representation.
+    Use `RenderMode` for the working mode and `ViewType` for destination routing.
 
-- :material-export: **`OutputManager`**
+- :material-layers-triple-outline: **Optional depth**
 
-    Routes final views to optional external outputs and exposes state/failure information.
+    Adopt `SceneServices` only for time, tasks, assets, actions, camera, environment or ports.
 
 </div>
 
-## Runtime and scenes
+## The normal path
 
-| Type | Role |
+```mermaid
+flowchart LR
+  A[PApplet] --> Z[ziviDomeLive]
+  Z --> S[Scene]
+  S --> U[update once]
+  S --> R[sceneRender one or more times]
+  Z --> M[RenderMode]
+  Z --> V[ViewType routes]
+```
+
+## Stable controls by intention
+
+| Intention | Start with |
 |---|---|
-| `ziviDomeLive` | Main runtime facade used by a Processing sketch. |
-| `Scene` | Scene lifecycle, update and drawing contract. |
-| `SceneManager` | Registration and scene switching. |
+| Activate one scene | `setScene(scene)` |
+| Register several scenes | `registerScene(scene)` and `getSceneManager()` |
+| Choose the runtime mode | `setRenderMode(mode)` |
+| Choose the preview representation | `setCurrentView(view)` |
+| Calibrate spherical orientation | `setPitch`, `setYaw`, `setRoll`, `resetOrientation` |
+| Fit a domemaster | `setFov`, `setFishSize` |
+| Change output resolution | `resetGraphics(resolution)`; allocation is deferred |
+| Configure the scene camera | `getSceneCamera()` or `SceneServices.camera()` |
+| Configure optional outputs | `getOutputManager()` |
 
-The normal application path is `ziviDomeLive` → `Scene`, with `SceneManager` used when a sketch contains more than one scene.
+## When to enter Advanced Stable
 
-## Common facade controls
+| Need | Service/type |
+|---|---|
+| Monotonic frame timing | `FrameClock` |
+| Bounded fixed-step simulation | `SimulationTimeline` |
+| Background calculation without OpenGL | `SceneTaskGroup` |
+| Images, shaders and retained shapes | `SceneAssets` |
+| Named input actions | `SceneActionMap` |
+| Orbit input or tracked target | `SceneCameraService` / `OrbitCamera` |
+| Activation-owned environment | `SceneEnvironmentService` |
+| Optional MIDI/OSC/device adapter | `ScenePorts` SPI |
 
-<div class="grid cards" markdown>
+!!! info "The public facade remains authoritative"
+    Prefer facade-owned scene registration. The facade prepares fresh services before every activation setup and releases them after scene disposal.
 
-- **Scene** — `setScene(...)`, `registerScene(...)`, `setSceneManager(...)`, `getSceneManager()`
-- **Render mode** — `setRenderMode(...)`, `getRenderMode()`, `setCurrentView(...)`
-- **Spherical calibration** — `setFov(...)`, `setFishSize(...)`, `setPitch(...)`, `setYaw(...)`, `setRoll(...)`, `resetOrientation()`
-- **Preview/output** — `setShowPreview(...)`, `setStandardOutputAspectMode(...)`, `getOutputManager()`, `resetGraphics(int)`, `getOutputResolution()`
-- **Scene camera** — `getSceneCamera()`, `setSceneCameraInputEnabled(...)`
-- **Lifecycle** — `pause()`, `resume()`, `dispose()`
-
-</div>
-
-!!! info "Java public ≠ artist-facing"
-    `SceneServices`, timing/assets/task services, public renderer implementations, performance snapshots, `FrameViews` and low-level OpenGL bridge/target types are documented separately as Advanced, Experimental or Engine-facing API.
+!!! warning "Never call the internal graph"
+    There is no public renderer/GL/output-producer layer in 2.0. Select a final representation; do not construct cubemap targets or call renderer passes.
 
 <div class="zd-actions" markdown>
-[API Overview](overview.md){ .md-button }
-[Generated Javadocs](javadocs.md){ .md-button .md-button--primary }
+[Scene contract](scene-interface.md){ .md-button .md-button--primary }
+[API levels](overview.md){ .md-button }
+[Generated Javadocs](javadocs.md){ .md-button }
 </div>

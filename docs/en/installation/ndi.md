@@ -25,7 +25,7 @@ ziviDomeLive
     -> NDI network
 ```
 
-The public `io.github.vicvalentim:devolay:2.2.0-vic.1` artifact is a
+The public `io.github.vicvalentim:devolay:2.2.0-vic.2` artifact is a
 **separated build**. It includes Devolay classes and desktop JNI binaries, but
 does not include the proprietary `Processing.NDI.Lib.x64.dll`, `libndi.dylib`,
 or `libndi.so.6`. ziviDomeLive intentionally does not use Devolay's integrated
@@ -112,7 +112,7 @@ NDI initialization is lazy and begins only when publication is enabled:
 
 ```java
 OutputManager outputs = ziviDome.getOutputManager();
-outputs.toggleOutput("ndi");
+outputs.setOutputEnabled(OutputManager.OutputType.NDI, true);
 
 println(outputs.getOutputState(OutputManager.OutputType.NDI));
 println(outputs.getOutputFailureReason(OutputManager.OutputType.NDI));
