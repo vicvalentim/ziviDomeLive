@@ -14,6 +14,13 @@ import java.util.function.Supplier;
  * <p>Images, shaders, and shapes are created only on the bound render thread. The default
  * loaders keep borrowed Processing objects and release their Java references at scene
  * disposal.</p>
+ *
+ * <p>Use these synchronous asset operations during {@link Scene#setupScene()} or another known
+ * render-thread callback, not inside background tasks or recurring hot paths.</p>
+ *
+ * <p><strong>API stability:</strong> Advanced Stable.</p>
+ *
+ * @since 2.0.0
  */
 public final class SceneAssets {
 
@@ -30,9 +37,9 @@ public final class SceneAssets {
     }
 
     /**
-     * Loads an image once using a sketch-relative Processing data path.
+     * Loads an image once using a sketch-relative or absolute Processing image path.
      *
-     * @param path Processing image path
+     * @param path non-blank Processing image path, also used as the activation cache key
      * @return loaded image, or null when Processing cannot load it
      */
     public PImage loadImage(String path) {
@@ -52,7 +59,7 @@ public final class SceneAssets {
     /**
      * Loads a fragment shader once.
      *
-     * @param fragmentPath Processing fragment shader path
+     * @param fragmentPath non-blank Processing fragment shader path and cache key
      * @return loaded shader, or null when Processing cannot load it
      */
     public PShader loadShader(String fragmentPath) {
@@ -72,7 +79,7 @@ public final class SceneAssets {
     /**
      * Loads a fragment/vertex shader pair once.
      *
-     * @param key cache key
+     * @param key non-blank activation cache key
      * @param fragmentPath Processing fragment shader path
      * @param vertexPath Processing vertex shader path
      * @return loaded shader, or null when Processing cannot load it
@@ -94,8 +101,8 @@ public final class SceneAssets {
     /**
      * Creates a retained shape once on the render thread.
      *
-     * @param key cache key
-     * @param factory retained shape factory
+     * @param key non-blank activation cache key
+     * @param factory retained shape factory invoked only when the key is absent
      * @return cached or newly created shape
      */
     public PShape getOrCreateShape(String key, Supplier<? extends PShape> factory) {
@@ -107,8 +114,8 @@ public final class SceneAssets {
     /**
      * Stores or replaces one borrowed retained shape.
      *
-     * @param key stable shape key
-     * @param shape retained Processing shape
+     * @param key non-blank activation cache key
+     * @param shape borrowed retained Processing shape
      * @return the supplied shape
      */
     public PShape cacheShape(String key, PShape shape) {
@@ -121,7 +128,7 @@ public final class SceneAssets {
     /**
      * Invalidates retained shapes whose keys start with the supplied prefix.
      *
-     * @param prefix key prefix used to select retained shapes
+     * @param prefix key prefix used to select retained shapes; an empty prefix removes all
      * @return number of removed shapes
      */
     public int removeShapesByPrefix(String prefix) {

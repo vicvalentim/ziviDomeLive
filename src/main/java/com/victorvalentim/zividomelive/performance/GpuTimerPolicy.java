@@ -1,12 +1,18 @@
 package com.victorvalentim.zividomelive.performance;
 
-/** Policy controlling OpenGL GPU measurement backend selection. */
+/**
+ * Policy controlling experimental OpenGL GPU measurement backend selection.
+ *
+ * <p><strong>API stability:</strong> Experimental.</p>
+ *
+ * @since 2.0.0
+ */
 public enum GpuTimerPolicy {
 	/** Uses timestamp pairs only, avoiding ownership of the global elapsed-query target. */
 	SAFE,
 
 	/**
-	 * Legacy public name retained for compatibility.
+	 * Enables the complete capability-driven fallback chain for controlled benchmarks.
 	 *
 	 * <p>Selection is capability-driven: timestamp pairs are preferred, elapsed queries are the
 	 * timer fallback, and the runtime measurement layer may use fence completion when both timer
@@ -24,7 +30,7 @@ public enum GpuTimerPolicy {
 	 * <p>This method selects a candidate only. Runtime qualification is responsible for deciding
 	 * whether the candidate is trustworthy on the active driver/context.</p>
 	 *
-	 * @param architecture normalized host architecture retained for API compatibility and metadata
+	 * @param architecture normalized host architecture recorded as benchmark metadata
 	 * @param timestampCounterBits counter bits reported for {@code GL_TIMESTAMP}
 	 * @param elapsedCounterBits counter bits reported for {@code GL_TIME_ELAPSED}
 	 * @return selected timer candidate, or {@link GpuTimerBackend#NONE}

@@ -4,7 +4,16 @@ import processing.core.PImage;
 
 import java.util.Objects;
 
-/** Scene-scoped Environment configuration that restores the state it replaced. */
+/**
+ * Activation-scoped environment configuration that restores the facade state it replaced.
+ *
+ * <p>Restoration is ownership-safe: a property is restored only if it still contains the value
+ * applied by this activation, so a later owner is not overwritten.</p>
+ *
+ * <p><strong>API stability:</strong> Advanced Stable.</p>
+ *
+ * @since 2.0.0
+ */
 public final class SceneEnvironmentService {
 
     private final ziviDomeLive parent;
@@ -29,7 +38,7 @@ public final class SceneEnvironmentService {
     /**
      * Sets the borrowed equirectangular source for this activation.
      *
-     * @param image borrowed source, or null to clear temporarily
+     * @param image borrowed equirectangular source, or {@code null} to clear temporarily
      */
     public void setEquirectangular(PImage image) {
         ensureOpen();
@@ -64,7 +73,8 @@ public final class SceneEnvironmentService {
     /**
      * Sets the non-negative visual colour multiplier for this activation.
      *
-     * @param intensity visual multiplier
+     * @param intensity visual multiplier; finite negative values are clamped to zero and
+     *                  non-finite values are ignored
      */
     public void setIntensity(float intensity) {
         ensureOpen();
@@ -79,7 +89,7 @@ public final class SceneEnvironmentService {
     /**
      * Sets the source-longitude offset for this activation.
      *
-     * @param yawOffset offset in radians
+     * @param yawOffset offset in radians; non-finite values are ignored
      */
     public void setYawOffset(float yawOffset) {
         ensureOpen();

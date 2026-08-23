@@ -5,7 +5,14 @@ import processing.core.PVector;
 
 
 /**
- * Simple quaternion class for representing rotations.
+ * Immutable quaternion value for representing three-dimensional rotations.
+ *
+ * <p>Operations never mutate either operand. Methods that require a unit quaternion normalize
+ * their inputs or account for magnitude explicitly, and all components must be finite.</p>
+ *
+ * <p><strong>API stability:</strong> Advanced Stable.</p>
+ *
+ * @since 2.0.0
  */
 public final class Quaternion {
     private static final float SLERP_LINEAR_THRESHOLD = 0.9995f;
@@ -173,7 +180,7 @@ public final class Quaternion {
     /**
      * Returns this rotation normalized to unit length without mutating this value.
      *
-     * @return a new unit quaternion
+     * @return a unit quaternion; this instance may be returned when it is already normalized
      * @throws IllegalStateException when all four components are zero
      */
     public Quaternion normalized() {
@@ -245,21 +252,6 @@ public final class Quaternion {
                 startWeight * start.y + endWeight * endY,
                 startWeight * start.z + endWeight * endZ,
                 startWeight * start.w + endWeight * endW).normalized();
-    }
-
-    /**
-     * Returns a new {@link PMatrix3D} representing the rotation of this quaternion.
-     *
-     * @return a 4x4 rotation matrix as a {@link PMatrix3D}
-     */
-    public PMatrix3D toPMatrix() {
-        PMatrix3D matrix = toMatrix();
-        return new PMatrix3D(
-                matrix.m00, matrix.m01, matrix.m02, matrix.m03,
-                matrix.m10, matrix.m11, matrix.m12, matrix.m13,
-                matrix.m20, matrix.m21, matrix.m22, matrix.m23,
-                matrix.m30, matrix.m31, matrix.m32, matrix.m33
-        );
     }
 
     private static Quaternion requireQuaternion(Quaternion quaternion, String label) {

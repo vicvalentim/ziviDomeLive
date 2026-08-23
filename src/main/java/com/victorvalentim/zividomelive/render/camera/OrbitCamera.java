@@ -13,18 +13,16 @@ import static processing.core.PConstants.RIGHT;
 /**
  * Scene-space quaternion orbit camera provided as a native ziviDomeLive service.
  *
- * <p>Unlike {@link MouseControlledCamera} (which drives the Standard View through
- * {@code pg.camera(...)}), {@code OrbitCamera} transforms the scene modelview
- * directly inside {@code sceneRender}. Because it operates in scene space, the
- * same camera works identically across every projection (fisheye, equirectangular,
- * cubemap and standard) and never touches the dome parameters (yaw / pitch / roll /
- * fov) articulated by the ControlManager.</p>
+ * <p>The camera transforms the scene modelview directly inside
+ * {@link com.victorvalentim.zividomelive.Scene#sceneRender(PGraphicsOpenGL)}. Because it operates
+ * in scene space, the same pose works across Standard, domemaster, equirectangular, and skybox
+ * views without changing spherical calibration controls.</p>
  *
  * <p>Typical usage inside a {@code Scene}:</p>
  * <pre>
  * public void sceneRender(PGraphicsOpenGL pg) {
  *     pg.pushMatrix();
- *     parent.getSceneCamera().apply(pg); // move through space
+ *     services.camera().apply(pg);
  *     // ... draw scene content ...
  *     pg.popMatrix();
  * }
@@ -33,6 +31,10 @@ import static processing.core.PConstants.RIGHT;
  * <p>Rotations use unit quaternions (gimbal-lock free). Programmatic pose changes
  * are smoothly interpolated (SLERP/LERP), while direct mouse manipulation is
  * applied immediately so drag and wheel gestures remain attached to the pointer.</p>
+ *
+ * <p><strong>API stability:</strong> Advanced Stable.</p>
+ *
+ * @since 2.0.0
  */
 public final class OrbitCamera {
 
@@ -114,7 +116,9 @@ public final class OrbitCamera {
      * Applies the camera transform to the given scene graphics.
      * Call inside {@code sceneRender} between {@code pushMatrix}/{@code popMatrix}.
      *
-     * @param pg the scene graphics to transform
+     * <p>This method reads camera state but does not advance interpolation.</p>
+     *
+     * @param pg non-null scene graphics to transform
      */
     public void apply(PGraphicsOpenGL pg) {
         if (orientationMatrixDirty) {
@@ -127,8 +131,11 @@ public final class OrbitCamera {
     }
 
     /**
-     * Advances the smooth interpolation toward the current goals.
-     * The library calls this once per frame; scenes normally do not need to.
+     * Advances smooth interpolation toward the current goals by one step.
+     *
+     * <p>The ziviDomeLive facade calls this exactly once per Processing frame for its shared
+     * camera; scenes using {@link com.victorvalentim.zividomelive.SceneCameraService} must not call
+     * it again. Code that constructs a standalone camera owns its update cadence.</p>
      */
     public void update() {
 		if (orientation != goalOrientation) {
@@ -218,7 +225,7 @@ public final class OrbitCamera {
     /**
      * Handles mouse input: drag to orbit, wheel to fly in/out.
      *
-     * @param event the mouse event
+     * @param event non-null Processing mouse event
      */
     public void mouseEvent(MouseEvent event) {
         switch (event.getAction()) {
@@ -405,8 +412,8 @@ public final class OrbitCamera {
     /**
      * Sets the allowed distance range for zoom.
      *
-     * @param min minimum distance
-     * @param max maximum distance
+     * @param min minimum distance; callers should supply a finite value no greater than max
+     * @param max maximum distance; callers should supply a finite value no less than min
      */
     public void setDistanceLimits(float min, float max) {
         this.minDistance = min;
@@ -465,7 +472,7 @@ public final class OrbitCamera {
     /**
      * Sets drag sensitivity in radians per pixel.
      *
-     * @param dragSensitivity sensitivity value
+     * @param dragSensitivity finite sensitivity value
      */
     public void setDragSensitivity(float dragSensitivity) {
         this.dragSensitivity = dragSensitivity;
@@ -474,8 +481,8 @@ public final class OrbitCamera {
     /**
      * Sets the wheel zoom step sizes.
      *
-     * @param wheelStep    distance change per standard notch
-     * @param wheelPadStep distance change per fractional (trackpad) notch
+     * @param wheelStep    finite distance change per standard notch
+     * @param wheelPadStep finite distance change per fractional (trackpad) notch
      */
     public void setWheelSteps(float wheelStep, float wheelPadStep) {
         this.wheelStep = wheelStep;
@@ -505,7 +512,7 @@ public final class OrbitCamera {
     }
 
     /**
-     * Returns the current (interpolated) orientation quaternion.
+     * Returns the current immutable, interpolated orientation quaternion.
      *
      * @return current orientation
      */

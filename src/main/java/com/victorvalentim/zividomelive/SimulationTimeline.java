@@ -9,6 +9,13 @@ import java.util.function.DoubleConsumer;
  * <p>The timeline converts real frame seconds into arbitrary simulation units through
  * {@code rate}. It executes at most {@code maxSubSteps} callbacks per frame and drops
  * excess whole steps after a stall, preventing an unbounded catch-up spiral.</p>
+ *
+ * <p>The scene owns simulation rate, position, fixed step, and pause policy. The runtime owns the
+ * activation that contains this timeline but does not impose units or a global step size.</p>
+ *
+ * <p><strong>API stability:</strong> Advanced Stable.</p>
+ *
+ * @since 2.0.0
  */
 public final class SimulationTimeline {
 
@@ -27,7 +34,8 @@ public final class SimulationTimeline {
      * Advances this timeline using a bounded number of fixed steps.
      *
      * @param realDeltaSeconds non-negative real frame time in seconds
-     * @param stepper callback invoked once for each fixed simulation step
+     * @param stepper callback invoked synchronously once for each fixed simulation step, on the
+     *                caller's thread
      * @return number of fixed steps executed
      */
     public synchronized int advance(double realDeltaSeconds, DoubleConsumer stepper) {
@@ -55,13 +63,13 @@ public final class SimulationTimeline {
         return executed;
     }
 
-    /** Clears only the partial-step accumulator and dropped-time telemetry. */
+    /** Clears only the partial-step accumulator and dropped-unit telemetry. */
     public synchronized void resetAccumulator() {
         accumulator = 0.0;
         droppedUnits = 0.0;
     }
 
-    /** Resets position, accumulator, telemetry, and pause state. */
+    /** Resets position, accumulator, telemetry, and pause state without changing configuration. */
     public synchronized void reset() {
         position = 0.0;
         accumulator = 0.0;
@@ -164,7 +172,7 @@ public final class SimulationTimeline {
         return maxSubSteps;
     }
 
-    /** @return accumulated partial step in simulation units */
+    /** @return accumulated sub-step remainder in simulation units */
     public synchronized double getAccumulator() {
         return accumulator;
     }

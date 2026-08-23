@@ -7,6 +7,8 @@ package com.victorvalentim.zividomelive.performance;
  * capability-gated asynchronous OpenGL timer queries for the complete render pipeline.
  * {@link GpuTimerPolicy} controls architecture-specific fallback and query ownership.</p>
  *
+ * <p><strong>API stability:</strong> Experimental.</p>
+ *
  * @since 2.0.0
  */
 public enum PerformanceMode {

@@ -1,11 +1,13 @@
 package com.victorvalentim.zividomelive.performance;
 
 /**
- * Stable names for performance samples exposed by the experimental profiler.
+ * Named performance samples exposed by the experimental profiler.
  *
  * <p>{@link PerformanceSnapshot#getStatistics(PerformanceMetric)} always returns
  * CPU-observed wall time. GPU elapsed statistics are a separate channel and currently
  * exist only for {@link #RENDER_PIPELINE}.</p>
+ *
+ * <p><strong>API stability:</strong> Experimental.</p>
  *
  * @since 2.0.0
  */

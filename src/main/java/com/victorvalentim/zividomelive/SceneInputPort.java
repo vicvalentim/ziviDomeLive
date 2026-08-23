@@ -9,7 +9,13 @@ import java.util.function.Consumer;
  * {@link #start(Consumer)} is thread-safe and defers scene handling to a Processing frame
  * boundary. Starting and closing an adapter must return promptly.</p>
  *
+ * <p>Adapters implement lifecycle, but {@link ScenePorts} owns it after connection; scenes must
+ * not close a connected port directly.</p>
+ *
+ * <p><strong>API stability:</strong> Advanced Stable.</p>
+ *
  * @param <T> message type defined by the optional adapter
+ * @since 2.0.0
  */
 public interface SceneInputPort<T> extends AutoCloseable {
 
@@ -20,7 +26,10 @@ public interface SceneInputPort<T> extends AutoCloseable {
      */
     void start(Consumer<? super T> receiver);
 
-    /** Stops the adapter and releases its external resources. */
+    /**
+     * Stops the adapter and releases its external resources promptly.
+     * Implementations should make repeated calls harmless.
+     */
     @Override
     void close();
 }

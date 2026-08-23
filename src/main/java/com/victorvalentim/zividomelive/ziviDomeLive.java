@@ -17,15 +17,20 @@ import java.util.logging.Logger;
 import static processing.core.PConstants.*;
 
 /**
- * The `ziviDomeLive` class manages rendering and control of a live dome visualization.
- * It integrates with Processing and `OutputManager` for dome rendering.
+ * Main artist-facing facade for live fulldome, spherical, and Standard rendering in Processing.
  *
- * <p>This class handles setup, initialization, and rendering of fisheye domemaster,
- * equirectangular, cubemap, and standard views. It also manages the control panel and mouse events for interaction.</p>
+ * <p>Create one instance in the sketch's {@code setup()}, call {@link #setup()} after the P3D
+ * surface exists, and provide content through {@link Scene}. The facade owns scene activation,
+ * renderers, Processing hooks, camera synchronization, the built-in control panel, outputs, and
+ * terminal cleanup.</p>
  *
- * <p>It provides methods to set up the rendering environment, initialize various managers,
- * handle mouse and key events, and render different views. The class also supports toggling
- * output methods (NDI, Spout, Syphon) and managing the current scene and view type.</p>
+ * <p>Methods documented as <em>Processing Callback</em> are Java-public only because the
+ * constructor registers them with Processing. Sketches must not call those callbacks directly.
+ * Performance methods are explicitly Experimental; the remaining artist-facing facade is Stable
+ * for the 2.x series.</p>
+ *
+ * <p><strong>API stability:</strong> Stable, except methods explicitly marked Experimental or
+ * Processing Callback.</p>
  */
 public class ziviDomeLive {
 
@@ -121,6 +126,8 @@ public class ziviDomeLive {
 
 	/**
 	 * Aspect policy used to compute Standard output dimensions.
+	 *
+	 * <p><strong>API stability:</strong> Stable.</p>
 	 */
 	public enum StandardOutputAspectMode {
 		/** Snap to the closest supported family based on the current logical window ratio. */
@@ -147,9 +154,11 @@ public class ziviDomeLive {
 
 
 	/**
-	 * Constructs a new `ziviDomeLive` instance with the specified PApplet.
+	 * Creates a facade owned by the supplied Processing sketch and registers runtime callbacks.
 	 *
-	 * @param p the PApplet instance used for rendering
+	 * <p>Call {@link #setup()} from the sketch's {@code setup()} after creating its P3D surface.</p>
+	 *
+	 * @param p non-null Processing sketch used for rendering
 	 * @throws IllegalArgumentException if the PApplet instance is null
 	 */
 	public ziviDomeLive(PApplet p) {
@@ -169,7 +178,7 @@ public class ziviDomeLive {
 
 	/**
 	 * Sets the global logging mode used by the library.
-	 * Call this before creating a ziviDomeLive instance.
+	 * Call this before creating a ziviDomeLive instance so startup follows the selected profile.
 	 *
 	 * @param mode desired logging mode
 	 */
@@ -177,12 +186,12 @@ public class ziviDomeLive {
 		LogManager.setMode(mode);
 	}
 
-	/** Enables verbose DEBUG logs (console + file). */
+	/** Enables verbose DEBUG logs to the console and library log file. */
 	public static void enableDebugLogging() {
 		LogManager.setMode(LogMode.DEBUG);
 	}
 
-	/** Enables RELEASE logging mode (LogManager output disabled). */
+	/** Enables RELEASE mode, which disables library-managed log output. */
 	public static void enableReleaseLogging() {
 		LogManager.setMode(LogMode.RELEASE);
 	}
@@ -207,12 +216,13 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Sets the current scene to be rendered.
+	 * Selects and activates a scene through the facade-owned manager.
 	 *
-	 * <p>Both the output and preview Standard renderers are updated so that both pipelines
-	 * render the new scene content.</p>
+	 * <p>An unregistered instance is registered automatically. Switching performs the complete
+	 * activation order: stop old activation work, dispose the previous scene, create fresh
+	 * services, configure the new scene, then set it up.</p>
 	 *
-	 * @param scene the Scene instance to be set
+	 * @param scene scene instance to activate; {@code null} is ignored
 	 */
 	public void setScene(Scene scene) {
 		if (disposed) {
@@ -261,7 +271,11 @@ public class ziviDomeLive {
 
 	/**
 	 * Sets up the rendering environment, including frame rate, OpenGL info, texture hints,
-	 * output configuration, and mouse event registration.
+	 * output coordination, and the built-in interface.
+	 *
+	 * <p>Call once from the sketch's {@code setup()} after its P3D surface has been created. The
+	 * operation is idempotent; renderer allocation completes lazily in the registered
+	 * {@link #post()} callback when the OpenGL context is active.</p>
 	 *
 	 * @throws IllegalStateException if the PApplet instance is not properly configured
 	 */
@@ -1100,7 +1114,10 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Main draw method that handles rendering and updating the view.
+	 * Processing Callback that renders the already-updated frame and built-in interface.
+	 *
+	 * <p>The constructor registers this method automatically. Sketches must not call it directly or
+	 * call a second ziviDomeLive render method from their own {@code draw()}.</p>
 	 */
 	public void draw() {
 		if (disposed || paused || initState != InitState.MANAGERS_READY) {
@@ -1355,12 +1372,16 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Resets output graphics with a new output resolution.
-	 * Preview stays constrained to the Processing window size.
+	 * Schedules output-target recreation at a safe draw boundary.
+	 * Preview resolution remains derived from the Processing window.
 	 *
-	 * @param newResolution the new output resolution to be set
+	 * @param newResolution positive output resolution in pixels
+	 * @throws IllegalArgumentException when {@code newResolution} is not positive
 	 */
 	public void resetGraphics(int newResolution) {
+		if (newResolution <= 0) {
+			throw new IllegalArgumentException("Output resolution must be positive.");
+		}
 		pendingOutputReset = true;
 		pendingOutputResolution = newResolution;
 		LOGGER.info("Changing output resolution to: " + newResolution);
@@ -1376,9 +1397,9 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Sets the current scene to be rendered and updates all relevant components.
+	 * Alias for {@link #setScene(Scene)} retained as part of the 2.x scene API.
 	 *
-	 * @param newScene the new scene to be set as the current scene
+	 * @param newScene scene instance to activate; {@code null} is ignored
 	 */
 	public void setCurrentScene(Scene newScene) {
 		setScene(newScene);
@@ -1517,8 +1538,11 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Handles key events for interaction.
-	 * This method must be registered using p.registerMethod("keyEvent", this).
+	 * Processing Callback that routes key events to built-ins, named scene actions, and the active
+	 * scene's raw callback.
+	 *
+	 * <p>The constructor registers this method automatically; sketches must not call or register it
+	 * themselves.</p>
 	 *
 	 * @param event the KeyEvent object containing details of the key event
 	 */
@@ -1595,8 +1619,11 @@ public class ziviDomeLive {
 
 
 	/**
-	 * Handles mouse events for interaction.
-	 * This method must be registered using p.registerMethod("mouseEvent", this).
+	 * Processing Callback that routes mouse events to named actions, the active scene, the built-in
+	 * interface, and exactly one navigation camera.
+	 *
+	 * <p>The constructor registers this method automatically; sketches must not call or register it
+	 * themselves. A visible control under the pointer owns its gesture and suppresses navigation.</p>
 	 *
 	 * @param event the MouseEvent object containing details of the mouse event
 	 */
@@ -1645,8 +1672,10 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Handles control events from the ControlP5 library.
-	 * The built-in ControlManager registers this callback as a ControlP5 listener.
+	 * Processing Callback used by the built-in ControlP5 interface.
+	 *
+	 * <p>This method is public for callback integration only. It is not a scene input command and
+	 * sketches must not call it directly.</p>
 	 *
 	 * @param theEvent the ControlEvent object containing details of the control event
 	 */
@@ -1661,9 +1690,9 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Returns the instance of the OutputManager.
+	 * Returns artist-facing output control and telemetry.
 	 *
-	 * @return the OutputManager instance
+	 * @return output manager, or {@code null} before {@link #setup()} completes
 	 */
 	public OutputManager getOutputManager() {
 		return outputManager;
@@ -1674,23 +1703,27 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Gets the current fish size.
+	 * Returns the domemaster circle size.
 	 *
-	 * @return the current fish size
+	 * @return configured size as a percentage of the square target
 	 */
 	public float getFishSize() {
 		return fishSize;
 	}
 
 	/**
-	 * Sets the fish size.
+	 * Sets the domemaster circle size.
 	 *
-	 * @param fishSize the new fish size
+	 * @param fishSize size percentage; values outside 0..100 are constrained
 	 */
 	public void setFishSize(float fishSize) {
-		this.fishSize = fishSize;
+		if (!Float.isFinite(fishSize)) {
+			LOGGER.warning("Ignoring non-finite domemaster size: " + fishSize);
+			return;
+		}
+		this.fishSize = PApplet.constrain(fishSize, 0.0f, 100.0f);
 		if (fisheyeDomemaster != null) {
-			fisheyeDomemaster.setSizePercentage(fishSize);
+			fisheyeDomemaster.setSizePercentage(this.fishSize);
 		}
 		if (previewFisheyeDomemaster != null) {
 			previewFisheyeDomemaster.setSizePercentage(fishSize);
@@ -1698,72 +1731,77 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Gets the current field of view (FOV).
+	 * Returns the domemaster angular field of view.
 	 *
-	 * @return the current FOV
+	 * @return field of view in degrees
 	 */
 	public float getFov() {
 		return fov;
 	}
 
 	/**
-	 * Sets the field of view (FOV).
+	 * Sets the domemaster angular field of view.
 	 *
-	 * @param fov the new FOV
+	 * @param fov field of view in degrees; finite values are constrained to 0..360 and non-finite
+	 *            values are ignored
 	 */
 	public void setFov(float fov) {
-		this.fov = fov;
+		if (!Float.isFinite(fov)) {
+			LOGGER.warning("Ignoring non-finite domemaster field of view: " + fov);
+			return;
+		}
+		this.fov = PApplet.constrain(fov, 0.0f, 360.0f);
 	}
 
 	/**
-	 * Gets the current pitch.
+	 * Returns the spherical pitch control accumulator.
 	 *
-	 * @return the current pitch
+	 * @return pitch in radians
 	 */
 	public float getPitch() {
 		return sphericalOrientation.getPitch();
 	}
 
 	/**
-	 * Sets the pitch.
+	 * Sets spherical pitch by composing the shortest delta around the local X axis.
 	 *
-	 * @param pitch the new pitch
+	 * @param pitch control value in radians; non-finite values are ignored
 	 */
 	public void setPitch(float pitch) {
 		sphericalOrientation.setPitch(pitch);
 	}
 
 	/**
-	 * Gets the current yaw.
+	 * Returns the spherical yaw control accumulator.
 	 *
-	 * @return the current yaw
+	 * @return yaw in radians
 	 */
 	public float getYaw() {
 		return sphericalOrientation.getYaw();
 	}
 
 	/**
-	 * Sets the yaw.
+	 * Sets spherical yaw by composing the shortest delta around the local Z axis.
 	 *
-	 * @param yaw the new yaw
+	 * @param yaw control value in radians; non-finite values are ignored
 	 */
 	public void setYaw(float yaw) {
 		sphericalOrientation.setYaw(yaw);
 	}
 
 	/**
-	 * Gets the current roll.
+	 * Returns the spherical roll control accumulator.
 	 *
-	 * @return the current roll
+	 * @return roll in radians
 	 */
 	public float getRoll() {
 		return sphericalOrientation.getRoll();
 	}
 
 	/**
-	 * Sets the roll.
+	 * Sets spherical roll by composing the shortest delta around the local Y axis.
 	 *
-	 * @param roll the new roll
+	 * @param roll control value in radians; non-finite values are ignored
 	 */
 	public void setRoll(float roll) {
 		sphericalOrientation.setRoll(roll);
@@ -1794,9 +1832,13 @@ public class ziviDomeLive {
 	 * <p>The selection takes effect immediately in {@link RenderMode#FULL}. Dedicated modes keep
 	 * it as the preview selection to restore when FULL is selected again.</p>
 	 *
-	 * @param currentView new preview view
+	 * @param currentView new preview view; {@code null} is ignored
 	 */
 	public void setCurrentView(ViewType currentView) {
+		if (currentView == null) {
+			LOGGER.warning("Ignoring null preview view.");
+			return;
+		}
 		this.currentView = currentView;
 	}
 
@@ -1877,6 +1919,8 @@ public class ziviDomeLive {
 	 * <p>This is an experimental benchmarking hook; normal applications should route output through
 	 * {@link OutputManager}.</p>
 	 *
+	 * <p><strong>API stability:</strong> Experimental.</p>
+	 *
 	 * @param view output-resolution view to render during profiling, or {@code null} to clear
 	 * @since 2.0.0
 	 */
@@ -1906,10 +1950,12 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Resets the controls to their default state.
+	 * Resets the built-in controls to their default state when the interface is initialized.
 	 */
 	public void resetControls() {
-		controlManager.resetControls();
+		if (controlManager != null) {
+			controlManager.resetControls();
+		}
 	}
 
 	/**
@@ -1960,8 +2006,8 @@ public class ziviDomeLive {
 	/**
 	 * Returns the native scene-space orbit camera service.
 	 *
-	 * <p>Scenes drive space navigation by calling {@code getSceneCamera().apply(pg)}
-	 * inside {@code sceneRender} (between {@code pushMatrix}/{@code popMatrix}). The
+	 * <p>Scenes normally obtain this same camera from {@link SceneServices#camera()} and apply it
+	 * inside {@code sceneRender} between {@code pushMatrix}/{@code popMatrix}. The
 	 * camera transforms the scene modelview directly, so it works across every
 	 * projection without touching the dome parameters (yaw/pitch/roll/fov). Its current
 	 * rotational quaternion is synchronized with the shared Environment every frame;
@@ -2008,7 +2054,10 @@ public class ziviDomeLive {
 	/**
 	 * Loads and sets an LDR equirectangular environment background from the sketch data path.
 	 *
-	 * @param imagePath Processing data path or absolute image path
+	 * <p>This is a synchronous Processing asset load. Use it during sketch setup, not inside a
+	 * recurring frame callback or background task.</p>
+	 *
+	 * @param imagePath Processing data path or absolute image path; null or blank clears the source
 	 */
 	public void setEquirectangularBackground(String imagePath) {
 		if (imagePath == null || imagePath.isBlank()) {
@@ -2063,7 +2112,8 @@ public class ziviDomeLive {
 	/**
 	 * Sets the colour multiplier applied to the LDR environment background.
 	 *
-	 * @param intensity non-negative colour multiplier
+	 * @param intensity colour multiplier; finite negative values are clamped to zero and non-finite
+	 *                  values are ignored
 	 */
 	public void setEnvironmentBackgroundIntensity(float intensity) {
 		environmentState.setIntensity(intensity);
@@ -2081,7 +2131,7 @@ public class ziviDomeLive {
 	/**
 	 * Rotates the equirectangular environment lookup around the vertical axis.
 	 *
-	 * @param yawOffset radians added to the source longitude lookup
+	 * @param yawOffset radians added to the source longitude lookup; non-finite values are ignored
 	 */
 	public void setEnvironmentBackgroundYawOffset(float yawOffset) {
 		environmentState.setYawOffset(yawOffset);
@@ -2129,9 +2179,12 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Gets the current PApplet instance.
+	 * Returns the Processing sketch that owns this facade.
 	 *
-	 * @return the current PApplet instance
+	 * <p>Scenes should prefer {@link SceneServices#applet()} so ownership remains explicit for the
+	 * current activation.</p>
+	 *
+	 * @return non-null owning Processing sketch
 	 */
 	public PApplet getPApplet() {
 
@@ -2143,9 +2196,9 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Checks if the instance is initialized and ready to render.
+	 * Reports whether setup and lazy OpenGL manager initialization completed successfully.
 	 *
-	 * @return true if the instance is initialized and managers are ready, false otherwise
+	 * @return {@code true} when the facade can render frames
 	 */
 	public boolean isInitialized() {
 		return initState == InitState.MANAGERS_READY;
@@ -2158,7 +2211,10 @@ public class ziviDomeLive {
 	 * interval around the complete render pipeline. Unsupported contexts fall back to CPU, and
 	 * no synchronous query or {@code glFinish()} is introduced.</p>
 	 *
-	 * @param mode requested profiling mode
+	 * <p><strong>API stability:</strong> Experimental.</p>
+	 *
+	 * @param mode non-null requested profiling mode
+	 * @throws IllegalArgumentException when {@code mode} is null
 	 * @since 2.0.0
 	 */
 	public void enablePerformanceProfiling(PerformanceMode mode) {
@@ -2169,8 +2225,11 @@ public class ziviDomeLive {
 	 * Enables experimental performance collection with preallocated sample storage.
 	 * Calling this method resets previously collected samples.
 	 *
-	 * @param mode requested profiling mode
-	 * @param sampleCapacity number of completed frames retained in the ring buffer
+	 * <p><strong>API stability:</strong> Experimental.</p>
+	 *
+	 * @param mode non-null requested profiling mode
+	 * @param sampleCapacity number of completed frames retained in the ring buffer, from 2 to 100000
+	 * @throws IllegalArgumentException when an argument is invalid
 	 * @since 2.0.0
 	 */
 	public void enablePerformanceProfiling(PerformanceMode mode, int sampleCapacity) {
@@ -2184,9 +2243,12 @@ public class ziviDomeLive {
 	 * scenes. On Apple Silicon it may own {@code GL_TIME_ELAPSED} for the complete pipeline,
 	 * so scene code must not start another elapsed timer query during the interval.</p>
 	 *
-	 * @param mode requested profiling mode
-	 * @param sampleCapacity number of completed frames retained in the ring buffer
-	 * @param timerPolicy GPU timer selection policy
+	 * <p><strong>API stability:</strong> Experimental.</p>
+	 *
+	 * @param mode non-null requested profiling mode
+	 * @param sampleCapacity number of completed frames retained in the ring buffer, from 2 to 100000
+	 * @param timerPolicy non-null GPU timer selection policy
+	 * @throws IllegalArgumentException when an argument is invalid
 	 * @since 2.0.0
 	 */
 	public void enablePerformanceProfiling(
@@ -2204,6 +2266,8 @@ public class ziviDomeLive {
 	/**
 	 * Disables collection without discarding completed samples.
 	 *
+	 * <p><strong>API stability:</strong> Experimental.</p>
+	 *
 	 * @since 2.0.0
 	 */
 	public void disablePerformanceProfiling() {
@@ -2214,6 +2278,8 @@ public class ziviDomeLive {
 
 	/**
 	 * Clears all performance samples and invariant counters.
+	 *
+	 * <p><strong>API stability:</strong> Experimental.</p>
 	 *
 	 * @since 2.0.0
 	 */
@@ -2226,6 +2292,8 @@ public class ziviDomeLive {
 	 * Creates an immutable performance snapshot. Call outside a measured interval because
 	 * snapshot aggregation intentionally allocates and sorts copies of retained samples.
 	 *
+	 * <p><strong>API stability:</strong> Experimental.</p>
+	 *
 	 * @return immutable snapshot of completed frames
 	 * @since 2.0.0
 	 */
@@ -2235,6 +2303,10 @@ public class ziviDomeLive {
 
 	/**
 	 * Returns a read-only diagnostic report for the active Processing graphics renderer.
+	 *
+	 * <p>Call on the Processing/OpenGL thread after the renderer is initialized.</p>
+	 *
+	 * <p><strong>API stability:</strong> Experimental.</p>
 	 *
 	 * @return current graphics capability report
 	 * @since 2.0.0
@@ -2310,7 +2382,12 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Method called before each draw call.
+	 * Processing Callback that establishes the authoritative frame boundary.
+	 *
+	 * <p>It drains activation queues and bounded external input, ticks the frame clock, processes a
+	 * deferred reload or calls {@link Scene#update()}, refreshes tracked camera targets, and advances
+	 * camera interpolation once. The constructor registers it automatically; sketches must not call
+	 * it directly.</p>
 	 */
 	public void pre() {
 		if (disposed || paused) {
@@ -2356,7 +2433,10 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Post-initialization method to set up managers after the initial setup.
+	 * Processing Callback that performs lazy renderer initialization after {@link #setup()}.
+	 *
+	 * <p>The constructor registers it automatically and the facade unregisters it after successful
+	 * initialization. Sketches must not call it directly.</p>
 	 */
 	public void post() {
 		if (!disposed && !paused && initState == InitState.SETUP_COMPLETE) {
@@ -2375,16 +2455,19 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Stops the instance permanently and releases all owned resources.
+	 * Processing Callback that stops the instance permanently and releases all owned resources.
 	 *
-	 * <p>This terminal operation delegates to {@link #dispose()} and is idempotent.</p>
+	 * <p>This terminal operation delegates to {@link #dispose()} and is idempotent. Processing calls
+	 * it automatically; applications normally do not.</p>
 	 */
 	public void stop() {
 		dispose();
 	}
 
 	/**
-	 * Resumes processes after a pause.
+	 * Processing Callback that resumes activation input and outputs remembered by {@link #pause()}.
+	 *
+	 * <p>The constructor registers it automatically; sketches must not call it directly.</p>
 	 */
 	public void resume() {
 		if (disposed || !paused) {
@@ -2412,7 +2495,10 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Pauses all processes.
+	 * Processing Callback that pauses frame work, drops queued external input, clears pointer
+	 * anchors, and disables outputs while remembering their enabled state.
+	 *
+	 * <p>The constructor registers it automatically; sketches must not call it directly.</p>
 	 */
 	public void pause() {
 		if (disposed || paused) {
@@ -2443,7 +2529,10 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Releases resources and cleans up before the application exits.
+	 * Processing Callback that performs terminal, idempotent cleanup.
+	 *
+	 * <p>Processing calls this method automatically. It may also be invoked once by an application
+	 * that intentionally ends the facade early; no facade operation may reactivate it afterward.</p>
 	 */
 	public void dispose() {
 		if (disposed) {

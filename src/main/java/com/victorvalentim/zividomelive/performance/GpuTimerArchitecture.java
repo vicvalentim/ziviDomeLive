@@ -2,7 +2,16 @@ package com.victorvalentim.zividomelive.performance;
 
 import java.util.Locale;
 
-/** Normalized host architecture used to choose a benchmark-safe GPU timer backend. */
+/**
+ * Normalized host and renderer architecture recorded with experimental GPU measurements.
+ *
+ * <p>Capability checks and runtime qualification remain authoritative; architecture is diagnostic
+ * evidence rather than proof that a timer backend is safe.</p>
+ *
+ * <p><strong>API stability:</strong> Experimental.</p>
+ *
+ * @since 2.0.0
+ */
 public enum GpuTimerArchitecture {
 	/** Native or renderer-identified Apple Silicon host. */
 	APPLE_SILICON,

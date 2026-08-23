@@ -10,9 +10,16 @@ import java.util.logging.Logger;
 /**
  * Lifecycle-aware service context for one activation of one {@link Scene}.
  *
- * <p>The facade creates this context before {@link Scene#setupScene()}, advances it around
- * {@link Scene#update()}, and closes it after {@link Scene#dispose()}. Existing scenes remain
- * source compatible; service-aware scenes receive it through {@link Scene#configure(SceneServices)}.</p>
+ * <p>The facade creates this context before {@link Scene#setupScene()}, supplies it through
+ * {@link Scene#configure(SceneServices)}, advances it around {@link Scene#update()}, and closes it
+ * after {@link Scene#dispose()}. Reloading the same scene object creates a fresh context.</p>
+ *
+ * <p>Scenes consume these services but never construct or close them. Every accessor rejects use
+ * after the activation begins disposal.</p>
+ *
+ * <p><strong>API stability:</strong> Advanced Stable.</p>
+ *
+ * @since 2.0.0
  */
 public final class SceneServices {
 
@@ -44,7 +51,7 @@ public final class SceneServices {
         this.ports = new ScenePorts(renderQueue);
     }
 
-    /** @return Processing applet that owns the facade */
+    /** @return Processing applet that owns the facade and this activation */
     public PApplet applet() {
         ensureOpen();
         return parent.getPApplet();
@@ -74,7 +81,7 @@ public final class SceneServices {
         return assets;
     }
 
-    /** @return activation-scoped named input map */
+    /** @return activation-scoped named action and input-binding map */
     public SceneActionMap actions() {
         ensureOpen();
         return actions;
@@ -98,7 +105,11 @@ public final class SceneServices {
         return ports;
     }
 
-    /** Defers a full dispose/setup cycle of the active scene to the next frame boundary. */
+    /**
+     * Requests one full dispose/configure/setup cycle for the active scene.
+     *
+     * <p>Multiple requests before the next Processing frame boundary coalesce into one reload.</p>
+     */
     public void requestReload() {
         ensureOpen();
         reloadRequested.set(true);

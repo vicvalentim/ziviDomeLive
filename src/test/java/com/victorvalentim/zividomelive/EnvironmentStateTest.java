@@ -53,6 +53,19 @@ class EnvironmentStateTest {
 	}
 
 	@Test
+	void visualControlsIgnoreNonFiniteValues() {
+		EnvironmentState state = new EnvironmentState();
+		state.setIntensity(1.5f);
+		state.setYawOffset(0.75f);
+
+		state.setIntensity(Float.NaN);
+		state.setYawOffset(Float.POSITIVE_INFINITY);
+
+		assertEquals(1.5f, state.getIntensity(), 1.0e-6f);
+		assertEquals(0.75f, state.getYawOffset(), 1.0e-6f);
+	}
+
+	@Test
 	void sceneCameraOrientationDefaultsToIdentityAndUsesImmutableValues() {
 		EnvironmentState state = new EnvironmentState();
 		Quaternion initial = state.getSceneCameraOrientation();

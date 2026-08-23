@@ -84,6 +84,48 @@ class ZividomeliveLifecycleTest {
 	}
 
 	@Test
+	void facadeRejectsInvalidResolutionBeforeDeferringAllocation() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+
+		assertThrows(IllegalArgumentException.class, () -> lib.resetGraphics(0));
+		assertThrows(IllegalArgumentException.class, () -> lib.resetGraphics(-1));
+		assertEquals(1024, lib.getOutputResolution());
+	}
+
+	@Test
+	void domemasterSizeIsClampedBeforeRenderersExist() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+
+		lib.setFishSize(-10f);
+		assertEquals(0f, lib.getFishSize());
+		lib.setFishSize(150f);
+		assertEquals(100f, lib.getFishSize());
+		lib.setFishSize(Float.NaN);
+		assertEquals(100f, lib.getFishSize());
+	}
+
+	@Test
+	void facadeCalibrationPreservesTheLastFiniteBoundedValue() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+
+		lib.setFov(500f);
+		assertEquals(360f, lib.getFov());
+		lib.setFov(Float.NaN);
+		assertEquals(360f, lib.getFov());
+
+		lib.setCurrentView(ViewType.SKYBOX);
+		lib.setCurrentView(null);
+		assertEquals(ViewType.SKYBOX, lib.getCurrentView());
+	}
+
+	@Test
+	void resettingControlsBeforeManagerInitializationIsSafe() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+
+		assertDoesNotThrow(lib::resetControls);
+	}
+
+	@Test
 	void environmentBackgroundStateIsConfigurableBeforeRendererInitialization() {
 		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		PImage image = new PImage(4, 2);

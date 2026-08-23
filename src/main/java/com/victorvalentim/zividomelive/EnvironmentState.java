@@ -68,9 +68,12 @@ final class EnvironmentState {
 
 	/**
 	 * Sets the non-negative visual colour multiplier.
-	 * @param intensity visual colour multiplier
+	 * @param intensity visual colour multiplier; non-finite values are ignored
 	 */
 	public void setIntensity(float intensity) {
+		if (!Float.isFinite(intensity)) {
+			return;
+		}
 		this.intensity = Math.max(0.0f, intensity);
 	}
 
@@ -84,9 +87,12 @@ final class EnvironmentState {
 
 	/**
 	 * Sets the source-longitude offset in radians.
-	 * @param yawOffset source-longitude offset in radians
+	 * @param yawOffset source-longitude offset in radians; non-finite values are ignored
 	 */
 	public void setYawOffset(float yawOffset) {
+		if (!Float.isFinite(yawOffset)) {
+			return;
+		}
 		this.yawOffset = yawOffset;
 	}
 

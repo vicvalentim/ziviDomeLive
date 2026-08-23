@@ -50,6 +50,7 @@ class PublicApiCompatibilityTest {
 
 	private static final Class<?>[] STABLE_TYPES = {
 			ziviDomeLive.class,
+			ziviDomeLive.StandardOutputAspectMode.class,
 			Scene.class,
 			SceneManager.class,
 			RenderMode.class,
@@ -70,6 +71,8 @@ class PublicApiCompatibilityTest {
 			SceneInputPort.class,
 			SceneOutputPort.class,
 			OutputManager.class,
+			OutputManager.OutputType.class,
+			OutputManager.OutputState.class,
 			Quaternion.class,
 			SphericalOrientation.class,
 			OrbitCamera.class
@@ -79,6 +82,7 @@ class PublicApiCompatibilityTest {
 			PerformanceMode.class,
 			PerformanceMetric.class,
 			PerformanceSnapshot.class,
+			PerformanceSnapshot.MetricStatistics.class,
 			GraphicsCapabilities.class,
 			GpuTimerPolicy.class,
 			GpuTimerBackend.class,
@@ -139,7 +143,7 @@ class PublicApiCompatibilityTest {
 	}
 
 	@Test
-	void stableEnumNamesAndOrderAreFrozen() {
+	void publicEnumNamesAndOrderAreDeliberate() {
 		assertArrayEquals(new ViewType[]{
 				ViewType.STANDARD, ViewType.DOMEMASTER,
 				ViewType.EQUIRECTANGULAR, ViewType.SKYBOX
@@ -149,6 +153,70 @@ class PublicApiCompatibilityTest {
 				RenderMode.EQUIRECTANGULAR, RenderMode.SKYBOX
 		}, RenderMode.values());
 		assertArrayEquals(new LogMode[]{LogMode.DEBUG, LogMode.RELEASE}, LogMode.values());
+		assertArrayEquals(new ziviDomeLive.StandardOutputAspectMode[]{
+				ziviDomeLive.StandardOutputAspectMode.AUTO,
+				ziviDomeLive.StandardOutputAspectMode.ASPECT_16_9,
+				ziviDomeLive.StandardOutputAspectMode.ASPECT_16_10,
+				ziviDomeLive.StandardOutputAspectMode.ASPECT_4_3,
+				ziviDomeLive.StandardOutputAspectMode.ASPECT_1_1
+		}, ziviDomeLive.StandardOutputAspectMode.values());
+		assertArrayEquals(new OutputManager.OutputType[]{
+				OutputManager.OutputType.NDI, OutputManager.OutputType.SPOUT,
+				OutputManager.OutputType.SYPHON
+		}, OutputManager.OutputType.values());
+		assertArrayEquals(new OutputManager.OutputState[]{
+				OutputManager.OutputState.UNAVAILABLE, OutputManager.OutputState.AVAILABLE,
+				OutputManager.OutputState.INITIALIZED, OutputManager.OutputState.ENABLED,
+				OutputManager.OutputState.STOPPING
+		}, OutputManager.OutputState.values());
+		assertArrayEquals(new PerformanceMode[]{
+				PerformanceMode.OFF, PerformanceMode.CPU, PerformanceMode.CPU_GPU
+		}, PerformanceMode.values());
+		assertArrayEquals(new PerformanceMetric[]{
+				PerformanceMetric.FRAME_TOTAL, PerformanceMetric.SCENE_UPDATE,
+				PerformanceMetric.SCENE_RENDER, PerformanceMetric.RENDER_PIPELINE,
+				PerformanceMetric.GRAPHICS_RESET, PerformanceMetric.STANDARD_RENDER,
+				PerformanceMetric.STANDARD_PREVIEW, PerformanceMetric.STANDARD_OUTPUT,
+				PerformanceMetric.CUBEMAP_TOTAL, PerformanceMetric.CUBEMAP_PREVIEW,
+				PerformanceMetric.CUBEMAP_OUTPUT, PerformanceMetric.CUBEMAP_POS_X,
+				PerformanceMetric.CUBEMAP_NEG_X, PerformanceMetric.CUBEMAP_POS_Y,
+				PerformanceMetric.CUBEMAP_NEG_Y, PerformanceMetric.CUBEMAP_POS_Z,
+				PerformanceMetric.CUBEMAP_NEG_Z, PerformanceMetric.CUBEMAP_BLIT,
+				PerformanceMetric.CUBEMAP_MIPMAP, PerformanceMetric.DOMEMASTER,
+				PerformanceMetric.DOMEMASTER_PREVIEW, PerformanceMetric.DOMEMASTER_OUTPUT,
+				PerformanceMetric.EQUIRECTANGULAR, PerformanceMetric.EQUIRECTANGULAR_PREVIEW,
+				PerformanceMetric.EQUIRECTANGULAR_OUTPUT, PerformanceMetric.SKYBOX,
+				PerformanceMetric.SKYBOX_PREVIEW, PerformanceMetric.SKYBOX_OUTPUT,
+				PerformanceMetric.OUTPUT_PIPELINE, PerformanceMetric.PREVIEW_PIPELINE,
+				PerformanceMetric.PREVIEW_COPY, PerformanceMetric.PREVIEW_COMPOSITE,
+				PerformanceMetric.FLOATING_PREVIEW, PerformanceMetric.CONTROL_PANEL,
+				PerformanceMetric.NDI_CAPTURE, PerformanceMetric.NDI_CONVERSION,
+				PerformanceMetric.NDI_QUEUE, PerformanceMetric.NDI_SEND,
+				PerformanceMetric.SYPHON, PerformanceMetric.SPOUT
+		}, PerformanceMetric.values());
+		assertArrayEquals(new GpuTimerArchitecture[]{
+				GpuTimerArchitecture.APPLE_SILICON, GpuTimerArchitecture.APPLE_INTEL,
+				GpuTimerArchitecture.WINDOWS_ARM64, GpuTimerArchitecture.WINDOWS_X86_64,
+				GpuTimerArchitecture.LINUX_ARM64, GpuTimerArchitecture.LINUX_X86_64,
+				GpuTimerArchitecture.OTHER
+		}, GpuTimerArchitecture.values());
+		assertArrayEquals(new GpuTimerBackend[]{
+				GpuTimerBackend.NONE, GpuTimerBackend.TIMESTAMP_PAIR,
+				GpuTimerBackend.TIME_ELAPSED_EXCLUSIVE, GpuTimerBackend.FENCE_COMPLETION
+		}, GpuTimerBackend.values());
+		assertArrayEquals(new GpuTimerPolicy[]{
+				GpuTimerPolicy.SAFE, GpuTimerPolicy.ARCHITECTURE_AWARE,
+				GpuTimerPolicy.TIME_ELAPSED_EXCLUSIVE
+		}, GpuTimerPolicy.values());
+	}
+
+	@Test
+	void publicApiDoesNotExposeMutableFields() {
+		for (Class<?> type : concat(STABLE_TYPES, ADVANCED_STABLE_TYPES, EXPERIMENTAL_TYPES)) {
+			assertTrue(Arrays.stream(type.getDeclaredFields())
+					.filter(field -> Modifier.isPublic(field.getModifiers()))
+					.allMatch(field -> type.isEnum() && field.isEnumConstant()), type.getName());
+		}
 	}
 
 	@Test
@@ -223,6 +291,11 @@ class PublicApiCompatibilityTest {
 	}
 
 	@Test
+	void quaternionDoesNotExposePre2MatrixAlias() {
+		assertFalse(publicMethodNames(Quaternion.class).contains("toPMatrix"));
+	}
+
+	@Test
 	void removedEnginePackagesCannotReturnAsPublicApi() {
 		for (String className : REMOVED_ENGINE_TYPES) {
 			assertThrows(ClassNotFoundException.class, () -> Class.forName(className), className);
@@ -235,6 +308,215 @@ class PublicApiCompatibilityTest {
 			Class<?> type = Class.forName(className);
 			assertFalse(Modifier.isPublic(type.getModifiers()), className);
 		}
+	}
+
+	@Test
+	void final20MethodSnapshotIsExact() {
+		assertDeclaredApi(ziviDomeLive.class,
+				"clearEnvironmentBackground():void",
+				"controlEvent(ControlEvent):void",
+				"disablePerformanceProfiling():void",
+				"dispose():void",
+				"draw():void",
+				"enableDebugLogging():void",
+				"enablePerformanceProfiling(PerformanceMode):void",
+				"enablePerformanceProfiling(PerformanceMode,int):void",
+				"enablePerformanceProfiling(PerformanceMode,int,GpuTimerPolicy):void",
+				"enableReleaseLogging():void",
+				"getCurrentView():ViewType",
+				"getEnvironmentBackgroundIntensity():float",
+				"getEnvironmentBackgroundYawOffset():float",
+				"getFishSize():float",
+				"getFov():float",
+				"getGraphicsCapabilities():GraphicsCapabilities",
+				"getLogMode():LogMode",
+				"getOutputManager():OutputManager",
+				"getOutputResolution():int",
+				"getPApplet():PApplet",
+				"getPerformanceSnapshot():PerformanceSnapshot",
+				"getPitch():float",
+				"getRenderMode():RenderMode",
+				"getRoll():float",
+				"getSceneCamera():OrbitCamera",
+				"getSceneManager():SceneManager",
+				"getStandardOutputAspectMode():StandardOutputAspectMode",
+				"getTargetFrameRate():int",
+				"getYaw():float",
+				"hasEnvironmentBackground():boolean",
+				"isEnvironmentBackgroundVisible():boolean",
+				"isInitialized():boolean",
+				"isSceneCameraInputEnabled():boolean",
+				"isShowPreview():boolean",
+				"isSphericalCaptureActive():boolean",
+				"keyEvent(KeyEvent):void",
+				"mouseEvent(MouseEvent):void",
+				"pause():void",
+				"post():void",
+				"pre():void",
+				"registerScene(Scene):void",
+				"resetControls():void",
+				"resetGraphics(int):void",
+				"resetOrientation():void",
+				"resetPerformanceStatistics():void",
+				"resume():void",
+				"setCurrentScene(Scene):void",
+				"setCurrentView(ViewType):void",
+				"setEnvironmentBackgroundIntensity(float):void",
+				"setEnvironmentBackgroundVisible(boolean):void",
+				"setEnvironmentBackgroundYawOffset(float):void",
+				"setEquirectangularBackground(PImage):void",
+				"setEquirectangularBackground(String):void",
+				"setFishSize(float):void",
+				"setFov(float):void",
+				"setLogMode(LogMode):void",
+				"setPerformanceOutputDemand(ViewType):void",
+				"setPitch(float):void",
+				"setRenderMode(RenderMode):void",
+				"setRoll(float):void",
+				"setScene(Scene):void",
+				"setSceneCameraInputEnabled(boolean):void",
+				"setSceneManager(SceneManager):void",
+				"setShowPreview(boolean):void",
+				"setStandardOutputAspectMode(StandardOutputAspectMode):void",
+				"setTargetFrameRate(int):void",
+				"setup():void",
+				"setYaw(float):void",
+				"stop():void");
+
+		assertDeclaredApi(Scene.class,
+				"configure(SceneServices):void", "dispose():void", "getName():String",
+				"keyEvent(KeyEvent):void", "mouseEvent(MouseEvent):void",
+				"sceneRender(PGraphicsOpenGL):void", "setupScene():void", "update():void");
+		assertDeclaredApi(SceneManager.class,
+				"activateScene(Scene):void", "clearScenes():void", "containsScene(Scene):boolean",
+				"getCurrentScene():Scene", "getSceneCount():int", "nextScene():void",
+				"previousScene():void", "registerScene(Scene):void",
+				"reloadCurrentScene():boolean", "setCurrentSceneIndex(int):void");
+		assertDeclaredApi(SceneServices.class,
+				"actions():SceneActionMap", "applet():PApplet", "assets():SceneAssets",
+				"camera():SceneCameraService", "environment():SceneEnvironmentService",
+				"frameClock():FrameClock", "ports():ScenePorts", "requestReload():void",
+				"tasks():SceneTaskGroup", "timeline():SimulationTimeline");
+		assertDeclaredApi(FrameClock.class,
+				"getDeltaSeconds():double", "getElapsedSeconds():double", "getFrameIndex():long",
+				"getMaxDeltaSeconds():double", "setMaxDeltaSeconds(double):void");
+		assertDeclaredApi(SimulationTimeline.class,
+				"advance(double,DoubleConsumer):int", "getAccumulator():double",
+				"getDroppedUnits():double", "getFixedStep():double", "getMaxSubSteps():int",
+				"getPosition():double", "getRate():double", "isPaused():boolean", "jump(double):void",
+				"pause():void", "reset():void", "resetAccumulator():void", "resume():void",
+				"setFixedStep(double):void", "setMaxSubSteps(int):void", "setPosition(double):void",
+				"setRate(double):void");
+		assertDeclaredApi(SceneTaskGroup.class,
+				"getInFlightCount():int", "getMaxInFlight():int", "isBusy(String):boolean",
+				"submitIfIdle(String,Callable,Consumer):boolean",
+				"submitIfIdle(String,Callable,Consumer,Consumer):boolean",
+				"submitIfIdle(String,Runnable):boolean");
+		assertDeclaredApi(SceneAssets.class,
+				"cacheShape(String,PShape):PShape", "getOrCreateShape(String,Supplier):PShape",
+				"loadImage(String):PImage", "loadShader(String):PShader",
+				"loadShader(String,String,String):PShader", "removeShapesByPrefix(String):int");
+		assertDeclaredApi(SceneActionMap.class,
+				"bindKeyCodePressed(String,int,Runnable):void",
+				"bindKeyPressed(String,char,Runnable):void",
+				"bindMouse(String,int,Consumer):void", "clear():void", "register(String,Runnable):void",
+				"size():int", "trigger(String):boolean", "unregister(String):void");
+		assertDeclaredApi(SceneCameraService.class,
+				"apply(PGraphicsOpenGL):void", "clearTargetTracking():void",
+				"isTrackingTarget():boolean", "orbit():OrbitCamera", "setInputEnabled(boolean):void",
+				"trackTarget(Supplier):void");
+		assertDeclaredApi(SceneEnvironmentService.class,
+				"clear():void", "getIntensity():float", "getYawOffset():float", "isVisible():boolean",
+				"setEquirectangular(PImage):void", "setIntensity(float):void",
+				"setVisible(boolean):void", "setYawOffset(float):void");
+		assertDeclaredApi(ScenePorts.class,
+				"connectInput(SceneInputPort,Consumer):void",
+				"connectOutput(SceneOutputPort):SceneOutputPort",
+				"getDroppedInputCount():long", "getPendingInputCount():int");
+		assertDeclaredApi(SceneInputPort.class, "close():void", "start(Consumer):void");
+		assertDeclaredApi(SceneOutputPort.class, "close():void", "offer(Object):boolean");
+
+		assertDeclaredApi(OutputManager.class,
+				"getLocalTextureBackendName():String", "getLocalTextureView():ViewType",
+				"getNdiCapturedFrames():long", "getNdiDroppedFrames():long",
+				"getNdiFailedFrames():long", "getNdiSentFrames():long",
+				"getOutputFailureReason(OutputType):String", "getOutputState(OutputType):OutputState",
+				"getViewForOutput(OutputType):ViewType", "isActive():boolean",
+				"isLocalTextureAvailable():boolean", "isLocalTextureInitialized():boolean",
+				"isNdiEnabled():boolean", "isOutputEnabled(OutputType):boolean",
+				"isSpoutEnabled():boolean", "isSyphonEnabled():boolean",
+				"setLocalTextureView(ViewType):void", "setNdiFrameRate(int,int):void",
+				"setNdiView(ViewType):void", "setOutputEnabled(OutputType,boolean):void",
+				"setSpoutView(ViewType):void", "setSyphonView(ViewType):void",
+				"setViewForOutput(OutputType,ViewType):void", "toggleOutput(OutputType):void");
+		assertDeclaredApi(Quaternion.class,
+				"fromAxisAngle(PVector,float):Quaternion",
+				"fromAxisAngle(float,float,float,float):Quaternion",
+				"multiply(Quaternion):Quaternion", "normalized():Quaternion",
+				"slerp(Quaternion,float):Quaternion", "toMatrix():PMatrix3D",
+				"toMatrix(PMatrix3D):void", "w():float", "x():float", "y():float", "z():float");
+		assertDeclaredApi(SphericalOrientation.class,
+				"getPitch():float", "getQuaternion():Quaternion", "getRoll():float", "getYaw():float",
+				"reset():void", "setPitch(float):void", "setRoll(float):void", "setYaw(float):void");
+		assertDeclaredApi(OrbitCamera.class,
+				"apply(PGraphicsOpenGL):void", "getDistance():float", "getOrientation():Quaternion",
+				"getTarget():PVector", "goTo(PVector,Quaternion,float):void",
+				"mouseEvent(MouseEvent):void", "reset(float):void", "resetInputState():void",
+				"rotateAround(PVector,float):void", "rotateAround(float,float,float,float):void",
+				"rotateAroundImmediate(PVector,float):void",
+				"rotateAroundImmediate(float,float,float,float):void",
+				"setCollapseGuard(float):void", "setDistance(float):void",
+				"setDistanceImmediate(float):void", "setDistanceLimits(float,float):void",
+				"setDragSensitivity(float):void", "setLerpFactor(float):void",
+				"setOrientation(Quaternion):void", "setOrientationImmediate(Quaternion):void",
+				"setTarget(PVector):void", "setTarget(float,float,float):void",
+				"setTargetImmediate(PVector):void", "setWheelSteps(float,float):void",
+				"snapTo(PVector,Quaternion,float):void",
+				"snapTo(float,float,float,Quaternion,float):void", "update():void", "zoom(float):void",
+				"zoomImmediate(float):void");
+
+		assertDeclaredApi(PerformanceSnapshot.class,
+				"getCalls(PerformanceMetric,int):int", "getCubemapCaptureViolations():long",
+				"getDiagnostics():List", "getDurationNanos(PerformanceMetric,int):long",
+				"getEffectiveMode():PerformanceMode", "getGpuCalls(PerformanceMetric,int):int",
+				"getGpuDurationNanos(PerformanceMetric,int):long",
+				"getGpuStatistics(PerformanceMetric):MetricStatistics",
+				"getGpuTimerArchitecture():GpuTimerArchitecture",
+				"getGpuTimerBackend():GpuTimerBackend", "getGpuTimerPolicy():GpuTimerPolicy",
+				"getInvariantViolations():long", "getOverwrittenFrames():long",
+				"getRequestedMode():PerformanceMode", "getStatistics(PerformanceMetric):MetricStatistics",
+				"getStoredFrames():int", "getTotalFrames():long",
+				"getUnexpectedPassViolations():long", "hasGpuTimings():boolean");
+		assertDeclaredApi(PerformanceSnapshot.MetricStatistics.class,
+				"getAverageCallsPerFrame():double", "getAverageFps():double",
+				"getAverageMilliseconds():double", "getFramesOver16Point67Milliseconds():long",
+				"getFramesOver33Point33Milliseconds():long", "getFramesOver50Milliseconds():long",
+				"getMaximumMilliseconds():double", "getOnePercentLowFps():double",
+				"getP50Milliseconds():double", "getP95Milliseconds():double",
+				"getP99Milliseconds():double", "getSampledFrames():int", "getTotalCalls():long");
+		assertDeclaredApi(GraphicsCapabilities.class,
+				"isHardwareRasterizer():boolean", "isHardwareRasterizerKnown():boolean",
+				"isOpenGlRenderer():boolean", "joglProfile():String", "renderer():String",
+				"shadingLanguageVersion():String", "supportsAnisotropicFiltering():boolean",
+				"supportsCubemap():boolean", "supportsFramebuffer():boolean",
+				"supportsGpuTimerQuery():boolean", "supportsPixelBufferObject():boolean",
+				"supportsSeamlessCubemap():boolean", "supportsSyncFence():boolean",
+				"supportsTexture():boolean", "vendor():String", "version():String");
+		assertDeclaredApi(GpuTimerPolicy.class,
+				"allowsElapsedFallback():boolean", "allowsFenceFallback():boolean",
+				"selectBackend(GpuTimerArchitecture,int,int):GpuTimerBackend");
+		assertDeclaredApi(GpuTimerArchitecture.class,
+				"detect(String,String,String,String):GpuTimerArchitecture");
+	}
+
+	@Test
+	void final20PublicConstructorsAreExact() {
+		assertPublicConstructors(ziviDomeLive.class, "ziviDomeLive(PApplet)");
+		assertPublicConstructors(SceneManager.class, "SceneManager()");
+		assertPublicConstructors(Quaternion.class, "Quaternion(float,float,float,float)");
+		assertPublicConstructors(SphericalOrientation.class, "SphericalOrientation()");
+		assertPublicConstructors(OrbitCamera.class,
+				"OrbitCamera()", "OrbitCamera(PVector,float)", "OrbitCamera(float)");
 	}
 
 	@Test
@@ -267,6 +549,27 @@ class PublicApiCompatibilityTest {
 				.filter(method -> Modifier.isPublic(method.getModifiers()))
 				.map(Method::getName)
 				.collect(Collectors.toSet());
+	}
+
+	private static void assertDeclaredApi(Class<?> type, String... expected) {
+		assertEquals(Set.of(expected), Arrays.stream(type.getDeclaredMethods())
+				.filter(method -> Modifier.isPublic(method.getModifiers()))
+				.filter(method -> !method.isSynthetic())
+				.filter(method -> !type.isEnum()
+						|| !(method.getName().equals("values") || method.getName().equals("valueOf")))
+				.map(method -> method.getName() + "(" + Arrays.stream(method.getParameterTypes())
+						.map(Class::getSimpleName)
+						.collect(Collectors.joining(",")) + "):" + method.getReturnType().getSimpleName())
+				.collect(Collectors.toSet()), type.getName());
+	}
+
+	private static void assertPublicConstructors(Class<?> type, String... expected) {
+		assertEquals(Set.of(expected), Arrays.stream(type.getDeclaredConstructors())
+				.filter(constructor -> Modifier.isPublic(constructor.getModifiers()))
+				.map(constructor -> type.getSimpleName() + "(" + Arrays.stream(constructor.getParameterTypes())
+						.map(Class::getSimpleName)
+						.collect(Collectors.joining(",")) + ")")
+				.collect(Collectors.toSet()), type.getName());
 	}
 
 	private static Class<?>[] concat(Class<?>[]... groups) {
