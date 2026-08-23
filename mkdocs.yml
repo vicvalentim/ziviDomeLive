@@ -17,7 +17,6 @@ theme:
   favicon: assets/png/favicon.ico
   font:
     text: Noto Sans
-    code: Noto Mono
   palette:
     - media: "(prefers-color-scheme)"
       toggle:
@@ -25,15 +24,15 @@ theme:
         name: Switch to light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: blue
-      accent: indigo
+      primary: green
+      accent: light-green
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: blue
-      accent: cyan
+      primary: green
+      accent: light-green
       toggle:
         icon: material/brightness-4
         name: Switch to system preference
@@ -73,7 +72,7 @@ plugins:
       concurrency: 1
       cards_layout: default/variant
       cards_layout_options:
-        background_color: "#0b1026"
+        background_color: "#032e14"
         color: "#ffffff"
   - i18n:
       reconfigure_material: true

@@ -33,6 +33,7 @@ class ExampleScene implements Scene {
 ## Activation sequence
 
 ```mermaid
+%%{init: {"themeVariables": {"actorLineColor": "#059d2c"}}}%%
 sequenceDiagram
   participant F as ziviDomeLive
   participant V as SceneServices
