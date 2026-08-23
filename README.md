@@ -295,9 +295,18 @@ The documentation system has distinct authorities:
 ./gradlew clean test build
 ./gradlew qualificationTests
 python3 tools/validate_documentation.py --root .
-mkdocs build --strict
+python3 -m mkdocs build --strict
 ./gradlew buildReleaseArtifacts
 ```
+
+For a local live preview, invoke MkDocs through the same Python 3 interpreter that owns the documentation dependencies:
+
+```bash
+python3 -m pip install -r requirements-docs.txt
+python3 -m mkdocs serve
+```
+
+Do not rely on an unqualified system `mkdocs` executable: older macOS/Python 2 installations cannot parse the Material `!ENV` configuration or load the current plugins.
 
 Headless tests cover public API shape, lifecycle, routing, math, metadata, package structure and documentation contracts. GPU image quality, projector/lens behavior and NDI/Syphon/Spout receiver interoperability remain manual, environment-specific qualification.
 

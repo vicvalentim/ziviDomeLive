@@ -8,8 +8,10 @@ Use Java 17 e execute:
 ./gradlew clean qualificationTests
 ./gradlew build -x test
 ./gradlew buildReleaseArtifacts
-mkdocs build --strict
+python3 -m mkdocs build --strict
 ```
+
+Visualize o manual com `python3 -m mkdocs serve`. Isso evita executáveis MkDocs antigos do sistema que podem pertencer ao Python 2.
 
 ## Contratos do Projeto
 

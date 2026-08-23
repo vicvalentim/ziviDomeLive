@@ -376,6 +376,18 @@ def check_editorial_system(root,c):
         '## Research-quality reporting',
     ]:
         if token not in testing: c.error(f'research-quality testing guide is missing: {token}')
+    command_guides = [
+        'README.md', 'docs/en/contributing.md', 'docs/pt/contributing.md',
+        'docs/en/research-software.md', 'docs/pt/research-software.md',
+        'docs/en/release-notes/2.0.0.md', 'docs/pt/release-notes/2.0.0.md',
+    ]
+    for rel in command_guides:
+        text=read(root/rel)
+        if re.search(r'(?m)^mkdocs\s+(?:serve|build)\b', text):
+            c.error(f'Python-ambiguous MkDocs command in {rel}; use python3 -m mkdocs')
+    readme=read(root/'README.md')
+    for token in ('python3 -m pip install -r requirements-docs.txt', 'python3 -m mkdocs serve'):
+        if token not in readme: c.error(f'local MkDocs setup guidance missing: {token}')
 
 def main():
     ap=argparse.ArgumentParser()

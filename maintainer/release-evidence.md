@@ -156,7 +156,7 @@ Qualification run on 2026-08-17:
 
 - `qualificationTests`: PASS — 304 total, 304 passed, 0 failed, 0 skipped
 - documentation validator: PASS — 0 errors, 0 warnings
-- `mkdocs build --strict`: PASS
+- `python3 -m mkdocs build --strict`: PASS
 - `buildReleaseArtifacts`: PASS
 - `verifyProcessingPackage`: PASS
 - ZIP/PDEX byte identity: PASS

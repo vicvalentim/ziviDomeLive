@@ -156,7 +156,7 @@ Do not reintroduce nested scene draw ownership, texture-bound `glReadPixels`, PB
 ./gradlew clean qualificationTests
 ./gradlew build -x test
 ./gradlew buildReleaseArtifacts
-mkdocs build --strict
+python3 -m mkdocs build --strict
 processing-java --sketch=examples/SolarSystem \
   --output=/tmp/zividomelive-solarsystem-build --force --build
 ```

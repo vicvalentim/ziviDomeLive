@@ -117,7 +117,7 @@ Esta declaração cobre a revisão documental. Qualquer paper JOSS futuro precis
 ./gradlew clean test build
 ./gradlew qualificationTests
 python3 tools/validate_documentation.py --root .
-mkdocs build --strict
+python3 -m mkdocs build --strict
 ./gradlew buildReleaseArtifacts
 python3 tools/validate_documentation.py \
   --root . \

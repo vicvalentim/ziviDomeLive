@@ -145,6 +145,7 @@ An exact reflection-based snapshot freezes public types, methods, constructors, 
 - Preserved 1.x names only in explicit migration/history material.
 - Added detailed bilingual release notes, lifecycle/service/output documentation and research-software/JOSS-readiness evidence mapping without claiming JOSS submission or acceptance.
 - Added Material for MkDocs Mermaid diagrams, tags, CI social cards, bilingual navigation and semantic page statuses.
+- Standardized local MkDocs commands through `python3 -m mkdocs` so legacy system/Python 2 executables cannot parse the project configuration by accident.
 - Replaced raster diagram placeholders with theme-aware Mermaid source.
 - Replaced the hero placeholder with a traceable SVG/PNG editorial illustration.
 - Kept real example/calibration/benchmark screenshots gated on installed-package qualification rather than publishing mock evidence.

@@ -117,7 +117,7 @@ This statement covers the documentation revision. Any future JOSS paper must inc
 ./gradlew clean test build
 ./gradlew qualificationTests
 python3 tools/validate_documentation.py --root .
-mkdocs build --strict
+python3 -m mkdocs build --strict
 ./gradlew buildReleaseArtifacts
 python3 tools/validate_documentation.py \
   --root . \
