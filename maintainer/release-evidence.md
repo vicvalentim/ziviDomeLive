@@ -91,7 +91,7 @@ If a backend/platform is not claimed for 2.0.0, replace its row status with `NOT
 
 | Check | Status | Evidence |
 |---|---|---|
-| provisional images replaced and `docs/img/PLACEHOLDERS.txt` removed | UNVERIFIED | visual review |
+| raster diagram placeholders removed; Mermaid diagrams and hero asset reviewed | UNVERIFIED | visual + strict-build review |
 | EN/PT facts synchronized | UNVERIFIED | validator + review |
 | Javadocs match public signatures | UNVERIFIED | Javadoc build/review |
 | no roadmap feature presented as current | UNVERIFIED | review |

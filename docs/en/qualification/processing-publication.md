@@ -11,6 +11,27 @@ This checklist is a **maintainer/publication** surface. It is not part of the ar
 
 The generated Processing library must remain self-contained for installation, examples, source inspection, API reference, licensing and citation. MkDocs is the technical manual; a future GitBook is not a dependency of the Processing package.
 
+## Official-guideline mapping
+
+### Project homepage
+
+- [ ] stable public URL presents a concise abstract and the intended audience
+- [ ] installation distinguishes Contribution Manager, release artifact and source build
+- [ ] all eight executable examples are listed, with tutorials/manual linked when useful
+- [ ] Processing/Java baseline, renderer, `pixelDensity(1)`, dependencies and limitations are stated
+- [ ] tested systems/Processing versions are either backed by evidence or explicitly left unqualified
+- [ ] `library.keywords` and the documentation-update date are visible
+- [ ] latest stable release and the untagged 2.0 development state are not confused
+- [ ] direct stable-release links use the common `ziviDomeLive` basename for ZIP/TXT/PDEX
+
+### Package and reference
+
+- [ ] Javadocs are generated into `reference/index.html`
+- [ ] source, examples, license/notices and `library.properties` ship beside the runtime library
+- [ ] the package root/folder name and artifact basenames remain `ziviDomeLive`
+- [ ] examples compile against the installed package, not only the repository build
+- [ ] the public reference contains only the intended Stable, Advanced Stable and Experimental types
+
 ## AUTOMATED
 
 - [ ] `./gradlew clean test build --console=plain`
@@ -57,6 +78,7 @@ The final package must include and expose:
 - [ ] `library.properties`
 - [ ] project/source license and third-party notices
 - [ ] citation metadata shipped according to the current packaging task
+- [ ] README, CHANGELOG, `CITATION.cff` and `THIRD_PARTY.md`
 
 It must not contain local benchmark reports, maintainer-only generated evidence, `.DS_Store`, tests or local helper JARs excluded by the release packaging contract.
 

@@ -41,7 +41,7 @@ Historical notes may still mention superseded language when clearly labelled as 
 | Before | After |
 |---|---|
 | README/MkDocs lead with renderer internals | artist-first purpose, representations, start path; internals moved to Developer Guide |
-| public types presented as one undifferentiated group | Artist-facing / Advanced / Experimental / Deprecated / Engine-facing classification |
+| public types presented as one undifferentiated group | Stable / Advanced Stable / Experimental / Processing Callback / Internal classification |
 | external-output artist page mixed with backend internals | artist page focuses on destination/view/enable/state/receiver; internals moved |
 | qualification after release tag | qualification/evidence becomes pre-tag gate |
 | `tested.*` without release evidence | omitted until qualification justifies a claim |
@@ -59,12 +59,12 @@ Historical notes may still mention superseded language when clearly labelled as 
 
 ## 6. API documented
 
-- Artist-facing stable: runtime facade, `Scene`, `SceneManager`, `RenderMode`, `ViewType`, `OutputManager` and normal facade controls.
-- Advanced public: Scene Services/time/camera/orientation and direct renderer facilities where public.
-- Experimental public: current performance instrumentation.
-- Deprecated: compatibility methods explicitly retained by implementation/Javadocs.
-- Engine-facing public: `FrameViews`, `CubemapTarget`, `ProcessingGlAdapter` and comparable low-level boundaries.
-- Internal: package-private pipeline/policy architecture documented only in Developer Guide.
+- Stable: runtime facade, `Scene`, `SceneManager`, `RenderMode`, `ViewType` and logging/aspect controls.
+- Advanced Stable: Scene Services/time/tasks/assets/actions/camera/environment/ports, typed outputs, quaternion/orientation/navigation.
+- Experimental: current performance/capability/timer reporting vocabulary.
+- Processing Callback: public facade hooks required by Processing/ControlP5 discovery.
+- Internal: concrete renderers, frame containers, GL targets/adapters, UI, workers and producer operations documented only in Developer Guide/history.
+- Deprecated: none in the final 2.0 public surface; removed 1.x symbols are migration history.
 
 ## 7. Processing compliance
 
@@ -118,7 +118,7 @@ Those are intentionally represented as release evidence gates, not fictional PAS
 At handoff time the expected blockers are:
 
 1. apply DOC-01…DOC-08 to the current `release/2.0.0` checkout and resolve any concurrent branch changes;
-2. replace six `docs/img/` provisional images and delete `docs/img/PLACEHOLDERS.txt`;
+2. verify the SVG/PNG hero and Mermaid diagrams; capture real example/tool evidence only from the installed qualified package;
 3. execute/record all `maintainer/release-evidence.md` gates;
 4. verify the external Zenodo DOI record;
 5. decide and record actual tested platform/backend claims, leaving unqualified combinations unclaimed;
