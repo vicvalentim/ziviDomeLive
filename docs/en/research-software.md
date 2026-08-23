@@ -15,6 +15,18 @@ ziviDomeLive is developed as open-source research software and as a technical-ar
 !!! important "Readiness map, not publication status"
     This page maps repository evidence to current JOSS-style review concerns. It does not claim submission, review, acceptance, endorsement or a JOSS paper DOI.
 
+## Research provenance and institutional context
+
+The library originated in 2024 as part of the Arts doctoral research in the Technological Poetics research line at PPGARTES/UFMG, *O domo é vivo: entre técnica, sensível e poética em imersão* ([institutional record](https://hdl.handle.net/1843/981)). This origin situates the software as a research-creation artifact concerned with the relationships among technique, sensory experience, poetics and immersion.
+
+Its current research context is the project *Arte, Codificação e Imersão: pesquisa-criação, open-source e ecossistemas audiovisuais imersivos*, selected under [PIBITI/UFRB Call no. 05/2026](https://ufrb.edu.br/ppgci/noticias/1624-edital-05-2026-do-pibiti-26-27) for the 2026–2027 cycle. Prof. Dr. Victor Hugo Soares Valentim coordinates the project, with undergraduate scholarship students **Tiago Silva Rosa** and **David Siqueira de Araujo**, both at CECULT/UFRB, participating as collaborators. This institutional provenance describes the research setting; it does not by itself establish research impact, publication status or authorship of a particular release.
+
+### Research record
+
+- [Open Source Science project record](https://science.ecosyste.ms/projects/36511);
+- Victor Hugo Soares Valentim, [*ziviDomeLive como artefato de pesquisa e experimentação em arte e tecnologia para criação de experiências audiovisuais ao vivo em fulldome*](https://files.cercomp.ufg.br/weby/up/777/o/ziviDomeLive_como_artefato_de_pesquisa_e_experimentac%CC%A7a%CC%83o_em_arte_e_tecnologia_para_criac%CC%A7a%CC%83o_de_experie%CC%82ncias_audiovisuais_ao_vivo_em_fulldome.pdf), *Proceedings of the XIII International Symposium on Innovation in Interactive Media — Paradigmas*, Goiânia: Media Lab / Iberoamérica, PPG ACT, 2026, pp. 615–628, ISSN 2358-0488;
+- the [research-integrity, full human-review and conduct declaration](research-integrity.md), which records the normative framework, AI-use disclosure and current research-team credit.
+
 ## Statement of need
 
 ### Problem
@@ -105,11 +117,11 @@ A DOI, affiliation or statement of potential use is not evidence of research imp
 - cite the software through [Citation](citation.md) and `CITATION.cff`;
 - preserve contributor authorship/credit according to actual intellectual contribution.
 
-## AI-assisted work disclosure for this documentation revision
+## AI-assisted work and full human review
 
-The 2.0 documentation restructuring was assisted by OpenAI Codex under maintainer direction. API claims were checked against source, the executable public-API snapshot and local validation; external standards were checked against official Processing, JOSS and Material for MkDocs sources. The maintainer remains responsible for technical accuracy and release approval.
+The 2.0 work was assisted by OpenAI Codex under the direction of Prof. Dr. Victor Hugo Soares Valentim. Assistance included codebase analysis, implementation and refactoring support, test and documentation development, and validation workflow execution. The author declares that he reviewed the resulting code, documentation, tests, technical and research claims, references and release materials in full, understands and approves the final decisions, and accepts full human responsibility for research and development in art and technology.
 
-This statement covers the documentation revision. Any future JOSS paper must include its own complete disclosure of AI use in software development, documentation and paper authorship, together with the human verification procedure.
+The complete scope, limits and normative basis of this statement are recorded in [Research Integrity, Human Review and Conduct](research-integrity.md). Any future JOSS paper must include its own complete disclosure and human verification procedure.
 
 ## Reviewer commands
 

@@ -162,6 +162,7 @@ plugins:
             Maintainer: Manutenção
             Citation: Citação
             Research Software and JOSS Readiness: Software de Pesquisa e Prontidão JOSS
+            Research Integrity, Human Review and Conduct: Integridade Científica, Revisão Humana e Conduta
             Topics: Tópicos
             About: Sobre
             About ziviDomeLive: Sobre o ziviDomeLive
@@ -304,6 +305,7 @@ nav:
   - About:
       - About ziviDomeLive: about.md
       - Research Software and JOSS Readiness: research-software.md
+      - Research Integrity, Human Review and Conduct: research-integrity.md
       - Citation: citation.md
       - Author: author.md
       - License: license.md

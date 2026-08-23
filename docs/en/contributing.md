@@ -1,5 +1,39 @@
 # Contributing
 
+!!! tip "Contributing development"
+    We welcome contributions to the development of ziviDomeLive. Bug fixes, well-scoped features, tests, examples, accessibility improvements, translations and documentation all matter and are greatly appreciated.
+
+Participation is governed by the [Code of Conduct](https://github.com/vicvalentim/ziviDomeLive/blob/main/CODE_OF_CONDUCT.md) and the project's [research-integrity and human-review declaration](research-integrity.md). AI-assisted work must identify the tool and purpose; contributors must understand, test, review and accept responsibility for every submitted change.
+
+## Steps to contribute
+
+1. **Fork the repository.** Open the [ziviDomeLive repository](https://github.com/vicvalentim/ziviDomeLive) and select **Fork** to create a copy under your GitHub account.
+2. **Clone your fork.** Replace `YOUR-USERNAME` with your GitHub account:
+
+    ```bash
+    git clone https://github.com/YOUR-USERNAME/ziviDomeLive.git
+    cd ziviDomeLive
+    ```
+
+3. **Create a focused branch.** Use a short name that identifies the work:
+
+    ```bash
+    git checkout -b your-branch-name
+    ```
+
+4. **Make and test the change.** Keep the scope coherent, follow the contracts below and add or update tests and bilingual documentation when public behavior changes.
+5. **Commit and push to your fork.** Write a clear commit message, then publish the branch:
+
+    ```bash
+    git add <changed-files>
+    git commit -m "Describe the contribution"
+    git push origin your-branch-name
+    ```
+
+6. **Open a pull request.** From your fork, open a PR against the original repository. Explain the problem, the chosen solution, intentional API or behavior changes, validation performed and any remaining hardware or visual checks. Link the related issue when one exists.
+
+Thank you for helping ziviDomeLive remain useful, teachable and sustainable.
+
 ## Local Checks
 
 Use Java 17 and run:
@@ -46,6 +80,10 @@ Public behavior changes require Javadocs, focused unit tests, bilingual user
 documentation, and a changelog entry. Keep pure routing, orientation, sizing,
 and lifecycle policy isolated from OpenGL where possible so it can be tested in
 the headless qualification fork.
+
+Research, documentation and code contributions must cite their sources and
+credit collaborators according to actual contribution. Do not submit private,
+confidential or unpublished third-party material to generative-AI services.
 
 Do not commit generated `build/`, `site/`, or `release/` contents. Release
 artifacts are produced by Gradle and published from version tags.

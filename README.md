@@ -316,13 +316,15 @@ Headless tests cover public API shape, lifecycle, routing, math, metadata, packa
 
 ziviDomeLive is developed as open-source research software and a technical-artistic research artifact at the intersection of creative coding, immersive media, fulldome, real-time audiovisual systems, artistic research and education.
 
+The library emerged in 2024 from the Arts doctoral research in Technological Poetics at PPGARTES/UFMG, *[O domo é vivo: entre técnica, sensível e poética em imersão](https://hdl.handle.net/1843/981)*. It is now linked to *Arte, Codificação e Imersão: pesquisa-criação, open-source e ecossistemas audiovisuais imersivos*, selected under [PIBITI/UFRB Call no. 05/2026](https://ufrb.edu.br/ppgci/noticias/1624-edital-05-2026-do-pibiti-26-27) for 2026–2027. Prof. Dr. Victor Hugo Soares Valentim coordinates the project with undergraduate scholarship collaborators Tiago Silva Rosa and David Siqueira de Araujo at CECULT/UFRB.
+
 The project is developed by **[Victor Valentim](https://victorvalentim.com/)**. Repository metadata records the following affiliations:
 
 - CECULT/UFRB — Federal University of Reconcavo da Bahia;
 - PPGARTES/UFMG — Federal University of Minas Gerais;
 - ORCID: [0000-0002-0282-7947](https://orcid.org/0000-0002-0282-7947).
 
-The documentation includes a [research-software and JOSS-readiness map](docs/en/research-software.md). It aligns verifiable software evidence with review criteria; it does **not** claim that ziviDomeLive has been submitted to or accepted by JOSS.
+The public research record includes an [Open Source Science project entry](https://science.ecosyste.ms/projects/36511) and the 2026 SIIMI proceedings article [*ziviDomeLive como artefato de pesquisa e experimentação em arte e tecnologia para criação de experiências audiovisuais ao vivo em fulldome*](https://files.cercomp.ufg.br/weby/up/777/o/ziviDomeLive_como_artefato_de_pesquisa_e_experimentac%CC%A7a%CC%83o_em_arte_e_tecnologia_para_criac%CC%A7a%CC%83o_de_experie%CC%82ncias_audiovisuais_ao_vivo_em_fulldome.pdf). The documentation includes a [research-software and JOSS-readiness map](docs/en/research-software.md) and the project's [research-integrity, full human-review and conduct declaration](docs/en/research-integrity.md). These align verifiable evidence with review criteria; they do **not** claim that ziviDomeLive has been submitted to or accepted by JOSS.
 
 ## Citation
 
@@ -334,7 +336,7 @@ Release maintainers must verify the registered external record before tagging or
 
 ## Contributing and support
 
-Bug reports, documentation improvements, tests, examples and scoped code contributions are welcome. Read the [Contributing Guide](docs/en/contributing.md) for contract and validation requirements. Use [GitHub Issues](https://github.com/vicvalentim/ziviDomeLive/issues) for reproducible problems and support questions.
+Bug reports, documentation improvements, tests, examples and scoped code contributions are welcome. Read the [Contributing Guide](docs/en/contributing.md) for the fork, branch, validation and pull-request workflow, and follow the project's [Code of Conduct](CODE_OF_CONDUCT.md). Use [GitHub Issues](https://github.com/vicvalentim/ziviDomeLive/issues) for reproducible problems and support questions.
 
 Development is supported through [GitHub Sponsors](https://github.com/sponsors/vicvalentim); sponsorship does not change the open availability of the library, documentation or public development.
 

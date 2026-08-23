@@ -144,6 +144,8 @@ An exact reflection-based snapshot freezes public types, methods, constructors, 
 - Reclassified API documentation into Stable, Advanced Stable, Experimental, Processing Callback and Internal levels.
 - Preserved 1.x names only in explicit migration/history material.
 - Added detailed bilingual release notes, lifecycle/service/output documentation and research-software/JOSS-readiness evidence mapping without claiming JOSS submission or acceptance.
+- Recorded the library's 2024 doctoral-research origin, current PIBITI/UFRB 05/2026 project, coordinator, CECULT/UFRB scholarship collaborators, Open Source Science entry and 2026 SIIMI proceedings article.
+- Added a bilingual research-integrity and full human-review declaration grounded in CNPq Ordinance 2,664/2026 and international integrity frameworks, plus a Processing-inspired project Code of Conduct and complete fork-to-PR contribution workflow.
 - Added Material for MkDocs Mermaid diagrams, tags, CI social cards, bilingual navigation and semantic page statuses.
 - Standardized local MkDocs commands through `python3 -m mkdocs` so legacy system/Python 2 executables cannot parse the project configuration by accident.
 - Consolidated generated Javadocs at the language-neutral `site/reference` route, with locale-safe EN/PT links that also work inside pull-request preview subdirectories.

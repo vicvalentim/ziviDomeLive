@@ -15,6 +15,18 @@ ziviDomeLive é desenvolvido como software de pesquisa open source e artefato t�
 !!! important "Mapa de prontidão, não status de publicação"
     Esta página mapeia evidências do repositório para preocupações atuais de revisão no estilo JOSS. Não alega submissão, review, aceite, endorsement ou DOI de paper JOSS.
 
+## Proveniência da pesquisa e contexto institucional
+
+A biblioteca surgiu em 2024 no âmbito da pesquisa de doutorado em Artes, na linha de pesquisa Poéticas Tecnológicas do PPGARTES/UFMG, *O domo é vivo: entre técnica, sensível e poética em imersão* ([registro institucional](https://hdl.handle.net/1843/981)). Essa origem situa o software como artefato de pesquisa-criação dedicado às relações entre técnica, experiência sensível, poética e imersão.
+
+Seu contexto de pesquisa atual é o projeto *Arte, Codificação e Imersão: pesquisa-criação, open-source e ecossistemas audiovisuais imersivos*, contemplado no [Edital PIBITI/UFRB nº 05/2026](https://ufrb.edu.br/ppgci/noticias/1624-edital-05-2026-do-pibiti-26-27), ciclo 2026–2027. O projeto é coordenado pelo Prof. Dr. Victor Hugo Soares Valentim e conta com os bolsistas estudantes de graduação **Tiago Silva Rosa** e **David Siqueira de Araujo**, ambos do CECULT/UFRB, como colaboradores. Essa proveniência descreve o contexto institucional da pesquisa; isoladamente, ela não comprova impacto científico, status de publicação ou autoria de uma release específica.
+
+### Registro da pesquisa
+
+- [ficha do projeto no Open Source Science](https://science.ecosyste.ms/projects/36511);
+- Victor Hugo Soares Valentim, [*ziviDomeLive como artefato de pesquisa e experimentação em arte e tecnologia para criação de experiências audiovisuais ao vivo em fulldome*](https://files.cercomp.ufg.br/weby/up/777/o/ziviDomeLive_como_artefato_de_pesquisa_e_experimentac%CC%A7a%CC%83o_em_arte_e_tecnologia_para_criac%CC%A7a%CC%83o_de_experie%CC%82ncias_audiovisuais_ao_vivo_em_fulldome.pdf), *Anais do XIII Simpósio Internacional de Inovação em Mídias Interativas — Paradigmas*, Goiânia: Media Lab / Iberoamérica, PPG ACT, 2026, p. 615–628, ISSN 2358-0488;
+- [declaração de integridade científica, revisão humana integral e conduta](research-integrity.md), que registra referencial normativo, disclosure de IA e crédito da equipe atual.
+
 ## Declaração de necessidade
 
 ### Problema
@@ -105,11 +117,11 @@ DOI, afiliação ou potencial de uso não são evidência de impacto. Um stateme
 - cite o software por [Citação](citation.md) e `CITATION.cff`;
 - preserve autoria/crédito conforme a contribuição intelectual real.
 
-## Trabalho assistido por IA — disclosure desta revisão documental
+## Trabalho assistido por IA e revisão humana integral
 
-A reestruturação da documentação 2.0 recebeu assistência do OpenAI Codex sob direção do maintainer. Claims da API foram conferidos contra fontes, snapshot executável da API e validação local; padrões externos foram conferidos em fontes oficiais Processing, JOSS e Material for MkDocs. O maintainer continua responsável pela precisão técnica e aprovação da release.
+O trabalho da versão 2.0 recebeu assistência do OpenAI Codex sob direção do Prof. Dr. Victor Hugo Soares Valentim. A assistência incluiu análise do codebase, apoio à implementação e refatoração, desenvolvimento de testes e documentação e execução dos fluxos de validação. O autor declara ter revisado integralmente o código, a documentação, os testes, os claims técnicos e de pesquisa, as referências e os materiais de release resultantes, compreender e aprovar as decisões finais e assumir responsabilidade humana integral pela pesquisa e desenvolvimento em arte e tecnologia.
 
-Esta declaração cobre a revisão documental. Qualquer paper JOSS futuro precisa de disclosure próprio e completo sobre IA no desenvolvimento, documentação e autoria do paper, incluindo o procedimento de verificação humana.
+O escopo completo, os limites e a base normativa dessa declaração estão em [Integridade Científica, Revisão Humana e Conduta](research-integrity.md). Qualquer paper JOSS futuro precisa de disclosure próprio e completo, acompanhado do procedimento de verificação humana.
 
 ## Comandos para reviewers
 

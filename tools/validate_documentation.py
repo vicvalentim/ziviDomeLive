@@ -254,12 +254,21 @@ def check_research_readiness(root,c):
         'docs/en/research-software.md': [
             'Statement of need', 'State of the field', 'Research impact',
             'Evidence matrix', 'AI-assisted work', 'does not claim submission',
-            '```mermaid',
+            'Research provenance', 'https://hdl.handle.net/1843/981',
+            'PIBITI/UFRB Call no. 05/2026', 'Victor Hugo Soares Valentim',
+            'Tiago Silva Rosa', 'David Siqueira de Araujo', 'CECULT/UFRB',
+            'science.ecosyste.ms/projects/36511', 'XIII International Symposium',
+            'research-integrity.md', '```mermaid',
         ],
         'docs/pt/research-software.md': [
             'Declaração de necessidade', 'Estado da área', 'Impacto de pesquisa',
             'Matriz de evidências', 'Trabalho assistido por IA',
-            'Não alega submissão', '```mermaid',
+            'Não alega submissão', 'Proveniência da pesquisa',
+            'https://hdl.handle.net/1843/981', 'Edital PIBITI/UFRB nº 05/2026',
+            'Victor Hugo Soares Valentim', 'Tiago Silva Rosa',
+            'David Siqueira de Araujo', 'CECULT/UFRB',
+            'science.ecosyste.ms/projects/36511', 'XIII Simpósio Internacional',
+            'research-integrity.md', '```mermaid',
         ],
     }
     for rel, tokens in requirements.items():
@@ -268,6 +277,70 @@ def check_research_readiness(root,c):
             if token not in text: c.error(f'research-readiness page {rel} is missing: {token}')
         if not re.search(r'(?i)incomplete|incomplet', text):
             c.error(f'research-readiness page {rel} does not mark incomplete evidence')
+
+def check_research_integrity(root,c):
+    requirements = {
+        'docs/en/research-integrity.md': [
+            'CNPq Ordinance no. 2,664', 'Singapore Statement',
+            'European Code of Conduct for Research Integrity', 'OpenAI Codex',
+            'reviewed the resulting code', 'full human responsibility',
+            'Tiago Silva Rosa', 'David Siqueira de Araujo',
+            'Processing 4 Code of Conduct',
+        ],
+        'docs/pt/research-integrity.md': [
+            'Portaria CNPq nº 2.664', 'Declaração de Singapura',
+            'Código Europeu de Conduta', 'OpenAI Codex',
+            'revisado integralmente o código', 'responsabilidade humana integral',
+            'Tiago Silva Rosa', 'David Siqueira de Araujo',
+            'Código de Conduta do Processing 4',
+        ],
+    }
+    for rel, tokens in requirements.items():
+        text=read(root/rel)
+        for token in tokens:
+            if token not in text: c.error(f'research-integrity page {rel} is missing: {token}')
+
+    conduct=read(root/'CODE_OF_CONDUCT.md')
+    for token in (
+            '# ziviDomeLive Code of Conduct', '## Our standards',
+            '## Research integrity and AI-assisted work',
+            '## Reporting and enforcement', 'Processing 4 Code of Conduct',
+            'human responsibility for AI-assisted contributions'):
+        if token not in conduct: c.error(f'CODE_OF_CONDUCT.md is missing: {token}')
+
+    contribution_requirements = {
+        'docs/en/contributing.md': [
+            'Contributing development', 'git clone https://github.com/YOUR-USERNAME/ziviDomeLive.git',
+            'git checkout -b your-branch-name', 'git push origin your-branch-name',
+            'Open a pull request', 'CODE_OF_CONDUCT.md',
+        ],
+        'docs/pt/contributing.md': [
+            'Contribuindo com o desenvolvimento', 'git clone https://github.com/SEU-USUARIO/ziviDomeLive.git',
+            'git checkout -b nome-da-sua-branch', 'git push origin nome-da-sua-branch',
+            'Abra um pull request', 'CODE_OF_CONDUCT.md',
+        ],
+    }
+    for rel, tokens in contribution_requirements.items():
+        text=read(root/rel)
+        for token in tokens:
+            if token not in text: c.error(f'contribution workflow {rel} is missing: {token}')
+
+    citation_requirements = {
+        'docs/en/citation.md': [
+            '## Published research article', 'XIII International Symposium',
+            '615–628', 'ISSN 2358-0488', 'science.ecosyste.ms/projects/36511',
+            'does not replace `CITATION.cff`',
+        ],
+        'docs/pt/citation.md': [
+            '## Artigo de pesquisa publicado', 'XIII Simpósio Internacional',
+            '615–628', 'ISSN 2358-0488', 'science.ecosyste.ms/projects/36511',
+            'não substitui o `CITATION.cff`',
+        ],
+    }
+    for rel, tokens in citation_requirements.items():
+        text=read(root/rel)
+        for token in tokens:
+            if token not in text: c.error(f'research citation page {rel} is missing: {token}')
 
 def check_release_documents(root,c):
     changelog=read(root/'CHANGELOG.md')
@@ -512,6 +585,7 @@ def check_editorial_system(root,c):
         'name: mermaid', 'material-editorial.css', 'splash-sphere.js', '- tags:', '- social:',
         'callback:', 'internal:', 'Advanced Stable API', 'Removed 1.x API',
         'Internal Boundary', 'Research Software and JOSS Readiness',
+        'Research Integrity, Human Review and Conduct',
     ]:
         if token not in mk: c.error(f'Material editorial configuration missing: {token}')
     if 'navigation.instant' in mk:
@@ -524,12 +598,18 @@ def check_editorial_system(root,c):
     for token in (
             '- About ziviDomeLive: about.md',
             '- Research Software and JOSS Readiness: research-software.md',
+            '- Research Integrity, Human Review and Conduct: research-integrity.md',
             '- Citation: citation.md', '- Author: author.md', '- License: license.md'):
         if token not in mk[about_nav:]: c.error(f'About navigation entry missing: {token}')
     for rel in ('docs/en/about.md', 'docs/pt/about.md'):
         page = read(root/rel)
-        for token in ('research-software.md', 'citation.md', 'author.md', 'license.md'):
+        for token in ('research-software.md', 'research-integrity.md', 'citation.md', 'author.md', 'license.md'):
             if token not in page: c.error(f'About landing page is missing {token}: {rel}')
+        for token in (
+                '2024', 'https://hdl.handle.net/1843/981',
+                'Arte, Codificação e Imersão', '05/2026',
+                'Victor Hugo Soares Valentim', 'CECULT/UFRB'):
+            if token not in page: c.error(f'About research provenance is missing {token}: {rel}')
     if 'exclude("**/_internal/**")' not in build:
         c.error('Javadocs do not exclude the current _internal source taxonomy')
     if 'tasks.register<Sync>("attachJavadocsToSite")' not in build:
@@ -655,6 +735,7 @@ def main():
     check_examples(root,c)
     check_language_parity(root,c)
     check_research_readiness(root,c)
+    check_research_integrity(root,c)
     check_release_documents(root,c)
     check_editorial_system(root,c)
     if not args.skip_links: check_local_links(root,c)
