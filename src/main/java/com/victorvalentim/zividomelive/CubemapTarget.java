@@ -140,10 +140,20 @@ final class CubemapTarget implements AutoCloseable {
 		if (!isAllocated() || renderFramebufferId == 0 || depthRenderbufferId == 0) {
 			return false;
 		}
-		return glAdapter.withPgl(parent, pgl ->
-				pgl.isTexture(textureId)
-						&& pgl.isFramebuffer(renderFramebufferId)
-						&& pgl.isRenderbuffer(depthRenderbufferId));
+		if (!(parent.g instanceof PGraphicsOpenGL graphics)) {
+			throw new IllegalStateException("Processing OpenGL renderer is not available.");
+		}
+		PGL pgl = graphics.beginPGL();
+		try {
+			if (pgl == null) {
+				throw new IllegalStateException("Processing PGL context is not available.");
+			}
+			return pgl.isTexture(textureId)
+					&& pgl.isFramebuffer(renderFramebufferId)
+					&& pgl.isRenderbuffer(depthRenderbufferId);
+		} finally {
+			graphics.endPGL();
+		}
 	}
 
 	/**
@@ -191,13 +201,15 @@ final class CubemapTarget implements AutoCloseable {
 		Objects.requireNonNull(renderOperation, "renderOperation");
 		ensureAllocated();
 
-		glAdapter.withPgl(graphics, pgl -> {
-			withCubemapFaceFramebuffer(
-					pgl,
-					glTargetFor(face),
-					() -> renderOperation.accept(pgl));
-			return null;
-		});
+		PGL pgl = graphics.beginPGL();
+		try {
+			if (pgl == null) {
+				throw new IllegalStateException("Processing PGL context is not available.");
+			}
+			withCubemapFaceFramebuffer(pgl, glTargetFor(face), renderOperation);
+		} finally {
+			graphics.endPGL();
+		}
 		mipmapsValid = false;
 	}
 
@@ -206,16 +218,34 @@ final class CubemapTarget implements AutoCloseable {
 	 */
 	public void generateMipmaps() {
 		ensureAllocated();
-		glAdapter.withPgl(parent, pgl -> {
-			withTextureUnitZeroCubemapBound(
-					pgl,
-					textureId,
-					savedActiveTexture,
-					savedCubemapBinding,
-					() -> pgl.generateMipmap(PGL.TEXTURE_CUBE_MAP));
-			return null;
-		});
+		if (!(parent.g instanceof PGraphicsOpenGL graphics)) {
+			throw new IllegalStateException("Processing OpenGL renderer is not available.");
+		}
+		PGL pgl = graphics.beginPGL();
+		try {
+			if (pgl == null) {
+				throw new IllegalStateException("Processing PGL context is not available.");
+			}
+			generateMipmapsBound(pgl);
+		} finally {
+			graphics.endPGL();
+		}
 		mipmapsValid = true;
+	}
+
+	private void generateMipmapsBound(PGL pgl) {
+		savedActiveTexture.clear();
+		savedCubemapBinding.clear();
+		pgl.getIntegerv(GL_ACTIVE_TEXTURE, savedActiveTexture);
+		pgl.activeTexture(PGL.TEXTURE0);
+		pgl.getIntegerv(GL_TEXTURE_BINDING_CUBE_MAP, savedCubemapBinding);
+		try {
+			pgl.bindTexture(PGL.TEXTURE_CUBE_MAP, textureId);
+			pgl.generateMipmap(PGL.TEXTURE_CUBE_MAP);
+		} finally {
+			pgl.bindTexture(PGL.TEXTURE_CUBE_MAP, savedCubemapBinding.get(0));
+			pgl.activeTexture(savedActiveTexture.get(0));
+		}
 	}
 
 	/**
@@ -534,7 +564,10 @@ final class CubemapTarget implements AutoCloseable {
 		}
 	}
 
-	private void withCubemapFaceFramebuffer(PGL pgl, int cubemapFaceTarget, Runnable renderOperation) {
+	private void withCubemapFaceFramebuffer(
+			PGL pgl,
+			int cubemapFaceTarget,
+			Consumer<PGL> renderOperation) {
 		savedReadFramebuffer.clear();
 		savedDrawFramebuffer.clear();
 		savedViewport.clear();
@@ -566,7 +599,7 @@ final class CubemapTarget implements AutoCloseable {
 			pgl.clear(PGL.COLOR_BUFFER_BIT | PGL.DEPTH_BUFFER_BIT);
 			logGlErrorIfAny(pgl, "native cubemap framebuffer clear");
 
-			renderOperation.run();
+			renderOperation.accept(pgl);
 			logGlErrorIfAny(pgl, "native cubemap face operation");
 			pgl.flush();
 			logGlErrorIfAny(pgl, "native cubemap framebuffer flush");

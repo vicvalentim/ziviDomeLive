@@ -9,6 +9,8 @@ import processing.core.PVector;
  */
 public final class Quaternion {
     private static final float SLERP_LINEAR_THRESHOLD = 0.9995f;
+    private static final float UNIT_TOLERANCE = 1.0e-6f;
+    private static final Quaternion IDENTITY = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
 
     private final float x;
     private final float y;
@@ -69,7 +71,7 @@ public final class Quaternion {
         requireFinite(az, "axis z");
         requireFinite(angle, "angle");
         if (angle == 0.0f) {
-            return new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+            return IDENTITY;
         }
         float axisMagnitude = (float) Math.sqrt(ax * ax + ay * ay + az * az);
         if (axisMagnitude == 0.0f) {
@@ -175,11 +177,19 @@ public final class Quaternion {
      * @throws IllegalStateException when all four components are zero
      */
     public Quaternion normalized() {
-        float magnitude = (float) Math.sqrt(w * w + x * x + y * y + z * z);
-        if (magnitude == 0.0f) {
+        float magnitudeSquared = w * w + x * x + y * y + z * z;
+        if (magnitudeSquared == 0.0f) {
             throw new IllegalStateException("A zero quaternion cannot be normalized.");
         }
-        return new Quaternion(x / magnitude, y / magnitude, z / magnitude, w / magnitude);
+        if (Math.abs(magnitudeSquared - 1.0f) <= UNIT_TOLERANCE) {
+            return this;
+        }
+        float inverseMagnitude = 1.0f / (float) Math.sqrt(magnitudeSquared);
+        return new Quaternion(
+                x * inverseMagnitude,
+                y * inverseMagnitude,
+                z * inverseMagnitude,
+                w * inverseMagnitude);
     }
 
     /**
@@ -195,28 +205,46 @@ public final class Quaternion {
         float amount = Math.max(0.0f, Math.min(1.0f, t));
         Quaternion start = normalized();
         Quaternion end = q2.normalized();
+        if (amount == 0.0f) {
+            return start;
+        }
         float dot = start.w * end.w + start.x * end.x + start.y * end.y + start.z * end.z;
+        float endX = end.x;
+        float endY = end.y;
+        float endZ = end.z;
+        float endW = end.w;
+        boolean negatedEnd = false;
         if (dot < 0.0f) {
-            end = new Quaternion(-end.x, -end.y, -end.z, -end.w);
+            endX = -endX;
+            endY = -endY;
+            endZ = -endZ;
+            endW = -endW;
+            negatedEnd = true;
             dot = -dot;
         }
         dot = Math.max(-1.0f, Math.min(1.0f, dot));
+		if (amount == 1.0f) {
+			return negatedEnd ? new Quaternion(endX, endY, endZ, endW) : end;
+		}
+        if (dot >= 1.0f - UNIT_TOLERANCE) {
+            return start;
+        }
         if (dot > SLERP_LINEAR_THRESHOLD) {
             return new Quaternion(
-                    start.x + amount * (end.x - start.x),
-                    start.y + amount * (end.y - start.y),
-                    start.z + amount * (end.z - start.z),
-                    start.w + amount * (end.w - start.w)).normalized();
+                    start.x + amount * (endX - start.x),
+                    start.y + amount * (endY - start.y),
+                    start.z + amount * (endZ - start.z),
+                    start.w + amount * (endW - start.w)).normalized();
         }
         float theta = (float) Math.acos(dot);
         float sinTheta = (float) Math.sin(theta);
         float startWeight = (float) Math.sin((1.0f - amount) * theta) / sinTheta;
         float endWeight = (float) Math.sin(amount * theta) / sinTheta;
         return new Quaternion(
-                startWeight * start.x + endWeight * end.x,
-                startWeight * start.y + endWeight * end.y,
-                startWeight * start.z + endWeight * end.z,
-                startWeight * start.w + endWeight * end.w).normalized();
+                startWeight * start.x + endWeight * endX,
+                startWeight * start.y + endWeight * endY,
+                startWeight * start.z + endWeight * endZ,
+                startWeight * start.w + endWeight * endW).normalized();
     }
 
     /**

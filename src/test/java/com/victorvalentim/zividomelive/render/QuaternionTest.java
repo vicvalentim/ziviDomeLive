@@ -88,8 +88,10 @@ class QuaternionTest {
 
     @Test
     void normalized_identityQuaternionRemainsIdentity() {
-        Quaternion q = new Quaternion(0f, 0f, 0f, 1f).normalized();
+        Quaternion identity = new Quaternion(0f, 0f, 0f, 1f);
+        Quaternion q = identity.normalized();
 
+		assertSame(identity, q, "An already-unit immutable value should be reused");
         assertEquals(0f, q.x(), DELTA);
         assertEquals(0f, q.y(), DELTA);
         assertEquals(0f, q.z(), DELTA);
@@ -237,10 +239,11 @@ class QuaternionTest {
     // -----------------------------------------------------------------------
 
     @Test
-    void slerp_identicalQuaternions_returnsCopy() {
+    void slerp_identicalQuaternions_reusesImmutableValue() {
         Quaternion q = new Quaternion(0f, 0f, 0f, 1f);
         Quaternion result = q.slerp(q, 0.5f);
 
+		assertSame(q, result);
         assertEquals(q.x(), result.x(), DELTA);
         assertEquals(q.y(), result.y(), DELTA);
         assertEquals(q.z(), result.z(), DELTA);
@@ -260,6 +263,16 @@ class QuaternionTest {
         assertEquals(start.z(), result.z(), DELTA);
         assertEquals(start.w(), result.w(), DELTA);
     }
+
+	@Test
+	void slerp_atTEqualOne_returnsTargetQuaternion() {
+		Quaternion start = new Quaternion(0f, 0f, 0f, 1f);
+		Quaternion end = Quaternion.fromAxisAngle(0f, 0f, 1f, (float) (Math.PI / 2));
+
+		Quaternion result = start.slerp(end, 1f);
+
+		assertSame(end, result);
+	}
 
     @Test
     void slerp_atHalfway_producesUnitLengthResult() {

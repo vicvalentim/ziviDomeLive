@@ -624,7 +624,14 @@ final class ProcessingGlAdapter {
 			throw new IllegalStateException("Cubemap binding state is already active.");
 		}
 
-		withPgl(graphics, pgl -> {
+		if (graphics == null) {
+			throw new IllegalStateException("Processing OpenGL graphics target is not available.");
+		}
+		PGL pgl = graphics.beginPGL();
+		try {
+			if (pgl == null) {
+				throw new IllegalStateException("Processing PGL context is not available.");
+			}
 			state.textureUnit = textureUnit;
 			state.savedActiveTexture.clear();
 			state.savedCubemapBinding.clear();
@@ -656,8 +663,9 @@ final class ProcessingGlAdapter {
 			} finally {
 				pgl.activeTexture(state.savedActiveTexture.get(0));
 			}
-			return null;
-		});
+		} finally {
+			graphics.endPGL();
+		}
 	}
 
 	/**
@@ -674,7 +682,14 @@ final class ProcessingGlAdapter {
 		}
 
 		try {
-			withPgl(graphics, pgl -> {
+			if (graphics == null) {
+				throw new IllegalStateException("Processing OpenGL graphics target is not available.");
+			}
+			PGL pgl = graphics.beginPGL();
+			try {
+				if (pgl == null) {
+					throw new IllegalStateException("Processing PGL context is not available.");
+				}
 				pgl.activeTexture(PGL.TEXTURE0 + state.textureUnit);
 				try {
 					pgl.bindTexture(PGL.TEXTURE_CUBE_MAP, state.savedCubemapBinding.get(0));
@@ -685,8 +700,9 @@ final class ProcessingGlAdapter {
 				} finally {
 					pgl.activeTexture(state.savedActiveTexture.get(0));
 				}
-				return null;
-			});
+			} finally {
+				graphics.endPGL();
+			}
 		} finally {
 			state.bound = false;
 		}

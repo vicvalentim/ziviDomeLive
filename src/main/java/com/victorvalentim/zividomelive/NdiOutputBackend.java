@@ -532,12 +532,13 @@ final class NdiOutputBackend {
 		}
 
 		rgbaBuffer.clear();
+		rgbaBuffer.order(ByteOrder.LITTLE_ENDIAN);
 		for (int index = 0; index < pixelCount; index++) {
 			int pixel = argbPixels[index];
-			rgbaBuffer.put((byte) ((pixel >>> 16) & 0xFF));
-			rgbaBuffer.put((byte) ((pixel >>> 8) & 0xFF));
-			rgbaBuffer.put((byte) (pixel & 0xFF));
-			rgbaBuffer.put((byte) ((pixel >>> 24) & 0xFF));
+			int packedRgba = (pixel & 0xFF00FF00)
+					| ((pixel >>> 16) & 0x000000FF)
+					| ((pixel << 16) & 0x00FF0000);
+			rgbaBuffer.putInt(packedRgba);
 		}
 		rgbaBuffer.flip();
 	}

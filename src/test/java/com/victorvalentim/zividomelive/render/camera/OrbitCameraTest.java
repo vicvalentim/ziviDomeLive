@@ -115,6 +115,16 @@ class OrbitCameraTest {
 	}
 
 	@Test
+	void updateAtRestReusesTheImmutableOrientation() {
+		OrbitCamera camera = new OrbitCamera(100f);
+		Quaternion before = camera.getOrientation();
+
+		camera.update();
+
+		assertSame(before, camera.getOrientation());
+	}
+
+	@Test
 	void vectorRotationOverloadsSupportSmoothAndImmediateMotion() {
 		OrbitCamera camera = new OrbitCamera(100f);
 		PVector yAxis = new PVector(0f, 1f, 0f);

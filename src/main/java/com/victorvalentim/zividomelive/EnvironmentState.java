@@ -110,6 +110,9 @@ final class EnvironmentState {
 			sceneCameraOrientation = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
 			return;
 		}
+		if (orientation == sceneCameraOrientation) {
+			return;
+		}
 		sceneCameraOrientation = orientation.normalized();
 	}
 

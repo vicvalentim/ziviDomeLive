@@ -13,6 +13,7 @@ import processing.opengl.PGL;
 import processing.opengl.PGraphicsOpenGL;
 
 import java.util.logging.Logger;
+import java.util.function.Consumer;
 
 /**
  * Captures a scene into a native OpenGL cubemap texture.
@@ -48,6 +49,8 @@ class CubemapRenderer implements PConstants {
     private final CameraManager defaultCameraManager = new CameraManager();
     private final PMatrix3D captureOrientationMatrix = new PMatrix3D();
     private final PMatrix3D environmentOrientationMatrix = new PMatrix3D();
+    private final Consumer<PGL> resolvedFaceBlit = this::blitResolvedFace;
+    private int resolvedSourceFramebufferId;
 
     /**
      * Constructs a CubemapRenderer with the specified initial resolution and parent PApplet.
@@ -284,7 +287,8 @@ class CubemapRenderer implements PConstants {
                 .toMatrix(environmentOrientationMatrix);
 
         try {
-            for (CubemapFace face : CubemapFace.values()) {
+            for (int faceIndex = 0; faceIndex < CubemapFace.count(); faceIndex++) {
+                CubemapFace face = CubemapFace.at(faceIndex);
                 long faceStarted = profiling ? monitor.start() : 0L;
                 try {
                     renderNativeCubemapFace(
@@ -356,11 +360,10 @@ class CubemapRenderer implements PConstants {
 
             long blitStarted = profiling ? monitor.start() : 0L;
             try {
-                nativeCubemapTarget.renderFace(
-                        face,
-                        captureGraphics,
-                        pgl -> blitResolvedFace(pgl, sourceFramebuffer.glFbo));
+                resolvedSourceFramebufferId = sourceFramebuffer.glFbo;
+                nativeCubemapTarget.renderFace(face, captureGraphics, resolvedFaceBlit);
             } finally {
+                resolvedSourceFramebufferId = 0;
                 if (profiling) monitor.record(PerformanceMetric.CUBEMAP_BLIT, blitStarted);
             }
         } finally {
@@ -368,9 +371,9 @@ class CubemapRenderer implements PConstants {
         }
     }
 
-    private void blitResolvedFace(PGL pgl, int sourceFramebufferId) {
+    private void blitResolvedFace(PGL pgl) {
         /* renderFace() owns DRAW; bind only READ to the Processing scratch framebuffer. */
-        pgl.bindFramebuffer(PGL.READ_FRAMEBUFFER, sourceFramebufferId);
+        pgl.bindFramebuffer(PGL.READ_FRAMEBUFFER, resolvedSourceFramebufferId);
         pgl.readBuffer(PGL.COLOR_ATTACHMENT0);
         /* Flip only framebuffer Y during the GPU-to-GPU transfer. */
         pgl.blitFramebuffer(

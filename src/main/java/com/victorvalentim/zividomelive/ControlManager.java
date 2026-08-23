@@ -35,6 +35,9 @@ class ControlManager {
     private Textlabel fpsLabel;
     private final PApplet p;
     private final List<NumberboxInput> numberboxInputs = new ArrayList<>();
+    private boolean synchronizedPanelVisible;
+    private boolean panelVisibilityInitialized;
+    private int nextFpsUpdateFrame;
 
     /**
      * Constructs a ControlManager with the specified PApplet, parent object, and base resolution.
@@ -377,6 +380,8 @@ class ControlManager {
     public void show() {
         cp5.show();
         applyRenderModeVisibility();
+        synchronizedPanelVisible = true;
+        panelVisibilityInitialized = true;
     }
 
     /**
@@ -384,6 +389,8 @@ class ControlManager {
      */
     public void hide() {
         cp5.hide();
+        synchronizedPanelVisible = false;
+        panelVisibilityInitialized = true;
     }
 
     /**
@@ -392,12 +399,21 @@ class ControlManager {
      * @param visible true to show the panel widgets, false to hide them
      */
     public void syncPanelVisibility(boolean visible) {
+		if (panelVisibilityInitialized && synchronizedPanelVisible == visible) {
+			return;
+		}
         if (visible) {
             show();
         } else {
             hide();
         }
     }
+
+	void refreshVisibility() {
+		if (panelVisibilityInitialized && synchronizedPanelVisible) {
+			applyRenderModeVisibility();
+		}
+	}
 
     /**
      * Returns whether the visible ControlP5 panel currently owns the mouse pointer.
@@ -603,6 +619,10 @@ class ControlManager {
      * @param frameRate the current frame rate to display
      */
     public void updateFpsLabel(float frameRate) {
+		if (p.frameCount < nextFpsUpdateFrame) {
+			return;
+		}
+		nextFpsUpdateFrame = p.frameCount + 12;
         fpsLabel.setText("FPS: " + PApplet.nf(frameRate, 0, 1));
     }
 

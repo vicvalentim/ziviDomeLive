@@ -1214,14 +1214,12 @@ public class ziviDomeLive {
 	 * Draws the control panel if it is set to be shown.
 	 */
 	void drawControlPanel() {
+		controlManager.syncPanelVisibility(showControlPanel);
+		if (!showControlPanel) {
+			return;
+		}
 		p.hint(DISABLE_DEPTH_TEST);
 		controlManager.updateFpsLabel(p.frameRate);
-
-		if (showControlPanel) {
-			controlManager.show();
-		} else {
-			controlManager.hide();
-		}
 		p.hint(ENABLE_DEPTH_TEST);
 	}
 
@@ -1831,6 +1829,9 @@ public class ziviDomeLive {
 			return;
 		}
 		this.renderMode = renderMode;
+		if (controlManager != null) {
+			controlManager.refreshVisibility();
+		}
 		LOGGER.info("Render mode set to: " + renderMode);
 	}
 
@@ -1899,6 +1900,9 @@ public class ziviDomeLive {
 	 */
 	public void setShowPreview(boolean showPreview) {
 		this.showPreview = showPreview;
+		if (controlManager != null) {
+			controlManager.refreshVisibility();
+		}
 	}
 
 	/**

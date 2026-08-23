@@ -2,6 +2,7 @@ package com.victorvalentim.zividomelive.render.camera;
 
 import com.victorvalentim.zividomelive.render.Quaternion;
 import processing.core.PApplet;
+import processing.core.PMatrix3D;
 import processing.core.PVector;
 import processing.event.MouseEvent;
 import processing.opengl.PGraphicsOpenGL;
@@ -48,7 +49,10 @@ public final class OrbitCamera {
     /** Current orientation (unit quaternion). */
     private Quaternion orientation = new Quaternion(0, 0, 0, 1);
     /** Goal orientation the camera is easing toward. */
-    private Quaternion goalOrientation = new Quaternion(0, 0, 0, 1);
+    private Quaternion goalOrientation = orientation;
+    /** Reused transform matrix; one camera may be applied to several cubemap faces per frame. */
+    private final PMatrix3D orientationMatrix = new PMatrix3D();
+    private boolean orientationMatrixDirty = true;
 
     /** Interpolation amount per frame (0..1); higher is snappier. */
     private float lerpFactor = 0.15f;
@@ -113,8 +117,12 @@ public final class OrbitCamera {
      * @param pg the scene graphics to transform
      */
     public void apply(PGraphicsOpenGL pg) {
+        if (orientationMatrixDirty) {
+            orientation.toMatrix(orientationMatrix);
+            orientationMatrixDirty = false;
+        }
         pg.translate(0, 0, -distance);
-        pg.applyMatrix(orientation.toMatrix());
+        pg.applyMatrix(orientationMatrix);
         pg.translate(-target.x, -target.y, -target.z);
     }
 
@@ -123,8 +131,18 @@ public final class OrbitCamera {
      * The library calls this once per frame; scenes normally do not need to.
      */
     public void update() {
-        orientation = orientation.slerp(goalOrientation, lerpFactor);
-        target.set(PVector.lerp(target, goalTarget, lerpFactor));
+		if (orientation != goalOrientation) {
+			Quaternion updatedOrientation = orientation.slerp(goalOrientation, lerpFactor);
+			if (updatedOrientation == orientation) {
+				goalOrientation = orientation;
+			} else {
+				orientation = updatedOrientation;
+				orientationMatrixDirty = true;
+			}
+        }
+        target.x += (goalTarget.x - target.x) * lerpFactor;
+        target.y += (goalTarget.y - target.y) * lerpFactor;
+        target.z += (goalTarget.z - target.z) * lerpFactor;
         distance = PApplet.lerp(distance, goalDistance, lerpFactor);
     }
 
@@ -164,6 +182,7 @@ public final class OrbitCamera {
         Quaternion delta = Quaternion.fromAxisAngle(ax, ay, az, angle);
         orientation = delta.multiply(orientation).normalized();
         goalOrientation = orientation;
+        orientationMatrixDirty = true;
     }
 
     /**
@@ -321,6 +340,7 @@ public final class OrbitCamera {
         goalTarget.set(tx, ty, tz);
         orientation = normalizedCopyOf(q);
         goalOrientation = orientation;
+        orientationMatrixDirty = true;
         distance = guardDistance(d, d);
         goalDistance = distance;
     }
@@ -356,6 +376,7 @@ public final class OrbitCamera {
     public void setOrientationImmediate(Quaternion orientation) {
         this.orientation = normalizedCopyOf(orientation);
         goalOrientation = this.orientation;
+        orientationMatrixDirty = true;
     }
 
     /**
