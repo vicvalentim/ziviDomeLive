@@ -48,6 +48,12 @@ jobs:
       - name: Build documentation in strict mode
         run: python3 -m mkdocs build --strict
 
+      - name: Attach generated Javadocs
+        run: ./gradlew attachJavadocsToSite --console=plain
+
+      - name: Validate exported documentation routes
+        run: python3 tools/validate_documentation.py --root . --site-dir site
+
       - name: Add qualification result to job summary
         if: always()
         shell: bash

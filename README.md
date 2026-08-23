@@ -280,7 +280,7 @@ Source development uses Gradle and is not the normal artist installation path.
 | Qualification | `CalibrationTool` | Orientation, projection and dome calibration |
 | Qualification | `BenchmarkTool` | Reproducible performance evidence |
 
-Browse [`examples/`](examples/) or the [examples guide](https://vicvalentim.github.io/ziviDomeLive/en/examples/basic/).
+Browse [`examples/`](examples/) or the [examples guide](https://vicvalentim.github.io/ziviDomeLive/examples/basic/).
 
 ## Documentation and verification
 
@@ -296,6 +296,8 @@ The documentation system has distinct authorities:
 ./gradlew qualificationTests
 python3 tools/validate_documentation.py --root .
 python3 -m mkdocs build --strict
+./gradlew attachJavadocsToSite --console=plain
+python3 tools/validate_documentation.py --root . --site-dir site
 ./gradlew buildReleaseArtifacts
 ```
 

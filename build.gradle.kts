@@ -13,6 +13,7 @@ import org.gradle.internal.os.OperatingSystem
 import org.gradle.api.tasks.testing.TestDescriptor
 import org.gradle.api.tasks.testing.TestListener
 import org.gradle.api.tasks.testing.TestResult
+import org.gradle.api.tasks.Sync
 
 plugins {
     id("java")
@@ -618,8 +619,63 @@ tasks.build.get().mustRunAfter("clean")
 tasks.assemble.get().mustRunAfter("clean")
 tasks.javadoc.get().mustRunAfter("assemble")
 tasks.javadoc {
-    // Cross-package benchmark recorders are implementation details, not Processing API.
-    exclude("**/internal/**")
+    // Physically categorized engine sources are implementation details, not Processing API.
+    exclude("**/_internal/**")
+
+    doLast {
+        // Temurin 17's default stylesheet imports this path but does not emit the file on every
+        // platform. Keep the import resolvable; the declared DejaVu families already include
+        // standard system fallbacks in the generated stylesheet.
+        val fontCompatibilityStylesheet = layout.buildDirectory
+            .file("docs/javadoc/resources/fonts/dejavu.css")
+            .get()
+            .asFile
+        Files.createDirectories(fontCompatibilityStylesheet.parentFile.toPath())
+        fontCompatibilityStylesheet.writeText(
+            "/* Intentionally empty: use the Javadoc stylesheet's system font fallbacks. */\n",
+            Charsets.UTF_8
+        )
+    }
+}
+
+tasks.register<Sync>("attachJavadocsToSite") {
+    group = "documentation"
+    description = "Attaches generated Javadocs to the canonical reference route of a built MkDocs site"
+    dependsOn("javadoc")
+
+    val exportedSite = layout.projectDirectory.dir("site")
+    val rootFavicon = exportedSite.file("favicon.ico")
+    from(layout.buildDirectory.dir("docs/javadoc"))
+    into(exportedSite.dir("reference"))
+    outputs.file(rootFavicon)
+
+    doFirst {
+        listOf(
+            exportedSite.file("index.html").asFile,
+            exportedSite.file("api/javadocs/index.html").asFile,
+            exportedSite.file("pt/api/javadocs/index.html").asFile
+        ).forEach { requiredPage ->
+            check(requiredPage.isFile) {
+                "MkDocs site must be built in both languages before attaching Javadocs: $requiredPage"
+            }
+        }
+
+        // 2.0 publishes one language-neutral Java reference. Remove the pre-freeze duplicate.
+        project.delete(exportedSite.dir("pt/reference"))
+    }
+
+    doLast {
+        check(exportedSite.file("reference/index.html").asFile.isFile) {
+            "Generated Javadocs were not attached to site/reference/index.html"
+        }
+        project.copy {
+            from(layout.projectDirectory.file("docs/assets/png/favicon.ico"))
+            into(exportedSite)
+        }
+        check(rootFavicon.asFile.isFile) {
+            "Root favicon was not attached for standalone Javadocs pages"
+        }
+    }
 }
 
 tasks.register("buildReleaseArtifacts") {

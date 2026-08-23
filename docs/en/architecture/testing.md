@@ -41,11 +41,13 @@ The repeatable baseline is:
 ./gradlew qualificationTests
 python3 tools/validate_documentation.py --root .
 python3 -m mkdocs build --strict
+./gradlew attachJavadocsToSite --console=plain
+python3 tools/validate_documentation.py --root . --site-dir site
 ```
 
 Tests cover the public API shape, configure-before-setup ordering, switch/reload/disposal behavior, old-activation isolation, camera/quaternion math, timeline behavior, typed output lifecycle, render-state logic, metadata and package rules. Assertions should report deterministic facts; exact test totals belong to generated CI/release evidence, not evergreen prose.
 
-The documentation validator additionally checks bilingual page parity, local links, Processing homepage fields, API-level membership, Mermaid configuration, release-note/history completeness, research-readiness gaps and the absence of provisional raster placeholders.
+The documentation validator additionally checks bilingual page parity, local links, Processing homepage fields, API-level membership, Mermaid configuration, release-note/history completeness, research-readiness gaps and the absence of provisional raster placeholders. With `--site-dir site`, it also crawls the exported HTML, stylesheets and canonical Javadocs route so missing local assets or localized 404s fail qualification.
 
 ## Package installation
 

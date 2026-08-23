@@ -28,19 +28,19 @@ jobs:
           cache-dependency-path: requirements-docs.txt
 
       - name: Install dependencies
-        run: pip install -r requirements-docs.txt
+        run: python3 -m pip install -r requirements-docs.txt
 
       - name: Build Javadocs
         run: ./gradlew javadoc --console=plain
 
       - name: Build website
-        run: mkdocs build --strict
+        run: python3 -m mkdocs build --strict
 
       - name: Attach Javadocs to website
-        run: |
-          cp -R build/docs/javadoc site/reference
-          mkdir -p site/pt
-          cp -R build/docs/javadoc site/pt/reference
+        run: ./gradlew attachJavadocsToSite --console=plain
+
+      - name: Validate exported website routes
+        run: python3 tools/validate_documentation.py --root . --site-dir site
 
       - name: Deploy website
         uses: JamesIves/github-pages-deploy-action@v4

@@ -154,7 +154,7 @@
 - Any Services change must cover configure-before-setup, first activation, switch, reload, fresh services, disposal order, old-task isolation, state restoration, and idempotence.
 - Compile every affected Processing example against the just-built library artifact, not an unrelated sketchbook installation. SolarSystem remains the minimum numerical/lifecycle regression sketch:
   `processing-java --sketch=examples/SolarSystem --output=/tmp/zividomelive-solarsystem-build --force --build`.
-- Documentation qualification is `python3 tools/validate_documentation.py --root . --package release/ziviDomeLive.zip --release-dir release` followed by `python3 -m mkdocs build --strict`.
+- Documentation qualification builds the bilingual MkDocs export, runs `./gradlew attachJavadocsToSite` to place one canonical Java reference at `site/reference`, and validates the exported routes with `python3 tools/validate_documentation.py --root . --site-dir site`. Portuguese pages must link back to that canonical tree rather than duplicate Javadocs below `site/pt`.
 - Run `git diff --check` and inspect the final public surface. Build success alone does not prove lifecycle or artist-facing API quality.
 
 ## Build, packaging, docs, and release

@@ -171,6 +171,8 @@ Do not reintroduce nested scene draw ownership, texture-bound `glReadPixels`, PB
 python3 tools/validate_documentation.py --root . \
   --package release/ziviDomeLive.zip --release-dir release
 python3 -m mkdocs build --strict
+./gradlew attachJavadocsToSite --console=plain
+python3 tools/validate_documentation.py --root . --site-dir site
 processing-java --sketch=examples/SolarSystem \
   --output=/tmp/zividomelive-solarsystem-build --force --build
 ```

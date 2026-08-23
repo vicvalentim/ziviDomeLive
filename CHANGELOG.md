@@ -146,6 +146,8 @@ An exact reflection-based snapshot freezes public types, methods, constructors, 
 - Added detailed bilingual release notes, lifecycle/service/output documentation and research-software/JOSS-readiness evidence mapping without claiming JOSS submission or acceptance.
 - Added Material for MkDocs Mermaid diagrams, tags, CI social cards, bilingual navigation and semantic page statuses.
 - Standardized local MkDocs commands through `python3 -m mkdocs` so legacy system/Python 2 executables cannot parse the project configuration by accident.
+- Consolidated generated Javadocs at the language-neutral `site/reference` route, with locale-safe EN/PT links that also work inside pull-request preview subdirectories.
+- Added deterministic exported-site crawling for HTML, CSS, sitemap alternates, Javadoc assets and required routes; publication workflows now fail before deploy on any local 404.
 - Replaced raster diagram placeholders with theme-aware Mermaid source.
 - Replaced the hero placeholder with a traceable SVG/PNG editorial illustration.
 - Kept real example/calibration/benchmark screenshots gated on installed-package qualification rather than publishing mock evidence.
@@ -186,7 +188,7 @@ An exact reflection-based snapshot freezes public types, methods, constructors, 
 - Output suites cover typed routes, states, bounded NDI shutdown and producer encapsulation.
 - Render-policy/math tests cover Standard/spherical requirement separation and projection state without requiring OpenGL when pure state is sufficient.
 - Release validation covers Java 17 build, Javadocs, Processing metadata/package shape, source/examples/reference/licenses, shader resources and byte-identical ZIP/PDEX.
-- Documentation validation covers EN/PT parity, links, metadata, API vocabulary, Processing homepage requirements, research-software readiness and strict MkDocs.
+- Documentation validation covers EN/PT parity, source links, exported HTML/CSS/sitemap routes, canonical Javadocs, metadata, API vocabulary, Processing homepage requirements, research-software readiness and strict MkDocs.
 - GPU image quality, projector/lens behavior and NDI/Syphon/Spout interoperability remain manual target-hardware gates.
 
 ### Release gates still open

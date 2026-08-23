@@ -9,6 +9,8 @@ Use Java 17 e execute:
 ./gradlew build -x test
 ./gradlew buildReleaseArtifacts
 python3 -m mkdocs build --strict
+./gradlew attachJavadocsToSite --console=plain
+python3 tools/validate_documentation.py --root . --site-dir site
 ```
 
 Visualize o manual com `python3 -m mkdocs serve`. Isso evita executáveis MkDocs antigos do sistema que podem pertencer ao Python 2.
