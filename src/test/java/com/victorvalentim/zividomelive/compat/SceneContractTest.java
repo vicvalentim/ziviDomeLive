@@ -24,9 +24,10 @@ class SceneContractTest {
 		assertDefaultMethod("update");
 		assertDefaultMethod("keyEvent", KeyEvent.class);
 		assertDefaultMethod("mouseEvent", MouseEvent.class);
-		assertDefaultControlEventMethod();
 		assertDefaultMethod("dispose");
 		assertDefaultMethod("getName");
+		assertFalse(java.util.Arrays.stream(Scene.class.getMethods())
+				.anyMatch(method -> method.getName().equals("controlEvent")));
 	}
 
 	@Test
@@ -38,19 +39,6 @@ class SceneContractTest {
 	private static void assertDefaultMethod(String name, Class<?>... parameterTypes) throws Exception {
 		Method method = Scene.class.getMethod(name, parameterTypes);
 		assertTrue(method.isDefault(), name + " must remain a default method");
-	}
-
-	private static void assertDefaultControlEventMethod() {
-		boolean found = false;
-		for (Method method : Scene.class.getMethods()) {
-			if (method.getName().equals("controlEvent")
-					&& method.getParameterCount() == 1
-					&& method.getParameterTypes()[0].getName().equals("controlP5.ControlEvent")) {
-				found = method.isDefault();
-				break;
-			}
-		}
-		assertTrue(found, "controlEvent(ControlEvent) must remain a default method");
 	}
 
 	private static class ContractScene implements Scene {

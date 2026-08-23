@@ -1,5 +1,6 @@
 package com.victorvalentim.zividomelive.support;
 
+import com.victorvalentim.zividomelive.LogMode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +15,7 @@ class LogManagerTest {
 
 	@AfterEach
 	void restoreReleaseMode() {
-		LogManager.setMode(LogManager.Mode.RELEASE);
+		LogManager.setMode(LogMode.RELEASE);
 	}
 
 	@Test
@@ -24,25 +25,25 @@ class LogManagerTest {
 
 	@Test
 	void setModeUpdatesGetMode() {
-		LogManager.setMode(LogManager.Mode.DEBUG);
-		assertEquals(LogManager.Mode.DEBUG, LogManager.getMode());
+		LogManager.setMode(LogMode.DEBUG);
+		assertEquals(LogMode.DEBUG, LogManager.getMode());
 		assertTrue(LogManager.isDebugEnabled());
 
-		LogManager.setMode(LogManager.Mode.RELEASE);
-		assertEquals(LogManager.Mode.RELEASE, LogManager.getMode());
+		LogManager.setMode(LogMode.RELEASE);
+		assertEquals(LogMode.RELEASE, LogManager.getMode());
 		assertFalse(LogManager.isDebugEnabled());
 	}
 
 	@Test
 	void releaseModeDisablesLogging() {
-		LogManager.setMode(LogManager.Mode.RELEASE);
+		LogManager.setMode(LogMode.RELEASE);
 		Logger logger = LogManager.getLogger();
 		assertFalse(logger.isLoggable(Level.SEVERE));
 	}
 
 	@Test
 	void duplicateMessagesAreThrottledWithinWindow() {
-		LogManager.setMode(LogManager.Mode.DEBUG);
+		LogManager.setMode(LogMode.DEBUG);
 		Filter filter = LogManager.getLogger().getFilter();
 		assertNotNull(filter, "DEBUG mode should install a duplicate-throttling filter");
 

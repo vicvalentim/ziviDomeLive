@@ -1,5 +1,6 @@
 package com.victorvalentim.zividomelive.support;
 
+import com.victorvalentim.zividomelive.LogMode;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
@@ -9,20 +10,12 @@ import java.util.logging.*;
  * Manages logging configuration for the application.
  */
 public class LogManager {
-	/** Supported logging profiles for the library. */
-	public enum Mode {
-		/** Verbose logging to console and file. */
-		DEBUG,
-		/** Silent mode: disables LogManager output. */
-		RELEASE
-	}
-
 	private static final Logger globalLogger = Logger.getLogger("com.victorvalentim.zividomelive");
 	private static boolean isConfigured = false;
 	private static final AtomicReference<String> lastLogMessage = new AtomicReference<>("");
 	private static final java.util.concurrent.atomic.AtomicLong lastLogTimestamp = new java.util.concurrent.atomic.AtomicLong(0L);
 	private static final long DUPLICATE_LOG_THROTTLE_MS = 5000L;
-	private static Mode currentMode = Mode.RELEASE;
+	private static LogMode currentMode = LogMode.RELEASE;
 
 	private LogManager() {}
 
@@ -32,7 +25,7 @@ public class LogManager {
 	 *
 	 * @param mode desired logging mode
 	 */
-	public static synchronized void setMode(Mode mode) {
+	public static synchronized void setMode(LogMode mode) {
 		if (mode == null) {
 			throw new IllegalArgumentException("Log mode cannot be null.");
 		}
@@ -46,17 +39,17 @@ public class LogManager {
 	 *
 	 * @return current logging mode
 	 */
-	public static synchronized Mode getMode() {
+	public static synchronized LogMode getMode() {
 		return currentMode;
 	}
 
 	/**
 	 * Reports whether verbose debug logging is enabled.
 	 *
-	 * @return {@code true} when the current mode is {@link Mode#DEBUG}
+	 * @return {@code true} when the current mode is {@link LogMode#DEBUG}
 	 */
 	public static synchronized boolean isDebugEnabled() {
-		return currentMode == Mode.DEBUG;
+		return currentMode == LogMode.DEBUG;
 	}
 
 	/**
@@ -77,7 +70,7 @@ public class LogManager {
 			handler.close();
 		}
 
-		if (currentMode == Mode.RELEASE) {
+		if (currentMode == LogMode.RELEASE) {
 			globalLogger.setLevel(Level.OFF);
 			globalLogger.setFilter(null);
 			isConfigured = true;

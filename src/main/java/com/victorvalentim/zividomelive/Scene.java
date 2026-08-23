@@ -1,10 +1,8 @@
 package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.support.LogManager;
-import controlP5.*;
-import processing.event.*;
+import processing.event.KeyEvent;
+import processing.event.MouseEvent;
 import processing.opengl.PGraphicsOpenGL;
-import java.util.logging.Logger;
 
 /**
  * Defines the lifecycle and drawing contract for a ziviDomeLive scene.
@@ -17,9 +15,6 @@ import java.util.logging.Logger;
  * observe different states.</p>
  */
 public interface Scene {
-    /** Logger instance for scene-related logging. */
-    Logger LOGGER = LogManager.getLogger();
-
     /**
      * Supplies lifecycle-aware API services before this scene is set up.
      *
@@ -85,20 +80,11 @@ public interface Scene {
     }
 
     /**
-     * Handles control events. Default implementation does nothing.
-     *
-     * @param theEvent the ControlEvent object containing details of the control event
-     */
-    default void controlEvent(ControlEvent theEvent) {
-    }
-
-    /**
      * Disposes resources used by the scene. This method is called when an active scene is
-     * switched, cleared, replaced, or released by the facade. By default, it logs the transition.
-     * Override this method if a scene requires custom resource management.
+     * switched, cleared, replaced, or released by the facade. Override this method if a scene
+     * requires custom resource management.
      */
     default void dispose() {
-        LOGGER.info("Disposing resources for scene: " + getName());
     }
 
     /**

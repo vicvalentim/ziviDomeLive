@@ -162,9 +162,6 @@ class InfiniteBackgroundScene implements Scene {
   public void mouseEvent(processing.event.MouseEvent event) {
   }
 
-  public void controlEvent(controlP5.ControlEvent event) {
-  }
-
   public String getName() {
     return "Infinite Background";
   }

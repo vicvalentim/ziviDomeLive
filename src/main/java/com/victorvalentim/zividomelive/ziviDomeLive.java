@@ -176,18 +176,18 @@ public class ziviDomeLive implements PConstants {
 	 *
 	 * @param mode desired logging mode
 	 */
-	public static void setLogMode(LogManager.Mode mode) {
+	public static void setLogMode(LogMode mode) {
 		LogManager.setMode(mode);
 	}
 
 	/** Enables verbose DEBUG logs (console + file). */
 	public static void enableDebugLogging() {
-		LogManager.setMode(LogManager.Mode.DEBUG);
+		LogManager.setMode(LogMode.DEBUG);
 	}
 
 	/** Enables RELEASE logging mode (LogManager output disabled). */
 	public static void enableReleaseLogging() {
-		LogManager.setMode(LogManager.Mode.RELEASE);
+		LogManager.setMode(LogMode.RELEASE);
 	}
 
 	/**
@@ -195,7 +195,7 @@ public class ziviDomeLive implements PConstants {
 	 *
 	 * @return active logging mode
 	 */
-	public static LogManager.Mode getLogMode() {
+	public static LogMode getLogMode() {
 		return LogManager.getMode();
 	}
 
@@ -1214,49 +1214,6 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Sets the current view to {@link ViewType#DOMEMASTER}.
-	 *
-	 * @deprecated The library's internal draw loop ({@code draw()} → {@code RenderPipeline})
-	 *             renders every frame automatically. Call {@link #setCurrentView(ViewType)}
-	 *             directly and let the pipeline handle the rest. This method is retained for
-	 *             source compatibility only.
-	 */
-	@Deprecated
-	public void renderFisheyeDomemaster() {
-		setCurrentView(ViewType.DOMEMASTER);
-	}
-
-	/**
-	 * Sets the current view to {@link ViewType#EQUIRECTANGULAR}.
-	 *
-	 * @deprecated See {@link #renderFisheyeDomemaster()} for migration guidance.
-	 */
-	@Deprecated
-	public void renderEquirectangular() {
-		setCurrentView(ViewType.EQUIRECTANGULAR);
-	}
-
-	/**
-	 * Sets the current view to {@link ViewType#SKYBOX}.
-	 *
-	 * @deprecated See {@link #renderFisheyeDomemaster()} for migration guidance.
-	 */
-	@Deprecated
-	public void renderCubemap() {
-		setCurrentView(ViewType.SKYBOX);
-	}
-
-	/**
-	 * Sets the current view to {@link ViewType#STANDARD}.
-	 *
-	 * @deprecated See {@link #renderFisheyeDomemaster()} for migration guidance.
-	 */
-	@Deprecated
-	public void renderStandard() {
-		setCurrentView(ViewType.STANDARD);
-	}
-
-	/**
 	 * Draws the control panel if it is set to be shown.
 	 */
 	void drawControlPanel() {
@@ -1706,11 +1663,6 @@ public class ziviDomeLive implements PConstants {
 			controlManager.handleEvent(theEvent);
 		}
 
-		// Forward the event to the current scene, if one exists
-		Scene activeScene = getCurrentScene();
-		if (activeScene != null) {
-			activeScene.controlEvent(theEvent);
-		}
 	}
 
 	/**

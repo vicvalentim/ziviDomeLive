@@ -2,6 +2,7 @@ package com.victorvalentim.zividomelive.compat;
 
 import com.victorvalentim.zividomelive.FrameViews;
 import com.victorvalentim.zividomelive.FrameClock;
+import com.victorvalentim.zividomelive.LogMode;
 import com.victorvalentim.zividomelive.Scene;
 import com.victorvalentim.zividomelive.SceneActionMap;
 import com.victorvalentim.zividomelive.SceneAssets;
@@ -37,7 +38,6 @@ import com.victorvalentim.zividomelive.render.modes.EquirectangularRenderer;
 import com.victorvalentim.zividomelive.render.modes.FisheyeDomemaster;
 import com.victorvalentim.zividomelive.render.modes.StandardRenderer;
 import com.victorvalentim.zividomelive.support.LibraryMetadata;
-import com.victorvalentim.zividomelive.support.LogManager;
 import com.victorvalentim.zividomelive.support.ThreadManager;
 import com.victorvalentim.zividomelive.ziviDomeLive;
 import org.junit.jupiter.api.Test;
@@ -136,10 +136,10 @@ class PublicApiCompatibilityTest {
 				OutputManager.OutputState.ENABLED,
 				OutputManager.OutputState.STOPPING
 		}, OutputManager.OutputState.values());
-		assertArrayEquals(new LogManager.Mode[]{
-				LogManager.Mode.DEBUG,
-				LogManager.Mode.RELEASE
-		}, LogManager.Mode.values());
+		assertArrayEquals(new LogMode[]{
+				LogMode.DEBUG,
+				LogMode.RELEASE
+		}, LogMode.values());
 		assertArrayEquals(new PerformanceMode[]{
 				PerformanceMode.OFF,
 				PerformanceMode.CPU,
@@ -197,7 +197,6 @@ class PublicApiCompatibilityTest {
 				FisheyeDomemaster.class,
 				StandardRenderer.class,
 				LibraryMetadata.class,
-				LogManager.class,
 				ThreadManager.class
 		};
 
@@ -263,14 +262,14 @@ class PublicApiCompatibilityTest {
 	}
 
 	@Test
-	void deprecatedRenderConvenienceMethodsRemainDeprecatedCompatibilityShims() throws Exception {
+	void pre20RenderConvenienceMethodsAreRemoved() {
 		for (String name : Arrays.asList(
 				"renderFisheyeDomemaster",
 				"renderEquirectangular",
 				"renderCubemap",
 				"renderStandard")) {
-			Method method = ziviDomeLive.class.getMethod(name);
-			assertTrue(method.isAnnotationPresent(Deprecated.class), name + " must remain deprecated");
+			assertFalse(Arrays.stream(ziviDomeLive.class.getMethods())
+					.anyMatch(method -> method.getName().equals(name)), name + " must be absent");
 		}
 	}
 
