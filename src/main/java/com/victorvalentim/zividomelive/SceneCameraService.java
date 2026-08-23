@@ -7,7 +7,17 @@ import processing.opengl.PGraphicsOpenGL;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-/** Scene-scoped access to the shared orbit camera and optional target tracking. */
+/**
+ * Activation-scoped access to the shared scene-space orbit camera.
+ *
+ * <p>Camera input configuration and target tracking are restored or cleared automatically when
+ * the activation ends. The facade advances camera interpolation exactly once per Processing
+ * frame; calling {@link OrbitCamera#update()} from a scene would advance it twice.</p>
+ *
+ * <p><strong>API stability:</strong> Advanced Stable.</p>
+ *
+ * @since 2.0.0
+ */
 public final class SceneCameraService {
 
     private final ziviDomeLive parent;
@@ -23,7 +33,7 @@ public final class SceneCameraService {
         this.previousInputEnabled = parent.isSceneCameraInputEnabled();
     }
 
-    /** @return shared scene-space orbit camera */
+    /** @return shared scene-space orbit camera; never {@code null} during the activation */
     public OrbitCamera orbit() {
         ensureOpen();
         return orbitCamera;
@@ -31,6 +41,8 @@ public final class SceneCameraService {
 
     /**
      * Applies the shared scene-camera transform to an open render target.
+     * Call from {@link Scene#sceneRender(PGraphicsOpenGL)} between a matching
+     * {@code pushMatrix()}/{@code popMatrix()} pair.
      *
      * @param graphics active scene render target
      */
@@ -52,7 +64,11 @@ public final class SceneCameraService {
     /**
      * Tracks a dynamic world-space target once after each scene update.
      *
-     * @param targetSupplier supplier of the latest target, or null results to skip a frame
+     * <p>The supplier runs on the Processing frame thread. Its vector is copied into the camera,
+     * so callers may safely reuse one mutable {@link PVector} as a no-allocation result buffer.</p>
+     *
+     * @param targetSupplier non-null supplier of the latest target; a {@code null} result skips
+     *                       that frame
      */
     public void trackTarget(Supplier<PVector> targetSupplier) {
         ensureOpen();

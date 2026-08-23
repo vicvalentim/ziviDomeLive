@@ -11,6 +11,27 @@ Este checklist pertence à superfície de **manutenção/publicação**, não ao
 
 O pacote Processing deve ser autocontido para instalação, exemplos, source, referência de API, licenças e citação. MkDocs é o manual técnico; o futuro GitBook não é dependência do pacote.
 
+## Mapeamento das diretrizes oficiais
+
+### Homepage do projeto
+
+- [ ] URL pública estável apresenta abstract conciso e audiência pretendida
+- [ ] instalação separa Contribution Manager, artefato de release e build do source
+- [ ] os oito exemplos executáveis estão listados, com tutoriais/manual linkados quando úteis
+- [ ] baseline Processing/Java, renderer, `pixelDensity(1)`, dependências e limitações estão declarados
+- [ ] sistemas/versões Processing testados têm evidência ou aparecem explicitamente sem qualificação
+- [ ] `library.keywords` e data de atualização documental estão visíveis
+- [ ] latest stable e o estado 2.0 sem tag não são confundidos
+- [ ] links da release estável usam o basename comum `ziviDomeLive` para ZIP/TXT/PDEX
+
+### Pacote e referência
+
+- [ ] Javadocs são gerados em `reference/index.html`
+- [ ] source, examples, licença/notices e `library.properties` acompanham a library runtime
+- [ ] nome da pasta raiz e basenames dos artefatos permanecem `ziviDomeLive`
+- [ ] exemplos compilam contra o pacote instalado, não apenas o build do repositório
+- [ ] a referência pública contém somente os tipos Stable, Advanced Stable e Experimental pretendidos
+
 ## AUTOMATED
 
 - [ ] `./gradlew clean test build --console=plain`
@@ -54,6 +75,7 @@ O pacote final deve conter:
 - [ ] `library.properties`
 - [ ] licença e notices de terceiros
 - [ ] metadata de citação conforme a task de packaging corrente
+- [ ] README, CHANGELOG, `CITATION.cff` e `THIRD_PARTY.md`
 
 Não deve conter relatórios locais de benchmark, evidência maintainer-only, `.DS_Store`, testes ou helper JARs locais excluídos pelo contrato de release.
 

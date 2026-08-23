@@ -2,26 +2,27 @@ package com.victorvalentim.zividomelive.render.camera;
 
 import com.victorvalentim.zividomelive.render.Quaternion;
 import processing.core.PApplet;
-import processing.core.PConstants;
+import processing.core.PMatrix3D;
 import processing.core.PVector;
 import processing.event.MouseEvent;
 import processing.opengl.PGraphicsOpenGL;
 
+import static processing.core.PConstants.LEFT;
+import static processing.core.PConstants.RIGHT;
+
 /**
  * Scene-space quaternion orbit camera provided as a native ziviDomeLive service.
  *
- * <p>Unlike {@link MouseControlledCamera} (which drives the Standard View through
- * {@code pg.camera(...)}), {@code OrbitCamera} transforms the scene modelview
- * directly inside {@code sceneRender}. Because it operates in scene space, the
- * same camera works identically across every projection (fisheye, equirectangular,
- * cubemap and standard) and never touches the dome parameters (yaw / pitch / roll /
- * fov) articulated by the ControlManager.</p>
+ * <p>The camera transforms the scene modelview directly inside
+ * {@link com.victorvalentim.zividomelive.Scene#sceneRender(PGraphicsOpenGL)}. Because it operates
+ * in scene space, the same pose works across Standard, domemaster, equirectangular, and skybox
+ * views without changing spherical calibration controls.</p>
  *
  * <p>Typical usage inside a {@code Scene}:</p>
  * <pre>
  * public void sceneRender(PGraphicsOpenGL pg) {
  *     pg.pushMatrix();
- *     parent.getSceneCamera().apply(pg); // move through space
+ *     services.camera().apply(pg);
  *     // ... draw scene content ...
  *     pg.popMatrix();
  * }
@@ -30,8 +31,12 @@ import processing.opengl.PGraphicsOpenGL;
  * <p>Rotations use unit quaternions (gimbal-lock free). Programmatic pose changes
  * are smoothly interpolated (SLERP/LERP), while direct mouse manipulation is
  * applied immediately so drag and wheel gestures remain attached to the pointer.</p>
+ *
+ * <p><strong>API stability:</strong> Advanced Stable.</p>
+ *
+ * @since 2.0.0
  */
-public class OrbitCamera implements PConstants {
+public final class OrbitCamera {
 
     /** Point the camera looks at (current, interpolated). */
     private final PVector target = new PVector(0, 0, 0);
@@ -46,7 +51,10 @@ public class OrbitCamera implements PConstants {
     /** Current orientation (unit quaternion). */
     private Quaternion orientation = new Quaternion(0, 0, 0, 1);
     /** Goal orientation the camera is easing toward. */
-    private Quaternion goalOrientation = new Quaternion(0, 0, 0, 1);
+    private Quaternion goalOrientation = orientation;
+    /** Reused transform matrix; one camera may be applied to several cubemap faces per frame. */
+    private final PMatrix3D orientationMatrix = new PMatrix3D();
+    private boolean orientationMatrixDirty = true;
 
     /** Interpolation amount per frame (0..1); higher is snappier. */
     private float lerpFactor = 0.15f;
@@ -66,9 +74,9 @@ public class OrbitCamera implements PConstants {
     /** Drag sensitivity in radians per pixel. */
     private float dragSensitivity = 0.01f;
     /** Distance change per standard wheel notch. */
-    private float wheelStep = 120f;
+    private float wheelStep = 80f;
     /** Distance change per fractional (trackpad) wheel notch. */
-    private float wheelPadStep = 4f;
+    private float wheelPadStep = 0.001f;
 
     private int lastMouseX = -1;
     private int lastMouseY = -1;
@@ -108,21 +116,40 @@ public class OrbitCamera implements PConstants {
      * Applies the camera transform to the given scene graphics.
      * Call inside {@code sceneRender} between {@code pushMatrix}/{@code popMatrix}.
      *
-     * @param pg the scene graphics to transform
+     * <p>This method reads camera state but does not advance interpolation.</p>
+     *
+     * @param pg non-null scene graphics to transform
      */
     public void apply(PGraphicsOpenGL pg) {
+        if (orientationMatrixDirty) {
+            orientation.toMatrix(orientationMatrix);
+            orientationMatrixDirty = false;
+        }
         pg.translate(0, 0, -distance);
-        pg.applyMatrix(orientation.toMatrix());
+        pg.applyMatrix(orientationMatrix);
         pg.translate(-target.x, -target.y, -target.z);
     }
 
     /**
-     * Advances the smooth interpolation toward the current goals.
-     * The library calls this once per frame; scenes normally do not need to.
+     * Advances smooth interpolation toward the current goals by one step.
+     *
+     * <p>The ziviDomeLive facade calls this exactly once per Processing frame for its shared
+     * camera; scenes using {@link com.victorvalentim.zividomelive.SceneCameraService} must not call
+     * it again. Code that constructs a standalone camera owns its update cadence.</p>
      */
     public void update() {
-        orientation = orientation.slerp(goalOrientation, lerpFactor);
-        target.set(PVector.lerp(target, goalTarget, lerpFactor));
+		if (orientation != goalOrientation) {
+			Quaternion updatedOrientation = orientation.slerp(goalOrientation, lerpFactor);
+			if (updatedOrientation == orientation) {
+				goalOrientation = orientation;
+			} else {
+				orientation = updatedOrientation;
+				orientationMatrixDirty = true;
+			}
+        }
+        target.x += (goalTarget.x - target.x) * lerpFactor;
+        target.y += (goalTarget.y - target.y) * lerpFactor;
+        target.z += (goalTarget.z - target.z) * lerpFactor;
         distance = PApplet.lerp(distance, goalDistance, lerpFactor);
     }
 
@@ -136,7 +163,7 @@ public class OrbitCamera implements PConstants {
      */
     public void rotateAround(float ax, float ay, float az, float angle) {
         Quaternion delta = Quaternion.fromAxisAngle(ax, ay, az, angle);
-        goalOrientation = delta.multiply(goalOrientation).normalize();
+        goalOrientation = delta.multiply(goalOrientation).normalized();
     }
 
     /**
@@ -160,8 +187,9 @@ public class OrbitCamera implements PConstants {
      */
     public void rotateAroundImmediate(float ax, float ay, float az, float angle) {
         Quaternion delta = Quaternion.fromAxisAngle(ax, ay, az, angle);
-        orientation = delta.multiply(orientation).normalize();
-        goalOrientation = copyOf(orientation);
+        orientation = delta.multiply(orientation).normalized();
+        goalOrientation = orientation;
+        orientationMatrixDirty = true;
     }
 
     /**
@@ -197,7 +225,7 @@ public class OrbitCamera implements PConstants {
     /**
      * Handles mouse input: drag to orbit, wheel to fly in/out.
      *
-     * @param event the mouse event
+     * @param event non-null Processing mouse event
      */
     public void mouseEvent(MouseEvent event) {
         switch (event.getAction()) {
@@ -318,7 +346,8 @@ public class OrbitCamera implements PConstants {
         target.set(tx, ty, tz);
         goalTarget.set(tx, ty, tz);
         orientation = normalizedCopyOf(q);
-        goalOrientation = copyOf(orientation);
+        goalOrientation = orientation;
+        orientationMatrixDirty = true;
         distance = guardDistance(d, d);
         goalDistance = distance;
     }
@@ -353,7 +382,8 @@ public class OrbitCamera implements PConstants {
      */
     public void setOrientationImmediate(Quaternion orientation) {
         this.orientation = normalizedCopyOf(orientation);
-        goalOrientation = copyOf(this.orientation);
+        goalOrientation = this.orientation;
+        orientationMatrixDirty = true;
     }
 
     /**
@@ -382,8 +412,8 @@ public class OrbitCamera implements PConstants {
     /**
      * Sets the allowed distance range for zoom.
      *
-     * @param min minimum distance
-     * @param max maximum distance
+     * @param min minimum distance; callers should supply a finite value no greater than max
+     * @param max maximum distance; callers should supply a finite value no less than min
      */
     public void setDistanceLimits(float min, float max) {
         this.minDistance = min;
@@ -442,7 +472,7 @@ public class OrbitCamera implements PConstants {
     /**
      * Sets drag sensitivity in radians per pixel.
      *
-     * @param dragSensitivity sensitivity value
+     * @param dragSensitivity finite sensitivity value
      */
     public void setDragSensitivity(float dragSensitivity) {
         this.dragSensitivity = dragSensitivity;
@@ -451,8 +481,8 @@ public class OrbitCamera implements PConstants {
     /**
      * Sets the wheel zoom step sizes.
      *
-     * @param wheelStep    distance change per standard notch
-     * @param wheelPadStep distance change per fractional (trackpad) notch
+     * @param wheelStep    finite distance change per standard notch
+     * @param wheelPadStep finite distance change per fractional (trackpad) notch
      */
     public void setWheelSteps(float wheelStep, float wheelPadStep) {
         this.wheelStep = wheelStep;
@@ -482,7 +512,7 @@ public class OrbitCamera implements PConstants {
     }
 
     /**
-     * Returns the current (interpolated) orientation quaternion.
+     * Returns the current immutable, interpolated orientation quaternion.
      *
      * @return current orientation
      */
@@ -490,15 +520,11 @@ public class OrbitCamera implements PConstants {
         return orientation;
     }
 
-    private static Quaternion copyOf(Quaternion quaternion) {
+    private static Quaternion normalizedCopyOf(Quaternion quaternion) {
         if (quaternion == null) {
             throw new IllegalArgumentException("Orientation cannot be null.");
         }
-        return new Quaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
-    }
-
-    private static Quaternion normalizedCopyOf(Quaternion quaternion) {
-        return copyOf(quaternion).normalize();
+        return quaternion.normalized();
     }
 
     private static void requireVector(PVector vector, String label) {

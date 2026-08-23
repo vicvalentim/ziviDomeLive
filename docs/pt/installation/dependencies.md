@@ -13,7 +13,7 @@ Instale dependências pelo Gerenciador de Contribuições quando disponíveis. U
 ## Dependência Java Incluída
 
 O pacote de release inclui o artefato público do Devolay, separado do runtime,
-`2.2.0-vic.1` para output de vídeo NDI experimental. Devolay é uma dependência
+`2.2.0-vic.2` para output de vídeo NDI experimental. Devolay é uma dependência
 Java/JNI embutida e, intencionalmente, não aparece como dependência do
 Gerenciador de Contribuições do Processing. Seu NDI Runtime proprietário não é
 incluído e deve ser instalado separadamente. O Processing não fornece uma

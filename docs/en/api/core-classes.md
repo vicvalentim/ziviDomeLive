@@ -1,166 +1,64 @@
+---
+title: Core Classes
+icon: material/cube-outline
+status: stable
+tags:
+  - API
+---
+
 # Core Classes
 
 ## ziviDomeLive
 
-Create one instance with the active `PApplet`, then call `setup()` once:
+Create the facade with the active `PApplet`, call `setup()` once and register scenes through it. The constructor registers Processing hooks; renderer creation remains lazy until a valid OpenGL surface exists.
 
 ```java
 ziviDomeLive dome = new ziviDomeLive(this);
 dome.setup();
+dome.setScene(new MainScene());
 ```
 
-The constructor registers Processing lifecycle and input hooks immediately.
-`setup()` creates output services and the startup scene; GPU renderers are
-created lazily from the registered `post()` hook after Processing has a valid
-OpenGL surface. `getInitState()` exposes the setup milestones
-`NOT_INITIALIZED`, `SETUP_COMPLETE`, and `MANAGERS_READY`; `READY` is reserved.
-Use `isInitialized()` for the common render-ready check. Pause and disposal are
-separate lifecycle concerns rather than additional `InitState` values.
-
-Key method groups:
-
-| Group | Methods |
+| Concern | Public controls |
 |---|---|
-| Scene | `setScene()`, `registerScene()`, `setSceneManager()`, `getSceneManager()`, `getCurrentSceneServices()` |
-| Render behavior | `setRenderMode()`, `getRenderMode()`, `setCurrentView()` |
-| Calibration | `setFov()`, `setFishSize()`, `setPitch()`, `setYaw()`, `setRoll()`, `resetOrientation()` |
-| Preview | `setShowPreview()`, `setStandardOutputAspectMode()` |
-| Output | `getOutputManager()`, `resetGraphics()`, `getOutputResolution()` |
-| Camera | `getSceneCamera()`, `setSceneCameraInputEnabled()` |
-| Lifecycle | `pause()`, `resume()`, `dispose()` |
+| Scenes | `setScene`, `setCurrentScene`, `registerScene`, `setSceneManager`, `getSceneManager` |
+| Representation | `setRenderMode`, `getRenderMode`, `setCurrentView`, `getCurrentView` |
+| Calibration | `setFov`, `setFishSize`, `setPitch`, `setYaw`, `setRoll`, `resetOrientation`, `resetControls` |
+| Preview | `setShowPreview`, `setStandardOutputAspectMode` |
+| Resolution/output | `resetGraphics`, `getOutputResolution`, `getOutputManager` |
+| Camera | `getSceneCamera`, `setSceneCameraInputEnabled` |
+| Environment | `setEquirectangularBackground`, visibility/intensity/yaw controls, `clearEnvironmentBackground` |
+| Logging | `setLogMode`, `enableDebugLogging`, `enableReleaseLogging` |
+| Experimental profiling | performance enable/disable/snapshot/capability controls |
+
+`isInitialized()` is the artist-facing readiness query. Initialization internals and renderer getters are not public 2.0 API.
+
+## Scene
+
+`Scene` protects the Processing programming model. Only `sceneRender(PGraphicsOpenGL)` is abstract; every lifecycle/input method is a default. See the [complete Scene contract](scene-interface.md).
 
 ## SceneManager
 
-`SceneManager` is the sole active-scene authority. It rejects null and duplicate registrations, activates the first scene automatically, and avoids reinitializing an already active scene.
+`SceneManager` is the active-scene authority. Registration and activation use **object identity**, not `equals()`.
 
-```java
-SceneManager scenes = new SceneManager();
-scenes.registerScene(new SceneA());
-scenes.registerScene(new SceneB());
-scenes.nextScene();
-```
-
-Switching disposes the leaving scene and sets up the arriving scene. `clearScenes()` disposes the active scene and removes every registration.
-
-| Operation | Behavior |
+| Method | Contract |
 |---|---|
-| `registerScene(scene)` | Adds a unique non-null scene; the first one becomes active |
-| `activateScene(scene)` | Activates a registered scene by identity |
-| `nextScene()` / `previousScene()` | Wraps through the registration order |
-| `setCurrentSceneIndex(index)` | Selects a valid zero-based index |
-| `reloadCurrentScene()` | Runs a complete dispose/setup cycle for the active scene |
-| `containsScene()` / `getSceneCount()` | Inspects registration state |
-| `clearScenes()` | Disposes the active scene and clears all registrations |
+| `registerScene(scene)` | Register one unique instance; first registration activates it |
+| `activateScene(scene)` | Activate a registered instance |
+| `nextScene()` / `previousScene()` | Wrap through registration order |
+| `setCurrentSceneIndex(index)` | Select a valid zero-based index |
+| `reloadCurrentScene()` | Full disposal/reactivation with fresh services |
+| `clearScenes()` | Dispose active activation and remove all registrations |
 
-Prefer facade `setScene()` or `registerScene()` when a scene uses
-`SceneServices`, because the facade must provide its activation context before
-`setupScene()`. See [Scene Services](scene-services.md).
+Prefer facade `setScene`/`registerScene`. A replacement manager is attached to facade lifecycle before first setup so `configure()` always precedes `setupScene()`.
 
-## OutputManager
+## RenderMode and ViewType
 
-The manager separates configured route, backend availability, native initialization, publication, and render requirements.
-Internally it delegates native ownership to concrete NDI, Syphon, and Spout services;
-those implementation classes are not part of the public API.
+`RenderMode` is runtime policy; `ViewType` is a final representation. `FULL` preserves independent routes. The exact enum orders are frozen and verified.
 
-```java
-OutputManager output = dome.getOutputManager();
-output.setViewForOutput(
-    OutputManager.OutputType.NDI,
-    ViewType.EQUIRECTANGULAR);
-output.toggleOutput("ndi");
-```
+## LogMode
 
-Use `getOutputState()` and `getOutputFailureReason()` for diagnostics. Use `isNdiEnabled()`, `isSyphonEnabled()`, or `isSpoutEnabled()` only when publication state is the specific question.
+`DEBUG` permits diagnostic console/file logging; `RELEASE` suppresses debug chatter. Example sketches ship without enabling debug logging so ordinary console output stays quiet.
 
-| State | Meaning |
-|---|---|
-| `UNAVAILABLE` | Unsupported backend or failed last initialization |
-| `AVAILABLE` | Backend is eligible but owns no native resources |
-| `INITIALIZED` | Native resources exist; publication is disabled |
-| `ENABLED` | Native resources exist and frames are published |
-| `STOPPING` | NDI publication stopped while bounded cleanup completes |
+## Stable does not expose the render graph
 
-`setViewForOutput()` changes a saved route. A dedicated `RenderMode` overrides
-the effective route without deleting that saved value; `FULL` restores it.
-Syphon and Spout receive the selected `PGraphicsOpenGL` directly. NDI performs
-pixel readback on the render thread and sends through a bounded three-slot
-worker pipeline.
-
-The automatic `RenderPipeline` supplies completed targets through `FrameViews`.
-`OutputManager` chooses the logical `ViewType` to publish and does not inspect
-the concrete renderer that produced it. Applications normally do not need to
-call the frame-aware `sendOutput(FrameViews)` overload directly.
-
-## SphericalOrientation
-
-`SphericalOrientation` owns the shared attitude for every spherical projection.
-Its setters accept cyclic control values, calculate the shortest delta, and
-compose that delta around local pitch `X`, yaw `Z`, or roll `Y` axes. The stored
-quaternion is normalized after composition.
-
-`getPitch()`, `getYaw()`, and `getRoll()` return the latest control accumulators;
-they are not an Euler conversion of `getQuaternion()`. Command order is
-therefore significant. `reset()` restores identity and zero accumulators.
-
-Applications usually access this behavior through the facade's calibration
-methods rather than constructing a separate orientation object.
-
-## CubemapFace And CameraManager
-
-`CubemapFace` defines the qualified cubemap face order and camera vectors:
-`+X`, `-X`, `+Y`, `-Y`, `+Z`, `-Z`. `CameraManager` remains available for
-1.x compatibility and initializes its orientations from that canonical table.
-
-## ProcessingGlAdapter
-
-`ProcessingGlAdapter` centralizes the Processing/OpenGL operations currently
-needed by the render pipeline and output backends: graphics target allocation,
-texture checks, `loadPixels()` copy, disposal, and PGL capability discovery.
-`ProcessingGlCapabilities` records whether the active context advertises
-texture, FBO, cubemap, seamless cubemap, PBO, and sync fence support.
-
-## CubemapTarget
-
-`CubemapTarget` owns a native `GL_TEXTURE_CUBE_MAP` allocation with one square
-RGBA8 face for each canonical `CubemapFace`. It applies conservative defaults:
-linear mipmapped min filtering, linear mag filtering, clamp-to-edge wrapping on
-all three axes, regenerated mipmaps after capture, and seamless cubemap sampling
-only when the active context advertises support.
-
-`CubemapRenderer` preserves the `Scene.sceneRender(PGraphicsOpenGL)` contract
-with one reusable offscreen Processing scratch target. After the Scene and
-optional far-depth environment are complete, a GPU framebuffer blit copies the
-resolved color into the matching `CubemapTarget` face. There is no legacy
-`PGraphicsOpenGL[]` face array and no six-texture fallback.
-`EquirectangularRenderer`, `FisheyeDomemaster`, and `CubemapViewRenderer` all
-sample the native cubemap directly. The adapted samplerCube shader resources
-are packaged under `data/shaders/samplercube/`.
-
-## OrbitCamera
-
-`OrbitCamera` is an optional scene-space transform. It is shared across all
-targets so Standard and spherical views see the same scene attitude.
-
-Configure distance limits, collapse guard, interpolation, drag sensitivity,
-and wheel steps through its setters. `setTarget()`, `setDistance()`,
-`setOrientation()`, `goTo()`, `snapTo()`, the explicit immediate setters, and
-`reset()` update its pose. `PVector` overloads are available for scene-friendly targets and axes. Callers
-normally retrieve the shared instance with `getSceneCamera()` and let the
-facade forward mouse input only while `setSceneCameraInputEnabled(true)` is
-active. The facade also copies its quaternion into the shared Environment state each frame.
-
-## Renderers
-
-The public renderer classes remain available for advanced integrations:
-
-- `StandardRenderer`
-- `CubemapRenderer`
-- `EquirectangularRenderer`
-- `FisheyeDomemaster`
-- `CubemapViewRenderer`
-
-Applications should prefer the facade and `RenderMode`. Direct renderer ownership is advanced integration and should not rely on internal allocation details.
-
-Do not retain a renderer target across `resetGraphics()`: resolution changes
-are deferred to the render loop and can replace high-resolution renderer
-instances. Query the facade again after the reset is applied.
+No public `CubemapRenderer`, `CubemapTarget`, `FrameViews`, `ProcessingGlAdapter`, ControlP5 manager or worker/executor exists in 2.0. This removal is intentional and prevents callers from assuming graphics-context and ownership responsibilities.

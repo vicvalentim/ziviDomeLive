@@ -19,10 +19,10 @@ Construa fluxos visuais **fulldome, esféricos e imersivos em tempo real** a par
 </div>
 
 </div>
-<div class="zd-hero__image" markdown>
-
-![Visão geral dos fluxos criativos do ziviDomeLive](../img/hero-overview.png)
-
+<div class="zd-hero__image">
+<div class="zd-splash-stage" data-zd-splash>
+<canvas class="zd-splash-canvas" data-zd-splash-canvas width="566" height="480" role="img" aria-label="Esfera animada do splash do ziviDomeLive com cubos wireframe orbitais">Esfera animada do splash do ziviDomeLive</canvas>
+</div>
 </div>
 </div>
 
@@ -34,7 +34,7 @@ Construa fluxos visuais **fulldome, esféricos e imersivos em tempo real** a par
 
     Renderização em perspectiva para a janela do Processing e outputs visuais convencionais.
 
-- :material-fisheye: **Domemaster**
+- :material-panorama-fisheye: **Domemaster**
 
     Representação fisheye circular para projeção fulldome e calibração do domo.
 

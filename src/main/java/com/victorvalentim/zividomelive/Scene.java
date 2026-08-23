@@ -1,10 +1,8 @@
 package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.support.LogManager;
-import controlP5.*;
-import processing.event.*;
+import processing.event.KeyEvent;
+import processing.event.MouseEvent;
 import processing.opengl.PGraphicsOpenGL;
-import java.util.logging.Logger;
 
 /**
  * Defines the lifecycle and drawing contract for a ziviDomeLive scene.
@@ -15,16 +13,19 @@ import java.util.logging.Logger;
  * the same Processing frame, so advancing simulation, timelines, counters or
  * mutable random state from the render callback can make spherical directions
  * observe different states.</p>
+ *
+ * <p>The library owns the supplied render target's {@code beginDraw()}/{@code endDraw()} pair.
+ * A scene must neither call those methods nor retain the target after the callback.</p>
+ *
+ * <p><strong>API stability:</strong> Stable.</p>
  */
 public interface Scene {
-    /** Logger instance for scene-related logging. */
-    Logger LOGGER = LogManager.getLogger();
-
     /**
      * Supplies lifecycle-aware API services before this scene is set up.
      *
-     * <p>The default implementation preserves existing sketches. Service-aware scenes may
-     * retain the provided context until their matching {@link #dispose()} call.</p>
+     * <p>The runtime calls this before the matching {@link #setupScene()} on every activation,
+     * including reloads of the same scene instance. The supplied context belongs to that one
+     * activation and may be retained only until the matching {@link #dispose()} returns.</p>
      *
      * @param services services owned by this scene activation
      */
@@ -34,8 +35,9 @@ public interface Scene {
     /**
      * Sets up the scene when it becomes active.
      *
-     * <p>A scene may be activated more than once. Each activation after a switch follows a
-     * corresponding {@link #dispose()} call.</p>
+     * <p>A scene instance may be activated more than once. Every activation receives fresh
+     * services through {@link #configure(SceneServices)} and follows a complete setup/dispose
+     * cycle.</p>
      */
     default void setupScene() {
     }
@@ -47,6 +49,9 @@ public interface Scene {
      * state transitions and mutable randomization that must advance once per frame.
      * Keep those mutations out of {@link #sceneRender(PGraphicsOpenGL)} when all
      * rendered views/faces must observe the same state.</p>
+     *
+     * <p>The runtime invokes this on the Processing frame thread after activation callbacks,
+     * bounded external input, and the frame clock have been advanced.</p>
      */
     default void update() {
     }
@@ -69,7 +74,10 @@ public interface Scene {
     void sceneRender(PGraphicsOpenGL pg);
 
     /**
-     * Handles key press events. Default implementation does nothing.
+     * Handles a Processing key event. The default implementation does nothing.
+     *
+     * <p>Named {@link SceneActionMap} bindings run first; the raw callback remains available for
+     * direct Processing-style input.</p>
      *
      * @param event the KeyEvent object containing details of the key event
      */
@@ -77,7 +85,10 @@ public interface Scene {
     }
 
     /**
-     * Handles mouse events. Default implementation does nothing.
+     * Handles a Processing mouse event. The default implementation does nothing.
+     *
+     * <p>Named {@link SceneActionMap} bindings run first, this raw callback runs next, and
+     * library-owned camera navigation is routed afterward.</p>
      *
      * @param event the MouseEvent object containing details of the mouse event
      */
@@ -85,24 +96,18 @@ public interface Scene {
     }
 
     /**
-     * Handles control events. Default implementation does nothing.
+     * Ends one active setup cycle and releases scene-owned domain resources.
      *
-     * @param theEvent the ControlEvent object containing details of the control event
-     */
-    default void controlEvent(ControlEvent theEvent) {
-    }
-
-    /**
-     * Disposes resources used by the scene. This method is called when an active scene is
-     * switched, cleared, replaced, or released by the facade. By default, it logs the transition.
-     * Override this method if a scene requires custom resource management.
+     * <p>Before this callback, the runtime stops accepting activation work and cancels
+     * activation-owned tasks. After it returns, the runtime releases services and adapters.
+     * Scenes must not close runtime-supplied services themselves. The same Java scene object may
+     * be configured and activated again later.</p>
      */
     default void dispose() {
-        LOGGER.info("Disposing resources for scene: " + getName());
     }
 
     /**
-     * Returns the name of the scene. Used for logging and debugging.
+     * Returns the artist-facing scene name used by logging and scene controls.
      *
      * @return the scene name; by default the implementation class simple name
      */

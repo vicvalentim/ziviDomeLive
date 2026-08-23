@@ -19,10 +19,10 @@ Build real-time **fulldome, spherical and immersive visual workflows** from one 
 </div>
 
 </div>
-<div class="zd-hero__image" markdown>
-
-![Overview of ziviDomeLive creative workflows](../img/hero-overview.png)
-
+<div class="zd-hero__image">
+<div class="zd-splash-stage" data-zd-splash>
+<canvas class="zd-splash-canvas" data-zd-splash-canvas width="566" height="480" role="img" aria-label="Animated ziviDomeLive splash sphere with orbiting wireframe cubes">Animated ziviDomeLive splash sphere</canvas>
+</div>
 </div>
 </div>
 
@@ -34,7 +34,7 @@ Build real-time **fulldome, spherical and immersive visual workflows** from one 
 
     Conventional perspective rendering for the Processing window and standard visual outputs.
 
-- :material-fisheye: **Domemaster**
+- :material-panorama-fisheye: **Domemaster**
 
     Circular fisheye representation for fulldome projection and dome calibration.
 

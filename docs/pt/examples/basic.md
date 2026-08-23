@@ -2,11 +2,8 @@
 
 Estes exemplos formam o primeiro percurso de aprendizagem da biblioteca. Ferramentas de qualificação são documentadas separadamente porque sua finalidade é testar uma release ou configuração de hardware, e não ensinar o modelo básico de projeto.
 
-<div class="zd-image-placeholder" markdown>
-**PLACEHOLDER DE IMAGEM — Exemplos fundamentais de aprendizagem**
-Captura final: montagem compacta de `EmptyProject`, `Basic` e `SphereParticle` executados a partir da biblioteca instalada.
-Asset final sugerido: `docs/img/learning-examples-foundations.png`
-</div>
+!!! note "Política de evidência visual"
+    Screenshots usadas como evidência de release devem vir do pacote instalado e qualificado. Esta página de aprendizagem usa o comportamento do código-fonte como autoridade e não substitui captura real por mockup editorial.
 
 ## EmptyProject
 
@@ -31,7 +28,7 @@ Use as setas Esquerda/Direita para alternar entre os pilares rotativos e a grade
 
 ## SphereParticle
 
-Exemplo de cena maior que executa no máximo uma tarefa de simulação pelo `ThreadManager` compartilhado, cancela o trabalho pertencente à cena no descarte e mantém as chamadas gráficas na render thread. Clique ou arraste para adicionar partículas.
+Exemplo de cena maior que executa trabalho de simulação bounded por `SceneServices.tasks()`, isola resultados na ativação atual e mantém chamadas gráficas na render thread. Clique ou arraste para adicionar partículas.
 
 Todos os exemplos de aprendizagem preservam `sceneRender(PGraphicsOpenGL)` e nunca chamam `ziviDome.draw()` manualmente.
 

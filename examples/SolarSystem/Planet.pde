@@ -53,6 +53,7 @@ public class Planet implements CelestialBody {
 
     // luas
     private final List<Moon> moons = new ArrayList<>();
+    private final List<Moon> moonsView = java.util.Collections.unmodifiableList(moons);
 
     // Anéis de Saturno
     private float ringRotationAngle = 0;
@@ -187,7 +188,7 @@ public class Planet implements CelestialBody {
 
     // ——————————————— Luas ———————————————
     public void addMoon(Moon m) { moons.add(m); }
-    public List<Moon> getMoons() { return new ArrayList<>(moons); }
+    public List<Moon> getMoons() { return moonsView; }
     public float getAxisTiltRad() { return axisTiltRad; }
 
     // ——————————————— Animação e Renderização ———————————————
@@ -209,10 +210,12 @@ public class Planet implements CelestialBody {
                         ShapeManager shapeManager) {
 
         float scale = pxPerAU();
-        PVector posPx = positionAU.copy().mult(scale);
+        float positionX = positionAU.x * scale;
+        float positionY = positionAU.y * scale;
+        float positionZ = positionAU.z * scale;
 
         pg.pushMatrix();
-            pg.translate(posPx.x, posPx.y, posPx.z);
+            pg.translate(positionX, positionY, positionZ);
 
             if (hasRings) {
                 drawSaturnRings(pg, renderingMode);
@@ -239,7 +242,7 @@ public class Planet implements CelestialBody {
 
         if (showLabel) {
             pg.pushMatrix();
-            pg.translate(posPx.x, posPx.y - (radiusPx + 5), posPx.z);
+            pg.translate(positionX, positionY - (radiusPx + 5), positionZ);
             pg.fill(255);
             pg.textSize(Math.max(10, radiusPx * 0.5f));
             pg.textAlign(PConstants.CENTER, PConstants.BOTTOM);

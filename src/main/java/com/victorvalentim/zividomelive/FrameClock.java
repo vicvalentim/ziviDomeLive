@@ -9,6 +9,13 @@ import java.util.function.LongSupplier;
  * <p>The runtime ticks this clock once before {@link Scene#update()}. Large stalls are
  * clamped so a paused debugger, window move, or transient hitch cannot inject an
  * unbounded simulation delta.</p>
+ *
+ * <p>The clock reports {@code double} seconds and is read-only except for the artist-selected
+ * delta clamp. Construction, ticking, and reset belong to the runtime.</p>
+ *
+ * <p><strong>API stability:</strong> Advanced Stable.</p>
+ *
+ * @since 2.0.0
  */
 public final class FrameClock {
 
@@ -72,12 +79,12 @@ public final class FrameClock {
         this.maxDeltaSeconds = maxDeltaSeconds;
     }
 
-    /** @return delta from the latest tick in seconds */
+    /** @return clamped delta from the latest Processing frame boundary, in seconds */
     public synchronized double getDeltaSeconds() {
         return deltaSeconds;
     }
 
-    /** @return accumulated clamped elapsed time in seconds */
+    /** @return monotonic sum of accepted, clamped frame deltas, in seconds */
     public synchronized double getElapsedSeconds() {
         return elapsedSeconds;
     }
@@ -87,7 +94,7 @@ public final class FrameClock {
         return maxDeltaSeconds;
     }
 
-    /** @return number of ticks since construction or the latest reset */
+    /** @return one-based frame count after the first runtime tick */
     public synchronized long getFrameIndex() {
         return frameIndex;
     }

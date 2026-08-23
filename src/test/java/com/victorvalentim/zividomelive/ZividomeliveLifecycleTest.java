@@ -1,9 +1,6 @@
 package com.victorvalentim.zividomelive;
 
 import com.victorvalentim.zividomelive.manager.OutputManager;
-import com.victorvalentim.zividomelive.render.modes.FisheyeDomemaster;
-import com.victorvalentim.zividomelive.render.modes.StandardRenderer;
-import com.victorvalentim.zividomelive.support.ThreadManager;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
 import processing.core.PImage;
@@ -87,6 +84,48 @@ class ZividomeliveLifecycleTest {
 	}
 
 	@Test
+	void facadeRejectsInvalidResolutionBeforeDeferringAllocation() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+
+		assertThrows(IllegalArgumentException.class, () -> lib.resetGraphics(0));
+		assertThrows(IllegalArgumentException.class, () -> lib.resetGraphics(-1));
+		assertEquals(1024, lib.getOutputResolution());
+	}
+
+	@Test
+	void domemasterSizeIsClampedBeforeRenderersExist() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+
+		lib.setFishSize(-10f);
+		assertEquals(0f, lib.getFishSize());
+		lib.setFishSize(150f);
+		assertEquals(100f, lib.getFishSize());
+		lib.setFishSize(Float.NaN);
+		assertEquals(100f, lib.getFishSize());
+	}
+
+	@Test
+	void facadeCalibrationPreservesTheLastFiniteBoundedValue() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+
+		lib.setFov(500f);
+		assertEquals(360f, lib.getFov());
+		lib.setFov(Float.NaN);
+		assertEquals(360f, lib.getFov());
+
+		lib.setCurrentView(ViewType.SKYBOX);
+		lib.setCurrentView(null);
+		assertEquals(ViewType.SKYBOX, lib.getCurrentView());
+	}
+
+	@Test
+	void resettingControlsBeforeManagerInitializationIsSafe() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+
+		assertDoesNotThrow(lib::resetControls);
+	}
+
+	@Test
 	void environmentBackgroundStateIsConfigurableBeforeRendererInitialization() {
 		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		PImage image = new PImage(4, 2);
@@ -139,7 +178,7 @@ class ZividomeliveLifecycleTest {
 	void setupStartsWithOutputsDisabled() {
 		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		lib.setup();
-		assertFalse(lib.isEnableOutput(), "Outputs should remain opt-in after setup");
+		assertFalse(lib.getOutputManager().isActive(), "Outputs should remain opt-in after setup");
 	}
 
 	@Test
@@ -190,40 +229,6 @@ class ZividomeliveLifecycleTest {
 		assertFalse(outputs.spoutEnabled);
 		assertTrue(outputs.syphonEnabled);
 		assertEquals(2, outputs.toggleCalls, "Repeated resume must not toggle restored outputs off");
-	}
-
-	@Test
-	void isEnableOutputDelegatesToOutputManager() {
-		ziviDomeLive lib = new ziviDomeLive(new PApplet());
-		lib.setup();
-
-		OutputManagerState state = readOutputState(lib);
-		assertEquals(state.anyEnabled, lib.isEnableOutput(),
-				"isEnableOutput must mirror the OutputManager enabled flags");
-	}
-
-	@Test
-	void stopDoesNotShutdownSharedThreadManager() {
-		ziviDomeLive lib = new ziviDomeLive(new PApplet());
-		lib.setup();
-
-		lib.stop();
-
-		assertFalse(ThreadManager.isShutdown(),
-				"The shared ThreadManager executor must stay alive across library instances");
-		assertFalse(lib.isInitialized());
-		assertEquals(ziviDomeLive.InitState.NOT_INITIALIZED, lib.getInitState());
-	}
-
-	@Test
-	void disposeDoesNotShutdownSharedThreadManager() {
-		ziviDomeLive lib = new ziviDomeLive(new PApplet());
-		lib.setup();
-
-		lib.dispose();
-
-		assertFalse(ThreadManager.isShutdown(),
-				"The shared ThreadManager executor must stay alive after disposing one library instance");
 	}
 
 	@Test
@@ -546,9 +551,7 @@ class ZividomeliveLifecycleTest {
 		lib.dispose();
 	}
 
-	private record OutputManagerState(boolean anyEnabled) {}
-
-	private static void setOutputManager(ziviDomeLive lib, OutputManager outputManager) throws Exception {
+	private static void setOutputManager(ziviDomeLive lib, OutputManagerImpl outputManager) throws Exception {
 		Field field = ziviDomeLive.class.getDeclaredField("outputManager");
 		field.setAccessible(true);
 		field.set(lib, outputManager);
@@ -570,12 +573,6 @@ class ZividomeliveLifecycleTest {
 		Field field = StandardRenderer.class.getDeclaredField("currentScene");
 		field.setAccessible(true);
 		return (Scene) field.get(renderer);
-	}
-
-	private OutputManagerState readOutputState(ziviDomeLive lib) {
-		var om = lib.getOutputManager();
-		assertNotNull(om, "OutputManager must be created during setup");
-		return new OutputManagerState(om.isNdiEnabled() || om.isSpoutEnabled() || om.isSyphonEnabled());
 	}
 
 	private static class StubApplet extends PApplet {
@@ -783,7 +780,7 @@ class ZividomeliveLifecycleTest {
 		}
 	}
 
-	private static class FakeOutputManager extends OutputManager {
+	private static class FakeOutputManager extends OutputManagerImpl {
 		private boolean ndiEnabled;
 		private boolean spoutEnabled;
 		private boolean syphonEnabled;
@@ -810,7 +807,7 @@ class ZividomeliveLifecycleTest {
 		}
 
 		@Override
-		public void shutdownOutputs() {
+		void disableAll() {
 			shutdownCalls++;
 			ndiEnabled = false;
 			spoutEnabled = false;
@@ -818,20 +815,18 @@ class ZividomeliveLifecycleTest {
 		}
 
 		@Override
-		public void toggleOutput(String method) {
+		public void setOutputEnabled(OutputManager.OutputType outputType, boolean enabled) {
 			toggleCalls++;
-			switch (method) {
-				case "ndi":
-					ndiEnabled = !ndiEnabled;
+			switch (outputType) {
+				case NDI:
+					ndiEnabled = enabled;
 					break;
-				case "spout":
-					spoutEnabled = !spoutEnabled;
+				case SPOUT:
+					spoutEnabled = enabled;
 					break;
-				case "syphon":
-					syphonEnabled = !syphonEnabled;
+				case SYPHON:
+					syphonEnabled = enabled;
 					break;
-				default:
-					throw new IllegalArgumentException("Unexpected output: " + method);
 			}
 		}
 	}

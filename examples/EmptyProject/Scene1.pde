@@ -27,8 +27,4 @@ class Scene1 implements Scene {
     
   }
 
-  public void controlEvent(controlP5.ControlEvent theEvent) {
-      println("Control event in Scene1: " + theEvent.getName());
-  }
-  
 }

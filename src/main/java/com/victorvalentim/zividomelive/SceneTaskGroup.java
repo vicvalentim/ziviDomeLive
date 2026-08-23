@@ -1,31 +1,38 @@
 package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.support.LogManager;
-import com.victorvalentim.zividomelive.support.ThreadManager;
 
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Bounded scene-owned task group backed by the library's shared {@link ThreadManager}.
+ * Bounded, activation-owned background work backed by the library's shared worker pool.
+ *
+ * <p>Work executes outside the Processing/OpenGL thread and must not call Processing graphics
+ * APIs. Result and error handlers are delivered at a later frame boundary only while the same
+ * activation remains alive. Disposal cancels in-flight work, rejects new submissions, and drops
+ * stale callbacks.</p>
+ *
+ * <p>This API is callback-based by design: it never exposes a {@code Future} that could encourage
+ * blocking the render thread.</p>
+ *
+ * <p><strong>API stability:</strong> Advanced Stable.</p>
+ *
+ * @since 2.0.0
  */
 public final class SceneTaskGroup {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
     private final Map<String, FutureTask<?>> tasks = new ConcurrentHashMap<>();
-    private final AtomicLong sequence = new AtomicLong();
     private final int maxInFlight;
     private final RenderThreadQueue renderQueue;
     private volatile boolean closed;
@@ -47,31 +54,22 @@ public final class SceneTaskGroup {
     }
 
     /**
-     * Submits an unkeyed task or throws when the scene budget is full.
+     * Submits keyed background work only when that key is idle and capacity is available.
      *
-     * @param <T> result type
-     * @param task work to execute
-     * @return future representing the task
-     */
-    public <T> Future<T> submit(Callable<T> task) {
-        String key = "task-" + sequence.incrementAndGet();
-        return trySubmit(key, task).orElseThrow(
-                () -> new RejectedExecutionException("Scene task budget is full."));
-    }
-
-    /**
-     * Submits keyed work only when no work with that key is already in flight.
+     * <p>This overload has no result callback. Unhandled failures are written to the library
+     * log.</p>
      *
      * @param key stable task key
-     * @param task work to execute
-     * @return true when submitted
+     * @param task background work that must not call Processing/OpenGL APIs
+     * @return {@code true} when accepted; {@code false} when the key is busy or the bounded group
+     *         is full
      */
     public boolean submitIfIdle(String key, Runnable task) {
         Objects.requireNonNull(task, "task");
-        return trySubmit(key, () -> {
+        return submitTracked(key, () -> {
             task.run();
             return null;
-        }).isPresent();
+        }, null, null);
     }
 
     /**
@@ -82,46 +80,61 @@ public final class SceneTaskGroup {
      * @param task background work that must not call Processing/OpenGL APIs
      * @param onResult result handler executed on the Processing render thread
      * @param <T> result type
-     * @return true when submitted
+     * @return {@code true} when accepted; {@code false} when the key is busy or the bounded group
+     *         is full
      */
     public <T> boolean submitIfIdle(
             String key,
             Callable<T> task,
             Consumer<? super T> onResult) {
-        Objects.requireNonNull(task, "task");
         Objects.requireNonNull(onResult, "onResult");
-        return trySubmit(key, () -> {
-            T result = task.call();
-            publishResult(() -> onResult.accept(result));
-            return result;
-        }).isPresent();
+        return submitTracked(key, task, onResult, null);
     }
 
     /**
-     * Attempts to submit keyed work. Empty means that key is busy or the group budget is full.
+     * Runs keyed work in the shared background pool and publishes either its result or failure
+     * at the next frame boundary of this activation.
      *
-     * @param <T> result type
      * @param key stable task key
-     * @param task work to execute
-     * @return future when submitted, otherwise empty
+     * @param task background work that must not call Processing/OpenGL APIs
+     * @param onResult result handler executed on the Processing render thread
+     * @param onError failure handler executed on the Processing render thread
+     * @param <T> result type
+     * @return {@code true} when accepted; {@code false} when the key is busy or the bounded group
+     *         is full
      */
-    public synchronized <T> Optional<Future<T>> trySubmit(String key, Callable<T> task) {
+    public <T> boolean submitIfIdle(
+            String key,
+            Callable<T> task,
+            Consumer<? super T> onResult,
+            Consumer<? super Throwable> onError) {
+        Objects.requireNonNull(onResult, "onResult");
+        Objects.requireNonNull(onError, "onError");
+        return submitTracked(key, task, onResult, onError);
+    }
+
+    private synchronized <T> boolean submitTracked(
+            String key,
+            Callable<T> task,
+            Consumer<? super T> onResult,
+            Consumer<? super Throwable> onError) {
         ensureOpen();
         String normalized = requireKey(key);
         Objects.requireNonNull(task, "task");
         if (tasks.size() >= maxInFlight) {
-            return Optional.empty();
+            return false;
         }
 
-        TrackedFutureTask<T> future = new TrackedFutureTask<>(normalized, task);
+        TrackedFutureTask<T> future = new TrackedFutureTask<>(
+                normalized, task, onResult, onError);
         FutureTask<?> previous = tasks.putIfAbsent(normalized, future);
         if (previous != null) {
-            return Optional.empty();
+            return false;
         }
 
         try {
-            ThreadManager.execute(future);
-            return Optional.of(future);
+            SharedTaskExecutor.execute(future);
+            return true;
         } catch (RuntimeException error) {
             tasks.remove(normalized, future);
             throw error;
@@ -139,12 +152,12 @@ public final class SceneTaskGroup {
         return task != null && !task.isDone();
     }
 
-    /** @return current number of queued or running tasks */
+    /** @return current number of queued or running background tasks */
     public int getInFlightCount() {
         return tasks.size();
     }
 
-    /** @return configured in-flight task budget */
+    /** @return maximum number of distinct keyed tasks allowed in flight */
     public int getMaxInFlight() {
         return maxInFlight;
     }
@@ -200,10 +213,18 @@ public final class SceneTaskGroup {
 
     private final class TrackedFutureTask<T> extends FutureTask<T> {
         private final String key;
+        private final Consumer<? super T> onResult;
+        private final Consumer<? super Throwable> onError;
 
-        private TrackedFutureTask(String key, Callable<T> task) {
+        private TrackedFutureTask(
+                String key,
+                Callable<T> task,
+                Consumer<? super T> onResult,
+                Consumer<? super Throwable> onError) {
             super(task);
             this.key = key;
+            this.onResult = onResult;
+            this.onError = onError;
         }
 
         @Override
@@ -213,11 +234,21 @@ public final class SceneTaskGroup {
                 return;
             }
             try {
-                get();
+                T result = get();
+                if (onResult != null) {
+                    publishResult(() -> onResult.accept(result));
+                }
             } catch (InterruptedException error) {
                 Thread.currentThread().interrupt();
-            } catch (Exception error) {
-                LOGGER.log(Level.SEVERE, "Scene task failed: " + key, error.getCause());
+            } catch (CancellationException ignored) {
+                // Activation disposal intentionally discards cancelled work.
+            } catch (ExecutionException error) {
+                Throwable cause = error.getCause();
+                if (onError != null) {
+                    publishResult(() -> onError.accept(cause));
+                } else {
+                    LOGGER.log(Level.SEVERE, "Scene task failed: " + key, cause);
+                }
             }
         }
     }

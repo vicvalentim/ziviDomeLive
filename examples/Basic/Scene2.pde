@@ -32,10 +32,6 @@ class Scene2 implements Scene {
       println("Mouse event in Scene2.");
   }
 
-  public void controlEvent(controlP5.ControlEvent theEvent) {
-      println("Control event in Scene2: " + theEvent.getName());
-  }
-
   public String getName() {
       return "Scene2";
   }

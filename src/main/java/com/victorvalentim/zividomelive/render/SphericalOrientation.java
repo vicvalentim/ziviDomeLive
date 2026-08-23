@@ -7,8 +7,15 @@ import processing.core.PConstants;
  *
  * <p>The three values are cyclic control accumulators, not an Euler decomposition of the current
  * attitude. Each value change is converted to the shortest angular delta and composed directly
- * into a unit quaternion in event order. Getter values preserve the corresponding setter values
- * for facade compatibility.</p>
+ * into a unit quaternion in event order. Getter values report the most recently accepted control
+ * values.</p>
+ *
+ * <p>{@link #getQuaternion()} returns an immutable value, so callers cannot mutate orientation
+ * state through the result.</p>
+ *
+ * <p><strong>API stability:</strong> Advanced Stable.</p>
+ *
+ * @since 2.0.0
  */
 public final class SphericalOrientation {
     private Quaternion orientation;
@@ -24,7 +31,7 @@ public final class SphericalOrientation {
     /**
      * Applies a pitch change around the current local X axis.
      *
-     * @param value pitch control value in radians
+     * @param value pitch control value in radians; non-finite values are ignored
      */
     public void setPitch(float value) {
         if (!Float.isFinite(value)) {
@@ -37,7 +44,7 @@ public final class SphericalOrientation {
     /**
      * Applies a yaw change around the current local Z axis.
      *
-     * @param value yaw control value in radians
+     * @param value yaw control value in radians; non-finite values are ignored
      */
     public void setYaw(float value) {
         if (!Float.isFinite(value)) {
@@ -50,7 +57,7 @@ public final class SphericalOrientation {
     /**
      * Applies a roll change around the current local Y axis.
      *
-     * @param value roll control value in radians
+     * @param value roll control value in radians; non-finite values are ignored
      */
     public void setRoll(float value) {
         if (!Float.isFinite(value)) {
@@ -88,12 +95,12 @@ public final class SphericalOrientation {
     }
 
     /**
-     * Returns a defensive copy of the current unit quaternion.
+     * Returns the current immutable unit quaternion.
      *
      * @return current spherical orientation
      */
     public Quaternion getQuaternion() {
-        return new Quaternion(orientation.x, orientation.y, orientation.z, orientation.w);
+        return orientation;
     }
 
     /** Restores the identity quaternion and zeroes all control accumulators. */
@@ -109,7 +116,7 @@ public final class SphericalOrientation {
             return;
         }
         Quaternion delta = Quaternion.fromAxisAngle(axisX, axisY, axisZ, angle);
-        orientation = orientation.multiply(delta).normalize();
+        orientation = orientation.multiply(delta).normalized();
     }
 
     private static float normalizeAngle(float angle) {

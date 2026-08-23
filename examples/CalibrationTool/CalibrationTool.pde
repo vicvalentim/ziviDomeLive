@@ -24,7 +24,7 @@ void setup() {
   ziviDome.setRenderMode(RenderMode.FULL);
 
   sceneManager = new SceneManager();
-  sceneManager.registerScene(new CubeCalibrationScene(ziviDome));
+  sceneManager.registerScene(new CubeCalibrationScene());
   sceneManager.registerScene(new BourkeSphereScene(ziviDome));
   ziviDome.setSceneManager(sceneManager);
 
@@ -84,6 +84,6 @@ void printCalibrationState() {
       + " yaw=" + nf(degrees(ziviDome.getYaw()), 0, 1)
       + " roll=" + nf(degrees(ziviDome.getRoll()), 0, 1)
       + " floatingPreview=" + ziviDome.isShowPreview()
-      + " outputEnabled=" + ziviDome.isEnableOutput()
+      + " outputEnabled=" + ziviDome.getOutputManager().isActive()
       + " outputResolution=" + ziviDome.getOutputResolution());
 }

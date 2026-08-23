@@ -7,10 +7,15 @@ icon: material/monitor-share
 
 Preview and output are **independent consumers of rendered views**. Window size, preview policy and external-output resolution solve different problems and should remain independently understandable.
 
-<figure markdown="span">
-  ![Preview and output routing](../../img/preview-output-routing.png)
-  <figcaption>In FULL, preview and external destinations can request different ViewTypes from the same frame.</figcaption>
-</figure>
+```mermaid
+flowchart LR
+  R[ziviDomeLive<br/>RenderMode.FULL] --> P[Preview<br/>stored ViewType]
+  R --> N[NDI<br/>stored ViewType]
+  R --> L[Local texture<br/>stored ViewType]
+  P --> W[Processing window]
+  N --> NR[Network receiver]
+  L --> LR[Syphon or Spout receiver]
+```
 
 <div class="grid cards" markdown>
 

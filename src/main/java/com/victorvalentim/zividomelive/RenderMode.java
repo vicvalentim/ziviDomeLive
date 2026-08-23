@@ -7,6 +7,8 @@ package com.victorvalentim.zividomelive;
  * through the {@link ViewType} API. Dedicated modes temporarily override
  * those effective choices without erasing them.</p>
  *
+ * <p><strong>API stability:</strong> Stable.</p>
+ *
  * @since 1.5.0
  */
 public enum RenderMode {

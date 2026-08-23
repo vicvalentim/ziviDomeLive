@@ -7,10 +7,15 @@ icon: material/view-dashboard-outline
 
 ziviDomeLive separates **how the application is currently working** from **which representation a destination receives**. Keeping those two decisions distinct is the key to predictable preview/output routing.
 
-<figure markdown="span">
-  ![RenderMode and ViewType overview](../../img/render-modes-overview.png)
-  <figcaption>RenderMode changes the current working mode; ViewType selects the representation requested by a destination.</figcaption>
-</figure>
+```mermaid
+flowchart LR
+  M[RenderMode<br/>runtime policy] --> F{FULL?}
+  F -->|yes| P[Stored ViewType<br/>per destination]
+  F -->|dedicated mode| O[Temporary effective view]
+  P --> A[Preview]
+  P --> B[NDI]
+  P --> C[Syphon / Spout]
+```
 
 <div class="grid cards" markdown>
 
@@ -35,7 +40,7 @@ Dedicated modes temporarily override the effective representation. They do **not
 
 ## ViewType: destination representation
 
-In `FULL`, each destination can request a different final representation. A Standard preview can coexist with a Domemaster NDI output, for example, without turning those destinations into the same route.
+    In `FULL`, each destination can request a different final representation. A Standard preview can coexist with a Domemaster NDI output, for example, without turning those destinations into the same route.
 
 === "Standard"
     Conventional perspective representation.

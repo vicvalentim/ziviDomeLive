@@ -3,11 +3,6 @@ package com.victorvalentim.zividomelive;
 import com.victorvalentim.zividomelive.manager.*;
 import com.victorvalentim.zividomelive.render.*;
 import com.victorvalentim.zividomelive.render.camera.*;
-import com.victorvalentim.zividomelive.render.gl.*;
-import com.victorvalentim.zividomelive.render.modes.*;
-import com.victorvalentim.zividomelive.support.*;
-import com.victorvalentim.zividomelive.internal.performance.GpuPerformanceTimer;
-import com.victorvalentim.zividomelive.internal.performance.PerformanceMonitor;
 import com.victorvalentim.zividomelive.performance.*;
 import processing.core.*;
 import processing.event.*;
@@ -19,23 +14,30 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import static processing.core.PConstants.*;
+
 /**
- * The `ziviDomeLive` class manages rendering and control of a live dome visualization.
- * It integrates with Processing and `OutputManager` for dome rendering.
+ * Main artist-facing facade for live fulldome, spherical, and Standard rendering in Processing.
  *
- * <p>This class handles setup, initialization, and rendering of fisheye domemaster,
- * equirectangular, cubemap, and standard views. It also manages the control panel and mouse events for interaction.</p>
+ * <p>Create one instance in the sketch's {@code setup()}, call {@link #setup()} after the P3D
+ * surface exists, and provide content through {@link Scene}. The facade owns scene activation,
+ * renderers, Processing hooks, camera synchronization, the built-in control panel, outputs, and
+ * terminal cleanup.</p>
  *
- * <p>It provides methods to set up the rendering environment, initialize various managers,
- * handle mouse and key events, and render different views. The class also supports toggling
- * output methods (NDI, Spout, Syphon) and managing the current scene and view type.</p>
+ * <p>Methods documented as <em>Processing Callback</em> are Java-public only because the
+ * constructor registers them with Processing. Sketches must not call those callbacks directly.
+ * Performance methods are explicitly Experimental; the remaining artist-facing facade is Stable
+ * for the 2.x series.</p>
+ *
+ * <p><strong>API stability:</strong> Stable, except methods explicitly marked Experimental or
+ * Processing Callback.</p>
  */
-public class ziviDomeLive implements PConstants {
+public class ziviDomeLive {
 
 	/**
 	 * Enum representing the initialization state of the library.
 	 */
-	public enum InitState {
+	enum InitState {
 		/** Instance created but setup has not started yet. */
 		NOT_INITIALIZED,
 		/** setup() completed, waiting for managers initialization in post(). */
@@ -96,7 +98,7 @@ public class ziviDomeLive implements PConstants {
 	private final OrbitCamera sceneCamera = new OrbitCamera();
 	private boolean sceneCameraInputEnabled = false;
 	private final EnvironmentState environmentState = new EnvironmentState();
-	private OutputManager outputManager;
+	private OutputManagerImpl outputManager;
 	private boolean resumeNdiOutput;
 	private boolean resumeSpoutOutput;
 	private boolean resumeSyphonOutput;
@@ -124,6 +126,8 @@ public class ziviDomeLive implements PConstants {
 
 	/**
 	 * Aspect policy used to compute Standard output dimensions.
+	 *
+	 * <p><strong>API stability:</strong> Stable.</p>
 	 */
 	public enum StandardOutputAspectMode {
 		/** Snap to the closest supported family based on the current logical window ratio. */
@@ -150,9 +154,11 @@ public class ziviDomeLive implements PConstants {
 
 
 	/**
-	 * Constructs a new `ziviDomeLive` instance with the specified PApplet.
+	 * Creates a facade owned by the supplied Processing sketch and registers runtime callbacks.
 	 *
-	 * @param p the PApplet instance used for rendering
+	 * <p>Call {@link #setup()} from the sketch's {@code setup()} after creating its P3D surface.</p>
+	 *
+	 * @param p non-null Processing sketch used for rendering
 	 * @throws IllegalArgumentException if the PApplet instance is null
 	 */
 	public ziviDomeLive(PApplet p) {
@@ -172,22 +178,22 @@ public class ziviDomeLive implements PConstants {
 
 	/**
 	 * Sets the global logging mode used by the library.
-	 * Call this before creating a ziviDomeLive instance.
+	 * Call this before creating a ziviDomeLive instance so startup follows the selected profile.
 	 *
 	 * @param mode desired logging mode
 	 */
-	public static void setLogMode(LogManager.Mode mode) {
+	public static void setLogMode(LogMode mode) {
 		LogManager.setMode(mode);
 	}
 
-	/** Enables verbose DEBUG logs (console + file). */
+	/** Enables verbose DEBUG logs to the console and library log file. */
 	public static void enableDebugLogging() {
-		LogManager.setMode(LogManager.Mode.DEBUG);
+		LogManager.setMode(LogMode.DEBUG);
 	}
 
-	/** Enables RELEASE logging mode (LogManager output disabled). */
+	/** Enables RELEASE mode, which disables library-managed log output. */
 	public static void enableReleaseLogging() {
-		LogManager.setMode(LogManager.Mode.RELEASE);
+		LogManager.setMode(LogMode.RELEASE);
 	}
 
 	/**
@@ -195,7 +201,7 @@ public class ziviDomeLive implements PConstants {
 	 *
 	 * @return active logging mode
 	 */
-	public static LogManager.Mode getLogMode() {
+	public static LogMode getLogMode() {
 		return LogManager.getMode();
 	}
 
@@ -210,12 +216,13 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Sets the current scene to be rendered.
+	 * Selects and activates a scene through the facade-owned manager.
 	 *
-	 * <p>Both the output and preview Standard renderers are updated so that both pipelines
-	 * render the new scene content.</p>
+	 * <p>An unregistered instance is registered automatically. Switching performs the complete
+	 * activation order: stop old activation work, dispose the previous scene, create fresh
+	 * services, configure the new scene, then set it up.</p>
 	 *
-	 * @param scene the Scene instance to be set
+	 * @param scene scene instance to activate; {@code null} is ignored
 	 */
 	public void setScene(Scene scene) {
 		if (disposed) {
@@ -264,7 +271,11 @@ public class ziviDomeLive implements PConstants {
 
 	/**
 	 * Sets up the rendering environment, including frame rate, OpenGL info, texture hints,
-	 * output configuration, and mouse event registration.
+	 * output coordination, and the built-in interface.
+	 *
+	 * <p>Call once from the sketch's {@code setup()} after its P3D surface has been created. The
+	 * operation is idempotent; renderer allocation completes lazily in the registered
+	 * {@link #post()} callback when the OpenGL context is active.</p>
 	 *
 	 * @throws IllegalStateException if the PApplet instance is not properly configured
 	 */
@@ -304,7 +315,7 @@ public class ziviDomeLive implements PConstants {
 		}
 
 		try {
-			outputManager = new OutputManager(this);
+			outputManager = new OutputManagerImpl(this);
 			LOGGER.info("OutputManager initialized without active outputs.");
 		} catch (Exception e) {
 			LOGGER.severe("Error initializing OutputManager: " + e.getMessage());
@@ -321,7 +332,7 @@ public class ziviDomeLive implements PConstants {
 		// Load DefaultScene through SceneManager when no user scene was selected before setup.
 		if (getCurrentScene() == null) {
 			try {
-				bootstrapScene = new com.victorvalentim.zividomelive.scene.DefaultScene(p);
+				bootstrapScene = new DefaultScene(p);
 				sceneManager.registerScene(bootstrapScene);
 				LOGGER.info("DefaultScene loaded successfully as the initial scene.");
 			} catch (Exception e) {
@@ -340,7 +351,7 @@ public class ziviDomeLive implements PConstants {
 	 *
 	 * @param p the PApplet instance used for rendering
 	 */
-	public void printOpenGLInfo(PApplet p) {
+	void printOpenGLInfo(PApplet p) {
 		ProcessingGlCapabilities capabilities = ProcessingGlAdapter.getDefault().queryCapabilities(p);
 		if (capabilities.isOpenGlRenderer()) {
 			LOGGER.info("OpenGL Version: " + capabilities.version());
@@ -380,7 +391,7 @@ public class ziviDomeLive implements PConstants {
 	 * Processing thread, after the OpenGL context is active. Preparing Syphon or Spout does not
 	 * enable frame publication; the corresponding UI toggle controls only the enabled state.</p>
 	 */
-	public void initializeManagers() {
+	void initializeManagers() {
 		if (disposed) {
 			LOGGER.warning("Manager initialization ignored after disposal.");
 			return;
@@ -479,7 +490,7 @@ public class ziviDomeLive implements PConstants {
 		}
 		releaseGraphicsResources();
 		if (outputManager != null) {
-			outputManager.shutdownOutputs();
+			outputManager.shutdownOutputsTerminal();
 		}
 	}
 
@@ -864,7 +875,7 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	boolean hasOutputRenderDemand() {
-		OutputManager manager = getOutputManager();
+		OutputManagerImpl manager = outputManager;
 		return (manager != null && manager.isActive())
 				|| (performanceMonitor.isEnabled() && performanceOutputDemand != null);
 	}
@@ -1103,7 +1114,10 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Main draw method that handles rendering and updating the view.
+	 * Processing Callback that renders the already-updated frame and built-in interface.
+	 *
+	 * <p>The constructor registers this method automatically. Sketches must not call it directly or
+	 * call a second ziviDomeLive render method from their own {@code draw()}.</p>
 	 */
 	public void draw() {
 		if (disposed || paused || initState != InitState.MANAGERS_READY) {
@@ -1214,60 +1228,15 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Sets the current view to {@link ViewType#DOMEMASTER}.
-	 *
-	 * @deprecated The library's internal draw loop ({@code draw()} → {@code RenderPipeline})
-	 *             renders every frame automatically. Call {@link #setCurrentView(ViewType)}
-	 *             directly and let the pipeline handle the rest. This method is retained for
-	 *             source compatibility only.
-	 */
-	@Deprecated
-	public void renderFisheyeDomemaster() {
-		setCurrentView(ViewType.DOMEMASTER);
-	}
-
-	/**
-	 * Sets the current view to {@link ViewType#EQUIRECTANGULAR}.
-	 *
-	 * @deprecated See {@link #renderFisheyeDomemaster()} for migration guidance.
-	 */
-	@Deprecated
-	public void renderEquirectangular() {
-		setCurrentView(ViewType.EQUIRECTANGULAR);
-	}
-
-	/**
-	 * Sets the current view to {@link ViewType#SKYBOX}.
-	 *
-	 * @deprecated See {@link #renderFisheyeDomemaster()} for migration guidance.
-	 */
-	@Deprecated
-	public void renderCubemap() {
-		setCurrentView(ViewType.SKYBOX);
-	}
-
-	/**
-	 * Sets the current view to {@link ViewType#STANDARD}.
-	 *
-	 * @deprecated See {@link #renderFisheyeDomemaster()} for migration guidance.
-	 */
-	@Deprecated
-	public void renderStandard() {
-		setCurrentView(ViewType.STANDARD);
-	}
-
-	/**
 	 * Draws the control panel if it is set to be shown.
 	 */
 	void drawControlPanel() {
+		controlManager.syncPanelVisibility(showControlPanel);
+		if (!showControlPanel) {
+			return;
+		}
 		p.hint(DISABLE_DEPTH_TEST);
 		controlManager.updateFpsLabel(p.frameRate);
-
-		if (showControlPanel) {
-			controlManager.show();
-		} else {
-			controlManager.hide();
-		}
 		p.hint(ENABLE_DEPTH_TEST);
 	}
 
@@ -1281,7 +1250,7 @@ public class ziviDomeLive implements PConstants {
 	 * <p>{@code renderPreviewPipeline()} guarantees the fisheye FBO is populated before
 	 * this method is called whenever {@code showPreview} is {@code true}.</p>
 	 */
-	public void drawFloatingPreview() {
+	void drawFloatingPreview() {
 		if (previewFisheyeDomemaster == null) {
 			return;
 		}
@@ -1403,12 +1372,16 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Resets output graphics with a new output resolution.
-	 * Preview stays constrained to the Processing window size.
+	 * Schedules output-target recreation at a safe draw boundary.
+	 * Preview resolution remains derived from the Processing window.
 	 *
-	 * @param newResolution the new output resolution to be set
+	 * @param newResolution positive output resolution in pixels
+	 * @throws IllegalArgumentException when {@code newResolution} is not positive
 	 */
 	public void resetGraphics(int newResolution) {
+		if (newResolution <= 0) {
+			throw new IllegalArgumentException("Output resolution must be positive.");
+		}
 		pendingOutputReset = true;
 		pendingOutputResolution = newResolution;
 		LOGGER.info("Changing output resolution to: " + newResolution);
@@ -1424,9 +1397,9 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Sets the current scene to be rendered and updates all relevant components.
+	 * Alias for {@link #setScene(Scene)} retained as part of the 2.x scene API.
 	 *
-	 * @param newScene the new scene to be set as the current scene
+	 * @param newScene scene instance to activate; {@code null} is ignored
 	 */
 	public void setCurrentScene(Scene newScene) {
 		setScene(newScene);
@@ -1565,14 +1538,20 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Handles key events for interaction.
-	 * This method must be registered using p.registerMethod("keyEvent", this).
+	 * Processing Callback that routes key events to built-ins, named scene actions, and the active
+	 * scene's raw callback.
+	 *
+	 * <p>The constructor registers this method automatically; sketches must not call or register it
+	 * themselves.</p>
 	 *
 	 * @param event the KeyEvent object containing details of the key event
 	 */
 	public void keyEvent(processing.event.KeyEvent event) {
 		if (disposed || paused) {
 			return;
+		}
+		if (controlManager != null) {
+			controlManager.keyEvent(event);
 		}
 		if (controlManager == null) {
 			Scene activeScene = getCurrentScene();
@@ -1643,8 +1622,11 @@ public class ziviDomeLive implements PConstants {
 
 
 	/**
-	 * Handles mouse events for interaction.
-	 * This method must be registered using p.registerMethod("mouseEvent", this).
+	 * Processing Callback that routes mouse events to named actions, the active scene, the built-in
+	 * interface, and exactly one navigation camera.
+	 *
+	 * <p>The constructor registers this method automatically; sketches must not call or register it
+	 * themselves. A visible control under the pointer owns its gesture and suppresses navigation.</p>
 	 *
 	 * @param event the MouseEvent object containing details of the mouse event
 	 */
@@ -1693,8 +1675,10 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Handles control events from the ControlP5 library.
-	 * The built-in ControlManager registers this callback as a ControlP5 listener.
+	 * Processing Callback used by the built-in ControlP5 interface.
+	 *
+	 * <p>This method is public for callback integration only. It is not a scene input command and
+	 * sketches must not call it directly.</p>
 	 *
 	 * @param theEvent the ControlEvent object containing details of the control event
 	 */
@@ -1706,40 +1690,43 @@ public class ziviDomeLive implements PConstants {
 			controlManager.handleEvent(theEvent);
 		}
 
-		// Forward the event to the current scene, if one exists
-		Scene activeScene = getCurrentScene();
-		if (activeScene != null) {
-			activeScene.controlEvent(theEvent);
-		}
 	}
 
 	/**
-	 * Returns the instance of the OutputManager.
+	 * Returns artist-facing output control and telemetry.
 	 *
-	 * @return the OutputManager instance
+	 * @return output manager, or {@code null} before {@link #setup()} completes
 	 */
 	public OutputManager getOutputManager() {
 		return outputManager;
 	}
 
+	OutputManagerImpl outputManagerInternal() {
+		return outputManager;
+	}
+
 	/**
-	 * Gets the current fish size.
+	 * Returns the domemaster circle size.
 	 *
-	 * @return the current fish size
+	 * @return configured size as a percentage of the square target
 	 */
 	public float getFishSize() {
 		return fishSize;
 	}
 
 	/**
-	 * Sets the fish size.
+	 * Sets the domemaster circle size.
 	 *
-	 * @param fishSize the new fish size
+	 * @param fishSize size percentage; values outside 0..100 are constrained
 	 */
 	public void setFishSize(float fishSize) {
-		this.fishSize = fishSize;
+		if (!Float.isFinite(fishSize)) {
+			LOGGER.warning("Ignoring non-finite domemaster size: " + fishSize);
+			return;
+		}
+		this.fishSize = PApplet.constrain(fishSize, 0.0f, 100.0f);
 		if (fisheyeDomemaster != null) {
-			fisheyeDomemaster.setSizePercentage(fishSize);
+			fisheyeDomemaster.setSizePercentage(this.fishSize);
 		}
 		if (previewFisheyeDomemaster != null) {
 			previewFisheyeDomemaster.setSizePercentage(fishSize);
@@ -1747,72 +1734,77 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Gets the current field of view (FOV).
+	 * Returns the domemaster angular field of view.
 	 *
-	 * @return the current FOV
+	 * @return field of view in degrees
 	 */
 	public float getFov() {
 		return fov;
 	}
 
 	/**
-	 * Sets the field of view (FOV).
+	 * Sets the domemaster angular field of view.
 	 *
-	 * @param fov the new FOV
+	 * @param fov field of view in degrees; finite values are constrained to 0..360 and non-finite
+	 *            values are ignored
 	 */
 	public void setFov(float fov) {
-		this.fov = fov;
+		if (!Float.isFinite(fov)) {
+			LOGGER.warning("Ignoring non-finite domemaster field of view: " + fov);
+			return;
+		}
+		this.fov = PApplet.constrain(fov, 0.0f, 360.0f);
 	}
 
 	/**
-	 * Gets the current pitch.
+	 * Returns the spherical pitch control accumulator.
 	 *
-	 * @return the current pitch
+	 * @return pitch in radians
 	 */
 	public float getPitch() {
 		return sphericalOrientation.getPitch();
 	}
 
 	/**
-	 * Sets the pitch.
+	 * Sets spherical pitch by composing the shortest delta around the local X axis.
 	 *
-	 * @param pitch the new pitch
+	 * @param pitch control value in radians; non-finite values are ignored
 	 */
 	public void setPitch(float pitch) {
 		sphericalOrientation.setPitch(pitch);
 	}
 
 	/**
-	 * Gets the current yaw.
+	 * Returns the spherical yaw control accumulator.
 	 *
-	 * @return the current yaw
+	 * @return yaw in radians
 	 */
 	public float getYaw() {
 		return sphericalOrientation.getYaw();
 	}
 
 	/**
-	 * Sets the yaw.
+	 * Sets spherical yaw by composing the shortest delta around the local Z axis.
 	 *
-	 * @param yaw the new yaw
+	 * @param yaw control value in radians; non-finite values are ignored
 	 */
 	public void setYaw(float yaw) {
 		sphericalOrientation.setYaw(yaw);
 	}
 
 	/**
-	 * Gets the current roll.
+	 * Returns the spherical roll control accumulator.
 	 *
-	 * @return the current roll
+	 * @return roll in radians
 	 */
 	public float getRoll() {
 		return sphericalOrientation.getRoll();
 	}
 
 	/**
-	 * Sets the roll.
+	 * Sets spherical roll by composing the shortest delta around the local Y axis.
 	 *
-	 * @param roll the new roll
+	 * @param roll control value in radians; non-finite values are ignored
 	 */
 	public void setRoll(float roll) {
 		sphericalOrientation.setRoll(roll);
@@ -1843,9 +1835,13 @@ public class ziviDomeLive implements PConstants {
 	 * <p>The selection takes effect immediately in {@link RenderMode#FULL}. Dedicated modes keep
 	 * it as the preview selection to restore when FULL is selected again.</p>
 	 *
-	 * @param currentView new preview view
+	 * @param currentView new preview view; {@code null} is ignored
 	 */
 	public void setCurrentView(ViewType currentView) {
+		if (currentView == null) {
+			LOGGER.warning("Ignoring null preview view.");
+			return;
+		}
 		this.currentView = currentView;
 	}
 
@@ -1878,6 +1874,9 @@ public class ziviDomeLive implements PConstants {
 			return;
 		}
 		this.renderMode = renderMode;
+		if (controlManager != null) {
+			controlManager.refreshVisibility();
+		}
 		LOGGER.info("Render mode set to: " + renderMode);
 	}
 
@@ -1923,23 +1922,13 @@ public class ziviDomeLive implements PConstants {
 	 * <p>This is an experimental benchmarking hook; normal applications should route output through
 	 * {@link OutputManager}.</p>
 	 *
+	 * <p><strong>API stability:</strong> Experimental.</p>
+	 *
 	 * @param view output-resolution view to render during profiling, or {@code null} to clear
 	 * @since 2.0.0
 	 */
 	public void setPerformanceOutputDemand(ViewType view) {
 		performanceOutputDemand = view;
-	}
-
-	/**
-	 * Checks if output is enabled.
-	 *
-	 * @return true if output is enabled, false otherwise
-	 */
-	public boolean isEnableOutput() {
-		return outputManager != null
-				&& (outputManager.isNdiEnabled()
-				|| outputManager.isSpoutEnabled()
-				|| outputManager.isSyphonEnabled());
 	}
 
 	/**
@@ -1958,13 +1947,18 @@ public class ziviDomeLive implements PConstants {
 	 */
 	public void setShowPreview(boolean showPreview) {
 		this.showPreview = showPreview;
+		if (controlManager != null) {
+			controlManager.refreshVisibility();
+		}
 	}
 
 	/**
-	 * Resets the controls to their default state.
+	 * Resets the built-in controls to their default state when the interface is initialized.
 	 */
 	public void resetControls() {
-		controlManager.resetControls();
+		if (controlManager != null) {
+			controlManager.resetControls();
+		}
 	}
 
 	/**
@@ -1972,7 +1966,7 @@ public class ziviDomeLive implements PConstants {
 	 *
 	 * @param fisheyeDomemaster the new FisheyeDomemaster instance
 	 */
-	public void setFisheyeDomemaster(FisheyeDomemaster fisheyeDomemaster) {
+	void setFisheyeDomemaster(FisheyeDomemaster fisheyeDomemaster) {
 		this.fisheyeDomemaster = fisheyeDomemaster;
 		if (this.fisheyeDomemaster != null) {
 			this.fisheyeDomemaster.setSizePercentage(fishSize);
@@ -1984,7 +1978,7 @@ public class ziviDomeLive implements PConstants {
 	 *
 	 * @return the current FisheyeDomemaster instance
 	 */
-	public FisheyeDomemaster getFisheyeDomemaster() {
+	FisheyeDomemaster getFisheyeDomemaster() {
 		return fisheyeDomemaster;
 	}
 
@@ -1992,7 +1986,7 @@ public class ziviDomeLive implements PConstants {
 	 * Returns the instance of the EquirectangularRenderer.
 	 * @return the EquirectangularRenderer instance.
 	 */
-	public EquirectangularRenderer getEquirectangularRenderer() {
+	EquirectangularRenderer getEquirectangularRenderer() {
 		return equirectangularRenderer;
 	}
 
@@ -2000,7 +1994,7 @@ public class ziviDomeLive implements PConstants {
 	 * Returns the instance of the CubemapViewRenderer.
 	 * @return the CubemapViewRenderer instance.
 	 */
-	public CubemapViewRenderer getCubemapViewRenderer() {
+	CubemapViewRenderer getCubemapViewRenderer() {
 		return cubemapViewRenderer;
 	}
 
@@ -2008,15 +2002,15 @@ public class ziviDomeLive implements PConstants {
 	 * Returns the instance of the StandardRenderer.
 	 * @return the StandardRenderer instance.
 	 */
-	public StandardRenderer getStandardRenderer() {
+	StandardRenderer getStandardRenderer() {
 		return standardRenderer;
 	}
 
 	/**
 	 * Returns the native scene-space orbit camera service.
 	 *
-	 * <p>Scenes drive space navigation by calling {@code getSceneCamera().apply(pg)}
-	 * inside {@code sceneRender} (between {@code pushMatrix}/{@code popMatrix}). The
+	 * <p>Scenes normally obtain this same camera from {@link SceneServices#camera()} and apply it
+	 * inside {@code sceneRender} between {@code pushMatrix}/{@code popMatrix}. The
 	 * camera transforms the scene modelview directly, so it works across every
 	 * projection without touching the dome parameters (yaw/pitch/roll/fov). Its current
 	 * rotational quaternion is synchronized with the shared Environment every frame;
@@ -2063,7 +2057,10 @@ public class ziviDomeLive implements PConstants {
 	/**
 	 * Loads and sets an LDR equirectangular environment background from the sketch data path.
 	 *
-	 * @param imagePath Processing data path or absolute image path
+	 * <p>This is a synchronous Processing asset load. Use it during sketch setup, not inside a
+	 * recurring frame callback or background task.</p>
+	 *
+	 * @param imagePath Processing data path or absolute image path; null or blank clears the source
 	 */
 	public void setEquirectangularBackground(String imagePath) {
 		if (imagePath == null || imagePath.isBlank()) {
@@ -2118,7 +2115,8 @@ public class ziviDomeLive implements PConstants {
 	/**
 	 * Sets the colour multiplier applied to the LDR environment background.
 	 *
-	 * @param intensity non-negative colour multiplier
+	 * @param intensity colour multiplier; finite negative values are clamped to zero and non-finite
+	 *                  values are ignored
 	 */
 	public void setEnvironmentBackgroundIntensity(float intensity) {
 		environmentState.setIntensity(intensity);
@@ -2136,7 +2134,7 @@ public class ziviDomeLive implements PConstants {
 	/**
 	 * Rotates the equirectangular environment lookup around the vertical axis.
 	 *
-	 * @param yawOffset radians added to the source longitude lookup
+	 * @param yawOffset radians added to the source longitude lookup; non-finite values are ignored
 	 */
 	public void setEnvironmentBackgroundYawOffset(float yawOffset) {
 		environmentState.setYawOffset(yawOffset);
@@ -2184,9 +2182,12 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Gets the current PApplet instance.
+	 * Returns the Processing sketch that owns this facade.
 	 *
-	 * @return the current PApplet instance
+	 * <p>Scenes should prefer {@link SceneServices#applet()} so ownership remains explicit for the
+	 * current activation.</p>
+	 *
+	 * @return non-null owning Processing sketch
 	 */
 	public PApplet getPApplet() {
 
@@ -2198,27 +2199,9 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Gets the width of the PApplet window.
+	 * Reports whether setup and lazy OpenGL manager initialization completed successfully.
 	 *
-	 * @return the width of the PApplet window
-	 */
-	public int getWidth() {
-		return p.width;
-	}
-
-	/**
-	 * Gets the height of the PApplet window.
-	 *
-	 * @return the height of the PApplet window
-	 */
-	public int getHeight() {
-		return p.height;
-	}
-
-	/**
-	 * Checks if the instance is initialized and ready to render.
-	 *
-	 * @return true if the instance is initialized and managers are ready, false otherwise
+	 * @return {@code true} when the facade can render frames
 	 */
 	public boolean isInitialized() {
 		return initState == InitState.MANAGERS_READY;
@@ -2231,7 +2214,10 @@ public class ziviDomeLive implements PConstants {
 	 * interval around the complete render pipeline. Unsupported contexts fall back to CPU, and
 	 * no synchronous query or {@code glFinish()} is introduced.</p>
 	 *
-	 * @param mode requested profiling mode
+	 * <p><strong>API stability:</strong> Experimental.</p>
+	 *
+	 * @param mode non-null requested profiling mode
+	 * @throws IllegalArgumentException when {@code mode} is null
 	 * @since 2.0.0
 	 */
 	public void enablePerformanceProfiling(PerformanceMode mode) {
@@ -2242,8 +2228,11 @@ public class ziviDomeLive implements PConstants {
 	 * Enables experimental performance collection with preallocated sample storage.
 	 * Calling this method resets previously collected samples.
 	 *
-	 * @param mode requested profiling mode
-	 * @param sampleCapacity number of completed frames retained in the ring buffer
+	 * <p><strong>API stability:</strong> Experimental.</p>
+	 *
+	 * @param mode non-null requested profiling mode
+	 * @param sampleCapacity number of completed frames retained in the ring buffer, from 2 to 100000
+	 * @throws IllegalArgumentException when an argument is invalid
 	 * @since 2.0.0
 	 */
 	public void enablePerformanceProfiling(PerformanceMode mode, int sampleCapacity) {
@@ -2257,9 +2246,12 @@ public class ziviDomeLive implements PConstants {
 	 * scenes. On Apple Silicon it may own {@code GL_TIME_ELAPSED} for the complete pipeline,
 	 * so scene code must not start another elapsed timer query during the interval.</p>
 	 *
-	 * @param mode requested profiling mode
-	 * @param sampleCapacity number of completed frames retained in the ring buffer
-	 * @param timerPolicy GPU timer selection policy
+	 * <p><strong>API stability:</strong> Experimental.</p>
+	 *
+	 * @param mode non-null requested profiling mode
+	 * @param sampleCapacity number of completed frames retained in the ring buffer, from 2 to 100000
+	 * @param timerPolicy non-null GPU timer selection policy
+	 * @throws IllegalArgumentException when an argument is invalid
 	 * @since 2.0.0
 	 */
 	public void enablePerformanceProfiling(
@@ -2277,6 +2269,8 @@ public class ziviDomeLive implements PConstants {
 	/**
 	 * Disables collection without discarding completed samples.
 	 *
+	 * <p><strong>API stability:</strong> Experimental.</p>
+	 *
 	 * @since 2.0.0
 	 */
 	public void disablePerformanceProfiling() {
@@ -2287,6 +2281,8 @@ public class ziviDomeLive implements PConstants {
 
 	/**
 	 * Clears all performance samples and invariant counters.
+	 *
+	 * <p><strong>API stability:</strong> Experimental.</p>
 	 *
 	 * @since 2.0.0
 	 */
@@ -2299,11 +2295,27 @@ public class ziviDomeLive implements PConstants {
 	 * Creates an immutable performance snapshot. Call outside a measured interval because
 	 * snapshot aggregation intentionally allocates and sorts copies of retained samples.
 	 *
+	 * <p><strong>API stability:</strong> Experimental.</p>
+	 *
 	 * @return immutable snapshot of completed frames
 	 * @since 2.0.0
 	 */
 	public PerformanceSnapshot getPerformanceSnapshot() {
 		return performanceMonitor.snapshot();
+	}
+
+	/**
+	 * Returns a read-only diagnostic report for the active Processing graphics renderer.
+	 *
+	 * <p>Call on the Processing/OpenGL thread after the renderer is initialized.</p>
+	 *
+	 * <p><strong>API stability:</strong> Experimental.</p>
+	 *
+	 * @return current graphics capability report
+	 * @since 2.0.0
+	 */
+	public GraphicsCapabilities getGraphicsCapabilities() {
+		return ProcessingGlAdapter.getDefault().queryCapabilities(p);
 	}
 
 	PerformanceMonitor performanceMonitor() {
@@ -2327,7 +2339,7 @@ public class ziviDomeLive implements PConstants {
 	 *
 	 * @return the current InitState
 	 */
-	public InitState getInitState() {
+	InitState getInitState() {
 		return initState;
 	}
 
@@ -2373,7 +2385,12 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Method called before each draw call.
+	 * Processing Callback that establishes the authoritative frame boundary.
+	 *
+	 * <p>It drains activation queues and bounded external input, ticks the frame clock, processes a
+	 * deferred reload or calls {@link Scene#update()}, refreshes tracked camera targets, and advances
+	 * camera interpolation once. The constructor registers it automatically; sketches must not call
+	 * it directly.</p>
 	 */
 	public void pre() {
 		if (disposed || paused) {
@@ -2419,7 +2436,10 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Post-initialization method to set up managers after the initial setup.
+	 * Processing Callback that performs lazy renderer initialization after {@link #setup()}.
+	 *
+	 * <p>The constructor registers it automatically and the facade unregisters it after successful
+	 * initialization. Sketches must not call it directly.</p>
 	 */
 	public void post() {
 		if (!disposed && !paused && initState == InitState.SETUP_COMPLETE) {
@@ -2438,16 +2458,19 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Stops the instance permanently and releases all owned resources.
+	 * Processing Callback that stops the instance permanently and releases all owned resources.
 	 *
-	 * <p>This terminal operation delegates to {@link #dispose()} and is idempotent.</p>
+	 * <p>This terminal operation delegates to {@link #dispose()} and is idempotent. Processing calls
+	 * it automatically; applications normally do not.</p>
 	 */
 	public void stop() {
 		dispose();
 	}
 
 	/**
-	 * Resumes processes after a pause.
+	 * Processing Callback that resumes activation input and outputs remembered by {@link #pause()}.
+	 *
+	 * <p>The constructor registers it automatically; sketches must not call it directly.</p>
 	 */
 	public void resume() {
 		if (disposed || !paused) {
@@ -2456,13 +2479,13 @@ public class ziviDomeLive implements PConstants {
 		LOGGER.info("Resuming processes...");
 		if (outputManager != null) {
 			if (resumeNdiOutput && !outputManager.isNdiEnabled()) {
-				outputManager.toggleOutput("ndi");
+				outputManager.setOutputEnabled(OutputManager.OutputType.NDI, true);
 			}
 			if (resumeSpoutOutput && !outputManager.isSpoutEnabled()) {
-				outputManager.toggleOutput("spout");
+				outputManager.setOutputEnabled(OutputManager.OutputType.SPOUT, true);
 			}
 			if (resumeSyphonOutput && !outputManager.isSyphonEnabled()) {
-				outputManager.toggleOutput("syphon");
+				outputManager.setOutputEnabled(OutputManager.OutputType.SYPHON, true);
 			}
 		}
 		Scene activeScene = getCurrentScene();
@@ -2475,7 +2498,10 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Pauses all processes.
+	 * Processing Callback that pauses frame work, drops queued external input, clears pointer
+	 * anchors, and disables outputs while remembering their enabled state.
+	 *
+	 * <p>The constructor registers it automatically; sketches must not call it directly.</p>
 	 */
 	public void pause() {
 		if (disposed || paused) {
@@ -2493,7 +2519,7 @@ public class ziviDomeLive implements PConstants {
 			resumeNdiOutput = outputManager.isNdiEnabled();
 			resumeSpoutOutput = outputManager.isSpoutEnabled();
 			resumeSyphonOutput = outputManager.isSyphonEnabled();
-			outputManager.stopOutput();
+			outputManager.disableAll();
 		}
 		LOGGER.info("Processes paused.");
 	}
@@ -2506,7 +2532,10 @@ public class ziviDomeLive implements PConstants {
 	}
 
 	/**
-	 * Releases resources and cleans up before the application exits.
+	 * Processing Callback that performs terminal, idempotent cleanup.
+	 *
+	 * <p>Processing calls this method automatically. It may also be invoked once by an application
+	 * that intentionally ends the facade early; no facade operation may reactivate it afterward.</p>
 	 */
 	public void dispose() {
 		if (disposed) {
@@ -2521,7 +2550,7 @@ public class ziviDomeLive implements PConstants {
 
 		if (outputManager != null) {
 			try {
-				outputManager.shutdownOutputs();
+				outputManager.shutdownOutputsTerminal();
 			} catch (Exception | LinkageError error) {
 				LOGGER.warning("OutputManager disposal failed: " + error.getMessage());
 			}

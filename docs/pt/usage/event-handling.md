@@ -1,13 +1,12 @@
 # Manipulação de Eventos
 
-O construtor de `ziviDomeLive` registra hooks `keyEvent` e `mouseEvent` no Processing. O painel ControlP5 interno registra um listener que encaminha eventos relevantes à cena ativa.
+O construtor de `ziviDomeLive` registra hooks `keyEvent` e `mouseEvent` no Processing. O painel ControlP5 interno pertence à facade e não expõe seus eventos por `Scene`.
 
 Implemente os callbacks na cena:
 
 ```java
 public void keyEvent(processing.event.KeyEvent event) {}
 public void mouseEvent(processing.event.MouseEvent event) {}
-public void controlEvent(controlP5.ControlEvent event) {}
 ```
 
 Não adicione encaminhamento no sketch principal, como `ziviDome.keyEvent(event)`. Isso entrega o mesmo evento duas vezes.
@@ -21,8 +20,8 @@ services.actions().register("reset-camera", () -> services.camera().orbit().rese
 services.actions().trigger("reset-camera");
 ```
 
-O runtime despacha as ações antes do callback cru da cena. O callback ainda executa
-por compatibilidade; evite realizar a mesma operação nos dois caminhos. Os bindings
+O runtime despacha as ações antes do callback cru da cena. O callback ainda executa;
+evite realizar a mesma operação nos dois caminhos. Os bindings
 são limpos automaticamente quando a cena perde ownership.
 
 ## Atalhos Globais
@@ -31,7 +30,7 @@ são limpos automaticamente quando a cena perde ownership.
 - `m`: alterna a view legada configurada para preview
 - Setas Esquerda/Direita: cena anterior/próxima
 
-Atalhos globais executam antes de o evento chegar à cena.
+Atalhos globais são processados pela facade sem exigir forwarding no sketch.
 
 ## Entrada de Câmera
 

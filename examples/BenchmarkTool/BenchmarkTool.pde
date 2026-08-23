@@ -1,8 +1,6 @@
 import com.victorvalentim.zividomelive.*;
 import com.victorvalentim.zividomelive.manager.OutputManager;
 import com.victorvalentim.zividomelive.performance.*;
-import com.victorvalentim.zividomelive.render.gl.ProcessingGlAdapter;
-import com.victorvalentim.zividomelive.render.gl.ProcessingGlCapabilities;
 import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;

@@ -1,13 +1,21 @@
 package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.support.LogManager;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
 /**
- * Manages scenes and allows switching between them dynamically.
+ * Maintains an identity-ordered collection of scenes and switches their activation.
+ *
+ * <p>A detached manager selects its first registered scene but does not invoke lifecycle methods.
+ * Attaching it through {@link ziviDomeLive#setSceneManager(SceneManager)} installs the facade
+ * lifecycle and activates the selection with fresh {@link SceneServices}. Scene membership uses
+ * Java object identity ({@code ==}), not {@link Object#equals(Object)}.</p>
+ *
+ * <p>Mutation methods are intended for the Processing thread and are not thread-safe.</p>
+ *
+ * <p><strong>API stability:</strong> Stable.</p>
  */
 public class SceneManager {
 
@@ -23,16 +31,19 @@ public class SceneManager {
 	private LifecycleListener lifecycleListener;
 	private static final Logger LOGGER = LogManager.getLogger();
 	/**
-	 * Constructs a SceneManager.
+	 * Creates an empty, detached scene manager.
 	 */
 	public SceneManager() {
 		this.scenes = new ArrayList<>();
 	}
 
 	/**
-	 * Registers a new scene.
+	 * Registers a scene by instance identity.
 	 *
-	 * @param scene the scene to register
+	 * <p>The first registration becomes the selected scene. It is set up immediately only when
+	 * this manager is already attached to a facade; otherwise setup begins when attached.</p>
+	 *
+	 * @param scene scene to register; {@code null} and duplicate instances are ignored
 	 */
 	public void registerScene(Scene scene) {
 		if (scene == null) {
@@ -59,7 +70,7 @@ public class SceneManager {
 	/**
 	 * Activates a scene by instance; registers it first if it is not in the manager yet.
 	 *
-	 * @param scene scene to activate
+	 * @param scene scene instance to activate; {@code null} is ignored
 	 */
 	public void activateScene(Scene scene) {
 		if (scene == null) {
@@ -95,7 +106,7 @@ public class SceneManager {
 	 * Returns true when the manager already contains the provided scene instance.
 	 *
 	 * @param scene scene to check
-	 * @return true if scene is already managed
+	 * @return {@code true} if that exact scene instance is already managed
 	 */
 	public boolean containsScene(Scene scene) {
 		return indexOfIdentity(scene) >= 0;
@@ -111,7 +122,7 @@ public class SceneManager {
 	}
 
 	/**
-	 * Switches to the next scene in the list.
+	 * Switches to the next scene in registration order, wrapping at the end.
 	 */
 	public void nextScene() {
 		if (scenes.isEmpty()) {
@@ -132,7 +143,7 @@ public class SceneManager {
 
 
 	/**
-	 * Switches to the previous scene in the list.
+	 * Switches to the previous scene in registration order, wrapping at the beginning.
 	 */
 	public void previousScene() {
 		if (scenes.isEmpty()) {
@@ -155,7 +166,7 @@ public class SceneManager {
 	/**
 	 * Returns the current scene.
 	 *
-	 * @return the current scene or null if no scene is active
+	 * @return selected scene, or {@code null} when no scene is registered
 	 */
 	public Scene getCurrentScene() {
 		if (scenes.isEmpty() || currentSceneIndex == -1) {
@@ -165,9 +176,9 @@ public class SceneManager {
 	}
 
 	/**
-	 * Sets the scene to the specified index, if valid.
+	 * Selects and activates the scene at the supplied registration index.
 	 *
-	 * @param index the index of the scene to switch to
+	 * @param index zero-based registration index; invalid values are ignored
 	 */
 	public void setCurrentSceneIndex(int index) {
 		if (index < 0 || index >= scenes.size()) {
@@ -231,10 +242,12 @@ public class SceneManager {
 	}
 
 	/**
-	 * Defers no work itself: callers invoke this method at a safe frame boundary to perform
-	 * one complete dispose/setup cycle of the active scene.
+	 * Performs one complete dispose/setup cycle for the active scene.
 	 *
-	 * @return true when an active scene was reloaded
+	 * <p>This method does not defer work. From scene code, prefer
+	 * {@link SceneServices#requestReload()}, which schedules the cycle at a safe frame boundary.</p>
+	 *
+	 * @return {@code true} when an attached, active scene was reloaded
 	 */
 	public boolean reloadCurrentScene() {
 		if (currentSceneIndex < 0 || currentSceneIndex >= scenes.size() || !currentSceneActive) {

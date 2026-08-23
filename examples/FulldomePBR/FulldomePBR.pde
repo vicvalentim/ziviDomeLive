@@ -21,7 +21,7 @@ void setup() {
   ziviDome = new ziviDomeLive(this);
   ziviDome.setup();
   ziviDome.setRenderMode(RenderMode.FULL);
-  ziviDome.setScene(new FulldomePbrScene(ziviDome));
+  ziviDome.setScene(new FulldomePbrScene());
 }
 
 void draw() {

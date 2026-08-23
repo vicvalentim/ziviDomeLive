@@ -35,7 +35,7 @@ jobs:
 
       - name: Install dependencies
         if: github.event.action != 'closed'
-        run: pip install -r requirements-docs.txt
+        run: python3 -m pip install -r requirements-docs.txt
 
       - name: Build Javadocs
         if: github.event.action != 'closed'
@@ -43,11 +43,15 @@ jobs:
 
       - name: Build website
         if: github.event.action != 'closed'
-        run: mkdocs build --strict
+        run: python3 -m mkdocs build --strict
 
       - name: Attach Javadocs to preview
         if: github.event.action != 'closed'
-        run: cp -R build/docs/javadoc site/reference
+        run: ./gradlew attachJavadocsToSite --console=plain
+
+      - name: Validate exported preview routes
+        if: github.event.action != 'closed'
+        run: python3 tools/validate_documentation.py --root . --site-dir site
 
       - name: Deploy preview
         uses: rossjrw/pr-preview-action@v1

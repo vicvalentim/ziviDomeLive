@@ -9,7 +9,7 @@ through lifecycle-aware API services:
 - `FrameClock`, `SimulationTimeline`, and bounded fixed-step advancement;
 - deferred scene reload and last-in/first-out cleanup;
 - a render-thread queue for Processing/OpenGL handoff;
-- bounded, keyed scene task groups backed by the shared `ThreadManager`;
+- bounded, keyed scene task groups backed by the runtime's internal shared executor;
 - typed image, shader, and shape caches with explicit ownership;
 - action-based input mapping, `OrbitCamera` target tracking, and scene-scoped
   Environment configuration.

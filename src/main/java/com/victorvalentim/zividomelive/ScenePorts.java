@@ -1,6 +1,5 @@
 package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.support.LogManager;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -17,15 +16,26 @@ import java.util.logging.Logger;
  * Activation-scoped boundary for optional MIDI, OSC, or device adapters.
  *
  * <p>The core library knows only application-defined message values. Input is bounded and
- * delivered on the Processing thread; output transport and backpressure remain adapter-owned.</p>
+ * delivered on the Processing thread; output transport and backpressure remain adapter-owned.
+ * The default input queue retains at most 256 messages, drops the oldest on overflow, and invokes
+ * at most 32 handlers per frame.</p>
+ *
+ * <p>Pause drops queued input and rejects new input until resume; it never replays stale device
+ * messages. Activation disposal closes connected adapters in reverse registration order.</p>
+ *
+ * <p><strong>API stability:</strong> Advanced Stable.</p>
+ *
+ * @since 2.0.0
  */
 public final class ScenePorts {
 
     private static final Logger LOGGER = LogManager.getLogger();
     private static final int DEFAULT_INPUT_CAPACITY = 256;
+    private static final int DEFAULT_MAX_EVENTS_PER_FRAME = 32;
 
     private final RenderThreadQueue renderQueue;
     private final int inputCapacity;
+    private final int maxEventsPerFrame;
     private final Deque<Runnable> pendingInput = new ArrayDeque<>();
     private final List<AutoCloseable> adapters = new ArrayList<>();
     private final Map<Object, Boolean> connected = new IdentityHashMap<>();
@@ -35,22 +45,31 @@ public final class ScenePorts {
     private boolean closed;
 
     ScenePorts(RenderThreadQueue renderQueue) {
-        this(renderQueue, DEFAULT_INPUT_CAPACITY);
+        this(renderQueue, DEFAULT_INPUT_CAPACITY, DEFAULT_MAX_EVENTS_PER_FRAME);
     }
 
     ScenePorts(RenderThreadQueue renderQueue, int inputCapacity) {
+        this(renderQueue, inputCapacity, DEFAULT_MAX_EVENTS_PER_FRAME);
+    }
+
+    ScenePorts(RenderThreadQueue renderQueue, int inputCapacity, int maxEventsPerFrame) {
         this.renderQueue = Objects.requireNonNull(renderQueue, "renderQueue");
         if (inputCapacity < 1) {
             throw new IllegalArgumentException("Input capacity must be positive.");
         }
+        if (maxEventsPerFrame < 1) {
+            throw new IllegalArgumentException("Per-frame input budget must be positive.");
+        }
         this.inputCapacity = inputCapacity;
+        this.maxEventsPerFrame = maxEventsPerFrame;
     }
 
     /**
      * Connects one external source to a handler owned by this scene activation.
      *
      * <p>When the bounded queue is full, the oldest pending message is discarded so the
-     * activation can continue receiving current device state.</p>
+     * activation can continue receiving current device state. The adapter may publish from any
+     * thread; the scene handler never runs on that producer thread.</p>
      *
      * @param port external input adapter owned by this activation after connection
      * @param handler scene handler invoked at a Processing frame boundary
@@ -76,6 +95,10 @@ public final class ScenePorts {
     /**
      * Connects a non-blocking output adapter and returns an activation-guarded view of it.
      *
+     * <p>After pause or disposal, the managed view returns {@code false} without forwarding the
+     * value. The runtime retains ownership of the connected adapter's {@link AutoCloseable}
+     * lifecycle.</p>
+     *
      * @param port external output adapter owned by this activation after connection
      * @param <T> message type defined by the adapter
      * @return activation-guarded output port
@@ -89,9 +112,14 @@ public final class ScenePorts {
         return new ManagedOutputPort<>(port);
     }
 
-    /** @return number of oldest pending input messages discarded due to queue pressure */
+    /** @return cumulative number of oldest pending messages discarded due to queue pressure */
     public synchronized long getDroppedInputCount() {
         return droppedInputCount;
+    }
+
+    /** @return number of input messages waiting for a future frame boundary */
+    public synchronized int getPendingInputCount() {
+        return pendingInput.size();
     }
 
     int drain() {
@@ -101,7 +129,7 @@ public final class ScenePorts {
             if (!accepting || paused) {
                 return 0;
             }
-            limit = pendingInput.size();
+            limit = Math.min(pendingInput.size(), maxEventsPerFrame);
         }
         int handled = 0;
         while (handled < limit) {

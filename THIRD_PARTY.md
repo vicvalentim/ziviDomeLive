@@ -5,7 +5,7 @@ This notice supplements, and does not replace, the project license in `LICENSE`.
 
 ## Devolay Community Fork
 
-- Component: `io.github.vicvalentim:devolay:2.2.0-vic.1`
+- Component: `io.github.vicvalentim:devolay:2.2.0-vic.2`
 - Purpose: Java integration with the NDI SDK
 - Original author: Walker Knapp
 - Fork maintainer: Victor Valentim

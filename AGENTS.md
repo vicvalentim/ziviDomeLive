@@ -3,10 +3,16 @@
 ## Scope, authority, and current state
 - This repository is a Processing 4 / Java 17 library for fulldome, spherical, and immersive rendering. The public facade is `com.victorvalentim.zividomelive.ziviDomeLive`.
 - Treat sources of truth in this order: `src/main/java` -> `src/test/java` -> executable examples -> `build.gradle.kts` and workflows -> README/docs.
-- Documentation is behind the 2.0 code. Do not preserve a stale API solely because it is documented, and do not rewrite broad docs before the code contract is settled.
+- The 2.0 public API freeze is implemented and guarded by compatibility tests. Documentation is maintained against that frozen contract, but must never override source or executable tests when drift is found.
 - This file is canonical. `.github/copilot-instructions.md` is a rendering/release supplement and must not contradict it.
-- This guide distinguishes protected behavior from known public-surface liabilities. Do not describe a planned refactor as implemented until source and tests prove it.
+- Do not describe a planned refactor as implemented until source and tests prove it, and do not restore pre-2.0 compatibility surface solely because historical documentation names it.
 - Preserve unrelated user changes in a dirty worktree. Use `apply_patch` for edits and keep changes scoped.
+
+## Source taxonomy and visibility
+- Artist-facing API remains in `src/main/java/com/victorvalentim/zividomelive`, with the deliberate public subpackages `manager`, `performance`, `render`, and `render/camera`.
+- Engine implementations are physically grouped by responsibility under `_internal/{output,performance,render,runtime,scene,support,ui}`. They intentionally retain the root `com.victorvalentim.zividomelive` package declaration so package-private collaborators can work across those physical categories.
+- Every top-level type under `_internal` must remain package-private. Do not import an `_internal` source from sketches, expose it in a public signature, or turn the physical directory name into a Java package without a deliberate architecture change.
+- `InternalSourceLayoutTest` protects the directory taxonomy and `PublicApiCompatibilityTest` protects the exported type/member snapshot. Update either test only for an intentional 2.0 contract change.
 
 ## Processing-facing programming model
 - Keep artist code close to ordinary Processing: configure in `setupScene()`, mutate once in `update()`, draw in `sceneRender(...)`, and receive `keyEvent(...)`/`mouseEvent(...)` when direct callbacks are simplest.
@@ -66,7 +72,8 @@
 - Runtime-owned: service construction/closure, frame ticking, queue binding/draining, input dispatch, deactivation cancellation, camera update, environment restoration, cache shutdown, and reload execution.
 - Scene-controlled: simulation rate/position, task submission, asset requests, action bindings, camera pose/configuration, optional mouse enablement, target tracking, and activation environment values.
 - A scene never closes a runtime-supplied service. Only the input/output port provider SPI exposes `AutoCloseable`, so adapter authors can implement lifecycle while `ScenePorts` retains activation ownership.
-- `SceneTaskGroup` uses the shared `ThreadManager`; never create an executor per scene. The bounded NDI sender worker is an intentional output-specific exception.
+- `SceneTaskGroup` submits callback-based work to the package-private, process-wide `SharedTaskExecutor`; never create an executor per scene and never expose the executor or a `Future` to artist code. The removed public `ThreadManager` is not part of 2.0.
+- Facade disposal closes each activation's `SceneTaskGroup` and cancels its work, but does not shut down the process-wide daemon executor. The bounded NDI sender worker is an intentional output-specific exception with its own native lifecycle.
 - Background work must not call Processing/OpenGL APIs. Render-thread publication belongs to the activation queue, and old-activation work must not reach a new activation of the same scene.
 - `SceneAssets` creates Processing/GPU-facing assets on the bound render thread. Borrowed resources drop references on disposal; owned native/GPU resources need deterministic disposers.
 - `SceneEnvironmentService` restores only values it touched and only when facade state still matches the value it applied, so a later owner is not overwritten.
@@ -100,10 +107,10 @@
 
 ## Rendering and graphics invariants
 - The projection pipeline remains:
-  - `render/CubemapRenderer.java`: six native cubemap faces;
-  - `render/modes/EquirectangularRenderer.java`: cubemap to equirectangular;
-  - `render/modes/FisheyeDomemaster.java`: equirectangular to domemaster;
-  - `StandardRenderer` and `CubemapViewRenderer`: optional viewers.
+  - `_internal/render/core/CubemapRenderer.java`: six native cubemap faces;
+  - `_internal/render/modes/EquirectangularRenderer.java`: cubemap to equirectangular;
+  - `_internal/render/modes/FisheyeDomemaster.java`: equirectangular to domemaster;
+  - `_internal/render/modes/StandardRenderer.java` and `CubemapViewRenderer.java`: optional viewers.
 - `ViewType` and `RenderMode` are top-level public enums. Keep `ViewType` declaration order stable because ControlP5 dropdowns map by index.
 - Resolution changes are deferred: setters record a pending reset; renderer/FBO allocation happens at a safe draw boundary.
 - Shader resources are packaged under `data/shaders`; keep Gradle copying and runtime paths aligned.
@@ -112,7 +119,9 @@
 
 ## Input, controls, outputs, and integrations
 - Built-in keys remain: `h` toggles the panel, `m` cycles `ViewType`, and Left/Right switch scenes when ControlP5 text input is inactive.
-- `ControlManager` owns ControlP5 widgets. Guard ControlP5 2.2.6 key-code indexing through `ControlP5KeyEventBridge`.
+- The facade automatically routes Processing key/mouse callbacks to named actions and the active Scene's raw callbacks. Sketches must not forward them again.
+- `ControlManager` owns ControlP5 widgets. `ziviDomeLive.controlEvent(ControlEvent)` is a public Processing/ControlP5 callback adapter for the built-in panel, not a Scene callback or artist command; do not restore `Scene.controlEvent(...)`.
+- Guard ControlP5 2.2.6 key-code indexing through `ControlP5KeyEventBridge`, and never register package-private UI implementation objects as Processing callback targets.
 - `OutputManager` coordinates NDI, Syphon, and Spout with independent view routing. Outputs start opt-in/disabled after setup; do not reintroduce automatic publication.
 - Syphon is macOS-gated, Spout is Windows-gated, and NDI initializes when enabled and supported. Linux has reduced local texture-sharing support.
 - Keep bounded non-blocking output workers and explicit shutdown. Never perform external I/O on the OpenGL thread.
@@ -120,6 +129,7 @@
 
 ## Public API governance for 2.0
 - Optimize for a didactic Processing API: few concepts, concrete names, direct calls, safe defaults, and teachable examples.
+- Stability is explicit: core facade/Scene/render selection types are Stable; opt-in services, outputs, quaternion/orbit utilities, and ports are Advanced Stable; performance and GPU diagnostics are Experimental. Keep Javadocs and compatibility tests aligned with these tiers.
 - Protect `Scene` before simplifying services. Do not add required Scene methods or move runtime cleanup into scenes.
 - Prefer the smallest visibility/lifecycle fix over a broad rewrite. Avoid event buses, generic dependency containers, interface explosions, and unrelated renderer/output changes.
 - Before removing/internalizing a public method, characterize current use, add lifecycle tests, and update `PublicApiCompatibilityTest` deliberately. Do not keep unsafe duplicate aliases indefinitely.
@@ -139,15 +149,17 @@
 
 ## Testing and validation
 - Main CI: `./gradlew build`; focused tests: `./gradlew test`; preferred full validation after API/lifecycle changes: `./gradlew clean test build`.
+- Release qualification: `./gradlew clean qualificationTests`; release packaging: `./gradlew buildReleaseArtifacts`.
 - Important suites cover SceneManager/lifecycle, public API compatibility, camera/quaternion math, timeline/clock, output lifecycle, and render-state logic.
 - Any Services change must cover configure-before-setup, first activation, switch, reload, fresh services, disposal order, old-task isolation, state restoration, and idempotence.
-- Compile Processing examples affected by PDE changes. SolarSystem:
+- Compile every affected Processing example against the just-built library artifact, not an unrelated sketchbook installation. SolarSystem remains the minimum numerical/lifecycle regression sketch:
   `processing-java --sketch=examples/SolarSystem --output=/tmp/zividomelive-solarsystem-build --force --build`.
+- Documentation qualification builds the bilingual MkDocs export, runs `./gradlew attachJavadocsToSite` to place one canonical Java reference at `site/reference`, and validates the exported routes with `python3 tools/validate_documentation.py --root . --site-dir site`. Portuguese pages must link back to that canonical tree rather than duplicate Javadocs below `site/pt`.
 - Run `git diff --check` and inspect the final public surface. Build success alone does not prove lifecycle or artist-facing API quality.
 
 ## Build, packaging, docs, and release
 - `compileJava` depends on `downloadDependencies`; its script fills `src/main/libs` when needed.
 - Release artifacts: `./gradlew buildReleaseArtifacts`; sketchbook deployment: `./gradlew deployToProcessingSketchbook`.
-- Docs use MkDocs Material with bilingual suffix files, but defer broad rewrites until the 2.0 public contract is stable.
+- Docs use MkDocs Material, Mermaid diagrams, and bilingual suffix files. Keep API/reference pages, executable examples, release notes, and the packaged artifact mutually consistent.
 - Use `LogManager.getLogger()`; debug logs are also written under `/tmp/zividomelive/logs` on non-Windows.
 - Licensing/version metadata is not fully consistent across files; verify authoritative release metadata before changing it.

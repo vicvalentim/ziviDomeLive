@@ -53,11 +53,13 @@ Audience: programmers calling the public library API.
 
 Every public type must be classified as one of:
 
-- ARTIST-FACING STABLE
-- ADVANCED PUBLIC
-- EXPERIMENTAL PUBLIC
-- DEPRECATED
-- ENGINE-FACING PUBLIC
+- STABLE
+- ADVANCED STABLE
+- EXPERIMENTAL
+- PROCESSING CALLBACK
+
+INTERNAL is a documentary/implementation boundary, not public Java API. The final
+2.0 surface contains no DEPRECATED or ENGINE-FACING PUBLIC category.
 
 Java `public` visibility alone does not define the intended audience.
 
@@ -141,7 +143,34 @@ Roadmap material must remain labelled as future work.
 
 No placeholder DOI or ISBN may appear in public release material.
 
-## 9. Historical preservation rule
+## 9. API level freeze
+
+### Stable
+
+`ziviDomeLive`, `ziviDomeLive.StandardOutputAspectMode`, `Scene`,
+`SceneManager`, `RenderMode`, `ViewType`, `LogMode`.
+
+### Advanced Stable
+
+`SceneServices`, its focused activation services and ports SPI, typed
+`OutputManager`/enums, `Quaternion`, `SphericalOrientation`, `OrbitCamera`.
+
+### Experimental
+
+The public performance/capability/timer reporting vocabulary.
+
+### Processing Callback
+
+Facade methods that must be public for Processing or ControlP5 discovery. They
+are not manually forwarded by sketches and do not imply a Scene callback.
+
+### Internal
+
+Renderer graph, GL resources/adapters, UI, runtime queues/executors, output
+producers and mutable performance implementation. Architecture may name these
+roles, but no current tutorial may instantiate their types.
+
+## 10. Historical preservation rule
 
 Every historically relevant statement must be classified before removal:
 
@@ -149,6 +178,20 @@ Every historically relevant statement must be classified before removal:
 
 Only `REMOVE` and `INVALID` authorize definitive disappearance.
 
-## 10. Freeze rule
+## 11. Research-software evidence rule
+
+Processing publication requirements and JOSS-style review readiness must be
+encoded as verifiable repository checks. Do not claim a tested platform, research
+impact, paper submission/acceptance or publication identifier from intent alone.
+Record gaps explicitly.
+
+## 12. Diagram and screenshot rule
+
+Use Material/Mermaid source for architecture, lifecycle, state and routing
+diagrams. Raster screenshots that serve as release evidence must come from the
+installed qualified package and record their environment. Editorial mockups must
+never be presented as runtime or qualification evidence.
+
+## 13. Freeze rule
 
 This documentation freeze must not introduce renderer refactors, API aliases or feature development for editorial convenience. Documentation must adapt to the implemented software, not the reverse.

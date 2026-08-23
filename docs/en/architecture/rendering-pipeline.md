@@ -17,4 +17,4 @@ A spherical cubemap should be captured once per frame and reused by all requeste
 
 ## Final views
 
-`FrameViews` is the engine-facing public container/boundary for final frame representations consumed by publishers/outputs. Users normally select those representations through `ViewType` instead of constructing pipeline internals.
+An internal immutable-per-frame boundary carries final representations to preview and output producers. Users select those representations through `ViewType`; neither the container nor producer operations are public.

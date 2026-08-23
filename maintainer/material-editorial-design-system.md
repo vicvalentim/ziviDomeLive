@@ -26,10 +26,15 @@ This file defines the presentation grammar used by the ziviDomeLive MkDocs site.
 
 ## API statuses
 
-- `stable` — artist-facing stable API;
-- `advanced` — advanced public API;
+- `stable` — stable API;
+- `advanced` — Advanced Stable API;
 - `experimental` — experimental public API;
-- `engine` — engine-facing public boundary;
+- `callback` — Processing/ControlP5 callback surface;
+- `internal` — internal implementation or migration boundary;
 - `qualification` — evidence/tooling rather than ordinary creative workflow.
 
 The Java modifier `public` alone never determines the documentation audience.
+
+Architecture/lifecycle/routing diagrams use Material's native Mermaid fence so
+they remain versionable, responsive and theme-aware. Raster assets are reserved
+for identity/artwork and real captured evidence.

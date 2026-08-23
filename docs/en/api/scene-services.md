@@ -1,50 +1,80 @@
 ---
-title: "Scene Services"
-icon: material/api
+title: Scene Services
+icon: material/layers-triple-outline
 status: advanced
+tags:
+  - API
+  - Lifecycle
+  - Concurrency
 ---
+
 # Scene Services
 
-## Do I really need this?
-
-For a simple scene, **no**. Implement `Scene`, keep state in `update()`, draw in `sceneRender()`, and use the main `ziviDomeLive` facade.
-
-Use `SceneServices` when a project needs lifecycle-aware facilities that should be created/configured with a scene activation and released with that activation.
-
-## Opt in progressively
-
-A service-aware scene can receive the current activation services through:
+`SceneServices` is an **Advanced Stable**, activation-scoped capability set. It is created, advanced and closed by `ziviDomeLive`, then supplied before each `setupScene()`.
 
 ```java
-public void configure(SceneServices services) {
-  // Retain only the service references your scene actually needs.
+class ServiceScene implements Scene {
+  SceneServices services;
+
+  public void configure(SceneServices services) {
+    this.services = services;
+  }
+
+  public void sceneRender(PGraphicsOpenGL pg) {
+    services.camera().apply(pg);
+    // draw
+  }
 }
 ```
 
-The exact service accessors are part of the generated Javadocs. Do not make Scene Services a dependency of examples that do not need them.
+## Service map
 
-## Typical needs
+| Accessor | Focus | Scene controls | Runtime owns |
+|---|---|---|---|
+| `applet()` | Processing host | Read/use ordinary applet facilities on the correct thread | Applet lifetime |
+| `frameClock()` | Frame time | Maximum accepted delta | Tick and monotonic frame index |
+| `timeline()` | Simulation | Rate, position, fixed step, catch-up policy, pause | None of the scene's step policy |
+| `tasks()` | Background CPU/I/O | Bounded keyed submission, result/error callbacks | Shared executor, cancellation, frame-boundary publication |
+| `assets()` | Images/shaders/shapes | Requests and retained shapes | Render-thread creation and cache shutdown |
+| `actions()` | Named input | Bind, trigger, unregister | Dispatch order and activation cleanup |
+| `camera()` | Scene-space navigation | Pose, input, tracking | Once-per-frame update and stale-anchor reset |
+| `environment()` | Background overrides | Image, visibility, intensity, yaw | Conditional restoration on deactivation |
+| `ports()` | Optional adapters | Connect bounded input/output ports | Drain limit, telemetry and closure |
+| `requestReload()` | Lifecycle | Ask for reload | Execute at a safe frame boundary |
 
-### Frame/time
+## Ownership restrictions
 
-Use the frame clock/timeline facilities when simulation or scheduling needs an explicit time source rather than ad-hoc counters.
+Scenes cannot construct or close runtime-supplied service objects. `parent`, `scene`, raw render queues, arbitrary dispose hooks and service `close()` methods are intentionally absent.
 
-### Assets
+Only `SceneInputPort` and `SceneOutputPort` extend `AutoCloseable`; that is an adapter-provider SPI. `ScenePorts` still retains activation ownership and closes connected adapters.
 
-Use lifecycle-aware asset facilities when asset ownership/loading should follow scene activation rather than global sketch state.
+## Background task contract
 
-### Background work and render-thread work
+`SceneTaskGroup.submitIfIdle(key, ...)` is bounded and callback-based. It does not return `Future`, expose the executor or accept unbounded work.
 
-Background tasks must not assume they own the Processing OpenGL context. Work that must touch renderer-owned graphics state has to return through the library's render-thread mechanism documented by the current API.
+```java
+services.tasks().submitIfIdle(
+    "mesh",
+    () -> buildCpuOnlyMeshData(),
+    data -> publishOnFrameBoundary(data),
+    error -> report(error));
+```
 
-### Actions and coordination
+- the callable/runnable must not call Processing/OpenGL;
+- result and error consumers run only for the submitting activation;
+- stale work from a disposed activation cannot publish into a later activation of the same `Scene` instance;
+- `getInFlightCount()` and `getMaxInFlight()` expose bounded-state telemetry.
 
-Use service-backed actions/queues when a project benefits from explicit coordination rather than direct cross-thread mutation.
+## Ports contract
 
-### Camera and Environment
+`connectInput(port, consumer)` accepts external-thread data into a bounded activation queue. The runtime delivers a bounded amount at a frame boundary. `getPendingInputCount()` and `getDroppedInputCount()` make backpressure observable.
 
-Camera tracking and Environment state can be integrated with scene lifecycle when the project requires it. They remain conceptually distinct: camera transforms scene space; spherical orientation calibrates the spherical representation.
+`connectOutput(port)` retains the provider and its non-blocking `offer(value)` contract. Real MIDI, OSC or device adapters remain optional and outside the core library.
 
-## Cleanup
+## Environment restoration
 
-A scene activation can end on switch, clear, replacement or facade release. Release scene-owned resources in `dispose()` and do not retain renderer targets beyond their documented lifetime.
+The environment service restores only values it changed and only while facade state still matches the value it applied. A later owner is never overwritten by stale cleanup.
+
+## Reload
+
+`requestReload()` defers the request. The next safe frame boundary performs stop-work → `dispose()` → service release → fresh services → `configure()` → `setupScene()`.

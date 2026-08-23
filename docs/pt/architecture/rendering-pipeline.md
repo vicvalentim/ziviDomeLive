@@ -8,4 +8,4 @@ O pipeline resolve as views necessárias no frame, renderiza o(s) domínio(s) ex
 
 A política interna decide se o frame exige Standard, cubemap esférico e quais projeções. Esses tipos internos são arquitetura, não API artist-facing.
 
-O cubemap esférico deve ser capturado uma vez por frame e reutilizado pelas projeções/consumidores necessários. A view Standard permanece independente. `FrameViews` funciona como fronteira engine-facing das representações finais.
+O cubemap esférico deve ser capturado uma vez por frame e reutilizado pelas projeções/consumidores necessários. A view Standard permanece independente. Uma fronteira interna imutável por frame leva as representações finais aos producers; callers escolhem resultados por `ViewType`.

@@ -9,7 +9,17 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
- * Named, action-based scene input bindings with raw Scene callbacks retained for compatibility.
+ * Activation-scoped named actions and Processing input bindings.
+ *
+ * <p>Key and mouse bindings run on the Processing frame thread before the matching raw
+ * {@link Scene} callback. Programmatic {@link #trigger(String)} calls run synchronously on the
+ * caller's thread, so scene code should trigger actions from Processing callbacks.</p>
+ *
+ * <p>The runtime clears all bindings when the activation ends.</p>
+ *
+ * <p><strong>API stability:</strong> Advanced Stable.</p>
+ *
+ * @since 2.0.0
  */
 public final class SceneActionMap {
 
@@ -58,7 +68,9 @@ public final class SceneActionMap {
     }
 
     /**
-     * Registers a mouse action such as {@link MouseEvent#PRESS} or {@link MouseEvent#DRAG}.
+     * Binds a named mouse handler such as {@link MouseEvent#PRESS} or {@link MouseEvent#DRAG}.
+
+     * <p>Only one binding is retained for each Processing mouse action constant.</p>
      *
      * @param name stable non-blank action name
      * @param mouseAction Processing mouse action constant
@@ -140,7 +152,7 @@ public final class SceneActionMap {
         mouseActions.values().removeIf(binding -> normalized.equals(binding.name));
     }
 
-    /** @return number of named runnable actions plus mouse bindings */
+    /** @return number of named runnable actions plus separately registered mouse bindings */
     public synchronized int size() {
         ensureOpen();
         return actions.size() + mouseActions.size();

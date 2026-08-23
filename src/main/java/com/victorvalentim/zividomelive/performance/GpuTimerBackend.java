@@ -1,6 +1,12 @@
 package com.victorvalentim.zividomelive.performance;
 
-/** GPU measurement mechanism effectively selected for a profiling session. */
+/**
+ * GPU measurement mechanism effectively selected for a profiling session.
+ *
+ * <p><strong>API stability:</strong> Experimental.</p>
+ *
+ * @since 2.0.0
+ */
 public enum GpuTimerBackend {
 	/** No GPU measurement is active; CPU profiling remains available. */
 	NONE,

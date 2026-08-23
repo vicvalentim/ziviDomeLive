@@ -10,7 +10,7 @@ por serviços da API vinculados ao lifecycle:
 - reload diferido e cleanup em ordem inversa;
 - fila da render thread para transferência Processing/OpenGL;
 - grupos de tarefas limitados e identificados por chave, apoiados pelo
-  `ThreadManager` compartilhado;
+  executor compartilhado interno do runtime;
 - caches tipados de imagem, shader e shape com ownership explícito;
 - mapeamento de input por ações, tracking de alvo do `OrbitCamera` e configuração
   Environment no escopo da cena.

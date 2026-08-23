@@ -29,6 +29,8 @@ class Scene1 implements Scene {
   private int selectedPlanet = -1;
   private boolean debugClockPrint = false;
   private boolean initialized = false;
+  private final PVector frameSunPosition = new PVector();
+  private final PVector trackedCameraTarget = new PVector();
 
   @Override
   public void configure(SceneServices services) {
@@ -96,13 +98,13 @@ class Scene1 implements Scene {
     sceneCamera.setLerpFactor(0.1f);
     // Mantém a manipulação direta da versão 1.5.0: mouse imediato, alvo rastreado suave.
     sceneCamera.setDragSensitivity(0.01f);
-    sceneCamera.setWheelSteps(80f, 0.001f);
     services.camera().setInputEnabled(true);
     services.camera().trackTarget(this::resolveCameraTarget);
 
     resetView();
     selectedPlanet = -1;
     initialized = true;
+    publishFrameState();
   }
 
   private void configureEnvironmentBackground() {
@@ -150,6 +152,10 @@ class Scene1 implements Scene {
       services.frameClock().getDeltaSeconds(),
       this::updateSimulation
     );
+    publishFrameState();
+    if (debugClockPrint) {
+      pApplet.println(clock.getCalendarUTCString());
+    }
   }
 
   private void updateSimulation(double dtDays) {
@@ -164,32 +170,34 @@ class Scene1 implements Scene {
   }
 
   private PVector resolveCameraTarget() {
-    if (!initialized) return new PVector();
+    trackedCameraTarget.set(0f, 0f, 0f);
+    if (!initialized) return trackedCameraTarget;
     float scale = pxPerAU();
     if (selectedPlanet == 0) {
-      return sun.getPositionAU().copy().mult(scale);
+      trackedCameraTarget.set(sun.getPositionAU()).mult(scale);
+      return trackedCameraTarget;
     }
     if (selectedPlanet > 0 && selectedPlanet <= planets.size()) {
-      return planets.get(selectedPlanet - 1).getPositionAU().copy().mult(scale);
+      trackedCameraTarget.set(planets.get(selectedPlanet - 1).getPositionAU()).mult(scale);
     }
-    return new PVector();
+    return trackedCameraTarget;
+  }
+
+  private void publishFrameState() {
+    frameSunPosition.set(sun.getPositionAU()).mult(pxPerAU());
   }
 
   @Override
   public void sceneRender(PGraphicsOpenGL pg) {
     if (!initialized) return;
     pg.background(0, 10, 20);
-    if (debugClockPrint) {
-      pApplet.println(clock.getCalendarUTCString());
-    }
 
     pg.pushMatrix();
     services.camera().apply(pg);
 
       pg.noLights();
-      PVector sunPx = sun.getPositionAU().copy().mult(pxPerAU());
       pg.pushMatrix();
-        pg.translate(sunPx.x, sunPx.y, sunPx.z);
+        pg.translate(frameSunPosition.x, frameSunPosition.y, frameSunPosition.z);
         sun.display(pg, showLabels);
       pg.popMatrix();
 

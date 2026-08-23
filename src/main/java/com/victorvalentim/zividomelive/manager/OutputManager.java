@@ -1,694 +1,163 @@
 package com.victorvalentim.zividomelive.manager;
 
-import com.victorvalentim.zividomelive.FrameViews;
-import com.victorvalentim.zividomelive.RenderMode;
 import com.victorvalentim.zividomelive.ViewType;
-import com.victorvalentim.zividomelive.support.LogManager;
-import com.victorvalentim.zividomelive.ziviDomeLive;
-import me.walkerknapp.devolay.DevolayFrameFormatType;
-import me.walkerknapp.devolay.DevolayFrameFourCCType;
-import processing.core.PConstants;
-import processing.opengl.PGraphicsOpenGL;
-
-import java.nio.ByteBuffer;
-import java.util.Locale;
-import java.util.logging.Logger;
 
 /**
- * Coordinates external-output routing and delegates publication to concrete backends.
+ * Artist-facing control, routing, and telemetry for external frame publication.
  *
- * <p>NDI, Syphon, and Spout own their native resources and lifecycle independently.
- * This manager retains the public routing API, resolves logical {@link ViewType} selections,
- * and supplies completed {@link FrameViews} targets without implementing backend details.</p>
+ * <p>Obtain this interface from
+ * {@link com.victorvalentim.zividomelive.ziviDomeLive#getOutputManager()}; applications do not
+ * construct output backends. NDI, Spout, and Syphon start disabled. Each transport keeps an
+ * independent {@link ViewType} route while global dedicated render modes may temporarily override
+ * the effective view.</p>
+ *
+ * <p>Mutating operations are intended for the Processing frame thread. NDI publication uses a
+ * bounded worker queue; disabling NDI requests an asynchronous stop and may temporarily report
+ * {@link OutputState#STOPPING}.</p>
+ *
+ * <p><strong>API stability:</strong> Advanced Stable.</p>
+ *
+ * @since 2.0.0
  */
-public class OutputManager implements PConstants {
+public interface OutputManager {
 
-	/** Public output identifiers retained for ControlManager compatibility. */
-	public enum OutputType {
-		/** Network Device Interface output. */
+	/** External transports supported by the core output coordinator. */
+	enum OutputType {
+		/** Network Device Interface video publication. */
 		NDI,
-		/** Windows Spout texture output. */
+		/** Windows GPU texture sharing. */
 		SPOUT,
-		/** macOS Syphon texture output. */
+		/** macOS GPU texture sharing. */
 		SYPHON
 	}
 
-	/**
-	 * Observable lifecycle state of one output backend.
-	 *
-	 * @since 1.5.0
-	 */
-	public enum OutputState {
-		/** The backend is unsupported or its last initialization attempt failed. */
+	/** Observable lifecycle state of one output transport. */
+	enum OutputState {
+		/** Unsupported on this platform or unavailable after initialization failure. */
 		UNAVAILABLE,
-		/** The backend is eligible for initialization but owns no native resources. */
+		/** Supported but not initialized or enabled. */
 		AVAILABLE,
-		/** Native resources exist while frame publication is disabled. */
+		/** Native resources are prepared but publication is disabled. */
 		INITIALIZED,
-		/** Native resources exist and frame publication is enabled. */
+		/** Publication is enabled. */
 		ENABLED,
-		/** NDI publication is disabled while bounded worker cleanup completes. */
+		/** An asynchronous stop is in progress. */
 		STOPPING
 	}
 
-	/** The single platform-local texture-sharing implementation available in this process. */
-	private enum LocalTextureBackend {
-		SYPHON,
-		SPOUT,
-		NONE
-	}
-
-	private static final long DEFAULT_NDI_SHUTDOWN_TIMEOUT_MILLIS =
-			NdiOutputBackend.DEFAULT_SHUTDOWN_TIMEOUT_MILLIS;
-
-	/** Default NDI metadata retained for compatibility and qualification. */
-	static final int DEFAULT_NDI_FRAME_RATE_NUMERATOR =
-			NdiOutputBackend.DEFAULT_FRAME_RATE_NUMERATOR;
-	static final int DEFAULT_NDI_FRAME_RATE_DENOMINATOR =
-			NdiOutputBackend.DEFAULT_FRAME_RATE_DENOMINATOR;
-	static final DevolayFrameFourCCType NDI_FRAME_FOUR_CC_TYPE =
-			NdiOutputBackend.FRAME_FOUR_CC_TYPE;
-	static final DevolayFrameFormatType NDI_FRAME_FORMAT_TYPE =
-			NdiOutputBackend.FRAME_FORMAT_TYPE;
-
-	private final Logger logger = LogManager.getLogger();
-	private final ziviDomeLive parent;
-	private final LocalTextureBackend localTextureBackend;
-	private final NdiOutputBackend ndiBackend;
-	private final SpoutOutputBackend spoutBackend;
-	private final SyphonOutputBackend syphonBackend;
-	private FrameViews latestFrameViews;
-
-	/* Independent output routing. Preview/viewer state is intentionally not stored here. */
-	private volatile ViewType ndiView = ViewType.DOMEMASTER;
-	private volatile ViewType spoutView = ViewType.DOMEMASTER;
-	private volatile ViewType syphonView = ViewType.DOMEMASTER;
-
-	/** Prevents repeated warnings from the deprecated single-view setter. */
-	private boolean deprecatedSetViewWarningLogged;
-
 	/**
-	 * Creates an output manager and the three concrete backend services.
+	 * Returns the independently configured route for one transport.
 	 *
-	 * @param parent main ziviDomeLive application; must not be {@code null}
-	 * @throws IllegalArgumentException if {@code parent} is {@code null}
+	 * @param outputType transport to inspect
+	 * @return configured view, or {@link ViewType#DOMEMASTER} when {@code outputType} is null
 	 */
-	public OutputManager(ziviDomeLive parent) {
-		this(parent, DEFAULT_NDI_SHUTDOWN_TIMEOUT_MILLIS);
-	}
-
-	/** Package-private constructor for deterministic worker-shutdown tests. */
-	OutputManager(ziviDomeLive parent, long ndiShutdownTimeoutMillis) {
-		if (parent == null) {
-			throw new IllegalArgumentException("parent cannot be null");
-		}
-		if (ndiShutdownTimeoutMillis <= 0) {
-			throw new IllegalArgumentException("NDI shutdown timeout must be positive");
-		}
-
-		this.parent = parent;
-
-		String osName = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-		boolean isMacOS = osName.contains("mac");
-		boolean isWindows = osName.contains("win");
-
-		if (isMacOS) {
-			localTextureBackend = LocalTextureBackend.SYPHON;
-		} else if (isWindows) {
-			localTextureBackend = LocalTextureBackend.SPOUT;
-		} else {
-			localTextureBackend = LocalTextureBackend.NONE;
-		}
-
-		ndiBackend = new NdiOutputBackend(parent.getTargetFrameRate(), ndiShutdownTimeoutMillis);
-		spoutBackend = new SpoutOutputBackend(parent.getPApplet(), isWindows);
-		syphonBackend = new SyphonOutputBackend(parent.getPApplet(), isMacOS);
-	}
+	ViewType getViewForOutput(OutputType outputType);
 
 	/**
-	 * Returns the independently configured view for an output.
+	 * Selects the logical view routed to one transport.
 	 *
-	 * @param outputType output whose configured view should be returned
-	 * @return configured view, or {@link ViewType#DOMEMASTER} for {@code null}
+	 * @param outputType transport to configure; a null value is ignored
+	 * @param viewType logical view to publish; a null value is ignored
 	 */
-	public ViewType getViewForOutput(OutputType outputType) {
-		if (outputType == null) {
-			return ViewType.DOMEMASTER;
-		}
+	void setViewForOutput(OutputType outputType, ViewType viewType);
 
-		switch (outputType) {
-			case NDI:
-				return ndiView;
-			case SPOUT:
-				return spoutView;
-			case SYPHON:
-				return syphonView;
-			default:
-				return ViewType.DOMEMASTER;
-		}
-	}
+	/** @param view logical view routed to NDI; {@code null} is ignored */
+	void setNdiView(ViewType view);
+
+	/** @param view logical view routed to Spout; {@code null} is ignored */
+	void setSpoutView(ViewType view);
+
+	/** @param view logical view routed to Syphon; {@code null} is ignored */
+	void setSyphonView(ViewType view);
 
 	/**
-	 * Changes only the selected external-output view.
+	 * Selects the logical view for the platform-local texture-sharing backend.
 	 *
-	 * @param outputType output whose route should change
-	 * @param viewType logical view to publish
+	 * @param view view routed to Spout on Windows or Syphon on macOS; {@code null} is ignored
 	 */
-	public void setViewForOutput(OutputType outputType, ViewType viewType) {
-		if (outputType == null || viewType == null) {
-			return;
-		}
-
-		switch (outputType) {
-			case NDI:
-				ndiView = viewType;
-				break;
-			case SPOUT:
-				spoutView = viewType;
-				break;
-			case SYPHON:
-				syphonView = viewType;
-				break;
-			default:
-				return;
-		}
-
-		logger.info("Set view for " + outputType + " to " + viewType + ".");
-	}
-
-	/** Compatibility no-op retained for callers that previously refreshed cached graphics. */
-	public void refreshCachedGraphics() {
-		// FrameViews resolves current targets after renderer reallocation.
-	}
-
-	/** Resolves a completed graphics target under the effective global render mode. */
-	PGraphicsOpenGL resolveGraphics(FrameViews frameViews, ViewType viewType) {
-		ViewType effectiveView = resolveOutputView(viewType);
-		if (frameViews == null || effectiveView == null) {
-			return null;
-		}
-
-		try {
-			return frameViews.getFrame(effectiveView);
-		} catch (RuntimeException error) {
-			logger.warning("resolveGraphics failed for " + effectiveView + ": "
-					+ rootCauseMessage(error));
-			return null;
-		}
-	}
-
-	/** Resolves a configured output route under the facade's global render mode. */
-	ViewType resolveOutputView(ViewType configuredView) {
-		RenderMode renderMode = parent.getRenderMode();
-		if (renderMode == null || renderMode == RenderMode.FULL) {
-			return configuredView;
-		}
-
-		switch (renderMode) {
-			case STANDARD:
-				return ViewType.STANDARD;
-			case DOMEMASTER:
-				return ViewType.DOMEMASTER;
-			case EQUIRECTANGULAR:
-				return ViewType.EQUIRECTANGULAR;
-			case SKYBOX:
-				return ViewType.SKYBOX;
-			case FULL:
-			default:
-				return configuredView;
-		}
-	}
-
-	/** Prepares the supported local GPU backend without enabling publication. */
-	public void initializeLocalTextureOutput() {
-		initializeLocalTextureBackend(latestFrameViews);
-	}
+	void setLocalTextureView(ViewType view);
 
 	/**
-	 * Prepares the supported local GPU backend using final views for initial dimensions.
+	 * @return Spout's configured view on Windows, Syphon's on macOS, or
+	 *         {@link ViewType#DOMEMASTER} when no local backend exists
+	 */
+	ViewType getLocalTextureView();
+
+	/**
+	 * Enables or disables one transport.
 	 *
-	 * @param frameViews final-frame contract supplied by the render pipeline
-	 * @since 2.0.0
+	 * @param outputType non-null transport
+	 * @param enabled {@code true} to enable publication
+	 * @throws IllegalArgumentException when {@code outputType} is null
 	 */
-	public void initializeLocalTextureOutput(FrameViews frameViews) {
-		if (frameViews != null) {
-			latestFrameViews = frameViews;
-		}
-		initializeLocalTextureOutput();
-	}
-
-	private void initializeLocalTextureBackend(FrameViews frameViews) {
-		switch (localTextureBackend) {
-			case SYPHON:
-				syphonBackend.initialize();
-				break;
-			case SPOUT:
-				spoutBackend.initialize(
-						resolveGraphics(frameViews, spoutView), parent.getOutputResolution());
-				break;
-			case NONE:
-			default:
-				break;
-		}
-	}
+	void setOutputEnabled(OutputType outputType, boolean enabled);
 
 	/**
-	 * Toggles one output without coupling it to preview selection or another output.
+	 * @param outputType non-null transport
+	 * @return {@code true} only while that transport is enabled
+	 * @throws IllegalArgumentException when {@code outputType} is null
+	 */
+	boolean isOutputEnabled(OutputType outputType);
+
+	/**
+	 * Toggles one transport's enabled state.
 	 *
-	 * @param method output identifier: {@code "ndi"}, {@code "spout"}, or {@code "syphon"}
+	 * @param outputType non-null transport
+	 * @throws IllegalArgumentException when {@code outputType} is null
 	 */
-	public void toggleOutput(String method) {
-		if (method == null || method.trim().isEmpty()) {
-			logger.warning("Ignoring output toggle request with empty method.");
-			return;
-		}
-
-		String normalizedMethod = method.trim().toLowerCase(Locale.ROOT);
-		switch (normalizedMethod) {
-			case "ndi":
-				if (isNdiEnabled()) {
-					ndiBackend.shutdown();
-				} else {
-					ndiBackend.enable();
-				}
-				break;
-			case "spout":
-				if (!spoutBackend.isSupported()) {
-					logger.warning("Spout toggle ignored: unsupported platform.");
-					return;
-				}
-				spoutBackend.toggle(
-						resolveGraphics(latestFrameViews, spoutView), parent.getOutputResolution());
-				break;
-			case "syphon":
-				if (!syphonBackend.isSupported()) {
-					logger.warning("Syphon toggle ignored: unsupported platform.");
-					return;
-				}
-				syphonBackend.toggle();
-				break;
-			default:
-				logger.warning("Unknown output method: " + normalizedMethod);
-				break;
-		}
-	}
+	void toggleOutput(OutputType outputType);
 
 	/**
-	 * Legacy method retained only for source compatibility.
-	 *
-	 * @param viewType ignored; configure each output with its dedicated setter
-	 * @deprecated use {@link #setNdiView(ViewType)}, {@link #setSpoutView(ViewType)}, or
-	 *             {@link #setSyphonView(ViewType)}
+	 * @param outputType transport to inspect
+	 * @return current lifecycle state, or {@link OutputState#UNAVAILABLE} for null
 	 */
-	@Deprecated
-	public void setView(ViewType viewType) {
-		if (!deprecatedSetViewWarningLogged) {
-			deprecatedSetViewWarningLogged = true;
-			logger.warning(
-					"OutputManager.setView() is deprecated and no longer changes external outputs."
-			);
-		}
-	}
+	OutputState getOutputState(OutputType outputType);
 
 	/**
-	 * Supplies the current final-frame boundary and publishes through enabled backends.
-	 *
-	 * @param frameViews completed final views supplied by the render pipeline
-	 * @since 2.0.0
+	 * @param outputType transport to inspect
+	 * @return latest backend failure reason, or an empty string when none is recorded
 	 */
-	public void sendOutput(FrameViews frameViews) {
-		if (frameViews == null) {
-			return;
-		}
-		latestFrameViews = frameViews;
-		sendOutput();
-	}
+	String getOutputFailureReason(OutputType outputType);
 
-	/** Republishes the most recently supplied final-frame contract. */
-	public void sendOutput() {
-		FrameViews frameViews = latestFrameViews;
-		if (frameViews == null) {
-			return;
-		}
+	/** @return whether NDI publication is enabled */
+	boolean isNdiEnabled();
 
-		if (spoutBackend.isEnabled()) {
-			spoutBackend.send(resolveGraphics(frameViews, spoutView));
-		} else if (syphonBackend.isEnabled()) {
-			syphonBackend.send(resolveGraphics(frameViews, syphonView));
-		}
+	/** @return whether Windows Spout publication is initialized and enabled */
+	boolean isSpoutEnabled();
 
-		if (ndiBackend.isEnabled()) {
-			ndiBackend.capture(resolveGraphics(frameViews, ndiView));
-		}
-	}
+	/** @return whether macOS Syphon publication is initialized and enabled */
+	boolean isSyphonEnabled();
+
+	/** @return whether this platform has a usable Spout or Syphon backend */
+	boolean isLocalTextureAvailable();
+
+	/** @return whether the platform-local backend has prepared native resources */
+	boolean isLocalTextureInitialized();
+
+	/** @return {@code "Spout"}, {@code "Syphon"}, or {@code "None"} */
+	String getLocalTextureBackendName();
 
 	/**
-	 * Notifies Spout that deferred output target dimensions changed.
-	 *
-	 * @param newResolution new configured output resolution in pixels
-	 */
-	public void notifyResolutionChanged(int newResolution) {
-		if (newResolution <= 0) {
-			logger.warning("Ignoring invalid output resolution: " + newResolution);
-			return;
-		}
-
-		if (localTextureBackend == LocalTextureBackend.SPOUT && spoutBackend.isInitialized()) {
-			spoutBackend.notifyResolutionChanged(
-					resolveGraphics(latestFrameViews, spoutView));
-		}
-	}
-
-	/**
-	 * Changes NDI frame-rate metadata for subsequently captured frames.
+	 * Sets rational frame-rate metadata for subsequently captured NDI frames.
 	 *
 	 * @param numerator positive frame-rate numerator
 	 * @param denominator positive frame-rate denominator
-	 * @throws IllegalArgumentException if either value is zero or negative
+	 * @throws IllegalArgumentException if either value is not positive
 	 */
-	public void setNdiFrameRate(int numerator, int denominator) {
-		ndiBackend.setFrameRate(numerator, denominator);
-	}
+	void setNdiFrameRate(int numerator, int denominator);
 
-	/** Shuts down every output and releases all native resources. */
-	public void shutdownOutputs() {
-		ndiBackend.shutdown();
-		spoutBackend.shutdown();
-		syphonBackend.shutdown();
-		logger.info("All output services have been shut down.");
-	}
+	/** @return cumulative NDI frames copied into bounded capture slots */
+	long getNdiCapturedFrames();
 
-	/**
-	 * Returns the lifecycle state of one output backend.
-	 *
-	 * @param outputType output to inspect
-	 * @return current state, or {@link OutputState#UNAVAILABLE} for {@code null}
-	 */
-	public OutputState getOutputState(OutputType outputType) {
-		if (outputType == null) {
-			return OutputState.UNAVAILABLE;
-		}
+	/** @return cumulative NDI frames sent by the dedicated worker */
+	long getNdiSentFrames();
 
-		switch (outputType) {
-			case NDI:
-				return ndiBackend.state(isNdiEnabled());
-			case SPOUT:
-				return spoutBackend.state(isSpoutEnabled());
-			case SYPHON:
-				return syphonBackend.state(isSyphonEnabled());
-			default:
-				return OutputState.UNAVAILABLE;
-		}
-	}
+	/** @return cumulative NDI frames discarded by latest-frame backpressure */
+	long getNdiDroppedFrames();
 
-	/**
-	 * Returns the latest failure reason recorded by one backend.
-	 *
-	 * @param outputType output to inspect
-	 * @return diagnostic text, or an empty string when no failure was recorded
-	 */
-	public String getOutputFailureReason(OutputType outputType) {
-		if (outputType == OutputType.NDI) {
-			return ndiBackend.failureReason();
-		}
-		if (outputType == OutputType.SPOUT && localTextureBackend == LocalTextureBackend.SPOUT) {
-			return spoutBackend.failureReason();
-		}
-		if (outputType == OutputType.SYPHON && localTextureBackend == LocalTextureBackend.SYPHON) {
-			return syphonBackend.failureReason();
-		}
-		return "";
-	}
+	/** @return cumulative NDI frames rejected by capture or sender failures */
+	long getNdiFailedFrames();
 
-	/** Pure lifecycle-state reducer shared by the concrete backends. */
-	static OutputState resolveOutputState(
-			boolean supported,
-			boolean unavailable,
-			boolean initialized,
-			boolean enabled,
-			boolean stopping) {
-		if (!supported || unavailable) {
-			return OutputState.UNAVAILABLE;
-		}
-		if (stopping) {
-			return OutputState.STOPPING;
-		}
-		if (enabled) {
-			return OutputState.ENABLED;
-		}
-		if (initialized) {
-			return OutputState.INITIALIZED;
-		}
-		return OutputState.AVAILABLE;
-	}
-
-	/**
-	 * Reports whether NDI is enabled and ready to send frames.
-	 *
-	 * @return {@code true} when NDI is active
-	 */
-	public boolean isNdiEnabled() {
-		return ndiBackend.isEnabled();
-	}
-
-	/**
-	 * Reports whether Spout publication is enabled.
-	 *
-	 * @return {@code true} on Windows when Spout is initialized and enabled
-	 */
-	public boolean isSpoutEnabled() {
-		return spoutBackend.isEnabled();
-	}
-
-	/**
-	 * Reports whether Syphon publication is enabled.
-	 *
-	 * @return {@code true} on macOS when Syphon is initialized and enabled
-	 */
-	public boolean isSyphonEnabled() {
-		return syphonBackend.isEnabled();
-	}
-
-	/**
-	 * Reports whether the supported local texture backend has been prepared.
-	 *
-	 * @return {@code true} when Syphon or Spout initialization completed
-	 */
-	public boolean isLocalTextureInitialized() {
-		OutputState state = getOutputState(localOutputType());
-		return state == OutputState.INITIALIZED || state == OutputState.ENABLED;
-	}
-
-	/**
-	 * Reports whether platform-local texture sharing is currently available.
-	 *
-	 * @return {@code true} when the supported backend has not failed initialization
-	 */
-	public boolean isLocalTextureAvailable() {
-		return getOutputState(localOutputType()) != OutputState.UNAVAILABLE;
-	}
-
-	private OutputType localOutputType() {
-		switch (localTextureBackend) {
-			case SPOUT:
-				return OutputType.SPOUT;
-			case SYPHON:
-				return OutputType.SYPHON;
-			case NONE:
-			default:
-				return null;
-		}
-	}
-
-	/**
-	 * Selects the view sent through NDI.
-	 *
-	 * @param view logical view to route to NDI
-	 */
-	public void setNdiView(ViewType view) {
-		setViewForOutput(OutputType.NDI, view);
-	}
-
-	/**
-	 * Selects the view sent through Spout.
-	 *
-	 * @param view logical view to route to Spout
-	 */
-	public void setSpoutView(ViewType view) {
-		setViewForOutput(OutputType.SPOUT, view);
-	}
-
-	/**
-	 * Selects the view sent through Syphon.
-	 *
-	 * @param view logical view to route to Syphon
-	 */
-	public void setSyphonView(ViewType view) {
-		setViewForOutput(OutputType.SYPHON, view);
-	}
-
-	/**
-	 * Sets the view routed to the supported platform-local texture backend.
-	 *
-	 * @param view logical view to route to Syphon or Spout
-	 */
-	public void setLocalTextureView(ViewType view) {
-		if (view == null) {
-			return;
-		}
-
-		switch (localTextureBackend) {
-			case SPOUT:
-				setSpoutView(view);
-				break;
-			case SYPHON:
-				setSyphonView(view);
-				break;
-			case NONE:
-			default:
-				logger.warning("Local texture view ignored: no Syphon/Spout backend on this platform.");
-				break;
-		}
-	}
-
-	/**
-	 * Returns the configured view for the supported local texture backend.
-	 *
-	 * @return Spout view on Windows, Syphon view on macOS, or domemaster otherwise
-	 */
-	public ViewType getLocalTextureView() {
-		switch (localTextureBackend) {
-			case SPOUT:
-				return spoutView;
-			case SYPHON:
-				return syphonView;
-			case NONE:
-			default:
-				return ViewType.DOMEMASTER;
-		}
-	}
-
-	/**
-	 * Returns a stable local-backend name for UI and diagnostics.
-	 *
-	 * @return {@code "Spout"}, {@code "Syphon"}, or {@code "None"}
-	 */
-	public String getLocalTextureBackendName() {
-		switch (localTextureBackend) {
-			case SPOUT:
-				return "Spout";
-			case SYPHON:
-				return "Syphon";
-			case NONE:
-			default:
-				return "None";
-		}
-	}
-
-	/**
-	 * Returns the number of NDI frames copied into capture slots.
-	 *
-	 * @return total captured NDI frames
-	 */
-	public long getNdiCapturedFrames() {
-		return ndiBackend.capturedFrames();
-	}
-
-	/**
-	 * Returns the number of NDI frames sent by the worker.
-	 *
-	 * @return total sent NDI frames
-	 */
-	public long getNdiSentFrames() {
-		return ndiBackend.sentFrames();
-	}
-
-	/**
-	 * Returns the number of NDI frames discarded by latest-frame backpressure.
-	 *
-	 * @return total dropped NDI frames
-	 */
-	public long getNdiDroppedFrames() {
-		return ndiBackend.droppedFrames();
-	}
-
-	/**
-	 * Returns the number of NDI frames rejected by capture or sender failures.
-	 *
-	 * @return total failed NDI frames
-	 */
-	public long getNdiFailedFrames() {
-		return ndiBackend.failedFrames();
-	}
-
-	/**
-	 * Reports whether an enabled output effectively requires a logical view.
-	 *
-	 * @param view logical view whose requirement should be checked
-	 * @return {@code true} when an enabled output resolves to {@code view}
-	 */
-	public boolean requiresView(ViewType view) {
-		if (view == null) {
-			return false;
-		}
-
-		if (isNdiEnabled() && resolveOutputView(ndiView) == view) {
-			return true;
-		}
-		if (isSpoutEnabled() && resolveOutputView(spoutView) == view) {
-			return true;
-		}
-		return isSyphonEnabled() && resolveOutputView(syphonView) == view;
-	}
-
-	/**
-	 * Checks whether at least one external output is active.
-	 *
-	 * @return {@code true} when NDI, Spout, or Syphon is enabled
-	 */
-	public boolean isActive() {
-		return isNdiEnabled() || isSpoutEnabled() || isSyphonEnabled();
-	}
-
-	/** Stops and releases every output owned by this manager. */
-	public void stopOutput() {
-		shutdownOutputs();
-	}
-
-	/** Compatibility wrapper for the bounded NDI worker wait. */
-	static boolean waitForWorker(Thread worker, long timeoutMillis) {
-		return NdiOutputBackend.waitForWorker(worker, timeoutMillis);
-	}
-
-	/** Compatibility wrapper for packed NDI line-stride calculation. */
-	static int ndiLineStride(int width) {
-		return NdiOutputBackend.lineStride(width);
-	}
-
-	/** Compatibility wrapper for Processing ARGB to packed RGBA conversion. */
-	static void writeArgbAsRgba(int[] argbPixels, int pixelCount, ByteBuffer rgbaBuffer) {
-		NdiOutputBackend.writeArgbAsRgba(argbPixels, pixelCount, rgbaBuffer);
-	}
-
-	/** Finds the most specific message in a nested backend failure. */
-	static String rootCauseMessage(Throwable error) {
-		Throwable root = error;
-		while (root.getCause() != null && root.getCause() != root) {
-			root = root.getCause();
-		}
-
-		String message = root.getMessage();
-		if (message == null || message.trim().isEmpty()) {
-			return root.getClass().getSimpleName();
-		}
-		return root.getClass().getSimpleName() + ": " + message;
-	}
-
-	int ndiFrameRateNumerator() {
-		return ndiBackend.frameRateNumerator();
-	}
-
-	int ndiFrameRateDenominator() {
-		return ndiBackend.frameRateDenominator();
-	}
+	/** @return whether at least one external transport is enabled */
+	boolean isActive();
 }

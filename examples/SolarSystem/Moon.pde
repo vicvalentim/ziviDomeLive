@@ -240,10 +240,10 @@ public class Moon implements CelestialBody {
     if (orbitShapeUniform == null) return;
     float baseScale  = pxPerAU();
     float orbitScale = baseScale * bodyScale;
-    PVector focusPx  = centralBody.getPositionAU().copy().mult(baseScale);
+    PVector focus = centralBody.getPositionAU();
 
     pg.pushMatrix();
-        pg.translate(focusPx.x, focusPx.y, focusPx.z);
+        pg.translate(focus.x * baseScale, focus.y * baseScale, focus.z * baseScale);
         pg.scale(orbitScale);
         pg.shape(orbitShapeUniform);
     pg.popMatrix();
@@ -257,26 +257,18 @@ public class Moon implements CelestialBody {
                         int renderingMode,
                         ShapeManager shapeManager) {
 
-        // 1) recalcule radiusPx relativo ao pai
-        applyScalingFactors();
-        // agora this.radiusPx == parent.getRadiusPx() * (this.radiusAU / parent.getRadiusAU())
-
-        // 2) escalas físicas
+        // 1) escalas físicas
         float baseScale  = pxPerAU();            // UA → px
         float orbitScale = baseScale * bodyScale; // amplificação unificada
 
-        // 3) foco fixo em px (planeta-pai)
-        PVector focusPx = centralBody.getPositionAU().copy().mult(baseScale);
-
-        // 4) deslocamento da lua em UA → px já ampliado
-        PVector relAU  = PVector.sub(positionAU, centralBody.getPositionAU());
-        PVector offset = relAU.mult(orbitScale);
-
-        // 5) posição final
-        PVector posPx  = PVector.add(focusPx, offset);
+        // 2) posição final em px, sem criar vetores temporários por face.
+        PVector focus = centralBody.getPositionAU();
+        float positionX = focus.x * baseScale + (positionAU.x - focus.x) * orbitScale;
+        float positionY = focus.y * baseScale + (positionAU.y - focus.y) * orbitScale;
+        float positionZ = focus.z * baseScale + (positionAU.z - focus.z) * orbitScale;
 
         pg.pushMatrix();
-        pg.translate(posPx.x, posPx.y, posPx.z);
+        pg.translate(positionX, positionY, positionZ);
         pg.rotateZ(alignWithAxis ? 0f : (float) argumentOfPeriapsisRad);
 
         // 6) usa o radiusPx já calculado
@@ -301,7 +293,7 @@ public class Moon implements CelestialBody {
         if (showLabel) {
         pg.fill(255);
         pg.textAlign(PConstants.CENTER, PConstants.BOTTOM);
-        pg.text(name, posPx.x, posPx.y - (radiusPx + 5), posPx.z);
+        pg.text(name, positionX, positionY - (radiusPx + 5), positionZ);
         }
     }
 

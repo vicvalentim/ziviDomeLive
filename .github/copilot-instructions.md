@@ -11,8 +11,14 @@ architecture. The public facade is `ziviDomeLive`; `ViewType` and `RenderMode` a
 public enums. The Processing-facing Scene contract remains intentionally small while spherical
 rendering uses native `GL_TEXTURE_CUBE_MAP` capture and `samplerCube` projection shaders.
 
-Documentation is behind the implementation. Do not infer the 2.0 public contract from docs
-without checking source, lifecycle tests, compatibility tests, and executable examples.
+The 2.0 public API freeze is implemented and documented. Source, lifecycle tests, compatibility
+tests, and executable examples remain authoritative whenever documentation drifts.
+
+Public API sources stay in the root package and the deliberate `manager`, `performance`,
+`render`, and `render/camera` subpackages. Engine sources are physically categorized below
+`_internal/{output,performance,render,runtime,scene,support,ui}` while retaining the root Java
+package for package-private collaboration. No `_internal` top-level type may become public or
+appear in an artist-facing signature.
 
 ## Rendering Domains
 
@@ -61,7 +67,8 @@ The floating domemaster may add a spherical requirement while the global mode is
 - `Scene.update()` runs once before rendering; spherical capture may render the same state multiple times.
 - `Scene.sceneRender(PGraphicsOpenGL)` receives a target whose draw lifecycle is already open.
 - A scene must never call `beginDraw()` or `endDraw()`.
-- Keyboard, mouse, and ControlP5 events are forwarded automatically and must not be forwarded again by the sketch.
+- Processing key/mouse events are routed automatically to named actions and the active Scene's raw callbacks; sketches must not forward them again.
+- `ziviDomeLive.controlEvent(ControlEvent)` adapts the built-in ControlP5 panel only. It is not forwarded to Scene, and the removed `Scene.controlEvent(...)` must not be restored.
 - Scene activation ownership uses instance identity; do not mix `equals()` registration with identity-scoped services.
 
 ## Services and Processing Input
@@ -111,7 +118,11 @@ NDI is the GPU-to-CPU boundary. Preserve:
 - bounded shutdown with deferred native cleanup if a send remains blocked;
 - explicit retry after initialization or worker failure.
 
-The NDI worker is the intentional exception to the general `ThreadManager` rule because it owns a bounded native sender lifecycle. Other background work uses `ThreadManager`.
+Scene background work goes through activation-owned `SceneTaskGroup` instances backed by the
+package-private, process-wide `SharedTaskExecutor`. The API is callback-based and must not expose
+the executor or `Future` objects. The dedicated NDI sender worker is an output-specific exception
+because it owns a bounded native sender lifecycle. Do not restore the removed public
+`ThreadManager`.
 
 ## Lifecycle
 
@@ -123,8 +134,9 @@ camera smoothing.
 
 `pause()` records active publications and shuts outputs down. `resume()` attempts to restore
 them. `dispose()` is terminal and idempotently releases owned outputs, controls, scene
-activations, renderers, splash resources, and callbacks. It must not shut down the process-wide
-shared `ThreadManager` merely because one facade instance is disposed.
+activations, renderers, splash resources, and callbacks. It closes each activation task group but
+does not shut down the process-wide `SharedTaskExecutor` merely because one facade instance is
+disposed.
 
 ## OpenGL Error 1282
 
@@ -144,7 +156,7 @@ Do not reintroduce nested scene draw ownership, texture-bound `glReadPixels`, PB
 - When broader work is genuinely required, isolate and justify it explicitly instead of
   allowing scope to grow implicitly inside an otherwise small fix.
 - Use `LogManager.getLogger()` for library logging.
-- Use `ThreadManager` for shared background tasks.
+- Use `SceneServices.tasks()` for artist-submitted background work and `SharedTaskExecutor` only inside the runtime.
 - Keep shader paths under `data/shaders/`; Gradle packages `shaders/` there.
 - Keep changes scoped to the current 2.0 native cubemap architecture.
 - Do not reintroduce `PGraphicsOpenGL[]` spherical capture, six-texture projection fallbacks, or placeholder `future`/`v2` packages.
@@ -156,7 +168,11 @@ Do not reintroduce nested scene draw ownership, texture-bound `glReadPixels`, PB
 ./gradlew clean qualificationTests
 ./gradlew build -x test
 ./gradlew buildReleaseArtifacts
-mkdocs build --strict
+python3 tools/validate_documentation.py --root . \
+  --package release/ziviDomeLive.zip --release-dir release
+python3 -m mkdocs build --strict
+./gradlew attachJavadocsToSite --console=plain
+python3 tools/validate_documentation.py --root . --site-dir site
 processing-java --sketch=examples/SolarSystem \
   --output=/tmp/zividomelive-solarsystem-build --force --build
 ```
