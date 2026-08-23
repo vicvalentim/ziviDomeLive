@@ -17,8 +17,16 @@ class BourkeSphereScene implements Scene {
   private final int LONGITUDE_SEGMENTS = 180;
   private final float ROTATION_PERIOD_SECONDS = 60f;
   private final int DEFAULT_PLAYBACK_FPS = 60;
+  private final float[] latitudeSines = new float[LATITUDE_SEGMENTS + 1];
+  private final float[] latitudeCosines = new float[LATITUDE_SEGMENTS + 1];
+  private final float[] latitudeTextureV = new float[LATITUDE_SEGMENTS + 1];
+  private final float[] longitudeSines = new float[LONGITUDE_SEGMENTS + 1];
+  private final float[] longitudeCosines = new float[LONGITUDE_SEGMENTS + 1];
+  private final float[] longitudeTextureU = new float[LONGITUDE_SEGMENTS + 1];
 
   private final ziviDomeLive dome;
+  private SceneServices services;
+  private PApplet applet;
   private PImage pattern;
   private int loadedPatternIndex = -1;
   private float patternRotation;
@@ -26,14 +34,21 @@ class BourkeSphereScene implements Scene {
   private boolean rotating;
   private int rotationFrame;
   private int playbackFrameRate = DEFAULT_PLAYBACK_FPS;
-  private long rotationStartMillis;
+  private double rotationStartSeconds;
 
   BourkeSphereScene(ziviDomeLive dome) {
     this.dome = dome;
   }
 
   @Override
+  public void configure(SceneServices services) {
+    this.services = services;
+    this.applet = services.applet();
+  }
+
+  @Override
   public void setupScene() {
+    buildSphereLookupTables();
     loadPatternForCurrentResolution();
     println(
       "[CalibrationTool] Bourke sphere center=(0, 0, 0); diameter="
@@ -46,10 +61,10 @@ class BourkeSphereScene implements Scene {
 
     if (rotating) {
       int frameCount = framesPerRevolution();
-      long elapsedMillis = Math.max(
-        0L, (long) dome.getPApplet().millis() - rotationStartMillis);
+      double elapsedSeconds = Math.max(
+        0.0, services.frameClock().getElapsedSeconds() - rotationStartSeconds);
       int nextFrame = (int) (
-        (elapsedMillis * playbackFrameRate / 1000L) % frameCount);
+        (elapsedSeconds * playbackFrameRate) % frameCount);
       if (nextFrame != rotationFrame) {
         rotationFrame = nextFrame;
         patternRotation = wrapAngle(
@@ -71,18 +86,11 @@ class BourkeSphereScene implements Scene {
     pg.rotateZ(patternRotation);
 
     for (int latitude = 0; latitude < LATITUDE_SEGMENTS; latitude++) {
-      float v0 = latitude / (float) LATITUDE_SEGMENTS;
-      float v1 = (latitude + 1f) / LATITUDE_SEGMENTS;
-      float latitude0 = HALF_PI - PI * v0;
-      float latitude1 = HALF_PI - PI * v1;
-
       pg.beginShape(TRIANGLE_STRIP);
       pg.texture(pattern);
       for (int longitude = 0; longitude <= LONGITUDE_SEGMENTS; longitude++) {
-        float u = longitude / (float) LONGITUDE_SEGMENTS;
-        float sphericalLongitude = -PI + TWO_PI * u;
-        sphereVertex(pg, latitude0, sphericalLongitude, u, v0);
-        sphereVertex(pg, latitude1, sphericalLongitude, u, v1);
+        sphereVertex(pg, latitude, longitude);
+        sphereVertex(pg, latitude + 1, longitude);
       }
       pg.endShape();
     }
@@ -148,13 +156,13 @@ class BourkeSphereScene implements Scene {
     boolean outputEnabled = dome.getOutputManager().isActive();
     int referenceResolution = outputEnabled
       ? dome.getOutputResolution()
-      : max(1, min(dome.getPApplet().width, dome.getPApplet().height));
+      : max(1, min(applet.width, applet.height));
     int patternIndex = closestPatternIndex(referenceResolution);
     if (pattern != null && patternIndex == loadedPatternIndex) {
       return;
     }
 
-    PImage candidate = dome.getPApplet().loadImage(IMAGE_FILES[patternIndex]);
+    PImage candidate = services.assets().loadImage(IMAGE_FILES[patternIndex]);
     if (candidate == null
       || candidate.width != IMAGE_WIDTHS[patternIndex]
       || candidate.height != IMAGE_HEIGHTS[patternIndex]) {
@@ -168,7 +176,7 @@ class BourkeSphereScene implements Scene {
     loadedPatternIndex = patternIndex;
     String source = outputEnabled
       ? "output " + referenceResolution + "px"
-      : "window " + dome.getPApplet().width + "x" + dome.getPApplet().height;
+      : "window " + applet.width + "x" + applet.height;
     println(
       "[CalibrationTool] Paul Bourke v14 pattern: "
       + IMAGE_WIDTHS[patternIndex] + "x" + IMAGE_HEIGHTS[patternIndex]
@@ -196,7 +204,7 @@ class BourkeSphereScene implements Scene {
     rotating = true;
     rotationOrigin = patternRotation;
     rotationFrame = 0;
-    rotationStartMillis = dome.getPApplet().millis();
+    rotationStartSeconds = services.frameClock().getElapsedSeconds();
   }
 
   private void pauseRotation() {
@@ -212,22 +220,48 @@ class BourkeSphereScene implements Scene {
       + " frames/revolution, 60 s/revolution.");
   }
 
-  private void sphereVertex(
-    PGraphicsOpenGL pg,
-    float latitude,
-    float longitude,
-    float u,
-    float v) {
-    float equatorialRadius = cos(latitude);
-    float x = SPHERE_CENTER_X + SPHERE_RADIUS * equatorialRadius * cos(longitude);
-    float y = SPHERE_CENTER_Y + SPHERE_RADIUS * equatorialRadius * sin(longitude);
-    float z = SPHERE_CENTER_Z + SPHERE_RADIUS * sin(latitude);
-    pg.vertex(x, y, z, u, v);
+  private void buildSphereLookupTables() {
+    for (int latitude = 0; latitude <= LATITUDE_SEGMENTS; latitude++) {
+      float v = latitude / (float) LATITUDE_SEGMENTS;
+      float angle = HALF_PI - PI * v;
+      latitudeSines[latitude] = sin(angle);
+      latitudeCosines[latitude] = cos(angle);
+      latitudeTextureV[latitude] = v;
+    }
+    for (int longitude = 0; longitude <= LONGITUDE_SEGMENTS; longitude++) {
+      float u = longitude / (float) LONGITUDE_SEGMENTS;
+      float angle = -PI + TWO_PI * u;
+      longitudeSines[longitude] = sin(angle);
+      longitudeCosines[longitude] = cos(angle);
+      longitudeTextureU[longitude] = u;
+    }
+  }
+
+  private void sphereVertex(PGraphicsOpenGL pg, int latitude, int longitude) {
+    float equatorialRadius = latitudeCosines[latitude];
+    float x = SPHERE_CENTER_X
+      + SPHERE_RADIUS * equatorialRadius * longitudeCosines[longitude];
+    float y = SPHERE_CENTER_Y
+      + SPHERE_RADIUS * equatorialRadius * longitudeSines[longitude];
+    float z = SPHERE_CENTER_Z + SPHERE_RADIUS * latitudeSines[latitude];
+    pg.vertex(
+      x,
+      y,
+      z,
+      longitudeTextureU[longitude],
+      latitudeTextureV[latitude]);
   }
 
   private float wrapAngle(float angle) {
     float wrapped = angle % TWO_PI;
     return wrapped < 0f ? wrapped + TWO_PI : wrapped;
+  }
+
+  @Override
+  public void dispose() {
+    pattern = null;
+    applet = null;
+    services = null;
   }
 
   @Override

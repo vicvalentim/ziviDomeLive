@@ -5,8 +5,6 @@ import spout.*;
 
 ziviDomeLive ziviDome;
 SceneManager sceneManager;
-PImage realEnvironment;
-PImage calibrationEnvironment;
 
 void settings() {
   pixelDensity(1);
@@ -19,8 +17,7 @@ void setup() {
   ziviDome.setup();
   ziviDome.setRenderMode(RenderMode.FULL);
   sceneManager = new SceneManager();
-  sceneManager.registerScene(new InfiniteBackgroundScene(
-    ziviDome, realEnvironment, calibrationEnvironment));
+  sceneManager.registerScene(new InfiniteBackgroundScene(ziviDome));
   ziviDome.setSceneManager(sceneManager);
 }
 

@@ -1,6 +1,5 @@
 // ConfigLoader.pde
 
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -10,7 +9,6 @@ class ConfigLoader {
   private final PApplet pApplet;
   private final SceneAssets assets;
   private PImage skyTexture;
-  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final HashMap<String,String> textureByName = new HashMap<>();
 
   private double sunRadiusAU = 1.0;
@@ -35,16 +33,11 @@ class ConfigLoader {
 
   /** (Re)carrega todo o JSON para as quatro variáveis */
   void reloadJson() {
-    lock.writeLock().lock();
-    try {
-      this.solarCfg    = pApplet.loadJSONObject("solar2.json");
-      this.jsonSun     = requireJSONObject(solarCfg, "sun");
-      this.sunMassSolar = requireDouble    (jsonSun, "massSolar");
-      this.jsonPlanets = requireJSONArray (solarCfg, "planets");
-      this.jsonMoons   = requireJSONArray (solarCfg, "moons");
-    } finally {
-      lock.writeLock().unlock();
-    }
+    this.solarCfg    = pApplet.loadJSONObject("solar2.json");
+    this.jsonSun     = requireJSONObject(solarCfg, "sun");
+    this.sunMassSolar = requireDouble    (jsonSun, "massSolar");
+    this.jsonPlanets = requireJSONArray (solarCfg, "planets");
+    this.jsonMoons   = requireJSONArray (solarCfg, "moons");
   }
 
   /**
@@ -76,41 +69,36 @@ class ConfigLoader {
   // Carrega o Sol
   // ─────────────────────────────────────────────────────────────────
   Sun loadSun() {
-    lock.readLock().lock();
     try {
-      try {
-        // 1) lê do JSON
-        double massSolar    = requireDouble(jsonSun, "massSolar");
-        this.sunMassSolar   = massSolar;          // ← garantido aqui!
-        double radiusAU     = requireDouble(jsonSun, "radiusAU");
-        double rotPeriodDays= requireDouble(jsonSun, "rotationPeriodDays");
-        JSONArray cn        = requireJSONArray(jsonSun, "colorNorm");
-        int displayColor    = pApplet.color(
-          cn.getFloat(0)*255f,
-          cn.getFloat(1)*255f,
-          cn.getFloat(2)*255f
-        );
+      // 1) lê do JSON
+      double massSolar    = requireDouble(jsonSun, "massSolar");
+      this.sunMassSolar   = massSolar;          // ← garantido aqui!
+      double radiusAU     = requireDouble(jsonSun, "radiusAU");
+      double rotPeriodDays= requireDouble(jsonSun, "rotationPeriodDays");
+      JSONArray cn        = requireJSONArray(jsonSun, "colorNorm");
+      int displayColor    = pApplet.color(
+        cn.getFloat(0)*255f,
+        cn.getFloat(1)*255f,
+        cn.getFloat(2)*255f
+      );
 
-        this.sunRadiusAU = radiusAU;
-        float radiusPx   = sunRadiusPx();
-        PImage tex       = lookupTexture("sun");
+      this.sunRadiusAU = radiusAU;
+      float radiusPx   = sunRadiusPx();
+      PImage tex       = lookupTexture("sun");
 
-        return new Sun(
-          pApplet,
-          radiusPx,
-          massSolar,
-          radiusAU,
-          rotPeriodDays,
-          new PVector(0, 0, 0),
-          displayColor,
-          tex
-        );
-      } catch (Exception e) {
-        pApplet.println("[ConfigLoader] Erro ao carregar 'sun': " + e.getMessage());
-        return null;
-      }
-    } finally {
-      lock.readLock().unlock();
+      return new Sun(
+        pApplet,
+        radiusPx,
+        massSolar,
+        radiusAU,
+        rotPeriodDays,
+        new PVector(0, 0, 0),
+        displayColor,
+        tex
+      );
+    } catch (Exception e) {
+      pApplet.println("[ConfigLoader] Erro ao carregar 'sun': " + e.getMessage());
+      return null;
     }
   }
 
@@ -312,15 +300,10 @@ class ConfigLoader {
   }
 
   public ArrayList<Planet> loadConfiguration() {
-    lock.writeLock().lock();
-    try {
-      ArrayList<Planet> planets = loadPlanets();
-      loadMoons(planets);
-      skyTexture = assets.loadImage("textures/8k_stars_milky_way.jpg");
-      return planets;
-    } finally {
-      lock.writeLock().unlock();
-    }
+    ArrayList<Planet> planets = loadPlanets();
+    loadMoons(planets);
+    skyTexture = assets.loadImage("textures/8k_stars_milky_way.jpg");
+    return planets;
   }
 
   private Planet getPlanetByName(String name, List<Planet> planets) {
@@ -331,21 +314,11 @@ class ConfigLoader {
   }
 
   public PImage getSkyTexture() {
-    lock.readLock().lock();
-    try {
-      return skyTexture;
-    } finally {
-      lock.readLock().unlock();
-    }
+    return skyTexture;
   }
 
   public void dispose() {
-    lock.writeLock().lock();
-    try {
-      skyTexture = null;
-    } finally {
-      lock.writeLock().unlock();
-    }
+    skyTexture = null;
   }
 
   // ─────────────────────────────────────────────────────────────────

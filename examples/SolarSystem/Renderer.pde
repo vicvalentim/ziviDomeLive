@@ -41,10 +41,12 @@ class Renderer {
   public void drawLighting(PGraphicsOpenGL pg) {
     pg.ambientLight(35, 35, 35);
     if (sun != null) {
-      PVector sunPx = sun.getPositionAU().copy()
-                         .mult(pxPerAU());
+      float scale = pxPerAU();
+      PVector sunPosition = sun.getPositionAU();
       pg.pointLight(255, 255, 220,
-                    sunPx.x, sunPx.y, sunPx.z);
+                    sunPosition.x * scale,
+                    sunPosition.y * scale,
+                    sunPosition.z * scale);
     }
   }
 
@@ -86,10 +88,13 @@ class Renderer {
   public void drawPlanetOrbits(PGraphicsOpenGL pg) {
     if (planetOrbitShapesUniform == null) return;
     float scale = pxPerAU();
-    PVector sunPx = sun.getPositionAU().copy().mult(scale);
+    PVector sunPosition = sun.getPositionAU();
 
     pg.pushMatrix();
-      pg.translate(sunPx.x, sunPx.y, sunPx.z);
+      pg.translate(
+        sunPosition.x * scale,
+        sunPosition.y * scale,
+        sunPosition.z * scale);
       pg.scale(scale);
       for (PShape shp : planetOrbitShapesUniform) {
         pg.shape(shp);

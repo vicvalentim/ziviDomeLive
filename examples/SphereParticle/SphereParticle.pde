@@ -3,13 +3,8 @@ import controlP5.*;
 import codeanticode.syphon.*;
 import spout.*;
 
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.ArrayList;
-
 // Instâncias principais
 ziviDomeLive ziviDome;      // Instância da biblioteca ziviDomeLive
-
-ReentrantLock lock = new ReentrantLock();  // Lock para controle de acesso concorrente
 
 void settings() {
   pixelDensity(1);  // Library default policy

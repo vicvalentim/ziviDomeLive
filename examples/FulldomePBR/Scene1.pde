@@ -4,8 +4,9 @@
 // The library owns beginDraw()/endDraw(); this scene only draws content.
 // Camera navigation uses the native ziviDomeLive OrbitCamera service.
 class FulldomePbrScene implements Scene {
-  private final ziviDomeLive parent;
-  private final PApplet pApplet;
+  private SceneServices services;
+  private SceneCameraService camera;
+  private PApplet pApplet;
 
   private float time = 0f;
   private float orbitRadius = 840f;
@@ -40,18 +41,19 @@ class FulldomePbrScene implements Scene {
   private final float envIntensity = 1.15f;
   private final PMatrix3D viewMatrix = new PMatrix3D();
 
-  FulldomePbrScene(ziviDomeLive parent) {
-    this.parent = parent;
-    this.pApplet = parent.getPApplet();
-    // Configure the native scene camera.
-    parent.getSceneCamera().setDistanceLimits(-1200f, 1200f);
-    // Protect against the collapse point at distance 0 (keeps the sign, no crossing).
-    parent.getSceneCamera().setCollapseGuard(0f);
-    resetCamera();
+  public void configure(SceneServices services) {
+    this.services = services;
+    this.camera = services.camera();
+    this.pApplet = services.applet();
   }
 
   public void setupScene() {
-    parent.setSceneCameraInputEnabled(true);
+    // Configure the native scene camera.
+    camera.orbit().setDistanceLimits(-1200f, 1200f);
+    // Protect against the collapse point at distance 0 (keeps the sign, no crossing).
+    camera.orbit().setCollapseGuard(0f);
+    resetCamera();
+    camera.setInputEnabled(true);
     buildStarShell();
     buildPrimitives();
     loadPbrShader();
@@ -69,7 +71,7 @@ class FulldomePbrScene implements Scene {
 
     pg.pushMatrix();
     // Move through space using the native scene-space camera service.
-    parent.getSceneCamera().apply(pg);
+    camera.apply(pg);
 
     // Capture the view matrix (camera only, before world spin / object transforms)
     // so the PBR shader can transform world-space lights into eye space.
@@ -143,7 +145,13 @@ class FulldomePbrScene implements Scene {
   }
 
   public void dispose() {
-    parent.setSceneCameraInputEnabled(false);
+    pbr = null;
+    unitSphere = null;
+    unitBox = null;
+    unitCylinder = null;
+    camera = null;
+    pApplet = null;
+    services = null;
   }
 
   public String getName() {
@@ -153,7 +161,7 @@ class FulldomePbrScene implements Scene {
   private void resetCamera() {
     // Gentle downward tilt so the composition reads well on the dome.
     Quaternion q = Quaternion.fromAxisAngle(1, 0, 0, PI / 12);
-    parent.getSceneCamera().snapTo(0, 0, 0, q, initialDistance);
+    camera.orbit().snapTo(0, 0, 0, q, initialDistance);
   }
 
   // -------------------------------------------------------------------------
@@ -420,7 +428,7 @@ class FulldomePbrScene implements Scene {
 
   private void loadPbrShader() {
     try {
-      pbr = pApplet.loadShader("pbr.frag", "pbr.vert");
+      pbr = services.assets().loadShader("fulldome-pbr", "pbr.frag", "pbr.vert");
       usePbr = pbr != null;
       println("[FulldomePBR] PBR shader loaded: " + usePbr);
     } catch (Exception e) {

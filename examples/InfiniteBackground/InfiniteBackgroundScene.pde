@@ -1,28 +1,41 @@
 class InfiniteBackgroundScene implements Scene {
+  private final int BOX_COUNT = 10;
+  private final float BOX_ORBIT_RADIUS = 520f;
+  private final float[] boxX = new float[BOX_COUNT];
+  private final float[] boxY = new float[BOX_COUNT];
+  private final float[] boxZ = new float[BOX_COUNT];
+  private final float[] boxRotationX = new float[BOX_COUNT];
+  private final float[] boxRotationY = new float[BOX_COUNT];
   private final ziviDomeLive dome;
+  private SceneServices services;
+  private SceneEnvironmentService environment;
+  private PApplet applet;
   private PImage realEnvironment;
   private PImage calibrationEnvironment;
   private float t;
   private boolean calibrationSource = true;
 
-  InfiniteBackgroundScene(
-      ziviDomeLive dome,
-      PImage realEnvironment,
-      PImage calibrationEnvironment) {
+  InfiniteBackgroundScene(ziviDomeLive dome) {
     this.dome = dome;
-    this.realEnvironment = realEnvironment;
-    this.calibrationEnvironment = calibrationEnvironment;
+  }
+
+  public void configure(SceneServices services) {
+    this.services = services;
+    this.environment = services.environment();
+    this.applet = services.applet();
   }
 
   public void setupScene() {
-    String environmentPath = sketchPath("../SolarSystem/data/textures/8k_stars_milky_way.jpg");
-    realEnvironment = loadImage(environmentPath);
+    String environmentPath = applet.sketchPath(
+      "../SolarSystem/data/textures/8k_stars_milky_way.jpg");
+    realEnvironment = services.assets().loadImage(environmentPath);
     calibrationEnvironment = createCalibrationEnvironment(2048, 1024);
+      updateBoxTransforms();
       if (realEnvironment == null) {
         println("[InfiniteBackground] Could not load environment: " + environmentPath);
       }
-      dome.setEquirectangularBackground(calibrationEnvironment);
-      dome.setEnvironmentBackgroundIntensity(1.0);
+      environment.setEquirectangular(calibrationEnvironment);
+      environment.setIntensity(1.0f);
       
       println("[InfiniteBackground] Synthetic calibration Environment active.");
       println("[InfiniteBackground] Scene ready.");
@@ -35,6 +48,7 @@ class InfiniteBackgroundScene implements Scene {
 
   public void update() {
     t += 0.01;
+    updateBoxTransforms();
   }
 
   public void sceneRender(PGraphicsOpenGL pg) {
@@ -80,22 +94,26 @@ class InfiniteBackgroundScene implements Scene {
 
   private void drawOrbitingBoxes(PGraphicsOpenGL pg) {
     pg.lights();
-    int count = 10;
-    float radius = 520;
-    for (int i = 0; i < count; i++) {
-      float a = TWO_PI * i / count + t;
-      float x = cos(a) * radius;
-      float y = sin(a) * radius;
-      float z = sin(a * 2.0) * 180;
-
+    for (int i = 0; i < BOX_COUNT; i++) {
       pg.pushMatrix();
-        pg.translate(x, y, z);
-        pg.rotateX(t + i * 0.2);
-        pg.rotateY(t * 1.4 + i * 0.1);
+        pg.translate(boxX[i], boxY[i], boxZ[i]);
+        pg.rotateX(boxRotationX[i]);
+        pg.rotateY(boxRotationY[i]);
         pg.noStroke();
         pg.fill(80 + i * 15, 170, 255 - i * 12);
         pg.box(85);
       pg.popMatrix();
+    }
+  }
+
+  private void updateBoxTransforms() {
+    for (int i = 0; i < BOX_COUNT; i++) {
+      float angle = TWO_PI * i / BOX_COUNT + t;
+      boxX[i] = cos(angle) * BOX_ORBIT_RADIUS;
+      boxY[i] = sin(angle) * BOX_ORBIT_RADIUS;
+      boxZ[i] = sin(angle * 2f) * 180f;
+      boxRotationX[i] = t + i * 0.2f;
+      boxRotationY[i] = t * 1.4f + i * 0.1f;
     }
   }
 
@@ -111,21 +129,21 @@ class InfiniteBackgroundScene implements Scene {
         break;
       case 'v':
       case 'V':
-        dome.setEnvironmentBackgroundVisible(!dome.isEnvironmentBackgroundVisible());
-        println("[InfiniteBackground] visible=" + dome.isEnvironmentBackgroundVisible());
+        environment.setVisible(!environment.isVisible());
+        println("[InfiniteBackground] visible=" + environment.isVisible());
         break;
       case '[':
-        dome.setEnvironmentBackgroundYawOffset(dome.getEnvironmentBackgroundYawOffset() - 0.1);
+        environment.setYawOffset(environment.getYawOffset() - 0.1f);
         break;
       case ']':
-        dome.setEnvironmentBackgroundYawOffset(dome.getEnvironmentBackgroundYawOffset() + 0.1);
+        environment.setYawOffset(environment.getYawOffset() + 0.1f);
         break;
       case '-':
-        dome.setEnvironmentBackgroundIntensity(max(0, dome.getEnvironmentBackgroundIntensity() - 0.1));
+        environment.setIntensity(max(0f, environment.getIntensity() - 0.1f));
         break;
       case '+':
       case '=':
-        dome.setEnvironmentBackgroundIntensity(dome.getEnvironmentBackgroundIntensity() + 0.1);
+        environment.setIntensity(environment.getIntensity() + 0.1f);
         break;
       case 'p':
       case 'P':
@@ -154,7 +172,7 @@ class InfiniteBackgroundScene implements Scene {
       return;
     }
     calibrationSource = !calibrationSource;
-    dome.setEquirectangularBackground(
+    environment.setEquirectangular(
       calibrationSource ? calibrationEnvironment : realEnvironment);
     println("[InfiniteBackground] source=" + (calibrationSource ? "calibration" : "real"));
   }
@@ -164,6 +182,14 @@ class InfiniteBackgroundScene implements Scene {
 
   public String getName() {
     return "Infinite Background";
+  }
+
+  public void dispose() {
+    realEnvironment = null;
+    calibrationEnvironment = null;
+    environment = null;
+    applet = null;
+    services = null;
   }
 
   // Generated once during setup: this is a small diagnostic source, never a frame-loop readback.

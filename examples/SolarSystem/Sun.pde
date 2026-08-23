@@ -88,9 +88,7 @@ public class Sun implements CelestialBody {
 
     private void drawLabel(PGraphicsOpenGL pg) {
         pg.pushMatrix();
-            PVector lp = position.copy();
-            lp.y -= radiusPx * 1.2f;
-            pg.translate(lp.x, lp.y, lp.z);
+            pg.translate(position.x, position.y - radiusPx * 1.2f, position.z);
             pg.fill(255);
             pg.textSize(pApplet.max(10, radiusPx * 0.4f));
             pg.textAlign(PConstants.CENTER, PConstants.BOTTOM);

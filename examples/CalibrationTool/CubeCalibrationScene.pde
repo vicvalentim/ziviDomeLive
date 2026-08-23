@@ -4,20 +4,30 @@ class CubeCalibrationScene implements Scene {
   private final float ANNOTATION_BIAS = 2f;
   private final int ANNOTATION_TEXTURE_SIZE = 1024;
   private final int GRID_DIVISIONS = 24;
+  private final String[] FACE_AXES = {"+X", "-X", "+Y", "-Y", "+Z", "-Z"};
+  private final String[] FACE_DIRECTIONS = {
+    "RIGHT", "LEFT", "DOWN", "UP", "FRONT", "BACK"
+  };
+  private final int[] faceAccents = new int[6];
 
-  private final ziviDomeLive dome;
+  private SceneServices services;
+  private PApplet applet;
   private PShader calibrationShader;
   private PGraphicsOpenGL[] annotationMaps;
   private boolean shaderFailureReported;
 
-  CubeCalibrationScene(ziviDomeLive dome) {
-    this.dome = dome;
+  @Override
+  public void configure(SceneServices services) {
+    this.services = services;
+    this.applet = services.applet();
   }
 
   @Override
   public void setupScene() {
+    initializeFaceAccents();
     try {
-      calibrationShader = dome.getPApplet().loadShader(
+      calibrationShader = services.assets().loadShader(
+          "cube-calibration",
           "cube-calibration.frag",
           "cube-calibration.vert");
       createAnnotationMaps();
@@ -140,7 +150,7 @@ class CubeCalibrationScene implements Scene {
     disposeAnnotationMaps();
     annotationMaps = new PGraphicsOpenGL[6];
     for (int index = 0; index < annotationMaps.length; index++) {
-      PGraphicsOpenGL annotation = (PGraphicsOpenGL) dome.getPApplet().createGraphics(
+      PGraphicsOpenGL annotation = (PGraphicsOpenGL) applet.createGraphics(
           ANNOTATION_TEXTURE_SIZE,
           ANNOTATION_TEXTURE_SIZE,
           P3D);
@@ -168,24 +178,24 @@ class CubeCalibrationScene implements Scene {
   }
 
   private int faceAccent(int index) {
-    switch (index) {
-      case 0: return dome.getPApplet().color(235, 55, 55);
-      case 1: return dome.getPApplet().color(125, 20, 20);
-      case 2: return dome.getPApplet().color(45, 210, 80);
-      case 3: return dome.getPApplet().color(20, 115, 45);
-      case 4: return dome.getPApplet().color(60, 125, 245);
-      default: return dome.getPApplet().color(35, 45, 145);
-    }
+    return faceAccents[index];
+  }
+
+  private void initializeFaceAccents() {
+    faceAccents[0] = applet.color(235, 55, 55);
+    faceAccents[1] = applet.color(125, 20, 20);
+    faceAccents[2] = applet.color(45, 210, 80);
+    faceAccents[3] = applet.color(20, 115, 45);
+    faceAccents[4] = applet.color(60, 125, 245);
+    faceAccents[5] = applet.color(35, 45, 145);
   }
 
   private String faceAxis(int index) {
-    String[] axes = {"+X", "-X", "+Y", "-Y", "+Z", "-Z"};
-    return axes[index];
+    return FACE_AXES[index];
   }
 
   private String faceDirection(int index) {
-    String[] directions = {"RIGHT", "LEFT", "DOWN", "UP", "FRONT", "BACK"};
-    return directions[index];
+    return FACE_DIRECTIONS[index];
   }
 
   private void disposeAnnotationMaps() {
@@ -287,6 +297,9 @@ class CubeCalibrationScene implements Scene {
   @Override
   public void dispose() {
     disposeAnnotationMaps();
+    calibrationShader = null;
+    applet = null;
+    services = null;
   }
 
   @Override

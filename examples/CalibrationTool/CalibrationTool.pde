@@ -24,7 +24,7 @@ void setup() {
   ziviDome.setRenderMode(RenderMode.FULL);
 
   sceneManager = new SceneManager();
-  sceneManager.registerScene(new CubeCalibrationScene(ziviDome));
+  sceneManager.registerScene(new CubeCalibrationScene());
   sceneManager.registerScene(new BourkeSphereScene(ziviDome));
   ziviDome.setSceneManager(sceneManager);
 
