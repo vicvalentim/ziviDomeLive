@@ -163,6 +163,8 @@ plugins:
             Citation: Citação
             Research Software and JOSS Readiness: Software de Pesquisa e Prontidão JOSS
             Topics: Tópicos
+            About: Sobre
+            About ziviDomeLive: Sobre o ziviDomeLive
 
 markdown_extensions:
   - abbr
@@ -292,14 +294,16 @@ nav:
           - Version 1.5.0: release-notes/1.5.0.md
       - Known Issues: known-issues.md
       - Roadmap: roadmap.md
-      - Research Software and JOSS Readiness: research-software.md
       - Topics: tags.md
-      - Citation: citation.md
-      - Author: author.md
-      - License: license.md
   - Maintainer:
       - Processing Publication: qualification/processing-publication.md
       - Automated Qualification: qualification/automated-benchmarks.md
       - Benchmark Reporting: qualification/benchmark-reporting.md
       - Release Readiness 2.0: qualification/2.0-release-readiness.md
       - Release Readiness 1.5: qualification/1.5-release-readiness.md
+  - About:
+      - About ziviDomeLive: about.md
+      - Research Software and JOSS Readiness: research-software.md
+      - Citation: citation.md
+      - Author: author.md
+      - License: license.md

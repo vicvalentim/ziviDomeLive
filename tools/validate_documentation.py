@@ -516,6 +516,20 @@ def check_editorial_system(root,c):
         if token not in mk: c.error(f'Material editorial configuration missing: {token}')
     if 'navigation.instant' in mk:
         c.error('navigation.instant is incompatible with the configured mkdocs-static-i18n contextual language switcher')
+    about_nav = mk.rfind('  - About:')
+    maintainer_nav = mk.rfind('  - Maintainer:')
+    later_top_level = about_nav >= 0 and '\n  - ' in mk[about_nav + len('  - About:'):]
+    if about_nav < 0 or about_nav < maintainer_nav or later_top_level:
+        c.error('About must be the final top-level documentation section')
+    for token in (
+            '- About ziviDomeLive: about.md',
+            '- Research Software and JOSS Readiness: research-software.md',
+            '- Citation: citation.md', '- Author: author.md', '- License: license.md'):
+        if token not in mk[about_nav:]: c.error(f'About navigation entry missing: {token}')
+    for rel in ('docs/en/about.md', 'docs/pt/about.md'):
+        page = read(root/rel)
+        for token in ('research-software.md', 'citation.md', 'author.md', 'license.md'):
+            if token not in page: c.error(f'About landing page is missing {token}: {rel}')
     if 'exclude("**/_internal/**")' not in build:
         c.error('Javadocs do not exclude the current _internal source taxonomy')
     if 'tasks.register<Sync>("attachJavadocsToSite")' not in build:
