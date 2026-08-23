@@ -23,9 +23,11 @@ public final class ScenePorts {
 
     private static final Logger LOGGER = LogManager.getLogger();
     private static final int DEFAULT_INPUT_CAPACITY = 256;
+    private static final int DEFAULT_MAX_EVENTS_PER_FRAME = 32;
 
     private final RenderThreadQueue renderQueue;
     private final int inputCapacity;
+    private final int maxEventsPerFrame;
     private final Deque<Runnable> pendingInput = new ArrayDeque<>();
     private final List<AutoCloseable> adapters = new ArrayList<>();
     private final Map<Object, Boolean> connected = new IdentityHashMap<>();
@@ -35,15 +37,23 @@ public final class ScenePorts {
     private boolean closed;
 
     ScenePorts(RenderThreadQueue renderQueue) {
-        this(renderQueue, DEFAULT_INPUT_CAPACITY);
+        this(renderQueue, DEFAULT_INPUT_CAPACITY, DEFAULT_MAX_EVENTS_PER_FRAME);
     }
 
     ScenePorts(RenderThreadQueue renderQueue, int inputCapacity) {
+        this(renderQueue, inputCapacity, DEFAULT_MAX_EVENTS_PER_FRAME);
+    }
+
+    ScenePorts(RenderThreadQueue renderQueue, int inputCapacity, int maxEventsPerFrame) {
         this.renderQueue = Objects.requireNonNull(renderQueue, "renderQueue");
         if (inputCapacity < 1) {
             throw new IllegalArgumentException("Input capacity must be positive.");
         }
+        if (maxEventsPerFrame < 1) {
+            throw new IllegalArgumentException("Per-frame input budget must be positive.");
+        }
         this.inputCapacity = inputCapacity;
+        this.maxEventsPerFrame = maxEventsPerFrame;
     }
 
     /**
@@ -94,6 +104,11 @@ public final class ScenePorts {
         return droppedInputCount;
     }
 
+    /** @return number of input messages waiting for a future frame boundary */
+    public synchronized int getPendingInputCount() {
+        return pendingInput.size();
+    }
+
     int drain() {
         renderQueue.requireRenderThread();
         int limit;
@@ -101,7 +116,7 @@ public final class ScenePorts {
             if (!accepting || paused) {
                 return 0;
             }
-            limit = pendingInput.size();
+            limit = Math.min(pendingInput.size(), maxEventsPerFrame);
         }
         int handled = 0;
         while (handled < limit) {

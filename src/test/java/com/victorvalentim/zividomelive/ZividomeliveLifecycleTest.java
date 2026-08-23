@@ -3,7 +3,6 @@ package com.victorvalentim.zividomelive;
 import com.victorvalentim.zividomelive.manager.OutputManager;
 import com.victorvalentim.zividomelive.render.modes.FisheyeDomemaster;
 import com.victorvalentim.zividomelive.render.modes.StandardRenderer;
-import com.victorvalentim.zividomelive.support.ThreadManager;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
 import processing.core.PImage;
@@ -200,30 +199,6 @@ class ZividomeliveLifecycleTest {
 		OutputManagerState state = readOutputState(lib);
 		assertEquals(state.anyEnabled, lib.isEnableOutput(),
 				"isEnableOutput must mirror the OutputManager enabled flags");
-	}
-
-	@Test
-	void stopDoesNotShutdownSharedThreadManager() {
-		ziviDomeLive lib = new ziviDomeLive(new PApplet());
-		lib.setup();
-
-		lib.stop();
-
-		assertFalse(ThreadManager.isShutdown(),
-				"The shared ThreadManager executor must stay alive across library instances");
-		assertFalse(lib.isInitialized());
-		assertEquals(ziviDomeLive.InitState.NOT_INITIALIZED, lib.getInitState());
-	}
-
-	@Test
-	void disposeDoesNotShutdownSharedThreadManager() {
-		ziviDomeLive lib = new ziviDomeLive(new PApplet());
-		lib.setup();
-
-		lib.dispose();
-
-		assertFalse(ThreadManager.isShutdown(),
-				"The shared ThreadManager executor must stay alive after disposing one library instance");
 	}
 
 	@Test

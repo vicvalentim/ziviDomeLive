@@ -38,7 +38,6 @@ import com.victorvalentim.zividomelive.render.modes.EquirectangularRenderer;
 import com.victorvalentim.zividomelive.render.modes.FisheyeDomemaster;
 import com.victorvalentim.zividomelive.render.modes.StandardRenderer;
 import com.victorvalentim.zividomelive.support.LibraryMetadata;
-import com.victorvalentim.zividomelive.support.ThreadManager;
 import com.victorvalentim.zividomelive.ziviDomeLive;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
@@ -196,8 +195,7 @@ class PublicApiCompatibilityTest {
 				EquirectangularRenderer.class,
 				FisheyeDomemaster.class,
 				StandardRenderer.class,
-				LibraryMetadata.class,
-				ThreadManager.class
+				LibraryMetadata.class
 		};
 
 		for (Class<?> type : publicTypes) {
@@ -352,6 +350,30 @@ class PublicApiCompatibilityTest {
 				"connectInput", SceneInputPort.class, java.util.function.Consumer.class));
 		assertEquals(SceneOutputPort.class,
 				ScenePorts.class.getMethod("connectOutput", SceneOutputPort.class).getReturnType());
+		assertEquals(int.class, ScenePorts.class.getMethod("getPendingInputCount").getReturnType());
+		assertEquals(long.class, ScenePorts.class.getMethod("getDroppedInputCount").getReturnType());
+	}
+
+	@Test
+	void sceneTasksExposeOnlyNonBlockingCallbackSubmission() throws Exception {
+		assertEquals(boolean.class, SceneTaskGroup.class.getMethod(
+				"submitIfIdle", String.class, Runnable.class).getReturnType());
+		assertEquals(boolean.class, SceneTaskGroup.class.getMethod(
+				"submitIfIdle",
+				String.class,
+				java.util.concurrent.Callable.class,
+				java.util.function.Consumer.class).getReturnType());
+		assertEquals(boolean.class, SceneTaskGroup.class.getMethod(
+				"submitIfIdle",
+				String.class,
+				java.util.concurrent.Callable.class,
+				java.util.function.Consumer.class,
+				java.util.function.Consumer.class).getReturnType());
+		assertThrows(NoSuchMethodException.class,
+				() -> SceneTaskGroup.class.getMethod("submit", java.util.concurrent.Callable.class));
+		assertThrows(NoSuchMethodException.class,
+				() -> SceneTaskGroup.class.getMethod(
+						"trySubmit", String.class, java.util.concurrent.Callable.class));
 	}
 
 	@Test

@@ -56,6 +56,25 @@ class ScenePortsTest {
     }
 
     @Test
+    void inputProcessingIsBoundedPerFrameAndReportsPendingWork() {
+        ScenePorts ports = new ScenePorts(new RenderThreadQueue(), 16, 4);
+        FakeInputPort<Integer> input = new FakeInputPort<>();
+        List<Integer> received = new ArrayList<>();
+        ports.connectInput(input, received::add);
+
+        for (int value = 0; value < 10; value++) {
+            input.emit(value);
+        }
+
+        assertEquals(10, ports.getPendingInputCount());
+        assertEquals(4, ports.drain());
+        assertEquals(List.of(0, 1, 2, 3), received);
+        assertEquals(6, ports.getPendingInputCount());
+        assertEquals(4, ports.drain());
+        assertEquals(2, ports.getPendingInputCount());
+    }
+
+    @Test
     void stopRejectsOldInputAndOutputBeforeAdaptersAreClosed() {
         RenderThreadQueue renderQueue = new RenderThreadQueue();
         ScenePorts ports = new ScenePorts(renderQueue, 4);
