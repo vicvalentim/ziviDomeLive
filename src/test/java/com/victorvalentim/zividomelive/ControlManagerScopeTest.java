@@ -9,6 +9,8 @@ import processing.awt.PGraphicsJava2D;
 import processing.core.PApplet;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,6 +20,28 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ControlManagerScopeTest {
+	@Test
+	void internalControlsNeverRegisterAsProcessingKeyCallbacks() throws Exception {
+		CallbackTrackingApplet applet = new CallbackTrackingApplet();
+		PGraphicsJava2D graphics = new PGraphicsJava2D();
+		graphics.setParent(applet);
+		graphics.setSize(640, 640);
+		applet.g = graphics;
+		ziviDomeLive dome = new ziviDomeLive(applet);
+		setOutputManager(dome, createOutputManager(dome));
+		ControlManager controls = new ControlManager(applet, dome, 1024);
+		try {
+			assertTrue(applet.keyEventTargets.stream()
+					.allMatch(target -> Modifier.isPublic(target.getClass().getModifiers())),
+					"Processing reflection callbacks must be declared by public target types");
+			assertFalse(applet.keyEventTargets.stream()
+					.anyMatch(target -> target instanceof ControlManager
+							|| target.getClass().getEnclosingClass() == ControlManager.class));
+		} finally {
+			controls.dispose();
+			dome.dispose();
+		}
+	}
 
 	@Test
 	void scopedBuildersPreserveControlP5LayoutAndInitialSelections() throws Exception {
@@ -229,6 +253,18 @@ class ControlManagerScopeTest {
 		graphics.setSize(640, 640);
 		applet.g = graphics;
 		return applet;
+	}
+
+	private static final class CallbackTrackingApplet extends PApplet {
+		private final List<Object> keyEventTargets = new ArrayList<>();
+
+		@Override
+		public void registerMethod(String methodName, Object target) {
+			if ("keyEvent".equals(methodName)) {
+				keyEventTargets.add(target);
+			}
+			super.registerMethod(methodName, target);
+		}
 	}
 
 	private static float parentAngle(ziviDomeLive dome, String controlName) {

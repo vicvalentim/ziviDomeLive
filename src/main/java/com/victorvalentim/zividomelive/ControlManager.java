@@ -52,7 +52,6 @@ class ControlManager {
         cp5 = new ControlP5(p);
         controlP5KeyEventBridge = new ControlP5KeyEventBridge(cp5);
         p.unregisterMethod("keyEvent", cp5.getWindow());
-        p.registerMethod("keyEvent", this);
 
         addGlobalControls();
         addSphericalControls();
@@ -426,7 +425,7 @@ class ControlManager {
     }
 
     void makeEditable(Numberbox n) {
-        final NumberboxInput nin = new NumberboxInput(n, p);
+        final NumberboxInput nin = new NumberboxInput(n);
         numberboxInputs.add(nin);
         n.onClick(theEvent -> {
             nin.setActive(true);
@@ -481,27 +480,21 @@ class ControlManager {
      * Guards ControlP5 keyboard dispatch from platform key codes outside its
      * fixed 1024-entry key-state array.
      *
-     * <p>This method must remain public because Processing invokes registered
-     * methods reflectively.</p>
+     * <p>The public facade owns Processing reflection callbacks and delegates here directly.</p>
      *
      * @param event Processing key event
      */
-    public void keyEvent(KeyEvent event) {
+    void keyEvent(KeyEvent event) {
         controlP5KeyEventBridge.dispatch(event);
+        for (NumberboxInput input : numberboxInputs) {
+            input.keyEvent(event);
+        }
     }
 
     /**
      * Disposes of the ControlManager by releasing all resources and clearing the ControlP5 instance.
      */
     public void dispose() {
-        p.unregisterMethod("keyEvent", this);
-        for (NumberboxInput input : numberboxInputs) {
-            try {
-                p.unregisterMethod("keyEvent", input);
-            } catch (RuntimeException ignored) {
-                // Continue releasing the remaining controls.
-            }
-        }
         numberboxInputs.clear();
         cp5.removeListener(parentControlListener);
         cp5.dispose();
@@ -515,18 +508,14 @@ class ControlManager {
         String text = "";
         Numberbox n;
         boolean active;
-        PApplet p;
 
         /**
-         * Constructs a NumberboxInput with the specified Numberbox and PApplet.
+         * Creates an editor for the specified Numberbox.
          *
          * @param theNumberbox the Numberbox to be managed
-         * @param p the PApplet instance
          */
-        public NumberboxInput(Numberbox theNumberbox, PApplet p) {
+        NumberboxInput(Numberbox theNumberbox) {
             n = theNumberbox;
-            this.p = p;
-            p.registerMethod("keyEvent", this);
         }
 
         /**
@@ -535,7 +524,7 @@ class ControlManager {
          *
          * @param k the KeyEvent to be processed
          */
-        public void keyEvent(KeyEvent k) {
+        void keyEvent(KeyEvent k) {
             if (k.getAction() == KeyEvent.PRESS && active) {
                 if (k.getKey() == '\n') {
                     submit();

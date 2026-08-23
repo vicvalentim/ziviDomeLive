@@ -14,9 +14,8 @@ import java.util.Objects;
  * Linux dead keys/AltGr and some platform modifier events can report negative
  * or greater-than-1023 values and therefore crash that method.</p>
  *
- * <p>This object is deliberately not registered with Processing. Reflection
- * callbacks are received by the public {@link ControlManager}, which delegates
- * here directly.</p>
+ * <p>This object and its package-private owner are deliberately not registered with Processing.
+ * The public {@link ziviDomeLive} callback delegates here through the owner.</p>
  */
 final class ControlP5KeyEventBridge {
 

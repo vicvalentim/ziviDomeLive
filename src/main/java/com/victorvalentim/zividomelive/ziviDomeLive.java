@@ -1550,6 +1550,9 @@ public class ziviDomeLive {
 		if (disposed || paused) {
 			return;
 		}
+		if (controlManager != null) {
+			controlManager.keyEvent(event);
+		}
 		if (controlManager == null) {
 			Scene activeScene = getCurrentScene();
 			if (activeScene != null) {
