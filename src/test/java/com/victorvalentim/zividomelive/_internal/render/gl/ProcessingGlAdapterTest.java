@@ -36,6 +36,8 @@ class ProcessingGlAdapterTest {
 				() -> adapter.createGraphics(new PApplet(), 0, 1, PApplet.P2D));
 		assertThrows(IllegalArgumentException.class,
 				() -> adapter.createGraphics(new PApplet(), 1, 0, PApplet.P2D));
+		assertThrows(IllegalArgumentException.class,
+				() -> adapter.createGraphics(new PApplet(), 1, 1, PApplet.P2D, -1));
 	}
 
 	@Test

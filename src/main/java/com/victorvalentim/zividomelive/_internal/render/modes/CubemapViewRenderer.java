@@ -8,7 +8,7 @@ import processing.opengl.PShader;
 import java.util.logging.Logger;
 
 /**
- * The CubemapViewRenderer class handles the creation and rendering of cubemap views.
+ * Renders the stable cubemap cross layout with true equi-angular (EAC) coordinates per face.
  */
 class CubemapViewRenderer {
     private static final Logger LOGGER = LogManager.getLogger();
@@ -95,7 +95,7 @@ class CubemapViewRenderer {
     }
 
     /**
-     * Draws the cubemap layout from a native samplerCube cubemap.
+     * Draws the EAC cubemap cross from a native samplerCube cubemap.
      *
      * @param nativeCubemap native cubemap populated by {@code CubemapRenderer}
      */
@@ -127,6 +127,7 @@ class CubemapViewRenderer {
 
         cubemap.beginDraw();
         boolean cubemapBound = false;
+        boolean shaderTouched = false;
         try {
             cubemap.background(0, 0);
             samplerCubeShader.set("resolution", cubemap.width, cubemap.height);
@@ -134,6 +135,7 @@ class CubemapViewRenderer {
             samplerCubeShader.set("layoutFaces", CUBEMAP_LAYOUT_FACE_ORDER);
             samplerCubeShader.set("faceRotations", FACE_ROTATIONS);
             samplerCubeShader.set("faceInversions", FACE_INVERSIONS);
+            shaderTouched = true;
             cubemap.shader(samplerCubeShader);
             glAdapter.bindCubemapTextureScoped(
                     cubemap, nativeCubemap, CUBEMAP_TEXTURE_UNIT, cubemapBindingState);
@@ -145,7 +147,13 @@ class CubemapViewRenderer {
                     glAdapter.restoreCubemapTexture(cubemap, cubemapBindingState);
                 }
             } finally {
-                cubemap.endDraw();
+                try {
+                    if (shaderTouched) {
+                        cubemap.resetShader();
+                    }
+                } finally {
+                    cubemap.endDraw();
+                }
             }
         }
     }

@@ -101,14 +101,17 @@ class SplashScreen {
         }
         
         backgroundLayer.beginDraw();
-        backgroundLayer.clear();
-        for (int i = 0; i < p.height; i++) {
-            float inter = PApplet.map(i, 0, p.height, 0, 1);
-            int gradColor = p.lerpColor(p.color(0, 0, 20, opacity), p.color(0, 0, 60, opacity), inter);
-            backgroundLayer.stroke(gradColor);
-            backgroundLayer.line(0, i, p.width, i);
+        try {
+            backgroundLayer.clear();
+            for (int i = 0; i < p.height; i++) {
+                float inter = PApplet.map(i, 0, p.height, 0, 1);
+                int gradColor = p.lerpColor(p.color(0, 0, 20, opacity), p.color(0, 0, 60, opacity), inter);
+                backgroundLayer.stroke(gradColor);
+                backgroundLayer.line(0, i, p.width, i);
+            }
+        } finally {
+            backgroundLayer.endDraw();
         }
-        backgroundLayer.endDraw();
         backgroundNeedsUpdate = false;
     }
 
@@ -117,6 +120,14 @@ class SplashScreen {
      */
     private void renderAnimations() {
         animationLayer.beginDraw();
+        try {
+            renderAnimationContent();
+        } finally {
+            animationLayer.endDraw();
+        }
+    }
+
+    private void renderAnimationContent() {
         animationLayer.clear();
         animationLayer.noFill();
         animationLayer.strokeWeight(2.0f);
@@ -127,33 +138,38 @@ class SplashScreen {
 
         // Render central sphere
         animationLayer.pushMatrix();
-        animationLayer.translate(p.width / 2f, p.height / 2f, 0);
-        animationLayer.rotateX(rotationAngleX);
-        animationLayer.rotateY(rotationAngleY);
-        animationLayer.rotateZ(rotationAngleZ);
+        try {
+            animationLayer.translate(p.width / 2f, p.height / 2f, 0);
+            animationLayer.rotateX(rotationAngleX);
+            animationLayer.rotateY(rotationAngleY);
+            animationLayer.rotateZ(rotationAngleZ);
 
-        int rings = 16;
-        int segments = 32;
-        float radius = 120;
+            int rings = 16;
+            int segments = 32;
+            float radius = 120;
 
-        for (int i = 0; i < rings; i++) {
-            float theta = PApplet.map(i, 0, rings - 1, -PConstants.PI / 2, PConstants.PI / 2);
-            float ringRadius = PApplet.cos(theta) * radius;
-            float y = PApplet.sin(theta) * radius;
+            for (int i = 0; i < rings; i++) {
+                float theta = PApplet.map(i, 0, rings - 1, -PConstants.PI / 2, PConstants.PI / 2);
+                float ringRadius = PApplet.cos(theta) * radius;
+                float y = PApplet.sin(theta) * radius;
 
-            int lineColor = p.lerpColor(p.color(100, 200, 255, 50), p.color(0, 120, 255, 150), PApplet.abs(PApplet.sin(p.millis() * 0.0005f + i)));
-            animationLayer.stroke(lineColor, opacity);
+                int lineColor = p.lerpColor(p.color(100, 200, 255, 50), p.color(0, 120, 255, 150), PApplet.abs(PApplet.sin(p.millis() * 0.0005f + i)));
+                animationLayer.stroke(lineColor, opacity);
 
-            animationLayer.beginShape();
-            for (int j = 0; j <= segments; j++) {
-                float phi = PApplet.map(j, 0, segments, 0, PConstants.TWO_PI);
-                float x = PApplet.cos(phi) * ringRadius;
-                float z = PApplet.sin(phi) * ringRadius;
-                animationLayer.vertex(x, y, z);
+                animationLayer.beginShape();
+                for (int j = 0; j <= segments; j++) {
+                    float phi = PApplet.map(j, 0, segments, 0, PConstants.TWO_PI);
+                    float x = PApplet.cos(phi) * ringRadius;
+                    float z = PApplet.sin(phi) * ringRadius;
+                    animationLayer.vertex(x, y, z);
+                }
+                animationLayer.endShape();
             }
-            animationLayer.endShape();
+        } finally {
+            animationLayer.popMatrix();
         }
-        animationLayer.popMatrix();
+
+        float radius = 120;
 
         // Render cubes orbiting around the sphere
         for (int i = 0; i < numCubes; i++) {
@@ -168,26 +184,30 @@ class SplashScreen {
             float z = orbitRadius * PApplet.sin(angle) + zOffset;
 
             animationLayer.pushMatrix();
-            animationLayer.translate(p.width / 2f, p.height / 2f, 0);
-            animationLayer.rotateZ(rotationOffset);
-            animationLayer.translate(0, y - p.height / 2f, z);
+            try {
+                animationLayer.translate(p.width / 2f, p.height / 2f, 0);
+                animationLayer.rotateZ(rotationOffset);
+                animationLayer.translate(0, y - p.height / 2f, z);
 
-            animationLayer.stroke(0, 200, 255, opacity);
-            animationLayer.strokeWeight(1.5f);
-            animationLayer.box(8);
-            animationLayer.popMatrix();
+                animationLayer.stroke(0, 200, 255, opacity);
+                animationLayer.strokeWeight(1.5f);
+                animationLayer.box(8);
+            } finally {
+                animationLayer.popMatrix();
+            }
         }
 
         // Render "ziviDomeLive" text below the sphere
         animationLayer.pushMatrix();
-        animationLayer.translate(p.width / 2f, p.height / 2f + radius + 40);
-        animationLayer.textAlign(PConstants.CENTER, PConstants.CENTER);
-        animationLayer.textSize(32);
-        animationLayer.fill(255, opacity);
-        animationLayer.text("ziviDomeLive", 0, 0);
-        animationLayer.popMatrix();
-
-        animationLayer.endDraw();
+        try {
+            animationLayer.translate(p.width / 2f, p.height / 2f + radius + 40);
+            animationLayer.textAlign(PConstants.CENTER, PConstants.CENTER);
+            animationLayer.textSize(32);
+            animationLayer.fill(255, opacity);
+            animationLayer.text("ziviDomeLive", 0, 0);
+        } finally {
+            animationLayer.popMatrix();
+        }
     }
 
     /**

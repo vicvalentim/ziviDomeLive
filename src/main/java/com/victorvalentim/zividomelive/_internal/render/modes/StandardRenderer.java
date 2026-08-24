@@ -33,6 +33,7 @@ import processing.opengl.PGraphicsOpenGL;
  * <em>not</em> call those methods.</p>
  */
 class StandardRenderer {
+    private static final int SHAPE_ANTIALIAS_SAMPLES = 4;
     private PGraphicsOpenGL standardView;
     private Scene currentScene;
     private MouseControlledCamera cam;
@@ -66,6 +67,10 @@ class StandardRenderer {
      * Far clipping plane multiplier. {@code far = distance * farFactor}.
      */
     private float farFactor = 2000f;
+
+    private static final float MIN_NEAR_FACTOR = 0.0001f;
+    private static final float DEFAULT_NEAR_FACTOR = 0.001f;
+    private static final float MAX_CLIP_FACTOR = 1_000_000f;
 
     /**
      * Constructs a {@code StandardRenderer}.
@@ -146,7 +151,8 @@ class StandardRenderer {
         if (standardView != null) {
             glAdapter.dispose(standardView);
         }
-        standardView = glAdapter.createGraphics(parent, width, height, PApplet.P3D);
+        standardView = glAdapter.createGraphics(
+                parent, width, height, PApplet.P3D, SHAPE_ANTIALIAS_SAMPLES);
     }
 
     // -------------------------------------------------------------------------
@@ -186,8 +192,19 @@ class StandardRenderer {
      * @param farFactor  multiplier for far plane  (default {@code 2000})
      */
     public void setClipFactors(float nearFactor, float farFactor) {
-        this.nearFactor = Math.max(0.0001f, nearFactor);
-        this.farFactor  = Math.max(nearFactor * 10f, farFactor);
+        float effectiveNear = Float.isFinite(nearFactor)
+                ? Math.max(MIN_NEAR_FACTOR, Math.min(MAX_CLIP_FACTOR / 10f, nearFactor))
+                : DEFAULT_NEAR_FACTOR;
+        float minimumFar = effectiveNear * 10f;
+        float effectiveFar = Float.isFinite(farFactor)
+                ? Math.max(minimumFar, Math.min(MAX_CLIP_FACTOR, farFactor))
+                : minimumFar;
+        this.nearFactor = effectiveNear;
+        this.farFactor = effectiveFar;
+    }
+
+    static int shapeAntialiasSamples() {
+        return SHAPE_ANTIALIAS_SAMPLES;
     }
 
     /**
@@ -221,33 +238,35 @@ class StandardRenderer {
         getCam().update(parent);
 
         standardView.beginDraw();
-        float dist   = getCam().getDistance();
-        float near   = Math.max(0.1f, dist * nearFactor);
-        float far    = dist * farFactor;
-        float aspect = (float) standardView.width / standardView.height;
-        standardView.perspective(VERTICAL_FOV_RADIANS, aspect, near, far);
-        standardView.background(skyR, skyG, skyB);
-        getCam().apply(standardView);
+        try {
+            float dist   = getCam().getDistance();
+            float near   = Math.max(0.1f, dist * nearFactor);
+            float far    = dist * farFactor;
+            float aspect = (float) standardView.width / standardView.height;
+            standardView.perspective(VERTICAL_FOV_RADIANS, aspect, near, far);
+            standardView.background(skyR, skyG, skyB);
+            getCam().apply(standardView);
 
-        if (currentScene != null) {
-            PerformanceMonitor monitor = PerformanceMonitor.current();
-            boolean profiling = monitor != null && monitor.isEnabled();
-            long started = profiling ? monitor.start() : 0L;
-            try {
-                currentScene.sceneRender(standardView);
-            } finally {
-                if (profiling) monitor.record(PerformanceMetric.SCENE_RENDER, started);
+            if (currentScene != null) {
+                PerformanceMonitor monitor = PerformanceMonitor.current();
+                boolean profiling = monitor != null && monitor.isEnabled();
+                long started = profiling ? monitor.start() : 0L;
+                try {
+                    currentScene.sceneRender(standardView);
+                } finally {
+                    if (profiling) monitor.record(PerformanceMetric.SCENE_RENDER, started);
+                }
             }
-        }
 
-        if (environmentBackgroundRenderer.isVisible()
-                && environmentBackgroundRenderer.hasEquirectangularImage()) {
-            standardView.noLights();
-            standardView.flush();
-            environmentBackgroundRenderer.renderStandard(standardView);
+            if (environmentBackgroundRenderer.isVisible()
+                    && environmentBackgroundRenderer.hasEquirectangularImage()) {
+                standardView.noLights();
+                standardView.flush();
+                environmentBackgroundRenderer.renderStandard(standardView);
+            }
+        } finally {
+            standardView.endDraw();
         }
-
-        standardView.endDraw();
     }
 
     /**

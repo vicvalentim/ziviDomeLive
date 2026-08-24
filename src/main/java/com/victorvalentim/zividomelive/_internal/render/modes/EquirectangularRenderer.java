@@ -83,10 +83,12 @@ class EquirectangularRenderer {
         PGraphicsOpenGL target = (PGraphicsOpenGL) equirectangular;
         target.beginDraw();
         boolean cubemapBound = false;
+        boolean shaderTouched = false;
         try {
             target.background(0, 0);
             samplerCubeShader.set("resolution", target.width, target.height);
             samplerCubeShader.set("cubemap", CUBEMAP_TEXTURE_UNIT);
+            shaderTouched = true;
             target.shader(samplerCubeShader);
             glAdapter.bindCubemapTextureScoped(
                     target, nativeCubemap, CUBEMAP_TEXTURE_UNIT, cubemapBindingState);
@@ -98,7 +100,13 @@ class EquirectangularRenderer {
                     glAdapter.restoreCubemapTexture(target, cubemapBindingState);
                 }
             } finally {
-                target.endDraw();
+                try {
+                    if (shaderTouched) {
+                        target.resetShader();
+                    }
+                } finally {
+                    target.endDraw();
+                }
             }
         }
     }

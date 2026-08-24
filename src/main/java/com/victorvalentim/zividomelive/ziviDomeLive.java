@@ -309,7 +309,7 @@ public class ziviDomeLive {
 
 		try {
 			setupHints();
-			LOGGER.info("Texture hints configured.");
+			LOGGER.info("Renderer hints configured.");
 		} catch (Exception e) {
 			LOGGER.severe("Error configuring texture hints: " + e.getMessage());
 		}
@@ -374,9 +374,10 @@ public class ziviDomeLive {
 	}
 
 	/**
-	 * Configures texture hints for the rendering environment.
+	 * Configures renderer hints for the rendering environment.
 	 */
 	void setupHints() {
+		p.hint(DISABLE_OPENGL_ERRORS);
 		p.textureMode(NORMAL);
 		p.textureWrap(REPEAT);
 		p.hint(ENABLE_TEXTURE_MIPMAPS);
@@ -1170,13 +1171,11 @@ public class ziviDomeLive {
 			long started = profiling ? performanceMonitor.start() : 0L;
 			LOGGER.info("Applying output resolution change: " + pendingOutputResolution + "px.");
 			try {
+				MouseControlledCamera preservedStandardCamera = standardCameraForGraphicsReset();
 				releaseOutputGraphicsResources();
 				outputResolution = pendingOutputResolution;
 				initializeOutputRenderers();
-				// Restore camera sharing after the new output StandardRenderer is created.
-				if (standardRendererPreview != null && standardRenderer != null) {
-					standardRendererPreview.setCam(standardRenderer.getCam());
-				}
+				restoreStandardCameraAfterGraphicsReset(preservedStandardCamera);
 				if (outputManager != null) {
 					outputManager.notifyResolutionChanged(outputResolution);
 				}
@@ -1185,6 +1184,23 @@ public class ziviDomeLive {
 			} finally {
 				if (profiling) performanceMonitor.record(PerformanceMetric.GRAPHICS_RESET, started);
 			}
+		}
+	}
+
+	MouseControlledCamera standardCameraForGraphicsReset() {
+		if (standardRenderer != null) {
+			return standardRenderer.getCam();
+		}
+		return standardRendererPreview != null ? standardRendererPreview.getCam() : null;
+	}
+
+	void restoreStandardCameraAfterGraphicsReset(MouseControlledCamera preservedCamera) {
+		if (preservedCamera == null || standardRenderer == null) {
+			return;
+		}
+		standardRenderer.setCam(preservedCamera);
+		if (standardRendererPreview != null) {
+			standardRendererPreview.setCam(preservedCamera);
 		}
 	}
 
@@ -1281,12 +1297,16 @@ public class ziviDomeLive {
 
 		boolean profiling = performanceMonitor.isEnabled();
 		long started = profiling ? performanceMonitor.start() : 0L;
+		boolean drawing = false;
 		try {
 			destination.beginDraw();
+			drawing = true;
 			destination.clear();
 			destination.image(source, 0, 0, destination.width, destination.height);
-			destination.endDraw();
 		} finally {
+			if (drawing) {
+				destination.endDraw();
+			}
 			if (profiling) performanceMonitor.record(PerformanceMetric.PREVIEW_COPY, started);
 		}
 	}

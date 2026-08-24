@@ -43,6 +43,16 @@ class ZividomeliveLifecycleTest {
 	}
 
 	@Test
+	void setupHintsDisablesProcessingOpenGlConsoleReporter() {
+		HintTrackingApplet applet = new HintTrackingApplet();
+		ziviDomeLive lib = new ziviDomeLive(applet);
+
+		lib.setupHints();
+
+		assertTrue(applet.hints.contains(processing.core.PConstants.DISABLE_OPENGL_ERRORS));
+	}
+
+	@Test
 	void setupIsIdempotent() {
 		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		lib.setup();
@@ -255,6 +265,29 @@ class ZividomeliveLifecycleTest {
 				"Facade must query SceneManager instead of a cached scene reference");
 		assertSame(second, readRendererScene(outputRenderer));
 		assertSame(second, readRendererScene(previewRenderer));
+	}
+
+	@Test
+	void outputResolutionResetPolicyPreservesStandardCameraIdentityAndPose() throws Exception {
+		PApplet applet = new PApplet();
+		ziviDomeLive lib = new ziviDomeLive(applet);
+		StandardRenderer previousOutput = new StandardRenderer(applet, 0, 0, null);
+		StandardRenderer preview = new StandardRenderer(applet, 0, 0, null);
+		MouseControlledCamera camera = previousOutput.getCam();
+		camera.setDistance(4321.0f);
+		preview.setCam(camera);
+		setField(lib, "standardRenderer", previousOutput);
+		setField(lib, "standardRendererPreview", preview);
+
+		lib.resetGraphics(2048);
+		MouseControlledCamera preserved = lib.standardCameraForGraphicsReset();
+		StandardRenderer replacementOutput = new StandardRenderer(applet, 0, 0, null);
+		setField(lib, "standardRenderer", replacementOutput);
+		lib.restoreStandardCameraAfterGraphicsReset(preserved);
+
+		assertSame(camera, replacementOutput.getCam());
+		assertSame(camera, preview.getCam());
+		assertEquals(4321.0f, replacementOutput.getCam().getDistance(), 0.0001f);
 	}
 
 	@Test
@@ -590,6 +623,23 @@ class ZividomeliveLifecycleTest {
 		public void frameRate(float fps) {
 			frameRateCalls++;
 			lastFrameRate = fps;
+		}
+	}
+
+	private static class HintTrackingApplet extends StubApplet {
+		private final Set<Integer> hints = new LinkedHashSet<>();
+
+		@Override
+		public void hint(int which) {
+			hints.add(which);
+		}
+
+		@Override
+		public void textureMode(int mode) {
+		}
+
+		@Override
+		public void textureWrap(int wrap) {
 		}
 	}
 

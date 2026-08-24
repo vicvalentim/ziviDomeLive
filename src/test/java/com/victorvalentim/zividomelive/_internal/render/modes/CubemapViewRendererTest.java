@@ -55,7 +55,7 @@ class CubemapViewRendererTest {
 	}
 
 	@Test
-	void nativeSkyboxPreservesOriginalCubemapViewMatrix() {
+	void eacCrossPreservesQualifiedFaceSlotsAndOrientation() {
 		assertArrayEquals(new int[]{3, 1, 4, 0, 5, 2}, CubemapViewRenderer.cubemapLayoutFaceOrder());
 		assertArrayEquals(new int[]{2, 2, 2, 2, 2, 2}, CubemapViewRenderer.faceRotations());
 		assertArrayEquals(new int[]{1, 1, 1, 1, 1, 1}, CubemapViewRenderer.faceInversions());

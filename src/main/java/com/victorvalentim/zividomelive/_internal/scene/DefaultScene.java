@@ -89,8 +89,9 @@ class DefaultScene implements Scene {
 	 */
 	private void renderRotatingSphere(PGraphicsOpenGL pg) {
 		pg.pushMatrix();
-		pg.noFill();
-		pg.strokeWeight(2.0f);
+		try {
+			pg.noFill();
+			pg.strokeWeight(2.0f);
 
 		float rotationAngleX = PApplet.radians(p.millis() * 0.02f);
 		float rotationAngleY = PApplet.radians(p.millis() * 0.015f);
@@ -122,7 +123,9 @@ class DefaultScene implements Scene {
 			pg.endShape();
 		}
 
-		pg.popMatrix();
+		} finally {
+			pg.popMatrix();
+		}
 	}
 
 	/**
@@ -142,14 +145,16 @@ class DefaultScene implements Scene {
 			float z = orbitRadius * PApplet.sin(angle) + zOffset;
 
 			pg.pushMatrix();
-			pg.rotateZ(rotationOffset);
-			pg.translate(0, y, z);
-			pg.stroke(0, 200, 255, opacity);
-			pg.strokeWeight(1.5f);
-			pg.noFill();
-			pg.box(8);
-
-			pg.popMatrix();
+			try {
+				pg.rotateZ(rotationOffset);
+				pg.translate(0, y, z);
+				pg.stroke(0, 200, 255, opacity);
+				pg.strokeWeight(1.5f);
+				pg.noFill();
+				pg.box(8);
+			} finally {
+				pg.popMatrix();
+			}
 		}
 	}
 
@@ -160,11 +165,14 @@ class DefaultScene implements Scene {
 	 */
 	private void renderText(PGraphicsOpenGL pg) {
 		pg.pushMatrix();
-		pg.translate(0, 200, 0);
-		pg.textAlign(PConstants.CENTER, PConstants.CENTER);
-		pg.fill(255, opacity);
-		pg.textSize(32);
-		pg.text("ziviDomeLive", 0, 0);
-		pg.popMatrix();
+		try {
+			pg.translate(0, 200, 0);
+			pg.textAlign(PConstants.CENTER, PConstants.CENTER);
+			pg.fill(255, opacity);
+			pg.textSize(32);
+			pg.text("ziviDomeLive", 0, 0);
+		} finally {
+			pg.popMatrix();
+		}
 	}
 }

@@ -533,23 +533,48 @@ final class ProcessingGlAdapter {
 	 * @return allocated OpenGL graphics target
 	 */
 	public PGraphicsOpenGL createGraphics(PApplet parent, int width, int height, String renderer) {
+		return createGraphics(parent, width, height, renderer, 0);
+	}
+
+	/**
+	 * Creates a Processing OpenGL graphics target with an explicit multisample request.
+	 *
+	 * @param parent Processing parent used to allocate the target
+	 * @param width target width in pixels
+	 * @param height target height in pixels
+	 * @param renderer Processing renderer constant
+	 * @param antialiasSamples requested samples, or zero to retain Processing's default
+	 * @return allocated OpenGL graphics target
+	 */
+	public PGraphicsOpenGL createGraphics(
+			PApplet parent,
+			int width,
+			int height,
+			String renderer,
+			int antialiasSamples) {
 		if (parent == null) {
 			throw new IllegalArgumentException("Processing parent must not be null.");
 		}
 		if (width <= 0 || height <= 0) {
 			throw new IllegalArgumentException("Graphics dimensions must be positive.");
 		}
+		if (antialiasSamples < 0) {
+			throw new IllegalArgumentException("Antialias sample count must not be negative.");
+		}
 		PGraphics graphics = parent.createGraphics(width, height, renderer);
 		if (!(graphics instanceof PGraphicsOpenGL openGlGraphics)) {
 			throw new IllegalStateException("Processing did not create an OpenGL graphics target.");
 		}
 		/*
-                 * Processing's generic OpenGL reporter is intentionally disabled
-                 * for library-owned off-screen targets. ziviDomeLive performs
-                 * contextual GL diagnostics through LogManager when required.
-                 */
-                openGlGraphics.hint(PConstants.DISABLE_OPENGL_ERRORS);
-                return openGlGraphics;
+		 * Processing's generic OpenGL reporter is intentionally disabled
+		 * for library-owned off-screen targets. ziviDomeLive performs
+		 * contextual GL diagnostics through LogManager when required.
+		 */
+		openGlGraphics.hint(PConstants.DISABLE_OPENGL_ERRORS);
+		if (antialiasSamples > 0) {
+			openGlGraphics.smooth(antialiasSamples);
+		}
+		return openGlGraphics;
 	}
 
 	/**
