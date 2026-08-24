@@ -1,12 +1,19 @@
 #version 410
-// PBR vertex shader for the FulldomePBR example (Processing P3D).
-// Feeds eye-space position/normal to the fragment stage. Lighting is computed
-// in eye space; the view matrix (uViewMatrix) is supplied by the scene so that
-// world-space lights are transformed consistently across all cubemap faces.
+#define PROCESSING_LIGHT_SHADER
 
-uniform mat4 transform;      // projection * modelview (Processing built-in)
-uniform mat4 modelview;      // camera * model (Processing built-in)
-uniform mat3 normalMatrix;   // inverse-transpose of modelview (built-in)
+// FulldomePBR vertex shader.
+//
+// Declaring PROCESSING_LIGHT_SHADER opts this shader into Processing's
+// native LIGHT contract. Processing owns the current modelview/normal
+// matrices and the light state for the active PGraphicsOpenGL.
+//
+// During ziviDomeLive cubemap capture the active camera changes for each
+// face. Processing therefore supplies the matching eye-space matrices and
+// matching eye-space light state automatically.
+
+uniform mat4 transformMatrix;
+uniform mat4 modelviewMatrix;
+uniform mat3 normalMatrix;
 
 in vec4 position;
 in vec4 color;
@@ -17,9 +24,13 @@ out vec3 vEyeNormal;
 out vec4 vColor;
 
 void main() {
-  gl_Position = transform * position;
-  vEyePos = (modelview * position).xyz;
-  vEyeNormal = normalize(normalMatrix * normal);
+  gl_Position = transformMatrix * position;
+
+  vEyePos =
+      (modelviewMatrix * position).xyz;
+
+  vEyeNormal =
+      normalize(normalMatrix * normal);
+
   vColor = color;
 }
-

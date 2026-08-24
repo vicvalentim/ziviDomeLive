@@ -1,26 +1,33 @@
 #version 410
-// PBR fragment shader (metallic-roughness, Cook-Torrance GGX) for FulldomePBR.
-// Lighting is evaluated in eye space. World-space lights are transformed to eye
-// space with uViewMatrix (the scene's camera/view matrix), which keeps lighting
-// consistent across every projection and cubemap face.
+#define PROCESSING_LIGHT_SHADER
+
+// FulldomePBR fragment shader.
 //
-// Enrichment: hemispheric image-based ambient (sky/ground) with a roughness-aware
-// Fresnel ambient specular term, plus ACES filmic tone mapping.
+// Metallic-roughness Cook-Torrance GGX using Processing's native light
+// uniforms. No custom face/view matrix is reconstructed by the example.
+//
+// Processing supplies lightPosition/lightNormal in the eye space of the
+// currently active PGraphicsOpenGL camera. This is essential for cubemap
+// capture: all six faces observe the same physical light rig while their
+// individual view orientations remain projection concerns.
 
-
-#define MAX_LIGHTS 4
+#define MAX_LIGHTS 8
 #define PI 3.14159265359
 
-uniform mat4 uViewMatrix;
-uniform int  uLightCount;
-uniform vec3 uLightPos[MAX_LIGHTS];
-uniform vec3 uLightColor[MAX_LIGHTS];
-uniform float uLightType[MAX_LIGHTS];
-uniform vec3 uAmbient;
+// ---------------------------------------------------------------------
+// Processing native LIGHT shader uniforms.
+// These names are populated automatically by PShader/PGraphicsOpenGL.
+// ---------------------------------------------------------------------
 
-uniform vec3 uSkyColor;
-uniform vec3 uGroundColor;
-uniform float uEnvIntensity;
+uniform int  lightCount;
+uniform vec4 lightPosition[MAX_LIGHTS];
+uniform vec3 lightNormal[MAX_LIGHTS];
+uniform vec3 lightAmbient[MAX_LIGHTS];
+uniform vec3 lightDiffuse[MAX_LIGHTS];
+
+// ---------------------------------------------------------------------
+// PBR material uniforms controlled by this example.
+// ---------------------------------------------------------------------
 
 uniform vec3  uAlbedo;
 uniform float uMetallic;
@@ -34,39 +41,76 @@ in vec4 vColor;
 out vec4 fragColor;
 
 
-float distributionGGX(vec3 N, vec3 H, float rough) {
-  float a = rough * rough;
+// ---------------------------------------------------------------------
+// Cook-Torrance / GGX
+// ---------------------------------------------------------------------
+
+float distributionGGX(
+    vec3 N,
+    vec3 H,
+    float roughness) {
+
+  float a = roughness * roughness;
   float a2 = a * a;
-  float NdotH = max(dot(N, H), 0.0);
-  float d = (NdotH * NdotH * (a2 - 1.0) + 1.0);
-  return a2 / (PI * d * d + 1e-5);
+
+  float NdotH =
+      max(dot(N, H), 0.0);
+
+  float denominatorTerm =
+      NdotH * NdotH * (a2 - 1.0) + 1.0;
+
+  return a2 /
+      (PI
+       * denominatorTerm
+       * denominatorTerm
+       + 1e-5);
 }
 
-float geometrySchlickGGX(float NdotV, float rough) {
-  float r = rough + 1.0;
+
+float geometrySchlickGGX(
+    float NdotV,
+    float roughness) {
+
+  float r = roughness + 1.0;
   float k = (r * r) / 8.0;
-  return NdotV / (NdotV * (1.0 - k) + k);
+
+  return NdotV /
+      (NdotV * (1.0 - k) + k);
 }
 
-float geometrySmith(vec3 N, vec3 V, vec3 L, float rough) {
-  float NdotV = max(dot(N, V), 0.0);
-  float NdotL = max(dot(N, L), 0.0);
-  return geometrySchlickGGX(NdotV, rough) * geometrySchlickGGX(NdotL, rough);
+
+float geometrySmith(
+    vec3 N,
+    vec3 V,
+    vec3 L,
+    float roughness) {
+
+  float NdotV =
+      max(dot(N, V), 0.0);
+
+  float NdotL =
+      max(dot(N, L), 0.0);
+
+  return
+      geometrySchlickGGX(NdotV, roughness)
+      * geometrySchlickGGX(NdotL, roughness);
 }
 
-vec3 fresnelSchlick(float cosTheta, vec3 F0) {
-  return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+
+vec3 fresnelSchlick(
+    float cosTheta,
+    vec3 F0) {
+
+  return
+      F0
+      + (1.0 - F0)
+      * pow(1.0 - cosTheta, 5.0);
 }
 
-vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float rough) {
-  vec3 Fr = max(vec3(1.0 - rough), F0);
-  return F0 + (Fr - F0) * pow(1.0 - cosTheta, 5.0);
-}
 
-vec3 sampleEnv(vec3 dir, vec3 upEye) {
-  float h = clamp(dot(dir, upEye) * 0.5 + 0.5, 0.0, 1.0);
-  return mix(uGroundColor, uSkyColor, h);
-}
+// ---------------------------------------------------------------------
+// Display transform
+// ---------------------------------------------------------------------
 
 vec3 acesFilmic(vec3 x) {
   const float a = 2.51;
@@ -74,70 +118,200 @@ vec3 acesFilmic(vec3 x) {
   const float c = 2.43;
   const float d = 0.59;
   const float e = 0.14;
-  return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+
+  return clamp(
+      (x * (a * x + b))
+      / (x * (c * x + d) + e),
+      0.0,
+      1.0);
 }
+
+
+// ---------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------
 
 void main() {
-  vec3 N = normalize(vEyeNormal);
-  vec3 V = normalize(-vEyePos);
-  vec3 albedo = uAlbedo * vColor.rgb;
-  float metallic = clamp(uMetallic, 0.0, 1.0);
-  float roughness = clamp(uRoughness, 0.04, 1.0);
-  float NdotV = max(dot(N, V), 0.0);
 
-  vec3 F0 = mix(vec3(0.04), albedo, metallic);
-  vec3 Lo = vec3(0.0);
+  vec3 N =
+      normalize(vEyeNormal);
+
+  /*
+   * In eye space the camera origin is always (0,0,0).
+   *
+   * This remains true for every cubemap face. The face changes orientation,
+   * but its eye-space camera origin does not become a new physical observer.
+   */
+  vec3 V =
+      normalize(-vEyePos);
+
+  vec3 albedo =
+      uAlbedo * vColor.rgb;
+
+  float metallic =
+      clamp(uMetallic, 0.0, 1.0);
+
+  float roughness =
+      clamp(uRoughness, 0.04, 1.0);
+
+  float NdotV =
+      max(dot(N, V), 0.0);
+
+  vec3 F0 =
+      mix(
+          vec3(0.04),
+          albedo,
+          metallic);
+
+  vec3 directLighting =
+      vec3(0.0);
+
+  vec3 ambientLighting =
+      vec3(0.0);
 
   for (int i = 0; i < MAX_LIGHTS; i++) {
-    if (i >= uLightCount) break;
 
-    vec3 radiance = uLightColor[i];
-    vec3 L;
-
-    if (uLightType[i] < 0.5) {
-      vec3 dEye = (uViewMatrix * vec4(uLightPos[i], 0.0)).xyz;
-      L = normalize(-dEye);
-    } else {
-      vec3 pEye = (uViewMatrix * vec4(uLightPos[i], 1.0)).xyz;
-      vec3 diff = pEye - vEyePos;
-      float dist = length(diff);
-      L = diff / max(dist, 1e-4);
-      float atten = 1.0 / (1.0 + 1.5e-6 * dist * dist);
-      radiance *= atten;
+    if (i >= lightCount) {
+      break;
     }
 
-    vec3 H = normalize(V + L);
-    float NdotL = max(dot(N, L), 0.0);
+    /*
+     * Processing uses lightPosition.w to distinguish directional lights:
+     *
+     *   w < 1 : directional
+     *   w = 1 : positional
+     *
+     * Directional orientation lives in lightNormal.
+     */
+    bool directional =
+        lightPosition[i].w < 1.0;
 
-    float NDF = distributionGGX(N, H, roughness);
-    float G = geometrySmith(N, V, L, roughness);
-    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+    /*
+     * Ambient lights contribute through lightAmbient. Other native
+     * lights normally carry zero ambient contribution.
+     */
+    ambientLighting +=
+        lightAmbient[i] * albedo;
 
-    vec3 numerator = NDF * G * F;
-    float denominator = 4.0 * NdotV * NdotL + 1e-4;
-    vec3 specular = numerator / denominator;
+    vec3 radiance =
+        lightDiffuse[i];
 
-    vec3 kd = (vec3(1.0) - F) * (1.0 - metallic);
-    Lo += (kd * albedo / PI + specular) * radiance * NdotL;
+    // Skip pure ambient entries.
+    if (!any(greaterThan(radiance, vec3(0.0)))) {
+      continue;
+    }
+
+    vec3 L;
+
+    if (directional) {
+
+      /*
+       * lightNormal is already transformed by Processing into the eye
+       * space of the current cubemap face.
+       */
+      L =
+          normalize(-lightNormal[i]);
+
+    } else {
+
+      /*
+       * lightPosition.xyz is likewise already in current eye space.
+       */
+      vec3 toLight =
+          lightPosition[i].xyz - vEyePos;
+
+      float distanceToLight =
+          length(toLight);
+
+      L =
+          toLight
+          / max(distanceToLight, 1e-4);
+
+      /*
+       * Preserve the previous FulldomePBR point-light response.
+       * Only coordinate transformation ownership changes.
+       */
+      float attenuation =
+          1.0
+          / (1.0
+             + 1.5e-6
+             * distanceToLight
+             * distanceToLight);
+
+      radiance *= attenuation;
+    }
+
+    float NdotL =
+        max(dot(N, L), 0.0);
+
+    if (NdotL <= 0.0) {
+      continue;
+    }
+
+    vec3 H =
+        normalize(V + L);
+
+    float NDF =
+        distributionGGX(
+            N,
+            H,
+            roughness);
+
+    float G =
+        geometrySmith(
+            N,
+            V,
+            L,
+            roughness);
+
+    vec3 F =
+        fresnelSchlick(
+            max(dot(H, V), 0.0),
+            F0);
+
+    vec3 numerator =
+        NDF * G * F;
+
+    float denominator =
+        4.0
+        * NdotV
+        * NdotL
+        + 1e-4;
+
+    vec3 specular =
+        numerator / denominator;
+
+    vec3 kd =
+        (vec3(1.0) - F)
+        * (1.0 - metallic);
+
+    directLighting +=
+        (kd * albedo / PI + specular)
+        * radiance
+        * NdotL;
   }
 
-  // Hemispheric IBL ambient (diffuse + roughness-aware specular).
-  vec3 upEye = normalize((uViewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
-  vec3 irradiance = sampleEnv(N, upEye);
-  vec3 R = reflect(-V, N);
-  vec3 prefiltered = sampleEnv(R, upEye);
+  /*
+   * Neutral native ambient replaces the previous hemispheric pseudo-IBL.
+   *
+   * The previous sky/ground term depended on a manually reconstructed
+   * face view matrix, which made it unsuitable as a cubemap-independent
+   * lighting contract.
+   */
+  vec3 color =
+      ambientLighting
+      + directLighting
+      + uEmissive;
 
-  vec3 Fr = fresnelSchlickRoughness(NdotV, F0, roughness);
-  vec3 kdA = (vec3(1.0) - Fr) * (1.0 - metallic);
-  vec3 ambientDiffuse = kdA * irradiance * albedo;
-  vec3 ambientSpecular = prefiltered * Fr;
-  vec3 ambient = uEnvIntensity * (ambientDiffuse + ambientSpecular) + uAmbient * albedo;
+  color =
+      acesFilmic(
+          max(color, vec3(0.0)));
 
-  vec3 color = ambient + Lo + uEmissive;
+  color =
+      pow(
+          color,
+          vec3(1.0 / 2.2));
 
-  color = acesFilmic(color);
-  color = pow(color, vec3(1.0 / 2.2));
-
-  fragColor = vec4(color, 1.0);
+  fragColor =
+      vec4(color, 1.0);
 }
-

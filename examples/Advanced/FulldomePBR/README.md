@@ -14,15 +14,20 @@ A fulldome-oriented Processing sketch that demonstrates:
 ## PBR pipeline
 
 - `data/pbr.vert` / `data/pbr.frag` implement a metallic-roughness workflow with
-  GGX distribution, Smith geometry and Schlick-Fresnel, plus hemispheric IBL
-  (sky/ground) and ACES filmic tone mapping with gamma correction. The shaders
-  target **GLSL `#version 410`** (OpenGL 4.1 core), matching the library's OpenGL
-  context.
-- Lighting is evaluated in **eye space**. World-space lights are transformed with a
-  `uViewMatrix` uniform (the scene's camera/view matrix, captured each frame), which
-  keeps lighting consistent across every projection and all six cubemap faces.
-- Four analytic lights are used (two directional + two point). Each object sets its
-  material via uniforms: `uAlbedo`, `uMetallic`, `uRoughness`, `uEmissive`.
+  GGX distribution, Smith geometry, Schlick-Fresnel and ACES filmic tone mapping
+  with gamma correction. The shaders target **GLSL `#version 410`** (OpenGL 4.1
+  core), matching the library's OpenGL context.
+- The shaders opt into Processing's native **LIGHT shader contract** with
+  `PROCESSING_LIGHT_SHADER`. Light positions and directions are supplied through
+  Processing's built-in `lightPosition`, `lightNormal`, `lightAmbient` and
+  `lightDiffuse` uniforms.
+- The scene installs its light rig through `PGraphicsOpenGL` before the animated
+  world transform. Processing therefore transforms the same physical lights into
+  the correct eye space for each cubemap face; the example does not reconstruct or
+  upload a custom face/view matrix.
+- Four analytic lights are used (two directional + two point), plus a neutral
+  ambient light. Each object sets its PBR material through `uAlbedo`,
+  `uMetallic`, `uRoughness` and `uEmissive`.
 - If the shader fails to load, the sketch automatically falls back to Processing's
   fixed-function lighting so it always runs.
 

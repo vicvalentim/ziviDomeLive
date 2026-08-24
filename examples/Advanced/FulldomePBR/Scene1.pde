@@ -29,17 +29,14 @@ class FulldomePbrScene implements Scene {
   private PShape unitBox;           // size 1, centered
   private PShape unitCylinder;      // radius 1, height 1, axis Y, centered
 
-  // Light data (scene/world space) uploaded to the shader each frame.
-  private final int lightCount = 4;
-  private final float[] lightPos = new float[lightCount * 3];
-  private final float[] lightColor = new float[lightCount * 3];
-  private final float[] lightType = new float[lightCount]; // 0 = directional, 1 = point
-  private final float[] ambient = { 22f / 255f, 22f / 255f, 30f / 255f };
-  // Hemispheric IBL environment (enrichment): sky above, ground below.
-  private final float[] skyColor = { 0.12f, 0.20f, 0.42f };
-  private final float[] groundColor = { 0.06f, 0.02f, 0.10f };
-  private final float envIntensity = 1.15f;
-  private final PMatrix3D viewMatrix = new PMatrix3D();
+  /*
+   * Lighting is installed through PGraphicsOpenGL itself.
+   *
+   * Processing transforms light positions/directions into the eye space of
+   * the currently active render camera. During cubemap capture this means
+   * every face receives a coherent native light state without the example
+   * reconstructing the face view matrix manually.
+   */
 
   public void configure(SceneServices services) {
     this.services = services;
@@ -57,7 +54,6 @@ class FulldomePbrScene implements Scene {
     buildStarShell();
     buildPrimitives();
     loadPbrShader();
-    configureLights();
   }
 
   public void update() {
@@ -70,17 +66,30 @@ class FulldomePbrScene implements Scene {
     pg.noStroke();
 
     pg.pushMatrix();
+
     // Move through space using the native scene-space camera service.
     camera.apply(pg);
 
-    // Capture the view matrix (camera only, before world spin / object transforms)
-    // so the PBR shader can transform world-space lights into eye space.
-    pg.getMatrix(viewMatrix);
+    /*
+     * Install the lights BEFORE the animated world transform.
+     *
+     * At this point Processing's modelview contains:
+     *
+     *     cubemap face camera * scene camera
+     *
+     * Processing therefore transforms the scene-space lights into the
+     * correct eye space for the current cubemap face. The following world
+     * rotation affects the objects, not the physical light rig.
+     *
+     * This is the same native light-state contract used by Processing's
+     * own LIGHT shader pipeline.
+     */
+    applySceneLights(pg);
 
     pg.pushMatrix();
     pg.rotateY(time * 0.11f);
 
-    // Background elements use the default pipeline (no PBR lighting).
+    // Background elements use the default pipeline (no PBR shading).
     pg.resetShader();
     renderStarShell(pg);
     renderDomeGrid(pg);
@@ -88,14 +97,12 @@ class FulldomePbrScene implements Scene {
     // PBR-lit content.
     if (usePbr) {
       pg.shader(pbr);
-      uploadLightUniforms();
       renderCentralCluster(pg);
       renderOrbitingModules(pg);
       renderSupportPillars(pg);
       pg.resetShader();
     } else {
-      // Fixed-function fallback keeps the example working without shaders.
-      applySceneLights(pg);
+      // The same native light rig drives Processing's fixed-function path.
       renderCentralCluster(pg);
       renderOrbitingModules(pg);
       renderSupportPillars(pg);
@@ -167,43 +174,12 @@ class FulldomePbrScene implements Scene {
   // Lighting
   // -------------------------------------------------------------------------
 
-  private void configureLights() {
-    // 0: key directional (cool white)
-    setLight(0, 0f, -0.45f, -0.75f, -0.25f, 140f, 140f, 160f);
-    // 1: fill directional (blue)
-    setLight(1, 0f, 0.35f, -0.2f, 0.9f, 40f, 70f, 120f);
-    // 2: warm point light
-    setLight(2, 1f, 0f, -240f, 280f, 255f, 205f, 170f);
-    // 3: cool point light
-    setLight(3, 1f, -520f, 180f, -260f, 90f, 150f, 255f);
-  }
-
-  private void setLight(int i, float type, float x, float y, float z, float r, float g, float b) {
-    lightType[i] = type;
-    lightPos[i * 3] = x;
-    lightPos[i * 3 + 1] = y;
-    lightPos[i * 3 + 2] = z;
-    lightColor[i * 3] = r / 255f;
-    lightColor[i * 3 + 1] = g / 255f;
-    lightColor[i * 3 + 2] = b / 255f;
-  }
-
-  private void uploadLightUniforms() {
-    pbr.set("uViewMatrix", viewMatrix);
-    pbr.set("uLightCount", lightCount);
-    pbr.set("uAmbient", ambient[0], ambient[1], ambient[2]);
-    pbr.set("uLightPos", lightPos, 3);
-    pbr.set("uLightColor", lightColor, 3);
-    pbr.set("uLightType", lightType, 1);
-    // Hemispheric IBL environment.
-    pbr.set("uSkyColor", skyColor[0], skyColor[1], skyColor[2]);
-    pbr.set("uGroundColor", groundColor[0], groundColor[1], groundColor[2]);
-    pbr.set("uEnvIntensity", envIntensity);
-  }
-
   // Fixed-function equivalent of the shader lights (fallback path).
   private void applySceneLights(PGraphicsOpenGL pg) {
-    pg.ambientLight(22, 22, 30);
+    // Do not inherit stale light state from another render pass or cubemap face.
+    pg.noLights();
+
+    pg.ambientLight(40, 42, 68);
     pg.directionalLight(140, 140, 160, -0.45f, -0.75f, -0.25f);
     pg.directionalLight(40, 70, 120, 0.35f, -0.2f, 0.9f);
     pg.pointLight(255, 205, 170, 0, -240, 280);
