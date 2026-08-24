@@ -1,6 +1,234 @@
 # Changelog
 
-All notable changes to this project are documented in this file.
+All notable project changes are recorded here. Version 2.0 follows the final public API freeze; earlier sections preserve the historical contract of their release and must not be read as current 2.0 API documentation.
+
+## [2.0.0]
+
+Version 2.0.0 is a deliberate major-version reset. It preserves the Processing-oriented `Scene` extension model while replacing the exposed 1.x implementation surface with a small, lifecycle-safe, typed API. Internally, spherical rendering moves to a native GPU cubemap with sibling final projections.
+
+The Java package remains `com.victorvalentim.zividomelive`. The public facade is `ziviDomeLive`.
+
+### License and provenance
+
+- Relicensed project-authored ziviDomeLive material in the 2.0 release line
+  under the Apache License 2.0 (`Apache-2.0`).
+- Preserved published releases through `v1.5.0` under their original
+  `GPL-2.0-only` terms.
+- Added a file-level `SolarSystem` provenance manifest with integrity hashes.
+- Recorded `solar2.json` as a project-maintained astronomical-data snapshot with
+  NASA/JPL scientific-data provenance, without claiming the underlying
+  scientific facts/data as project-authored Apache-2.0 content.
+- Corrected planetary/space texture attribution to **Solar System Scope / INOVE
+  under CC BY 4.0**, recording NASA elevation/imagery only as the upstream basis
+  stated by Solar System Scope.
+- Recorded `eso0932a.jpg` separately as **ESO/S. Brunier, CC BY 4.0**.
+- Prevented the unresolved historical `background.jpg` from receiving an
+  invented credit; it must be removed or independently resolved before release.
+- Preserved Devolay under Apache-2.0, the proprietary NDI Runtime under its own
+  terms, and Paul Bourke calibration assets under their documented
+  redistribution conditions.
+
+### Public API freeze
+
+The final surface is classified and protected as follows:
+
+- **Stable:** `ziviDomeLive`, `StandardOutputAspectMode`, `Scene`, `SceneManager`, `RenderMode`, `ViewType`, `LogMode`;
+- **Advanced Stable:** activation services, typed output control, quaternion/orientation helpers and `OrbitCamera`;
+- **Experimental:** performance snapshots, metrics, capability reports and GPU timing policy/backend/architecture;
+- **Processing callbacks:** public facade hooks invoked by Processing or ControlP5;
+- **Internal:** render graph, OpenGL targets/adapters, UI, runtime queues/executors and output producers.
+
+An exact reflection-based snapshot freezes public types, methods, constructors, enum order, field mutability and negative engine-leak constraints.
+
+### Breaking changes
+
+- Renamed the facade from lowercase `zividomelive` to `ziviDomeLive`.
+- Made `ViewType` a top-level enum with the frozen order `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR`, `SKYBOX`.
+- Kept `RenderMode` at `FULL`, `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR`, `SKYBOX`.
+- Removed all deprecated 1.x compatibility commands instead of carrying unsafe aliases into the new major version.
+- Removed direct facade renderer getters/setters and direct render commands.
+- Removed public concrete renderers, cubemap targets, GL adapters, camera/cubemap engine types, final-frame containers, UI/support managers and performance-monitor implementations.
+- Removed public/global thread-manager and executor access.
+- Removed `Scene.controlEvent(ControlEvent)`; ControlP5 callbacks now terminate at the facade/internal UI boundary.
+- Removed raw render queues, arbitrary dispose hooks, service construction/closure and scene/runtime escape hatches from `SceneServices`.
+- Removed string-based output toggles, generic `setView`, public output producers and direct frame publication.
+- Removed the pre-2.0 quaternion matrix alias in favor of the final explicit matrix API.
+
+### Added — Scene lifecycle and services
+
+- Added optional `Scene.configure(SceneServices)` before every activation `setupScene()`.
+- Preserved `Scene.sceneRender(PGraphicsOpenGL)` as the only required abstract method.
+- Made first registration, explicit activation, next/previous, index selection, reload, manager replacement, clear and facade disposal follow the same activation order.
+- Added fresh activation-scoped `SceneServices` for every activation/reload of a scene instance.
+- Added `FrameClock` using monotonic `double` time with bounded delta.
+- Added bounded fixed-step `SimulationTimeline` with scene-controlled rate, position, step, maximum substeps, pause and dropped-unit telemetry.
+- Added bounded keyed `SceneTaskGroup.submitIfIdle(...)` with callback-based results/errors and no public `Future`/executor.
+- Added activation-aware `SceneAssets` for Processing images, shaders and retained shapes.
+- Added `SceneActionMap` for named key/mouse actions while retaining raw key/mouse Scene callbacks.
+- Added `SceneCameraService` for scene-space orbit input and target tracking.
+- Added `SceneEnvironmentService` for activation-owned image, visibility, intensity and yaw overrides with conditional restoration.
+- Added protocol-agnostic `ScenePorts`, `SceneInputPort` and `SceneOutputPort` SPI with bounded external-input delivery and backpressure telemetry.
+- Added deferred `SceneServices.requestReload()` at a safe frame boundary.
+
+### Changed — Scene and frame semantics
+
+- Made `pre()` the authoritative per-frame/render-thread boundary.
+- Guaranteed `Scene.update()` once per Processing frame before any render pass.
+- Kept `sceneRender()` draw-only even when spherical capture invokes it for several faces.
+- Kept target `beginDraw()`/`endDraw()` ownership in the library.
+- Bound task results, render-queue work, ports, actions, camera input and environment state to the exact activation that created them.
+- Made scene registration/activation consistently identity-based so `equals()` cannot collide with activation-service ownership.
+- Made reload a complete stop-work → dispose → release → fresh-services → configure → setup cycle.
+
+### Added — Rendering architecture
+
+- Added native `GL_TEXTURE_CUBE_MAP` ownership behind the internal OpenGL boundary.
+- Added one reusable Processing command target feeding six native cubemap faces.
+- Added GLSL 4.10 `samplerCube` shaders under `data/shaders/samplercube/`.
+- Added direct sibling Domemaster, Equirectangular and Skybox projections from the shared cubemap.
+- Added internal requirement resolution so Standard and spherical domains run only when requested.
+- Added environment composition shared by Standard and spherical representations.
+- Added deferred renderer/FBO recreation for `resetGraphics(int)` at a safe draw boundary.
+
+### Changed — Rendering behavior
+
+- Kept Standard rendering independent from spherical capture.
+- Made transparent RGBA `(0, 0, 0, 0)` the default for every library-owned Standard and spherical final target; only Scene drawing, configured visible Environment content, or an explicit retained Standard sky-colour request makes covered pixels opaque.
+- Preserved cubemap alpha through all samplerCube projections, kept the Domemaster exterior and `Size%=0` transparent, and clear projection targets on allocation, every pass and failed/unavailable inputs so stale opaque frames cannot be republished.
+- Reused one spherical cubemap capture for all spherical projections/consumers required in a frame.
+- Removed the equirectangular intermediate from the active Domemaster path.
+- Preserved cubemap face orientation and previous skybox cross-layout behavior.
+- Preserved environment infinity: scene-camera orientation rotates it, while target translation and orbit distance do not.
+- Kept `RenderMode.FULL` as the independent preview/output routing mode.
+- Made dedicated modes temporary effective-view overrides that do not erase saved routes.
+- Preserved `ViewType` declaration order because ControlP5 dropdown routing is index-based.
+
+### Added — Camera and math
+
+- Added immutable public `Quaternion` composition, normalization, slerp and matrix publication.
+- Added public `SphericalOrientation` with cyclic control accumulators and normalized quaternion attitude.
+- Expanded `OrbitCamera` with Processing-friendly `PVector` overloads, atomic `goTo`, immediate setters, snap, axis rotation and explicit input-state reset.
+- Added numerical regression coverage for immediate drag/wheel manipulation, synchronized current/goal state, smooth programmatic movement and stale-anchor cleanup.
+
+### Changed — Camera and input
+
+- Restored immediate direct manipulation based on the SolarSystem 1.5 controller behavior while preserving smooth programmatic motion.
+- Preserved the established navigation coefficients: 0.01 radians/pixel, yaw on Y, pitch on X, 80 standard wheel units and 0.001 trackpad setting.
+- Routed each gesture to exactly one navigation camera.
+- Made a visible ControlP5 control under the pointer own its gesture.
+- Cleared drag anchors on release, owner change, scene switch/reload, pause and terminal disposal.
+- Fixed ControlP5 2.2.6 key-code indexing through a guarded internal bridge.
+- Routed the ControlP5 callback through the public facade to avoid illegal access to an internal UI class.
+
+### Added — Typed outputs
+
+- Made `OutputManager` a consumer-facing interface returned by the facade.
+- Added frozen `OutputType` order `NDI`, `SPOUT`, `SYPHON`.
+- Added output states `UNAVAILABLE`, `AVAILABLE`, `INITIALIZED`, `ENABLED`, `STOPPING`.
+- Added typed `setOutputEnabled`, `isOutputEnabled`, `toggleOutput(OutputType)`, `setViewForOutput` and per-backend view conveniences.
+- Added state/failure diagnostics and NDI captured/sent/dropped/failed counters.
+- Added platform-local texture availability/name/view reporting without exposing a producer handle.
+
+### Changed — Output runtime
+
+- Made every output opt-in/disabled after setup.
+- Kept Syphon and Spout on platform-local GPU-native `PGraphicsOpenGL` publication.
+- Kept NDI as the explicit GPU-to-CPU/network boundary.
+- Used three bounded NDI frame slots, latest-frame-wins backpressure and a dedicated non-OpenGL sender worker.
+- Made normal NDI disable asynchronous (`STOPPING`) without joining a native send from the render thread.
+- Kept only terminal shutdown eligible for a bounded worker wait.
+- Updated the bundled Devolay dependency to `2.2.0-vic.2`; the proprietary NDI Runtime remains separate.
+
+### Performance and allocation work
+
+- Removed recurring frame-path allocation from quaternion matrix publication, orbit-camera state reads, environment orientation publication, cubemap request routing, NDI conversion/publication and ControlP5 synchronization.
+- Reused internal physics and rendering buffers where ownership is stable.
+- Migrated SolarSystem orbital inputs, elapsed time, anomaly/solver/perturbation intermediates and compensated time accumulation to `double`, converting only when publishing `PVector` state.
+- Scaled SolarSystem fixed steps for very slow rates while retaining the normal maximum of `1/120` simulated day.
+- Removed artificial SolarSystem locks made unnecessary by coherent publication at the frame boundary.
+- Reworked SphereParticle snapshots around primitive buffers and bounded activation tasks to reduce GC jitter and eliminate unbounded submission.
+- Preserved non-blocking OpenGL-thread behavior for external I/O.
+
+### Examples
+
+- Migrated `EmptyProject` and `Basic` to the facade-owned 2.0 lifecycle.
+- Migrated `SphereParticle` to bounded activation work and frame-boundary publication.
+- Added/updated `InfiniteBackground` for translation-invariant environment behavior.
+- Updated `FulldomePBR` to retained shapes, packaged GLSL and the shared scene-space camera.
+- Reworked `SolarSystem` as the reference consumer for clock, timeline, tasks, assets, actions, reload, target tracking and environment ownership.
+- Kept `CalibrationTool` as the two-scene visual orientation/projection instrument.
+- Kept `BenchmarkTool` as the graphical CPU/GPU qualification surface rather than a beginner example.
+- Removed per-frame diagnostic console chatter from normal example operation; debug logging remains explicit.
+
+### Documentation and research-software readiness
+
+- Rebuilt the README as a Processing library homepage with statement of need, audience, installation, dependencies, examples, keywords, update date, qualification status, citation and API levels.
+- Reclassified API documentation into Stable, Advanced Stable, Experimental, Processing Callback and Internal levels.
+- Preserved 1.x names only in explicit migration/history material.
+- Added detailed bilingual release notes, lifecycle/service/output documentation and research-software/JOSS-readiness evidence mapping without claiming JOSS submission or acceptance.
+- Recorded the library's 2024 doctoral-research origin, current PIBITI/UFRB 05/2026 project, coordinator, CECULT/UFRB scholarship collaborators, Open Source Science entry and 2026 SIIMI proceedings article.
+- Added a bilingual research-integrity and full human-review declaration grounded in CNPq Ordinance 2,664/2026 and international integrity frameworks, plus a Processing-inspired project Code of Conduct and complete fork-to-PR contribution workflow.
+- Added Material for MkDocs Mermaid diagrams, tags, CI social cards, bilingual navigation and semantic page statuses.
+- Standardized local MkDocs commands through `python3 -m mkdocs` so legacy system/Python 2 executables cannot parse the project configuration by accident.
+- Consolidated generated Javadocs at the language-neutral `site/reference` route, with locale-safe EN/PT links that also work inside pull-request preview subdirectories.
+- Added deterministic exported-site crawling for HTML, CSS, sitemap alternates, Javadoc assets and required routes; publication workflows now fail before deploy on any local 404.
+- Replaced raster diagram placeholders with theme-aware Mermaid source.
+- Replaced the hero placeholder with a traceable SVG/PNG editorial illustration.
+- Kept real example/calibration/benchmark screenshots gated on installed-package qualification rather than publishing mock evidence.
+- Updated documentation validation for Processing homepage/package requirements, API levels, research evidence, release-note parity, placeholder removal and advanced MkDocs configuration.
+
+### Source organization
+
+- Reorganized internal production sources under physical `_internal/` categories for output, performance, render camera/core/GL/modes, runtime, scene, support and UI.
+- Mirrored that internal taxonomy in tests.
+- Preserved package declarations where package-private collaboration requires them; the physical reorganization does not create a new callable namespace.
+- Added tests that prevent uncategorized internal sources and public implementation leakage from returning.
+
+### Fixed
+
+- Bound/drained activation render work only at the authoritative frame boundary.
+- Prevented stale task/port/action/environment work from one activation reaching another.
+- Preserved configure-before-setup and dispose-before-service-release across every activation path.
+- Prevented duplicate camera routing and UI-owned gestures from navigating the scene.
+- Prevented disabled outputs from publishing automatically.
+- Prevented NDI sender backpressure from blocking the OpenGL thread.
+- Preserved environment state owned by a later activation during old-activation cleanup.
+- Removed deprecated or nonexistent method names from current documentation/examples.
+- Eliminated the ControlP5/Numberbox key-event illegal-access path by using the public facade callback.
+
+### Removed — Runtime and resources
+
+- Removed the six-`PGraphicsOpenGL` spherical fallback.
+- Removed the old six-texture spherical shader passes.
+- Removed the cubemap → equirectangular → domemaster dependency chain.
+- Removed parallel/legacy renderer scaffolding and obsolete source directories after the internal taxonomy migration.
+- Removed direct protocol dependencies from scene integration; optional control protocols use the small ports SPI.
+
+### Validation
+
+- Public API compatibility tests enforce final types, exact methods/constructors, enums, absence of mutable public fields and negative engine leaks.
+- Lifecycle suites cover first activation, switching, reload, fresh services, order, idempotence, cancellation/isolation and state restoration.
+- Numerical suites cover quaternion/orbit-camera/timeline/clock behavior.
+- Output suites cover typed routes, states, bounded NDI shutdown and producer encapsulation.
+- Render-policy/math tests cover Standard/spherical requirement separation and projection state without requiring OpenGL when pure state is sufficient.
+- Release validation covers Java 17 build, Javadocs, Processing metadata/package shape, source/examples/reference/licenses, shader resources and byte-identical ZIP/PDEX.
+- Documentation validation covers EN/PT parity, source links, exported HTML/CSS/sitemap routes, canonical Javadocs, metadata, API vocabulary, Processing homepage requirements, research-software readiness and strict MkDocs.
+- GPU image quality, projector/lens behavior and NDI/Syphon/Spout interoperability remain manual target-hardware gates.
+
+### Release qualification
+
+- Release qualification is bound to an exact source revision and generated Processing package.
+- Automated validation, installed-package execution, GPU visual checks and native-output interoperability are recorded in `maintainer/release-evidence.md`.
+- Platform support and backend availability remain distinct from physically qualified configurations.
+- The `v2.0.0` tag identifies the exact release revision accepted by the final qualification gate.
+
+### Not included in 2.0.0
+
+- Spherical Mirror and any `SPHERICAL_MIRROR` enum value.
+- HDR environment loading/render targets, IBL, irradiance, BRDF LUT or ambient-occlusion engine features.
+- PBO/fence-based NDI readback.
+- Headset, stereoscopic VR or generic XR runtime claims.
+- Core MIDI/OSC/device dependencies; only the protocol-agnostic ports SPI is included.
 
 ## [1.5.0] - 2026-08-11
 

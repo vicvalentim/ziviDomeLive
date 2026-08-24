@@ -1,87 +1,64 @@
-# Modos de Renderização
+---
+title: RenderMode e ViewType
+icon: material/view-dashboard-outline
+---
 
-`RenderMode` controla a representação efetiva usada pela janela Processing e por cada output externo habilitado. Ele não seleciona um backend de output e não substitui a API legada de routing por `ViewType`.
+# RenderMode e ViewType
 
-## Modo de Compatibilidade FULL
+ziviDomeLive separa **como a aplicação está trabalhando agora** de **qual representação um destino recebe**. Manter essas decisões distintas é a chave para um roteamento previsível de preview/output.
 
-`FULL` é o padrão. Sketches existentes que nunca chamam `setRenderMode()` mantêm rotas independentes para preview e outputs:
-
-```java
-dome.setRenderMode(RenderMode.FULL);
-dome.setCurrentView(zividomelive.ViewType.STANDARD);
-
-OutputManager outputs = dome.getOutputManager();
-outputs.setNdiView(zividomelive.ViewType.EQUIRECTANGULAR);
-outputs.setSyphonView(zividomelive.ViewType.FISHEYE_DOMEMASTER);
-outputs.setSpoutView(zividomelive.ViewType.CUBEMAP);
+```mermaid
+flowchart LR
+  M[RenderMode<br/>política do runtime] --> F{FULL?}
+  F -->|sim| P[ViewType salvo<br/>por destino]
+  F -->|modo dedicado| O[View efetiva temporária]
+  P --> A[Preview]
+  P --> B[NDI]
+  P --> C[Syphon / Spout]
 ```
 
-Somente outputs habilitados solicitam frames. Configurar uma rota ou preparar Syphon/Spout não ativa publicação nem adiciona requisito de renderização.
+<div class="grid cards" markdown>
 
-## Modos Dedicados
+- :material-tune-variant: **RenderMode** — *Como quero trabalhar agora?*
 
-Modos dedicados forçam uma representação efetiva para o preview principal e todos os outputs habilitados:
+    `FULL`, `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR`, `SKYBOX`
 
-| `RenderMode` | `ViewType` efetivo | Pipeline principal |
-|---|---|---|
-| `STANDARD` | `STANDARD` | Renderer Standard perspectiva direto |
-| `DOMEMASTER` | `FISHEYE_DOMEMASTER` | Cubemap, equiretangular, fisheye |
-| `EQUIRECTANGULAR` | `EQUIRECTANGULAR` | Cubemap, equiretangular |
-| `SKYBOX` | `CUBEMAP` | Cubemap, layout skybox |
+- :material-routes: **ViewType** — *O que este destino deve receber?*
 
-```java
-dome.setRenderMode(RenderMode.DOMEMASTER);
-```
+    `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR`, `SKYBOX`
 
-Os valores `ViewType` configurados para preview e outputs permanecem armazenados durante um modo dedicado. Voltar para `FULL` restaura essas rotas independentes:
+</div>
 
-```java
-dome.setRenderMode(RenderMode.FULL);
-```
+## RenderMode: modo de trabalho atual
 
-## Domemaster Flutuante
+`FULL` é o padrão. Ele preserva as rotas independentes de preview e output configuradas por `ViewType`.
 
-A miniatura fisheye flutuante é um serviço auxiliar de preview:
+Modos dedicados substituem temporariamente a representação efetiva. Eles **não** apagam as rotas armazenadas, que reaparecem ao retornar a `FULL`.
 
-```java
-dome.setRenderMode(RenderMode.STANDARD);
-dome.setShowPreview(true);
-```
+!!! info "Rotas armazenadas sobrevivem aos modos dedicados"
+    Mudar para `DOMEMASTER` durante a calibração não destrói o preview Standard nem as seleções de `ViewType` por destino armazenadas para `FULL`.
 
-Essa combinação renderiza intencionalmente o caminho Standard e os passes esféricos exigidos pela miniatura. Nos demais modos dedicados o serviço ainda pode ser habilitado por API, mas o painel interno oculta seu toggle redundante.
+## ViewType: representação por destino
 
-## Requisitos de Renderização
+Em `FULL`, cada destino pode solicitar uma representação final diferente. Um preview Standard pode coexistir, por exemplo, com um output NDI Domemaster sem transformar ambos na mesma rota.
 
-A biblioteca calcula o fechamento de dependências a cada frame:
+=== "Standard"
+    Representação convencional em perspectiva.
 
-```text
-Standard                 -> somente Standard
-Layout cubemap           -> captura cubemap + layout
-Equirectangular          -> captura cubemap + equiretangular
-Domemaster fisheye       -> captura cubemap + equiretangular + fisheye
-```
+=== "Domemaster"
+    Representação fisheye circular usada para projeção fulldome.
 
-Quando outputs habilitados solicitam views diferentes em `FULL`, seus requisitos são combinados. No máximo um cubemap mestre é capturado por frame. Consulte [Pipeline de Renderização](../architecture/rendering-pipeline.md) para a ordem completa.
+=== "Equirectangular"
+    Representação esférica 2:1 para fluxos 360°.
 
-## Domínios de Resolução
+=== "Skybox"
+    Representação em layout de cubemap.
 
-O preview Standard usa as dimensões atuais da janela Processing. Targets esféricos de preview usam:
+## Um runtime, múltiplos modos
 
-```text
-min(1024, max(256, min(windowWidth, windowHeight)))
-```
+Um modo de renderização não é uma segunda classe de runtime e não substitui a instância `ziviDomeLive`. O modelo público permanece um runtime único com múltiplos modos de trabalho.
 
-Targets de output externo usam a resolução independente de output:
-
-```java
-dome.resetGraphics(2048);
-```
-
-Os presets do painel são `1024`, `2048`, `3072` e `4096`. A realocação é adiada para o draw loop, afeta somente targets de output e preserva o Size% do domemaster.
-
-## Guias Relacionados
-
-- [Painel de Controle](control-panel.md)
-- [Calibração Esférica](spherical-calibration.md)
-- [Integração Externa](external-integration.md)
-- [Lifecycle de Runtime](../architecture/runtime-lifecycle.md)
+<div class="zd-actions" markdown>
+[Preview e Output](visual-capture-guide.md){ .md-button .md-button--primary }
+[Calibração Esférica](spherical-calibration.md){ .md-button }
+</div>

@@ -1,56 +1,72 @@
+---
+title: API Overview
+icon: material/api
+status: stable
+tags:
+  - API
+  - Architecture
+---
+
 # API Overview
 
-## Primary Types
+ziviDomeLive 2.0 has a deliberately small creative entry point and progressively exposes more control. The levels below are part of the documentation contract and are enforced against the Java surface by automated tests.
 
-| Type | Responsibility |
-|---|---|
-| `zividomelive` | Processing integration, lifecycle, rendering, calibration, and service access |
-| `RenderMode` | Global rendering behavior |
-| `Scene` | User drawing and event contract |
-| `SceneManager` | Scene registration, active ownership, switching, and disposal |
-| `OutputManager` | NDI, Syphon, and Spout routing and lifecycle |
-| `OrbitCamera` | Optional scene-space camera shared by all rendered targets |
-| `SphericalOrientation` | Cyclic pitch/yaw/roll accumulation on a unit quaternion |
-
-## Public Enums
-
-```java
-RenderMode.FULL
-RenderMode.STANDARD
-RenderMode.DOMEMASTER
-RenderMode.EQUIRECTANGULAR
-RenderMode.SKYBOX
+```mermaid
+flowchart TB
+  S[Stable<br/>ordinary sketches] --> A[Advanced Stable<br/>lifecycle-aware projects]
+  A --> E[Experimental<br/>measurement and qualification]
+  P[Processing callbacks<br/>framework entry points] -. invokes .-> S
+  I[Internal<br/>renderer · GL · UI · workers] -. implements .-> S
+  I -. implements .-> A
 ```
 
-`zividomelive.ViewType` remains available for preview and per-output routes. Its order is compatibility-sensitive and must not be changed.
+## Level 1 — Stable
 
-| `ViewType` index | Value | Representation |
-|---:|---|---|
-| 0 | `FISHEYE_DOMEMASTER` | Circular fulldome projection |
-| 1 | `EQUIRECTANGULAR` | 2:1 spherical projection |
-| 2 | `CUBEMAP` | Six-face inspection layout |
-| 3 | `STANDARD` | Perspective scene rendering |
+The recommended API for ordinary Processing sketches:
 
-`StandardOutputAspectMode` selects `AUTO`, `ASPECT_16_9`, `ASPECT_16_10`,
-`ASPECT_4_3`, or `ASPECT_1_1` for the high-resolution Standard output. It does
-not resize the Processing preview window.
+| Type | Role |
+|---|---|
+| `ziviDomeLive` | Runtime facade, scene ownership, configuration and Processing integration |
+| `ziviDomeLive.StandardOutputAspectMode` | Standard-output aspect policy |
+| `Scene` | Extension contract; only `sceneRender(PGraphicsOpenGL)` is required |
+| `SceneManager` | Registration and identity-based scene switching |
+| `RenderMode` | Current runtime working mode |
+| `ViewType` | Representation routed to a destination |
+| `LogMode` | Debug/release logging policy |
 
-`OutputManager.OutputState` distinguishes:
+Start here and stay here unless a concrete project need points to the next level.
 
-- `UNAVAILABLE`: unsupported or last initialization failed
-- `AVAILABLE`: eligible for initialization, no native resources
-- `INITIALIZED`: native resources exist, publication disabled
-- `ENABLED`: publication enabled
-- `STOPPING`: NDI publication stopped while bounded cleanup completes
+## Level 2 — Advanced Stable
 
-## Compatibility Notes
+Supported public contracts for lifecycle-aware or technically demanding projects:
 
-- The lowercase public facade name `zividomelive` remains unchanged.
-- `RenderMode.FULL` preserves the legacy routing model.
-- `renderFisheyeDomemaster()`, `renderEquirectangular()`, `renderCubemap()`, and `renderStandard()` remain deprecated compatibility shims.
-- Renderer getters remain public for 1.x compatibility, but renderer topology is not a permanent backend contract.
+- activation services: `SceneServices`, `FrameClock`, `SimulationTimeline`, `SceneTaskGroup`, `SceneAssets`, `SceneActionMap`, `SceneCameraService`, `SceneEnvironmentService`, `ScenePorts`, `SceneInputPort`, `SceneOutputPort`;
+- output control: `OutputManager`, `OutputType`, `OutputState`;
+- reusable math/navigation: `Quaternion`, `SphericalOrientation`, `OrbitCamera`.
 
-Generated Javadocs in the release package are the signature-level reference.
-Use [Core Classes](core-classes.md) for ownership and state semantics,
-[Operational Helpers](helper-functions.md) for runtime controls, and the
-[Scene Interface](scene-interface.md) for the drawing contract.
+Advanced stable means callable and supported, not scene-owned. Services supplied by the runtime cannot be constructed or closed by a sketch.
+
+## Level 3 — Experimental
+
+The reporting/qualification layer consists of `PerformanceMode`, `PerformanceMetric`, `PerformanceSnapshot`, `MetricStatistics`, `GraphicsCapabilities`, `GpuTimerPolicy`, `GpuTimerBackend` and `GpuTimerArchitecture`.
+
+Experimental metrics are useful evidence, but their vocabulary may evolve faster than the creative API. CPU wall time and GPU elapsed time are not interchangeable.
+
+## Processing callback surface
+
+`pre`, `draw`, `post`, `keyEvent`, `mouseEvent`, `pause`, `resume`, `stop` and `dispose` are public facade methods because Processing invokes them. They are integration entry points, not a second API that sketches should forward manually.
+
+Neither `Scene` nor the facade exposes a ControlP5 callback type. The built-in panel registers its listener internally; scenes receive Processing key/mouse callbacks or use `SceneActionMap`.
+
+## Internal boundary
+
+Renderer implementations, cubemap targets, final-frame containers, Processing/GL adapters, UI managers, queues, executors and output producers are package-private implementation. Physical `_internal/` folders categorize them for maintenance without changing their package-private collaboration model.
+
+!!! warning "No visibility inference"
+    A class name in architecture prose is not permission to instantiate it. Only the types listed in the Stable, Advanced Stable and Experimental sections are public 2.0 API.
+
+## No deprecated 2.0 surface
+
+The final 2.0 contract contains no `@Deprecated` compatibility layer. Old 1.x entry points are described on the [Removed 1.x API](deprecated.md) page strictly for migration and historical preservation.
+
+For exact methods, constructors and return types, use the [generated Javadocs](javadocs.md). `PublicApiCompatibilityTest` is the executable freeze.

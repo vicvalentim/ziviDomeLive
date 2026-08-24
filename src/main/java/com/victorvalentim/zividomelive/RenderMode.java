@@ -4,8 +4,10 @@ package com.victorvalentim.zividomelive;
  * Selects the global rendering behavior of a ziviDomeLive instance.
  *
  * <p>{@link #FULL} preserves the independent preview and external-output choices configured
- * through the legacy {@link zividomelive.ViewType} API. Dedicated modes temporarily override
+ * through the {@link ViewType} API. Dedicated modes temporarily override
  * those effective choices without erasing them.</p>
+ *
+ * <p><strong>API stability:</strong> Stable.</p>
  *
  * @since 1.5.0
  */
@@ -18,6 +20,6 @@ public enum RenderMode {
 	DOMEMASTER,
 	/** Render the equirectangular representation. */
 	EQUIRECTANGULAR,
-	/** Render the cubemap skybox representation. */
+	/** Render the equi-angular cubemap (EAC) cross representation. */
 	SKYBOX
 }

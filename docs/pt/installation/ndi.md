@@ -1,13 +1,13 @@
 # Runtime NDI
 
 !!! warning "Integração experimental e não oficial"
-    O output NDI do ziviDomeLive 1.5.0 é um sender de vídeo experimental mantido
+    O output NDI do ziviDomeLive 2.0.0 é um sender de vídeo experimental mantido
     pela comunidade. Ele não é uma integração oficial do Processing ou do NDI e
     não possui afiliação nem endosso da Vizrt NDI AB. O Processing não fornece
     uma biblioteca NDI oficial: portanto, o suporte NDI não é instalado pelo
     Gerenciador de Contribuições do Processing.
 
-    A versão 1.5.0 envia somente vídeo. Ela não oferece áudio NDI, recepção,
+    A versão 2.0.0 envia somente vídeo. Ela não oferece áudio NDI, recepção,
     tally, PTZ ou interface de descoberta. Qualifique o sender, receiver, rede,
     sistema operacional e formato de frame exatos antes do uso em produção.
 
@@ -25,7 +25,7 @@ ziviDomeLive
     -> rede NDI
 ```
 
-O artefato público `io.github.vicvalentim:devolay:2.2.0-vic.1` é um
+O artefato público `io.github.vicvalentim:devolay:2.2.0-vic.2` é um
 **separated build**. Ele inclui as classes Devolay e binários JNI para desktop,
 mas não inclui `Processing.NDI.Lib.x64.dll`, `libndi.dylib` ou `libndi.so.6`, que
 são proprietários. O ziviDomeLive intencionalmente não usa o modo integrado do
@@ -81,8 +81,7 @@ não o próprio arquivo.
 
 ## Linux
 
-NDI no Linux é experimental e não integra a matriz de outputs qualificados da
-1.5.0. O pacote desktop público NDI Tools é oferecido para Windows e macOS;
+NDI no Linux é experimental e exige qualificação de receiver específica da implantação, assim como os demais alvos NDI. O pacote desktop público NDI Tools é oferecido para Windows e macOS;
 usuários Linux devem obter o SDK/runtime atual na
 [página oficial do NDI SDK](https://ndi.video/for-developers/ndi-sdk/) e aceitar
 sua licença durante a instalação.
@@ -110,7 +109,7 @@ A inicialização NDI é tardia e começa somente quando a publicação é habil
 
 ```java
 OutputManager outputs = ziviDome.getOutputManager();
-outputs.toggleOutput("ndi");
+outputs.setOutputEnabled(OutputManager.OutputType.NDI, true);
 
 println(outputs.getOutputState(OutputManager.OutputType.NDI));
 println(outputs.getOutputFailureReason(OutputManager.OutputType.NDI));
@@ -126,11 +125,11 @@ O estado esperado depois da inicialização é `ENABLED`. Falhas comuns:
 
 A suíte automatizada verifica roteamento, conversão RGBA, metadata progressiva,
 backpressure e shutdown sem abrir uma sessão NDI real. O uso em produção ainda
-exige o [protocolo de qualificação de hardware](../qualification/1.5-release-readiness.md).
+exige o [protocolo de qualificação de hardware](../qualification/2.0-release-readiness.md).
 
 ## Limite de Licenciamento
 
-Devolay é Apache-2.0; ziviDomeLive é GPL-2.0-only. O NDI Runtime proprietário é
+Devolay e o material de autoria do projeto na linha ziviDomeLive 2.0 são Apache-2.0. O NDI Runtime proprietário é
 coberto separadamente pela licença e pelos termos de distribuição atuais do NDI
 SDK. Instalar ou redistribuir o runtime não o transforma em parte de nenhuma das
 licenças open source. Quem distribuir um produto com binários do NDI Runtime é

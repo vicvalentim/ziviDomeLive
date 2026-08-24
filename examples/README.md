@@ -1,22 +1,39 @@
 # ziviDomeLive Examples
 
-Open each sketch from Processing after installing ziviDomeLive and its declared dependencies. Every example uses `P3D`, `pixelDensity(1)`, automatic Processing hooks, and the current `Scene.sceneRender(PGraphicsOpenGL)` contract.
+The examples are part of the Processing-library learning and qualification surface. They use APIs recommended for ziviDomeLive 2.0.0.
+All ten sketches import the required external ControlP5 2.2.6 Processing library; install it explicitly before compiling or running them.
 
-| Example | Purpose | Primary interaction |
-|---|---|---|
-| `EmptyProject` | Empty starter template for a first scene | None |
-| `Basic` | Multiple scenes, all `RenderMode` values, and an alignment grid | `1..5`, `+`/`-`, mouse wheel, Left/Right arrows |
-| `SphereParticle` | Threaded particle simulation | Click/drag |
-| `CalibrationTool` | Cube-face focus/color tests and a 360-degree Paul Bourke spherical reference | Left/Right, `1..4`, brackets, `+`/`-`, `P`, `Y`, `R`, `F`, `Space`, `,`/`.`, `C`, `0` |
-| `FulldomePBR` | Retained geometry, PBR shader fallback, and scene-space camera | Drag, wheel, `P`, `V`, brackets, `+`/`-`, `R` |
-| `SolarSystem` | Large multi-file application | See the sketch's own source and configuration |
+## GettingStarted
 
-## Example Contract
+Use these in this order when learning the library:
 
-- The sketch calls `ziviDome.setup()` once and never calls `ziviDome.draw()`.
-- A scene receives an already-open render target and never calls `beginDraw()` or `endDraw()`.
-- Examples demonstrate both direct scene registration and `SceneManager`, according to their teaching purpose.
-- Entry tabs retain ControlP5, Syphon, and Spout imports because Processing uses them to assemble the contributed-library runtime classpath.
-- External outputs remain disabled until explicitly enabled through the control panel or API.
+1. **EmptyProject** — minimal project structure and Scene contract.
+2. **Basic** — scene drawing, facade-owned registration and render modes.
+3. **NamedActions** — named key-code/mouse bindings and programmatic actions.
+4. **PortLoopback** — bounded scene input and non-blocking output port adapters.
 
-`CalibrationTool` is a qualification instrument, not a generated golden reference. Use independently captured baseline evidence on the target GPU and native-output stack. Its Paul Bourke image remains subject to the bundled third-party notice.
+## Advanced
+
+1. **SphereParticle** — activation-scoped background simulation and frame-boundary publication.
+2. **InfiniteBackground** — Environment/background workflow.
+3. **FulldomePBR** — retained geometry, shaders and the scene camera service.
+4. **SolarSystem** — timeline, assets, actions, camera tracking and double-precision simulation.
+
+All eight learning examples are teaching material and use the final public API recommended to
+artists. Each sketch directory contains its own README.
+
+## Tools
+
+### CalibrationTool
+
+Visual/GPU qualification tool for checking spherical orientation, domemaster calibration and representative rendered output. It is **not** an introductory tutorial.
+
+### BenchmarkTool
+
+Performance/qualification tool for benchmark smoke and the measurement modes implemented by the project. It is **not** required for ordinary sketches.
+
+## Release rule
+
+Before a release tag, open/run all ten items from the **installed generated Processing package**,
+not only from the repository checkout. Record environment/platform evidence separately; the
+existence of a platform backend does not prove that platform was tested for the release.

@@ -4,66 +4,68 @@ import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RenderModeTest {
 
 	@Test
 	void fullIsTheDefaultAndNullIsIgnored() {
-		zividomelive dome = new zividomelive(new PApplet());
+		ziviDomeLive dome = new ziviDomeLive(new PApplet());
 
 		assertEquals(RenderMode.FULL, dome.getRenderMode());
+		assertEquals(ViewType.DOMEMASTER, dome.getCurrentView());
 		dome.setRenderMode(null);
 		assertEquals(RenderMode.FULL, dome.getRenderMode());
 	}
 
 	@Test
-	void dedicatedModesMapToTheirLegacyRepresentations() {
+	void dedicatedModesMapToTheirViewTypes() {
 		assertEquals(
-				zividomelive.ViewType.STANDARD,
+				ViewType.STANDARD,
 				RenderRequirementsPolicy.resolveView(
-						RenderMode.STANDARD, zividomelive.ViewType.FISHEYE_DOMEMASTER));
+						RenderMode.STANDARD, ViewType.DOMEMASTER));
 		assertEquals(
-				zividomelive.ViewType.FISHEYE_DOMEMASTER,
+				ViewType.DOMEMASTER,
 				RenderRequirementsPolicy.resolveView(
-						RenderMode.DOMEMASTER, zividomelive.ViewType.STANDARD));
+						RenderMode.DOMEMASTER, ViewType.STANDARD));
 		assertEquals(
-				zividomelive.ViewType.EQUIRECTANGULAR,
+				ViewType.EQUIRECTANGULAR,
 				RenderRequirementsPolicy.resolveView(
-						RenderMode.EQUIRECTANGULAR, zividomelive.ViewType.CUBEMAP));
+						RenderMode.EQUIRECTANGULAR, ViewType.SKYBOX));
 		assertEquals(
-				zividomelive.ViewType.CUBEMAP,
+				ViewType.SKYBOX,
 				RenderRequirementsPolicy.resolveView(
-						RenderMode.SKYBOX, zividomelive.ViewType.STANDARD));
+						RenderMode.SKYBOX, ViewType.STANDARD));
 	}
 
 	@Test
-	void fullPreservesIndependentLegacySelection() {
-		for (zividomelive.ViewType view : zividomelive.ViewType.values()) {
+	void fullPreservesIndependentViewSelection() {
+		for (ViewType view : ViewType.values()) {
 			assertEquals(view, RenderRequirementsPolicy.resolveView(RenderMode.FULL, view));
 		}
 	}
 
 	@Test
 	void returningToFullRestoresConfiguredPreviewView() {
-		zividomelive dome = new zividomelive(new PApplet());
-		dome.setCurrentView(zividomelive.ViewType.CUBEMAP);
+		ziviDomeLive dome = new ziviDomeLive(new PApplet());
+		dome.setCurrentView(ViewType.SKYBOX);
 
 		dome.setRenderMode(RenderMode.STANDARD);
-		assertEquals(zividomelive.ViewType.CUBEMAP, dome.getCurrentView());
+		assertEquals(ViewType.SKYBOX, dome.getCurrentView());
 
 		dome.setRenderMode(RenderMode.FULL);
-		assertEquals(zividomelive.ViewType.CUBEMAP, dome.getCurrentView());
+		assertEquals(ViewType.SKYBOX, dome.getCurrentView());
 	}
 
 	@Test
 	void floatingDomemasterRemainsAvailableInDedicatedStandardMode() {
 		RenderRequirementsPolicy.Requirements requirements = RenderRequirementsPolicy.forPreview(
-				RenderMode.STANDARD, zividomelive.ViewType.CUBEMAP, true);
+				RenderMode.STANDARD, ViewType.SKYBOX, true);
 
 		assertTrue(requirements.needsStandard());
 		assertTrue(requirements.needsFisheye());
-		assertTrue(requirements.needsEquirectangular());
+		assertFalse(requirements.needsEquirectangular());
 		assertTrue(requirements.needsCubemapSource());
 	}
 }

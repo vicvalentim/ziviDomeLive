@@ -31,7 +31,7 @@ class SphericalOrientationTest {
         Quaternion expected = Quaternion.fromAxisAngle(1.0f, 0.0f, 0.0f, PConstants.HALF_PI)
                 .multiply(Quaternion.fromAxisAngle(0.0f, 0.0f, 1.0f, 0.35f))
                 .multiply(Quaternion.fromAxisAngle(0.0f, 1.0f, 0.0f, -0.2f))
-                .normalize();
+                .normalized();
 
         assertQuaternionEquals(expected, orientation.getQuaternion());
     }
@@ -49,10 +49,10 @@ class SphericalOrientationTest {
         Quaternion yawQuaternion = yawChange.getQuaternion();
         Quaternion rollQuaternion = rollChange.getQuaternion();
         float dot = Math.abs(
-                yawQuaternion.x * rollQuaternion.x
-                        + yawQuaternion.y * rollQuaternion.y
-                        + yawQuaternion.z * rollQuaternion.z
-                        + yawQuaternion.w * rollQuaternion.w);
+                yawQuaternion.x() * rollQuaternion.x()
+                        + yawQuaternion.y() * rollQuaternion.y()
+                        + yawQuaternion.z() * rollQuaternion.z()
+                        + yawQuaternion.w() * rollQuaternion.w());
 
         assertNotEquals(1.0f, dot, EPSILON);
     }
@@ -67,7 +67,7 @@ class SphericalOrientationTest {
 
         Quaternion expected = beforeWrap
                 .multiply(Quaternion.fromAxisAngle(0.0f, 0.0f, 1.0f, 0.02f))
-                .normalize();
+                .normalized();
         assertQuaternionEquivalent(expected, orientation.getQuaternion());
     }
 
@@ -102,29 +102,29 @@ class SphericalOrientationTest {
     }
 
     private static void assertQuaternionEquals(Quaternion expected, Quaternion actual) {
-        assertEquals(expected.x, actual.x, EPSILON);
-        assertEquals(expected.y, actual.y, EPSILON);
-        assertEquals(expected.z, actual.z, EPSILON);
-        assertEquals(expected.w, actual.w, EPSILON);
+        assertEquals(expected.x(), actual.x(), EPSILON);
+        assertEquals(expected.y(), actual.y(), EPSILON);
+        assertEquals(expected.z(), actual.z(), EPSILON);
+        assertEquals(expected.w(), actual.w(), EPSILON);
         assertUnit(actual);
     }
 
     private static void assertQuaternionEquivalent(Quaternion expected, Quaternion actual) {
         float dot = Math.abs(
-                expected.x * actual.x
-                        + expected.y * actual.y
-                        + expected.z * actual.z
-                        + expected.w * actual.w);
+                expected.x() * actual.x()
+                        + expected.y() * actual.y()
+                        + expected.z() * actual.z()
+                        + expected.w() * actual.w());
         assertEquals(1.0f, dot, EPSILON);
         assertUnit(actual);
     }
 
     private static void assertUnit(Quaternion quaternion) {
         float magnitude = (float) Math.sqrt(
-                quaternion.x * quaternion.x
-                        + quaternion.y * quaternion.y
-                        + quaternion.z * quaternion.z
-                        + quaternion.w * quaternion.w);
+                quaternion.x() * quaternion.x()
+                        + quaternion.y() * quaternion.y()
+                        + quaternion.z() * quaternion.z()
+                        + quaternion.w() * quaternion.w());
         assertEquals(1.0f, magnitude, EPSILON);
     }
 }

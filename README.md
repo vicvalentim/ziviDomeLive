@@ -2,24 +2,24 @@
 
 <img src="docs/assets/png/logo.png" alt="ziviDomeLive logo" width="180">
 
-# ziviDomeLive
+# ziviDomeLive 2.0.0
 
-**Open-source Processing library for real-time immersive audiovisual creation, fulldome projection, spherical rendering, and creative coding.**
+**Open-source Processing 4 Contributed Library for real-time fulldome, spherical and immersive audiovisual creation.**
 
-[![Latest Release](https://img.shields.io/github/v/release/vicvalentim/ziviDomeLive?display_name=tag&label=version)](https://github.com/vicvalentim/ziviDomeLive/releases/latest)
-[![Processing](https://img.shields.io/badge/Processing-tested%204.5.6-006699)](https://processing.org/)
-[![Java](https://img.shields.io/badge/Java-17-007396)](https://github.com/vicvalentim/ziviDomeLive)
+[![Release line](https://img.shields.io/badge/release%20line-2.0.0-2563eb)](CHANGELOG.md)
+[![Processing](https://img.shields.io/badge/Processing-4-006699)](https://processing.org/)
+[![Java](https://img.shields.io/badge/Java-17-ED8B00)](https://adoptium.net/)
 [![Documentation](https://img.shields.io/badge/docs-MkDocs-526CFE)](https://vicvalentim.github.io/ziviDomeLive/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15671506.svg)](https://doi.org/10.5281/zenodo.15671506)
-[![License](https://img.shields.io/badge/license-GPL--2.0--only-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/vicvalentim)
 
 [Documentation](https://vicvalentim.github.io/ziviDomeLive/) ·
-[Latest release](https://github.com/vicvalentim/ziviDomeLive/releases/latest) ·
-[Examples](examples/) ·
-[Contributing](https://vicvalentim.github.io/ziviDomeLive/en/contributing/) ·
-[DOI](https://doi.org/10.5281/zenodo.15671506) ·
-[GitHub Sponsors](https://github.com/sponsors/vicvalentim)
+[Installation](#installation) ·
+[Examples](#examples) ·
+[API levels](#public-api-levels) ·
+[Release notes](docs/en/release-notes/2.0.0.md) ·
+[Citation](#citation)
 
 </div>
 
@@ -27,273 +27,132 @@
 
 ## Overview
 
-**ziviDomeLive** is a Processing 4 library designed to facilitate the creation of immersive visual and audiovisual experiences for fulldome projection, live performance, interactive installations, and other spherical-display workflows.
+ziviDomeLive is a Processing 4 library designed to facilitate the creation of immersive visual and audiovisual experiences for fulldome projection, live performance, interactive installations, and other spherical-display workflows.
 
 The library provides a flexible framework for scene management, real-time 3D rendering, projection conversion and calibration, interactive control, and external video routing. It supports independent Standard and spherical rendering domains, fisheye domemaster, equirectangular and cubemap representations, dynamic output resolution, and optional NDI, Syphon, or Spout publication.
 
 ziviDomeLive is intended for artists, creative coders, researchers, educators, students, developers, planetarium practitioners, VJs, and other users working with real-time immersive media.
 
->[!IMPORTANT]
-> **Current stable release: 1.5.0 — August 11, 2026.**
->
-> Version 1.5.0 is the final consolidation of the 1.x architecture. It preserves the established public facade while adding explicit `RenderMode` control, stronger lifecycle and routing contracts, quaternion-based spherical orientation, output diagnostics, qualification tooling, and expanded documentation. Experimental 2.0 rendering work is not part of the 1.5.0 public contract.
+![Illustrated overview of the ziviDomeLive creative workflow](docs/img/hero-overview.png)
 
-**Multiple Projection Modes**:
-- **ziviDomeLive** supports a wide range of projection modes including fisheye domemaster, equirectangular, cubemap, and more. These projection modes are ideal for fulldome displays, virtual reality setups, and immersive environments, allowing you to create visuals that wrap around the viewer or adapt to spherical displays.
+### Multiple Projection Modes
 
-**Resolution Switching for Domemaster**:
-- The library includes a mode that allows you to switch between 1k, 2k, 3k, and 4k resolutions for domemaster projection. This flexibility ensures that your visuals look sharp and detailed, regardless of the scale of your dome or display system. You can optimize performance based on the hardware capabilities and the specific requirements of your project.
+ziviDomeLive supports four final view representations: Standard perspective,
+fisheye Domemaster, 2:1 Equirectangular, and Skybox. The spherical views are
+derived from a shared native GPU cubemap capture, allowing the same Processing
+scene to feed fulldome, 360° and spherical-display workflows in real time.
 
-**Scene Management**:
-- Easily manage and switch between different scenes using the **Scene** interface. This feature allows for modular visual compositions where you can define multiple scenes and toggle between them dynamically. Each scene can have its own setup, rendering logic, and user interactions, making it versatile for both interactive installations and performances.
+### Configurable Output Resolution
 
-**Real-time Rendering**:
-- **ziviDomeLive** is optimized for live visual performances and real-time applications. It handles frame-by-frame rendering, ensuring smooth performance even with complex 3D scenes and shader effects. This makes it perfect for VJs, live coding performances, and interactive art installations.
-
-**External Integration**:
-- Seamlessly integrate with other applications using **Syphon** (for macOS) or **Spout** (for Windows). With these integrations, you can share rendered frames from your Processing sketches to other software in real-time. This is particularly useful for multimedia performances, where your visuals can be further processed or projected using different tools.
-
-**Interactive UI**:
-- The library integrates with **ControlP5**, a Processing library for creating graphical user interfaces (GUIs). This allows you to build interactive controls directly into your Processing sketches, such as sliders, buttons, and toggle switches, which can be used to manipulate various parameters of your visuals in real-time.
-
-**Cross-Platform Compatibility**:
-- **ziviDomeLive** works across multiple operating systems, including macOS, Windows, and Linux, making it highly versatile and accessible to a wide range of users. This ensures that your visual creations can be deployed on various platforms without compatibility issues.
-
-**Customizable Rendering Pipelines**:
-- Define and customize rendering pipelines to meet the needs of your project. Whether you are rendering for fulldome projection or interactive experiences, the library allows you to adjust the rendering resolution, projection mode, and other parameters to optimize performance and visual quality.
-
-## Research and Artistic Context
-
-ziviDomeLive is developed as open-source research software and as a technical-artistic research artifact at the intersection of **creative coding, immersive media, fulldome, real-time audiovisual systems, artistic research, and education**.
-
-The project treats the immersive rendering environment as a programmable space for artistic experimentation. Its development combines software engineering, computational art, projection systems, live audiovisual practice, and research-creation workflows.
-
-The project is developed by **[Victor Valentim](https://victorvalentim.com/)**.
-
-**Affiliations documented by the project:**
-
-- CECULT/UFRB — Federal University of Reconcavo da Bahia
-- PPGARTES/UFMG — Federal University of Minas Gerais
-- ORCID: [0000-0002-0282-7947](https://orcid.org/0000-0002-0282-7947)
-
-For academic and research use, see [Citation](#citation).
-
-## Features
-
-### Multiple Rendering and Projection Modes
-
-ziviDomeLive supports multiple real-time representations through the public `RenderMode` API:
-
-| Mode | Representation |
-| --- | --- |
-| `FULL` | Independent preview and output routes through `ViewType` |
-| `STANDARD` | Perspective Standard renderer |
-| `DOMEMASTER` | Fisheye domemaster |
-| `EQUIRECTANGULAR` | 2:1 spherical projection |
-| `SKYBOX` | Cubemap layout |
-
-`RenderMode.FULL` is the default compatibility mode.
-
-### Fulldome and Spherical Rendering
-
-The spherical domain supports:
-
-- fisheye domemaster rendering;
-- equirectangular output;
-- cubemap / skybox output;
-- shared pitch, yaw, and roll orientation controls;
-- fisheye field-of-view calibration;
-- domemaster Size% calibration;
-- independent preview and output resolution policies.
-
-### Resolution Switching
-
-Output resolution presets are available at:
-
-- `1024 × 1024`
-- `2048 × 2048`
-- `3072 × 3072`
-- `4096 × 4096`
-
-The Standard preview follows the Processing window, while spherical preview resolution is calculated automatically and remains independent from output resolution.
+Output resolution is configurable independently from the Processing preview
+window. This allows projects to balance visual fidelity and GPU workload for
+different dome, display, recording and external-output requirements, while the
+preview remains responsive to the current window size.
 
 ### Scene Management
 
-The `Scene` interface and `SceneManager` support modular real-time compositions with:
+Easily manage and switch between different scenes using the `Scene` interface.
+Scenes have explicit setup, update, rendering, input and disposal lifecycle
+hooks, making them suitable for modular visual compositions, interactive
+installations and live performance.
 
-- scene setup;
-- per-frame updates;
-- `PGraphicsOpenGL` rendering;
-- deterministic scene switching;
-- keyboard, mouse, and ControlP5 event forwarding;
-- scene disposal and resource cleanup.
+### Real-time Rendering
 
-### Real-Time Rendering
+ziviDomeLive is designed for real-time visual and audiovisual workflows. Its
+2.0 rendering architecture separates scene simulation from rendering, updates
+mutable scene state once per Processing frame, and reuses spherical capture
+across multiple final representations when required.
 
-ziviDomeLive is designed for live visual performance and interactive applications. The library manages rendering lifecycle and frame routing while preserving a Processing-oriented scene workflow.
+### External Integration
 
-Typical use cases include:
-
-- fulldome performances;
-- planetarium installations;
-- immersive audiovisual works;
-- VJ and live-coding environments;
-- interactive media installations;
-- monoscopic VR and spherical visualization;
-- research and teaching in art and technology.
-
-### External Video Integration
-
-Optional output backends include:
-
-| Backend | Platform | Path |
-| --- | --- | --- |
-| Syphon | macOS | GPU-native texture sharing |
-| Spout | Windows | GPU-native texture sharing |
-| NDI | macOS / Windows / experimental Linux | GPU-to-CPU network video boundary |
-
-NDI support uses the bundled Devolay Java/JNI dependency but requires a separately installed NDI Runtime. NDI in ziviDomeLive 1.5.0 is an experimental, unofficial, video-only integration.
+Rendered views can be routed to external applications through NDI, Syphon on
+macOS, or Spout on Windows. These outputs are optional, independently enabled
+and independently assigned to a final `ViewType`. NDI requires the separately
+installed NDI Runtime, while Syphon and Spout depend on their platform-specific
+Processing integrations.
 
 ### Interactive UI
 
-The built-in ControlP5 panel exposes runtime controls for:
+The built-in ControlP5 panel provides runtime controls for preview selection,
+render modes, spherical orientation, Domemaster calibration, output resolution
+and external-output routing. ControlP5 is an explicit required Processing
+dependency for the distributed examples and tools.
 
-- render mode;
-- preview and output routing;
-- pitch, yaw, and roll;
-- domemaster FOV;
-- domemaster Size%;
-- output resolution;
-- output publication state.
+### Cross-Platform Support
 
-### Cross-Platform Architecture
+Core rendering targets macOS, Windows and Linux. Platform-specific external
+outputs have separate runtime requirements and qualification paths: Syphon is
+available on macOS, Spout on Windows, and NDI is supported through Devolay and
+the separately installed NDI Runtime.
 
-Core Standard and spherical rendering are supported on:
+### Configurable Rendering Workflow
 
-- macOS
-- Windows
-- Linux
+The public API exposes render-mode selection, final-view routing, spherical
+orientation, Domemaster calibration, output resolution, scene services and
+typed external outputs. The underlying renderer graph, OpenGL targets and
+projection pipeline remain internal so that sketches use a stable Processing-
+oriented contract rather than depending on implementation details.
 
-External-sharing capabilities remain platform-specific. See the [system requirements](https://vicvalentim.github.io/ziviDomeLive/en/installation/requirements/) and [known issues](https://vicvalentim.github.io/ziviDomeLive/en/known-issues/) before production deployment.
+### Processing Contributed Library and research context
 
-## Known Issues
+ziviDomeLive is developed as an open-source **Processing 4 Contributed Library** for
+real-time fulldome, spherical and immersive audiovisual creation. Its design combines
+creative-coding practice, reusable library infrastructure and research-creation methods
+for artistic, educational and experimental workflows.
 
->[!IMPORTANT]
->**Disclaimer for Apple Silicon Users**:
->>For users on macOS with Apple Silicon processors (M series), it is recommended to use the Intel version of Processing (run via Rosetta 2) to ensure full **Syphon** functionality. The native ARM version of Processing currently lacks Syphon support, which may limit the real-time video-sharing capabilities of the **ziviDomeLive** library.
->
->**Disclaimer for Linux Users**:
->>Due to the absence of a native library for **NDI** in Processing, Linux users will not have access to external integration features, such as those provided by **Syphon** or **Spout** on macOS and Windows.
->
+The library is developed within an academic research context in art and technology,
+with particular emphasis on artistic research, computational art, immersive media,
+real-time graphics, fulldome practice and the use of open-source creative-coding tools
+as technical and methodological research artifacts.
 
->[!WARNING]
->**OpenGL Error 1282**:
-> Some users may encounter the following OpenGL error in the Processing console:
->   ```
->   OpenGL error 1282 at bot endDraw(): invalid operation
->   ```
->This error is related to specific OpenGL calls within Processing, but it does not impact the functionality of the **ziviDomeLive** library. Your visuals and performance should remain unaffected, and you can safely ignore this warning.
->
+As a contributed library, ziviDomeLive follows Processing ecosystem conventions for
+installation, examples, public API documentation, packaging and distribution while also
+maintaining scholarly metadata, persistent identifiers, provenance records and
+reproducible release qualification.
 
-### Qualification and Diagnostics
+### Statement of need
 
-Version 1.5.0 includes explicit release and runtime diagnostics:
+Processing makes real-time graphics approachable, but a production fulldome workflow still has to solve several concerns at once: render a scene consistently across several spherical views, avoid updating simulation once per cubemap face, calibrate the projection, manage scene resources, and route frames without blocking the OpenGL thread. ziviDomeLive provides one Processing-oriented contract for that boundary.
 
-- automated API, state, lifecycle, routing, math, metadata, and packaging tests;
-- `qualificationTests` Gradle task;
-- CalibrationTool visual qualification workflow;
-- observable external-output lifecycle states;
-- NDI captured, sent, dropped, and failed-frame telemetry;
-- documented GPU and native-output qualification procedures.
+The project focuses on **monoscopic spherical and fulldome image production**. It is not a headset runtime, stereoscopic VR engine, projection-mapping suite or general dependency-injection framework.
 
-## Rendering Model
+## What you can create
 
-ziviDomeLive 1.5.0 keeps Standard and spherical rendering as separate domains:
+| Workflow | Representation | Typical use |
+|---|---|---|
+| Standard | Perspective render | Processing window, conventional display, development preview |
+| Domemaster | Circular fisheye | Dome playback, lens/projector calibration, planetarium work |
+| Equirectangular | 2:1 spherical image | 360° media workflows and spherical inspection |
+| Skybox | True equi-angular cubemap (EAC) cross | Lower intra-face angular distortion, face/orientation inspection and compatible pipelines |
 
-```text
-STANDARD
-Scene -> StandardRenderer -> Standard target
+`RenderMode.FULL` keeps preview and external-output `ViewType` routes independent. A dedicated render mode temporarily chooses one effective representation without erasing the saved routes.
 
-SPHERICAL
-Scene -> six cubemap faces -> equirectangular -> fisheye domemaster
-                          \-> cubemap / skybox layout
-```
+## Why 2.0
 
-The 1.x spherical topology is an internal implementation detail. Stable public contracts concern rendered content, projection behavior, calibration, scene lifecycle, routing, and the public API rather than a permanent backend implementation.
+Version 2.0 preserves the teachable `Scene` model and deliberately breaks with unsafe 1.x implementation exposure:
 
-## Requirements
+- the facade is `ziviDomeLive`; the Java package remains `com.victorvalentim.zividomelive`;
+- `Scene.sceneRender(PGraphicsOpenGL)` is the only required scene method;
+- mutation belongs in `Scene.update()`, exactly once per Processing frame;
+- activation-scoped services replace global or scene-owned runtime machinery;
+- outputs are typed, opt-in and independently routed;
+- renderer, OpenGL, UI, worker and pipeline implementations are internal;
+- no deprecated 1.x compatibility API remains in the 2.0 public surface.
 
-| Requirement | Current 1.5.0 target |
-| --- | --- |
-| Processing | Processing 4 |
-| Tested Processing version | 4.5.6 |
-| Renderer | `P3D` |
-| Java for source builds | Java 17 |
-| Pixel density | `pixelDensity(1)` recommended |
-| GPU | OpenGL 4.1-capable GPU/driver |
-| Packaged shaders | GLSL 4.10 |
-| Platforms tested | macOS, Windows, Linux |
+<details>
+<summary><strong>Rendering architecture in one paragraph</strong></summary>
 
-A dedicated GPU is recommended for 3K/4K spherical rendering and shader-heavy scenes.
+Standard rendering stays independent. When a spherical representation is needed, the library captures six cubemap faces into a native GPU cubemap and derives Domemaster, Equirectangular and Skybox as sibling projections. The capture and projection machinery is internal; artist code selects results with `RenderMode` and `ViewType`.
 
-## Dependencies
-
-### Processing libraries
-
-| Dependency | Purpose | Platform |
-| --- | --- | --- |
-| ControlP5 `2.2.6` | Built-in control panel | All |
-| Syphon for Processing `4.0` | GPU texture sharing | macOS |
-| Spout for Processing `2.0.8.0` | GPU texture sharing | Windows |
-
-Install Processing dependencies through the Contribution Manager where available.
-
-### Bundled Java dependency
-
-ziviDomeLive 1.5.0 includes Devolay `2.2.0-vic.1` for experimental NDI output. The proprietary NDI Runtime is **not bundled** and must be installed separately.
-
-See the [NDI Runtime documentation](https://vicvalentim.github.io/ziviDomeLive/en/installation/ndi/) before enabling NDI.
-
-## Installation
-
-### Processing Contribution Manager
-
-When ziviDomeLive is available through Processing's Contribution Manager:
-
-1. Open Processing.
-2. Go to **Sketch → Import Library… → Manage Libraries…**
-3. Search for **ziviDomeLive**.
-4. Install the library.
-5. Open an example from **File → Examples → Contributed Libraries → ziviDomeLive**.
-
-### Manual installation
-
-Download the latest release artifact:
-
-- [ziviDomeLive.zip](https://github.com/vicvalentim/ziviDomeLive/releases/latest/download/ziviDomeLive.zip)
-- [ziviDomeLive.pdex](https://github.com/vicvalentim/ziviDomeLive/releases/latest/download/ziviDomeLive.pdex)
-- [ziviDomeLive.txt](https://github.com/vicvalentim/ziviDomeLive/releases/latest/download/ziviDomeLive.txt)
-
-For manual ZIP installation:
-
-1. Extract the `ziviDomeLive` folder.
-2. Move it to the Processing sketchbook `libraries` directory.
-3. Install the required Processing dependencies.
-4. Restart Processing.
-
-Cloning this repository is intended for development rather than normal installation.
+</details>
 
 ## Quickstart
 
 ```java
 import com.victorvalentim.zividomelive.*;
-
-// Processing contributed-library runtime dependencies:
 import controlP5.*;
-import codeanticode.syphon.*; // Apple
-import spout.*; // Windows
 
-zividomelive ziviDome;
+ziviDomeLive dome;
 
 void settings() {
   size(1280, 720, P3D);
@@ -301,233 +160,351 @@ void settings() {
 }
 
 void setup() {
-  ziviDome = new zividomelive(this);
-  ziviDome.setup();
-  ziviDome.setScene(new Scene1());
+  dome = new ziviDomeLive(this);
+  dome.setup();
+  dome.setScene(new MainScene());
+  dome.setRenderMode(RenderMode.DOMEMASTER);
 }
 
 void draw() {
-  // ziviDomeLive renders through its registered Processing draw hook.
+  // ziviDomeLive renders from its registered Processing hook.
 }
 
-class Scene1 implements Scene {
+class MainScene implements Scene {
+  float angle;
+
+  public void update() {
+    angle += 0.01; // exactly once per Processing frame
+  }
+
   public void sceneRender(PGraphicsOpenGL pg) {
     pg.background(8, 12, 24);
     pg.lights();
+    pg.rotateY(angle);
     pg.box(180);
   }
 }
 ```
 
-The library owns the Processing rendering lifecycle around the scene target. Do not call `beginDraw()` or `endDraw()` inside `sceneRender()`, and do not manually forward lifecycle or input events already registered by ziviDomeLive.
+> [!WARNING]
+> `sceneRender()` can run more than once in a frame because spherical capture draws multiple cubemap faces. Do not advance physics, timelines, counters or shared randomness there. The library owns `beginDraw()` and `endDraw()` for the supplied target.
 
-## Scene Contract
+## The Scene contract
 
-A scene may implement:
+| Callback | Requirement | Responsibility |
+|---|---:|---|
+| `configure(SceneServices)` | Optional | Receive fresh activation-scoped services before setup |
+| `setupScene()` | Optional | Initialize state for the current activation |
+| `update()` | Optional | Advance mutable state once per Processing frame |
+| `sceneRender(PGraphicsOpenGL)` | **Required** | Draw the already-updated state |
+| `keyEvent(...)`, `mouseEvent(...)` | Optional | Receive raw Processing input after named actions |
+| `dispose()` | Optional | Release scene-owned resources for this activation |
+| `getName()` | Optional | Supply a diagnostic/display name |
 
-- `setupScene()` when it becomes active;
-- `update()` once before rendering each frame;
-- `sceneRender(PGraphicsOpenGL pg)` for drawing;
-- `keyEvent()`, `mouseEvent()`, and `controlEvent()` for input;
-- `dispose()` to release scene-owned resources;
-- `getName()` for diagnostics.
+Activation order is deterministic:
 
-`SceneManager` is the authority for the active scene.
+```text
+services → configure → setup → frame/input callbacks → stop activation work → dispose → release services
+```
 
-## Spherical Calibration
+A reload is a complete dispose/setup cycle with fresh `SceneServices`, even when the same Java `Scene` instance is reused.
 
-The supported 1.5.0 calibration domain is:
+## Public API levels
 
-| Parameter | Range / values |
-| --- | --- |
-| Pitch | cyclic `-PI .. PI` |
-| Yaw | cyclic `-PI .. PI` |
-| Roll | cyclic `-PI .. PI` |
-| Domemaster FOV | `0 .. 360`, default `210` |
-| Domemaster Size% | `0 .. 100`, default `100` |
-| Output resolution | `1024`, `2048`, `3072`, `4096` |
+The 2.0 API is organized by teaching level and stability, not by the Java `public` modifier alone.
 
-Pitch, yaw, and roll are shared across spherical representations and compose incrementally into a normalized quaternion.
+| Level | Audience and promise | Public types |
+|---|---|---|
+| **Stable** | Normal Processing sketches; smallest recommended path | `ziviDomeLive`, `StandardOutputAspectMode`, `Scene`, `SceneManager`, `RenderMode`, `ViewType`, `LogMode` |
+| **Advanced Stable** | Projects needing lifecycle-aware time, tasks, assets, actions, camera, environment, ports, typed outputs or reusable math | `SceneServices`, `FrameClock`, `SimulationTimeline`, `SceneTaskGroup`, `SceneAssets`, `SceneActionMap`, `SceneCameraService`, `SceneEnvironmentService`, `ScenePorts`, `SceneInputPort`, `SceneOutputPort`, `OutputManager`, `OutputType`, `OutputState`, `Quaternion`, `SphericalOrientation`, `OrbitCamera` |
+| **Experimental** | Measurement and qualification; source compatibility may change in a major/minor revision | `PerformanceMode`, `PerformanceMetric`, `PerformanceSnapshot`, `MetricStatistics`, `GraphicsCapabilities`, `GpuTimerPolicy`, `GpuTimerBackend`, `GpuTimerArchitecture` |
+| **Processing callbacks** | Public only because Processing invokes them | `pre`, `draw`, `post`, `keyEvent`, `mouseEvent`, `pause`, `resume`, `stop`, `dispose` on the facade |
+| **Internal** | Renderer graph, OpenGL targets, UI, queues, workers and output producers; not callable API | Physical `_internal/` source categories and package-private implementation types |
 
-## External Outputs
+There is **no deprecated level in 2.0**. Removed 1.x symbols are recorded in the [migration history](docs/en/api/deprecated.md) and changelog, not kept as permanent aliases.
 
-External outputs are opt-in.
+### SceneServices, progressively
+
+`SceneServices` belongs to one activation and exposes focused services:
+
+| Accessor | Use |
+|---|---|
+| `applet()` | Owning Processing applet |
+| `frameClock()` | Monotonic per-frame time |
+| `timeline()` | Bounded fixed-step simulation |
+| `tasks()` | Bounded keyed background work with frame-boundary callbacks |
+| `assets()` | Activation-aware Processing images, shaders and shapes |
+| `actions()` | Named key/mouse actions while retaining raw callbacks |
+| `camera()` | Scene-space orbit camera, input, target tracking and opt-in view lighting |
+| `environment()` | Activation-owned environment overrides |
+| `ports()` | Bounded optional external-message adapters |
+| `requestReload()` | Deferred reload at a safe frame boundary |
+
+Scenes do not construct or close these services. Background tasks must not call Processing/OpenGL APIs; their results are published only to the activation that submitted them.
+
+## Rendering, calibration and routing
+
+### RenderMode versus ViewType
+
+- `RenderMode` answers **how the runtime should work now**: `FULL`, `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR` or `SKYBOX`.
+- `ViewType` answers **which final representation a destination receives**: `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR` or `SKYBOX`.
+
+The ControlP5 panel maps stable UI IDs explicitly to `ViewType`; enum ordinals are not an artist-facing persistence or routing contract.
+
+### Spherical calibration
+
+Pitch, yaw and roll orient the shared spherical domain. Domemaster FOV controls angular coverage; Size% fits the circular image to the physical lens/projector path and is not scene-camera zoom. Output resolution changes are deferred to a safe render boundary.
+
+### Transparent final frames
+
+Every library-owned Standard, Domemaster, Equirectangular and Skybox target starts at transparent
+RGBA `(0, 0, 0, 0)`. A Scene remains free to call `background(...)`, `clear()` or draw fullscreen
+geometry, and a configured visible Environment is rendered as explicit content. Preview copies and
+NDI/Syphon/Spout publication consume the same alpha-bearing final targets; a primary Processing
+window or external receiver may still composite or discard alpha according to its own contract.
+
+### External outputs
+
+Outputs start disabled and must be enabled explicitly through the typed `OutputManager` API:
 
 ```java
 import com.victorvalentim.zividomelive.manager.OutputManager;
 
-OutputManager outputs = ziviDome.getOutputManager();
-
-outputs.setNdiView(zividomelive.ViewType.EQUIRECTANGULAR);
-outputs.toggleOutput("ndi");
+OutputManager outputs = dome.getOutputManager();
+outputs.setViewForOutput(
+    OutputManager.OutputType.NDI,
+    ViewType.EQUIRECTANGULAR);
+outputs.setOutputEnabled(OutputManager.OutputType.NDI, true);
 
 println(outputs.getOutputState(OutputManager.OutputType.NDI));
 println(outputs.getOutputFailureReason(OutputManager.OutputType.NDI));
 ```
 
-Syphon and Spout remain GPU-native. NDI is the explicit GPU-to-CPU boundary and uses bounded buffering and latest-frame-wins backpressure.
+Syphon is macOS-only, Spout is Windows-only, and NDI requires a separately installed NDI Runtime. Code-path availability is not evidence that a receiver/platform combination passed physical qualification.
 
-## Built-in Controls
+## Built-in controls
 
-Default controls include:
+| Input | Action |
+|---|---|
+| `h` | Show/hide the ControlP5 panel |
+| `m` | Cycle the configured preview `ViewType` |
+| Left / Right | Switch scenes when text input is inactive |
 
-- `h` — show or hide the ControlP5 panel;
-- `m` — cycle the configured legacy preview `ViewType`;
-- Left / Right arrows — switch scenes.
+Visible ControlP5 controls own pointer gestures. A scene camera must not orbit or zoom through the same gesture.
 
-The panel adapts to the active `RenderMode`.
+## Requirements
+
+| Requirement | 2.0 contract |
+|---|---|
+| Processing | Processing 4 (revision 1285+); source compatibility is audited against 4.0, while routine automation uses 4.5.6 |
+| Renderer | `P3D` / `PGraphicsOpenGL` |
+| Java source build | Java 17 |
+| Pixel density | `pixelDensity(1)` for deterministic target dimensions |
+| Graphics | OpenGL 4.1-capable context; packaged projection shaders use GLSL 4.10 |
+| High resolutions | Dedicated GPU recommended for 3K/4K and shader-heavy scenes |
+
+The target is macOS, Windows and Linux for core rendering, with platform-specific optional outputs. The release qualification matrix below records the physically exercised configurations; `tested.platform` and `tested.processingVersion` remain blank because the Processing metadata fields cannot represent that matrix without collapsing distinct platform/runtime evidence.
+
+**Processing `library.keywords`:** fulldome, spherical rendering, domemaster, immersive media, creative coding, Processing, OpenGL, planetarium, NDI, Syphon, Spout, real-time graphics.
+
+## Release qualification
+
+ziviDomeLive 2.0.0 has been physically qualified on the four target desktop
+configurations used by the project:
+
+| Platform | Core rendering and 2.0 views | Distributed examples/tools | Native output qualification |
+|---|---|---|---|
+| macOS Apple Silicon `arm64` | PASS | PASS | NDI + Syphon |
+| macOS Intel `x86_64` | PASS | PASS | NDI + Syphon |
+| Windows `x86_64` | PASS | PASS | NDI + Spout |
+| Linux `x86_64` | PASS | PASS | NDI |
+
+The physical matrix covers Standard, Domemaster, Equirectangular and Skybox
+rendering, spherical calibration, Environment rendering, representative resize
+behavior, the complete set of ten distributed examples/tools, and the
+platform-applicable external-output paths.
+
+The current automated release gate also passes **387/387 qualification tests**
+with **0 failed and 0 skipped**, alongside the documentation and Processing
+package validators.
+
+Native-output applicability is platform-specific: Syphon is a macOS route,
+Spout is a Windows route, and NDI requires the separately installed official
+NDI Runtime. The Apple Silicon Syphon qualification uses the documented
+community universal compatibility build (`arm64` + `x86_64` native payload).
+
+The authoritative, revision-bound qualification record is maintained in
+[`maintainer/release-evidence.md`](maintainer/release-evidence.md).
+`tested.platform` and `tested.processingVersion` remain intentionally blank in
+`library.properties` because those scalar Processing metadata fields cannot
+faithfully represent this multi-platform qualification matrix.
+
+## Dependencies
+
+| Dependency | Purpose | Distribution | Repository |
+|---|---|---|---|
+| ControlP5 2.2.6 | Built-in runtime controls | Required external Processing library; install explicitly; defensive fallback disables the panel when absent | [sojamo/controlp5](https://github.com/sojamo/controlp5) |
+| Syphon for Processing 4.0 | macOS GPU texture sharing | Optional. Upstream package for Intel macOS; Apple Silicon users can use the community universal compatibility build below | [Syphon/Processing](https://github.com/Syphon/Processing) |
+| Spout for Processing 2.0.8.0 | Windows GPU texture sharing | Optional; output is unavailable when absent | [leadedge/SpoutProcessing](https://github.com/leadedge/SpoutProcessing) |
+| Devolay 2.2.0-vic.2 | Java/JNI NDI sender integration | Bundled Maven artifact; NDI Runtime is separate | [vicvalentim/devolay](https://github.com/vicvalentim/devolay) |
+
+### Syphon on Apple Silicon
+
+The upstream **Syphon for Processing 4.0** package does not currently ship the
+native Apple Silicon payload required by Processing 4 on `macos-aarch64`.
+ziviDomeLive therefore publishes a temporary **community compatibility build**
+for macOS containing universal `arm64` + `x86_64` native binaries.
+
+- Download: [Syphon-for-Processing-4.0-macOS-universal-community.zip](https://github.com/vicvalentim/ziviDomeLive/releases/download/v2.0.0/Syphon-for-Processing-4.0-macOS-universal-community.zip)
+- SHA-256: `59996d8e984c8662e1b964768861e28faa04ab9495daa641a0e14a5a1bf35995`
+- Upstream wrapper: [Syphon/Processing](https://github.com/Syphon/Processing)
+- Native framework: [Syphon/Syphon-Framework](https://github.com/Syphon/Syphon-Framework)
+- Java/JNI bridge: [Syphon/Java](https://github.com/Syphon/Java)
+
+This compatibility asset is **not an official Syphon Project release** and does
+not change the Syphon API used by ziviDomeLive. Quit Processing, replace the
+existing Sketchbook `libraries/Syphon/` folder with the extracted package, then
+restart Processing. The archive includes the upstream Syphon license and keeps
+the original Syphon for Processing 4.0 library identity.
+
+See [Dependencies](docs/en/installation/dependencies.md), [NDI Runtime](docs/en/installation/ndi.md), [Known Issues](docs/en/known-issues.md) and [Third-party notices](THIRD_PARTY.md).
+
+## Installation
+
+### Processing Contribution Manager
+
+After the 2.0 package is published:
+
+1. Open **Sketch → Import Library… → Manage Libraries…**.
+2. Search for **ziviDomeLive**.
+3. Install it and restart Processing if requested.
+4. Open **File → Examples → Contributed Libraries → ziviDomeLive**.
+
+### Release package
+
+For manual installation, download the release artifact rather than GitHub's repository source archive:
+
+- [`ziviDomeLive.zip`](https://github.com/vicvalentim/ziviDomeLive/releases/latest/download/ziviDomeLive.zip)
+- [`ziviDomeLive.pdex`](https://github.com/vicvalentim/ziviDomeLive/releases/latest/download/ziviDomeLive.pdex)
+- [`ziviDomeLive.txt`](https://github.com/vicvalentim/ziviDomeLive/releases/latest/download/ziviDomeLive.txt)
+
+The three files intentionally share a basename and release directory. The ZIP/PDEX contains `library/`, `reference/index.html`, `examples/`, `src/`, `library.properties`, licenses and notices in the structure expected by Processing.
+
+### Source build
+
+```bash
+git clone https://github.com/vicvalentim/ziviDomeLive.git
+cd ziviDomeLive
+./gradlew clean test build
+```
+
+Source development uses Gradle and is not the normal artist installation path.
 
 ## Examples
 
-The repository includes examples ranging from minimal templates to larger immersive scenes:
+| Level | Sketch | Focus |
+|---|---|---|
+| Getting Started | `GettingStarted/EmptyProject` | Minimal one-scene template |
+| Getting Started | `GettingStarted/Basic` | Two scenes, switching and render modes |
+| Getting Started | `GettingStarted/NamedActions` | Named key-code/mouse actions and programmatic triggers |
+| Getting Started | `GettingStarted/PortLoopback` | Bounded scene input and non-blocking output port SPI |
+| Advanced | `Advanced/SphereParticle` | Lifecycle-safe background simulation |
+| Advanced | `Advanced/InfiniteBackground` | Translation-invariant environment |
+| Advanced | `Advanced/FulldomePBR` | Retained geometry, shaders and scene camera |
+| Advanced | `Advanced/SolarSystem` | Time, assets, actions, camera tracking and double-precision orbital simulation |
+| Tools | `Tools/CalibrationTool` | Orientation, projection and dome calibration |
+| Tools | `Tools/BenchmarkTool` | Reproducible performance evidence |
 
-| Example | Purpose |
-| --- | --- |
-| `Basic` | Scene switching and `RenderMode` keys `1..5` |
-| `EmptyProject` | Minimal one-scene starter template |
-| `CalibrationTool` | GLSL focus/color target and 360-degree spherical calibration |
-| `FulldomePBR` | Retained geometry, PBR shaders, and scene-space orbit camera |
-| `SolarSystem` | Larger multi-file application |
-| `SphereParticle` | Threaded scene simulation |
+Browse [`examples/`](examples/) or the [examples guide](https://vicvalentim.github.io/ziviDomeLive/examples/basic/).
 
-Browse the [examples directory](examples/) or the [examples documentation](https://vicvalentim.github.io/ziviDomeLive/en/examples/basic/).
+## Documentation and verification
 
-## Documentation
+The documentation system has distinct authorities:
 
-Full documentation is available at:
-
-**https://vicvalentim.github.io/ziviDomeLive/**
-
-The documentation includes:
-
-- installation and dependencies;
-- quickstart;
-- render modes;
-- control panel;
-- spherical calibration;
-- scene management;
-- external integration;
-- rendering architecture;
-- API reference;
-- examples;
-- qualification procedures;
-- release notes;
-- contributing guidance;
-- known issues;
-- author and license information.
-
-Processing library releases also include the generated reference documentation required by the Processing library distribution structure.
-
-## Processing Contribution Library Metadata
-
-ziviDomeLive follows the Processing contributed-library packaging model.
-
-| Metadata | Value |
-| --- | --- |
-| Name | `ziviDomeLive` |
-| Current version | `1.5.0` |
-| Processing version tested | `4.5.6` |
-| Categories | `3D`, `Video & Vision` |
-| Platforms | macOS, Windows, Linux |
-| License | GPL-2.0-only |
-| Last stable release | August 11, 2026 |
-| DOI | `10.5281/zenodo.15671506` |
-
-**Keywords:** fulldome, projection, immersive media, creative coding, real-time graphics, NDI, Syphon, Spout, Processing, OpenGL, computational art, planetarium, live video.
-
-The release workflow produces the three matching Processing distribution artifacts:
-
-```text
-ziviDomeLive.zip
-ziviDomeLive.txt
-ziviDomeLive.pdex
-```
-
-The ZIP distribution contains the compiled library, examples, source, metadata, notices, and reference material required by the Processing library packaging workflow.
-
-## Build and Verification
-
-For development:
+1. implementation and tests define what exists;
+2. the frozen public API and generated Javadocs define callable signatures;
+3. MkDocs teaches installation, use, architecture and qualification;
+4. historical pages and the changelog explain migration without redefining 2.0.
 
 ```bash
-./gradlew clean qualificationTests
-./gradlew build -x test
+./gradlew clean test build
+./gradlew qualificationTests
+python3 tools/validate_documentation.py --root .
+python3 -m mkdocs build --strict
+./gradlew attachJavadocsToSite --console=plain
+python3 tools/validate_documentation.py --root . --site-dir site
 ./gradlew buildReleaseArtifacts
-mkdocs build --strict
 ```
 
-Release artifacts are written to:
-
-```text
-release/ziviDomeLive.zip
-release/ziviDomeLive.pdex
-release/ziviDomeLive.txt
-```
-
-GPU rendering and native output interoperability must also be qualified manually on target hardware.
-
-## Known Issues
-
-- Some Processing/JOGL hardware and driver combinations may emit OpenGL error `1282` (`GL_INVALID_OPERATION`). The issue is generally non-fatal but remains under investigation.
-- Native Syphon on Apple Silicon may require the Intel build of Processing under Rosetta 2.
-- Linux has reduced external-output support relative to macOS and Windows.
-- NDI output is experimental and requires qualification of the exact runtime, network, sender, receiver, operating system, and frame format.
-
-See the complete [Known Issues](https://vicvalentim.github.io/ziviDomeLive/en/known-issues/) documentation.
-
-## Contributing
-
-Contributions are welcome in the form of bug reports, documentation improvements, tests, examples, and code.
-
-Before submitting code:
+For a local live preview, invoke MkDocs through the same Python 3 interpreter that owns the documentation dependencies:
 
 ```bash
-./gradlew clean qualificationTests
-./gradlew build -x test
-./gradlew buildReleaseArtifacts
-mkdocs build --strict
+python3 -m pip install -r requirements-docs.txt
+python3 -m mkdocs serve
 ```
 
-Please preserve the documented 1.x public contracts and update tests, Javadocs, bilingual documentation, and the changelog when public behavior changes.
+Do not rely on an unqualified system `mkdocs` executable: older macOS/Python 2 installations cannot parse the Material `!ENV` configuration or load the current plugins.
 
-Read the complete [Contributing Guide](https://vicvalentim.github.io/ziviDomeLive/en/contributing/) before opening a pull request.
+Headless tests cover public API shape, lifecycle, routing, math, metadata, package structure and documentation contracts. GPU image quality, projector/lens behavior and NDI/Syphon/Spout receiver interoperability remain manual, environment-specific qualification.
+
+## Research and artistic context
+
+ziviDomeLive is an open-source **Processing 4 Contributed Library** developed at the intersection of creative coding, artistic research, research-creation, computational art, immersive media, fulldome practice, real-time audiovisual systems, education and open-source development.
+
+The library functions both as reusable infrastructure for Processing projects and as a technical-artistic research artifact. Its development investigates how programmable rendering systems, spherical image representations, real-time interaction and open creative-coding ecosystems can support artistic experimentation, live audiovisual performance, immersive installation, teaching and research.
+
+The project adopts an open-research approach in which source code, documentation, examples, release qualification, citation metadata and technical provenance form part of the public research record.
+
+The library emerged in 2024 from the Arts doctoral research in Technological Poetics at PPGARTES/UFMG, *[O domo é vivo: entre técnica, sensível e poética em imersão](https://hdl.handle.net/1843/981)*. It is now linked to *Arte, Codificação e Imersão: pesquisa-criação, open-source e ecossistemas audiovisuais imersivos*, selected under [PIBITI/UFRB Call no. 05/2026](https://ufrb.edu.br/ppgci/noticias/1624-edital-05-2026-do-pibiti-26-27) for 2026–2027. Prof. Dr. Victor Hugo Soares Valentim coordinates the project with undergraduate scholarship collaborators Tiago Silva Rosa and David Siqueira de Araujo at CECULT/UFRB.
+
+The project is developed by **[Victor Valentim](https://victorvalentim.com/)**. Repository metadata records the following affiliations:
+
+- CECULT/UFRB — Federal University of Reconcavo da Bahia;
+- PPGARTES/UFMG — Federal University of Minas Gerais (2024–2025);
+- ORCID: [0000-0002-0282-7947](https://orcid.org/0000-0002-0282-7947).
+
+The public research record includes an [Open Source Science project entry](https://science.ecosyste.ms/projects/36511) and the 2026 SIIMI proceedings article [*ziviDomeLive como artefato de pesquisa e experimentação em arte e tecnologia para criação de experiências audiovisuais ao vivo em fulldome*](https://files.cercomp.ufg.br/weby/up/777/o/ziviDomeLive_como_artefato_de_pesquisa_e_experimentac%CC%A7a%CC%83o_em_arte_e_tecnologia_para_criac%CC%A7a%CC%83o_de_experie%CC%82ncias_audiovisuais_ao_vivo_em_fulldome.pdf). The documentation includes a [research and JOSS-readiness map](docs/en/research-software.md) and the project's [research-integrity, full human-review and conduct declaration](docs/en/research-integrity.md). These align verifiable evidence with review criteria; they do **not** claim that ziviDomeLive has been submitted to or accepted by JOSS.
+
+### Scholarly and machine-readable metadata
+
+ziviDomeLive maintains machine-readable metadata to support citation, research indexing,
+archival discovery and reproducible scholarly use while preserving its identity as a
+Processing Contributed Library:
+
+- [`CITATION.cff`](CITATION.cff) — citation metadata for researchers and citation tools;
+- [`codemeta.json`](codemeta.json) — CodeMeta description of the Processing Contributed Library;
+- [`.zenodo.json`](.zenodo.json) — archival metadata for Zenodo releases;
+- [`THIRD_PARTY.md`](THIRD_PARTY.md) — dependency, license and provenance information;
+- [`maintainer/release-evidence.md`](maintainer/release-evidence.md) — revision-bound release qualification evidence.
+
+The persistent DOI is [10.5281/zenodo.15671506](https://doi.org/10.5281/zenodo.15671506), and the project is indexed in the Open Source Science / ecosyste.ms research index.
+
+These records complement the Processing library package rather than redefine it:
+**ziviDomeLive remains a Processing Contributed Library whose development and use also
+form part of an open artistic-research and research-creation practice.**
 
 ## Citation
 
-If ziviDomeLive contributes to academic research, artistic research, teaching, software studies, publications, artworks, or technical reports, please cite the software.
+If ziviDomeLive contributes to academic research, artistic research, teaching, software studies, publications, artworks or technical reports, cite the software using [`CITATION.cff`](CITATION.cff).
 
-**DOI:** [10.5281/zenodo.15671506](https://doi.org/10.5281/zenodo.15671506)
+**Persistent DOI:** [10.5281/zenodo.15671506](https://doi.org/10.5281/zenodo.15671506)
 
-Citation metadata is maintained in [`CITATION.cff`](CITATION.cff), allowing GitHub and compatible reference managers to expose structured software citation information.
+Release maintainers must verify the registered external record before tagging or changing the DOI metadata.
 
-## Author
+## Contributing and support
 
-**Victor Valentim**  
-Researcher, artist-programmer, professor, musician, and developer.
+Bug reports, documentation improvements, tests, examples and scoped code contributions are welcome. Read the [Contributing Guide](docs/en/contributing.md) for the fork, branch, validation and pull-request workflow, and follow the project's [Code of Conduct](CODE_OF_CONDUCT.md). Use [GitHub Issues](https://github.com/vicvalentim/ziviDomeLive/issues) for reproducible problems and support questions.
 
-- Website: [victorvalentim.com](https://victorvalentim.com/)
-- GitHub: [@vicvalentim](https://github.com/vicvalentim)
-- ORCID: [0000-0002-0282-7947](https://orcid.org/0000-0002-0282-7947)
+Development is supported through [GitHub Sponsors](https://github.com/sponsors/vicvalentim); sponsorship does not change the open availability of the library, documentation or public development.
 
-**Affiliations documented by the project:**
+## History
 
-- CECULT/UFRB — Federal University of Reconcavo da Bahia (2024 - Present)
-- PPGARTES/UFMG — Federal University of Minas Gerais (2024 - 2025)
-
-## Support
-
-ziviDomeLive is developed and maintained as open-source software for creative coding, immersive media, artistic research, and education.
-
-If the project is useful to your work, you can support its continued development through **[GitHub Sponsors](https://github.com/sponsors/vicvalentim)**.
-
-Sponsorship contributes to development time, cross-platform testing, documentation, examples, dependency maintenance, qualification, and the long-term sustainability of the project.
-
-The library, documentation, releases, and public development remain openly available regardless of sponsorship.
+The repository preserves the architectural history from the original 1.x renderer through the final 1.5.0 consolidation and the deliberate 2.0 public-surface reset. See the detailed [CHANGELOG](CHANGELOG.md), [2.0 release notes](docs/en/release-notes/2.0.0.md) and [removed 1.x migration map](docs/en/api/deprecated.md).
 
 ## License
 
-ziviDomeLive is distributed under the **[GPL-2.0-only](LICENSE)** license.
+Project-authored material in the ziviDomeLive **2.0 release line** is distributed under the **[Apache License 2.0](LICENSE)** (`Apache-2.0`), except where a file or third-party notice states otherwise. Published releases through `v1.5.0` retain the `GPL-2.0-only` terms under which those versions were originally released; the 2.0 relicensing does not revoke historical grants.
 
-Bundled components, third-party software, and calibration assets are documented in [`THIRD_PARTY.md`](THIRD_PARTY.md).
+Third-party software, scientific data and media retain their own provenance and terms. In `SolarSystem`, the curated astronomical dataset records NASA/JPL scientific-data provenance, while the planetary/space texture pack is credited to **Solar System Scope / INOVE under CC BY 4.0** and explicitly identifies NASA imagery/elevation data only as its upstream basis. The retained `eso0932a.jpg` panorama is credited separately to **ESO/S. Brunier under CC BY 4.0**. See [`THIRD_PARTY.md`](THIRD_PARTY.md) and [`examples/Advanced/SolarSystem/THIRD_PARTY.md`](examples/Advanced/SolarSystem/THIRD_PARTY.md).
 
-Copyright (c) 2024-2026 Victor Valentim.
+Copyright © 2024–2026 Victor Valentim.

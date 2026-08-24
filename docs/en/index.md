@@ -1,46 +1,91 @@
-# ziviDomeLive 1.5.0
+---
+title: ziviDomeLive
+icon: material/home-outline
+description: Create real-time fulldome, spherical and immersive visual workflows in Processing.
+---
 
-![ziviDomeLive splash](../assets/images/splash.jpg){ width="520" }
+<div class="zd-hero" markdown>
+<div markdown>
 
-ziviDomeLive is a Processing 4 library for real-time fulldome, monoscopic VR, and immersive installation graphics. It combines scene lifecycle management, independent Standard and spherical rendering, domemaster calibration, and optional NDI, Syphon, or Spout output routing.
+<div class="zd-hero__eyebrow">Processing library · ziviDomeLive 2.0</div>
 
-Version 1.5.0 consolidates the mature 1.x architecture. It preserves the public `zividomelive` facade and legacy `ViewType` order while adding `RenderMode`, centralized render requirements, predictable lifecycle ownership, quaternion spherical controls, and observable output states.
+# Create for the dome, the sphere and the live image
 
-## Start Here
+Build real-time **fulldome, spherical and immersive visual workflows** from one Processing scene, then choose how each preview or output should be represented.
 
-1. Review the [system requirements](installation/requirements.md) and [dependencies](installation/dependencies.md).
-2. Install the packaged library using the [installation guide](installation/installation-steps.md).
-3. Build a first scene with the [quickstart](getting-started/quickstart.md).
-4. Choose between independent routing and dedicated rendering in [Render Modes](usage/basic-usage.md).
-5. Learn the [control panel](usage/control-panel.md) and [spherical calibration](usage/spherical-calibration.md).
-6. Review the [1.5.0 release notes](release-notes/1.5.0.md) before upgrading an existing sketch.
+<div class="zd-actions" markdown>
+[Start creating](getting-started/quickstart.md){ .md-button .md-button--primary }
+[Explore the API](api/artist-api-map.md){ .md-button }
+</div>
 
-## Stable 1.5 Contracts
+</div>
+<div class="zd-hero__image">
+<div class="zd-splash-stage" data-zd-splash>
+<canvas class="zd-splash-canvas" data-zd-splash-canvas width="566" height="480" role="img" aria-label="Animated ziviDomeLive splash sphere with orbiting wireframe cubes">Animated ziviDomeLive splash sphere</canvas>
+</div>
+</div>
+</div>
 
-- `Scene.sceneRender(PGraphicsOpenGL)` receives an open render target; the library owns `beginDraw()` and `endDraw()`.
-- `RenderMode.FULL` is the default and preserves independent preview/output routes.
-- Standard rendering is independent from spherical cubemap capture.
-- Spherical pitch, yaw, and roll compose shortest deltas into one normalized quaternion; their facade values remain control accumulators.
-- Domemaster FOV is `0..360` with default `210`.
-- Domemaster Size% is `0..100` with default `100`.
-- Output-resolution presets are `1024`, `2048`, `3072`, and `4096`.
-- External output publication is disabled by default.
+## What can I create?
 
-## Rendering Domains
+<div class="grid cards" markdown>
 
-```text
-STANDARD
-Scene -> StandardRenderer -> Standard target
+- :material-monitor: **Standard**
 
-SPHERICAL
-Scene -> six cubemap faces -> equirectangular -> domemaster
-                          \-> cubemap layout
-```
+    Conventional perspective rendering for the Processing window and standard visual outputs.
 
-The spherical topology above remains an internal 1.x implementation detail. It is not a promise that future major versions must use `PGraphicsOpenGL[]` or derive domemaster from equirectangular output.
+- :material-panorama-fisheye: **Domemaster**
 
-## Qualification
+    Circular fisheye representation for fulldome projection and dome calibration.
 
-The Java suite validates API, state, lifecycle, routing, math, metadata, and release contracts without requiring a GPU. Start with the [rendering architecture](architecture/rendering-pipeline.md), then use the [CalibrationTool protocol](qualification/1.5-calibration-tool.md) and [release-readiness checklist](qualification/1.5-release-readiness.md) on qualified hardware. No golden image is manufactured by the repository.
+- :material-earth: **Equirectangular**
 
-See the [known issues](known-issues.md) before deploying to production.
+    2:1 spherical representation for 360° image workflows.
+
+- :material-cube-outline: **Skybox**
+
+    Cubemap-layout representation for inspection and compatible spherical workflows.
+
+</div>
+
+!!! tip "Start with one Scene"
+    A basic project needs the `ziviDomeLive` runtime and a `Scene`. Put state/simulation in `update()` and drawing in `sceneRender()`.
+
+## Choose your path
+
+<div class="grid cards" markdown>
+
+- :material-rocket-launch-outline: **New to ziviDomeLive**
+
+    Install the library, run the Quickstart and continue through the eight learning examples.
+
+    [Open the Quickstart →](getting-started/quickstart.md)
+
+- :material-palette-outline: **Building an artwork or installation**
+
+    Learn RenderMode, Preview × Output, spherical calibration, camera/navigation and external outputs.
+
+    [Open the Creative Guide →](usage/basic-usage.md)
+
+- :material-api: **Programming against the library**
+
+    Use the Artist API Map first, then generated Javadocs for exact signatures.
+
+    [Open the API Map →](api/artist-api-map.md)
+
+- :material-source-branch: **Contributing or researching the engine**
+
+    Study the Standard/Spherical domains, OpenGL backend, lifecycle, threading and output boundaries.
+
+    [Open the architecture →](architecture/overview.md)
+
+</div>
+
+## Calibration belongs to the output, not to scene zoom
+
+Pitch/Yaw/Roll orient the shared spherical domain. Domemaster additionally uses FOV and Size% to fit the representation to a physical projection system.
+
+[Open Spherical Calibration](usage/spherical-calibration.md){ .md-button }
+
+??? abstract "Under the hood"
+    Version 2.0 captures the spherical domain through a native cubemap and derives Domemaster, Equirectangular and Skybox from that shared representation. This implementation detail is documented for developers; artists can remain at the `Scene`, `RenderMode`, `ViewType` and calibration level.

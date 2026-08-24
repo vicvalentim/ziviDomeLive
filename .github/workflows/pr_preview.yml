@@ -18,7 +18,15 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
+      - name: Setup Java
+        if: github.event.action != 'closed'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
       - name: Setup Python
+        if: github.event.action != 'closed'
         uses: actions/setup-python@v5
         with:
           python-version: 3.x
@@ -26,11 +34,24 @@ jobs:
           cache-dependency-path: requirements-docs.txt
 
       - name: Install dependencies
-        run: pip install -r requirements-docs.txt
+        if: github.event.action != 'closed'
+        run: python3 -m pip install -r requirements-docs.txt
+
+      - name: Build Javadocs
+        if: github.event.action != 'closed'
+        run: ./gradlew javadoc --console=plain
 
       - name: Build website
         if: github.event.action != 'closed'
-        run: mkdocs build --strict
+        run: python3 -m mkdocs build --strict
+
+      - name: Attach Javadocs to preview
+        if: github.event.action != 'closed'
+        run: ./gradlew attachJavadocsToSite --console=plain
+
+      - name: Validate exported preview routes
+        if: github.event.action != 'closed'
+        run: python3 tools/validate_documentation.py --root . --site-dir site
 
       - name: Deploy preview
         uses: rossjrw/pr-preview-action@v1

@@ -2,7 +2,7 @@
 
 ## Runtime
 
-- Processing 4; a versão 1.5.0 é compilada e testada contra Processing core `4.5.6`
+- Processing 4 (revisão `1285` ou mais recente). A compatibilidade de código-fonte pode ser auditada contra a distribuição oficial do Processing 4.0 com `./gradlew compileProcessing4Baseline -Pprocessing4BaselineLibrary=/caminho/para/processing-4.0/core/library`. Os testes automatizados regulares usam Processing 4.5.6; essa versão testada não substitui a linha-base de compatibilidade 4.0, e compilação estática não substitui qualificação física de runtime.
 - Renderizador `P3D`
 - `pixelDensity(1)` recomendado para estabilidade entre displays
 - GPU e driver capazes de expor OpenGL 4.1; os shaders empacotados usam GLSL 4.10
@@ -18,7 +18,7 @@ O requisito prático depende da complexidade da cena, resolução de output e qu
 | Capacidade | macOS | Windows | Linux |
 |---|---|---|---|
 | Renderização Standard e esférica | Suportada | Suportada | Suportada |
-| Sender de vídeo NDI | Experimental; exige NDI Runtime separado e qualificação com receiver | Experimental; exige NDI Runtime separado e qualificação com receiver | Experimental, reduzido e não qualificado |
+| Sender de vídeo NDI | Experimental; exige NDI Runtime separado e qualificação com receiver | Experimental; exige NDI Runtime separado e qualificação com receiver | Experimental; exige NDI Runtime separado e qualificação com receiver |
 | Syphon | Backend da plataforma | Indisponível | Indisponível |
 | Spout | Indisponível | Backend da plataforma | Indisponível |
 
@@ -26,9 +26,14 @@ O requisito prático depende da complexidade da cena, resolução de output e qu
 
 ## Apple Silicon
 
-A stack Processing/Syphon usada pelo projeto pode exigir a versão Intel do Processing sob Rosetta 2 para interoperabilidade completa. Renderização ARM nativa sem Syphon continua possível, mas deve ser qualificada com o sketch e driver de destino.
+Configurações Processing nativas em Apple Silicon e Intel são alvos válidos do ziviDomeLive.
 
-Antes da implantação, consulte [Problemas Conhecidos](../known-issues.md),
-[Runtime NDI](ndi.md), o
-[Protocolo do Calibration Tool](../qualification/1.5-calibration-tool.md) e a
-[Prontidão para Release](../qualification/1.5-release-readiness.md).
+No caso do Syphon, a distribuição upstream do Syphon for Processing 4.0 não inclui atualmente o payload nativo `macos-aarch64` necessário ao Processing 4. Usuários Apple Silicon podem instalar o asset comunitário universal do ziviDomeLive (`arm64` + `x86_64`):
+
+[Syphon-for-Processing-4.0-macOS-universal-community.zip](https://github.com/vicvalentim/ziviDomeLive/releases/download/v2.0.0/Syphon-for-Processing-4.0-macOS-universal-community.zip)
+
+Esse pacote é externo à biblioteca Processing ziviDomeLive e não é uma release oficial do Syphon Project. Rosetta 2 não é requisito geral do ziviDomeLive.
+
+Veja [Dependências](dependencies.md) para instruções de instalação e checksum.
+
+Antes da implantação, consulte [Problemas Conhecidos](../known-issues.md), [Runtime NDI](ndi.md), o [Protocolo da Ferramenta de Calibração](../qualification/calibration-tool.md) e [Prontidão da Release](../qualification/2.0-release-readiness.md).

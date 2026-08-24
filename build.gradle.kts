@@ -6,12 +6,18 @@
 import java.util.Properties
 import java.time.Instant
 import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.net.HttpURLConnection
+import java.net.URI
+import java.security.MessageDigest
 import java.util.zip.ZipFile
+import java.awt.Desktop
 import groovy.json.JsonOutput
 import org.gradle.internal.os.OperatingSystem
 import org.gradle.api.tasks.testing.TestDescriptor
 import org.gradle.api.tasks.testing.TestListener
 import org.gradle.api.tasks.testing.TestResult
+import org.gradle.api.tasks.Sync
 
 plugins {
     id("java")
@@ -48,7 +54,7 @@ group = "com.victorvalentim.zividomelive"
 // - MINOR: Increases when you add new features that are backward-compatible.
 // - PATCH: Increases when you make backward-compatible bug fixes.
 // You can update these numbers as you release new versions of your library.
-version = "1.5.0"
+version = "2.0.0"
 
 tasks.register("verifyReleaseTag") {
     group = "verification"
@@ -67,7 +73,8 @@ tasks.register("verifyReleaseTag") {
 
 // Centralized dependency versions for easier Maven sync/updates.
 val processingCoreVersion = "4.5.6"
-val devolayVersion = "2.2.0-vic.1"
+val joglVersion = "2.6.0"
+val devolayVersion = "2.2.0-vic.2"
 
 // The location of your sketchbook folder. The sketchbook folder holds your installed
 // libraries, tools, and modes. It is needed if you:
@@ -78,19 +85,16 @@ val devolayVersion = "2.2.0-vic.1"
 // If you run the Gradle task deployToProcessingSketchbook, and you do not see your library
 // in the contributions manager, then one possible cause could be the sketchbook location
 // is wrong. You can check the sketchbook location in your Processing application preferences.
-var sketchbookLocation = ""
 val userHome = System.getProperty("user.home")
 val currentOS = OperatingSystem.current()
-if (currentOS.isMacOsX) {
-    sketchbookLocation = "$userHome/Documents/Processing/"
-} else if (currentOS.isWindows) {
-    sketchbookLocation = "$userHome/My Documents/Processing/sketchbook"
+val defaultSketchbookLocation = if (currentOS.isMacOsX || currentOS.isWindows) {
+    "$userHome/Documents/Processing"
 } else {
-    sketchbookLocation = "$userHome/sketchbook"
+    "$userHome/sketchbook"
 }
-// If you need to set the sketchbook location manually, uncomment out the following
-// line and set sketchbookLocation to the correct location
-// sketchbookLocation = "$userHome/sketchbook"
+val sketchbookLocation = providers.gradleProperty("processingSketchbook").orNull
+    ?: System.getenv("PROCESSING_SKETCHBOOK")?.takeIf { it.isNotBlank() }
+    ?: defaultSketchbookLocation
 
 
 // Repositories where dependencies will be fetched from.
@@ -108,6 +112,9 @@ repositories {
 dependencies {
     // resolve Processing core
     compileOnly(group = "org.processing", name = "core", version = processingCoreVersion)
+    // Processing 4.5.6 supplies this exact JOGL version at runtime. Compile-only access is
+    // limited to the ProcessingGlAdapter timer-query boundary and is never packaged.
+    compileOnly(group = "org.jogamp.jogl", name = "jogl-all", version = joglVersion)
 
     // insert your external dependencies
     implementation(group = "io.github.vicvalentim", name = "devolay", version = devolayVersion)
@@ -136,8 +143,335 @@ dependencies {
     testRuntimeOnly(fileTree("src/main/libs/Syphon.jar"))
 }
 
+// Processing 4.0 predates publication of Processing 4 artifacts to Maven Central.
+// Point this opt-in audit at the core/library directory from the official 4.0
+// distribution (revision 1285) to compile the complete source against its API
+// and matching JOGL jars without changing the routine 4.5.6 test toolchain.
+val processing4BaselineLibrary = providers.gradleProperty("processing4BaselineLibrary").orNull
+val processing4BaselineJars = if (processing4BaselineLibrary != null) {
+    fileTree(processing4BaselineLibrary) {
+        include("core.jar", "jogl-all.jar", "gluegen-rt.jar")
+    }
+} else {
+    files()
+}
+
+tasks.register<JavaCompile>("compileProcessing4Baseline") {
+    group = "verification"
+    description = "Compiles all production sources against Processing 4.0 revision 1285"
+    dependsOn("downloadDependencies")
+    source(sourceSets["main"].allJava)
+    classpath = processing4BaselineJars + configurations.compileClasspath.get().filter {
+        it.name != "core-$processingCoreVersion.jar" &&
+            !it.name.startsWith("jogl-all-") &&
+            !it.name.startsWith("gluegen-rt-")
+    }
+    destinationDirectory.set(layout.buildDirectory.dir("classes/java/processing4Baseline"))
+    options.release.set(17)
+
+    doFirst {
+        val baselineDirectory = processing4BaselineLibrary?.let(::file)
+            ?: throw GradleException(
+                "Set -Pprocessing4BaselineLibrary to Processing 4.0's core/library directory")
+        for (jarName in listOf("core.jar", "jogl-all.jar", "gluegen-rt.jar")) {
+            check(baselineDirectory.resolve(jarName).isFile) {
+                "Processing 4.0 baseline is missing $jarName in $baselineDirectory"
+            }
+        }
+    }
+}
+
 tasks.test {
     useJUnitPlatform()
+}
+
+// Compile the pure-Java BenchmarkTool exporter only as test support. Processing
+// compiles the same Java tab when the example runs, keeping it out of the library JAR.
+sourceSets["test"].java.srcDir("examples/Tools/BenchmarkTool")
+
+// The offline report generator is development tooling, isolated from the library JAR.
+val benchmarkReportSourceSet = sourceSets.create("benchmarkReport") {
+    java.srcDir("tools/benchmark-report/src/main/java")
+}
+sourceSets["test"].compileClasspath += benchmarkReportSourceSet.output
+sourceSets["test"].runtimeClasspath += benchmarkReportSourceSet.output
+tasks.named("compileTestJava") {
+    dependsOn(tasks.named(benchmarkReportSourceSet.compileJavaTaskName))
+}
+
+val benchmarkResultsDirectory = layout.buildDirectory.dir("benchmark-results")
+val benchmarkReportDirectory = layout.buildDirectory.dir("reports/benchmark")
+
+tasks.register<Delete>("benchmarkClean") {
+    group = "benchmark"
+    description = "Deletes captured benchmark runs and generated benchmark reports"
+    delete(benchmarkResultsDirectory, benchmarkReportDirectory)
+}
+
+tasks.register<JavaExec>("benchmarkReport") {
+    group = "benchmark"
+    description = "Validates BenchmarkTool runs and generates a self-contained offline report"
+    dependsOn(tasks.named(benchmarkReportSourceSet.classesTaskName))
+    classpath = benchmarkReportSourceSet.runtimeClasspath
+    mainClass.set("com.victorvalentim.zividomelive.benchmark.report.BenchmarkReportMain")
+
+    doFirst {
+        args(
+            "--results", benchmarkResultsDirectory.get().asFile.absolutePath,
+            "--output", benchmarkReportDirectory.get().asFile.absolutePath
+        )
+        providers.gradleProperty("benchmarkBaseline").orNull?.let {
+            args("--baseline", it)
+        }
+        providers.gradleProperty("benchmarkCandidate").orNull?.let {
+            args("--candidate", it)
+        }
+    }
+}
+
+tasks.register("benchmarkOpen") {
+    group = "benchmark"
+    description = "Opens the generated benchmark report when desktop integration is available"
+    dependsOn("benchmarkReport")
+    doLast {
+        val report = benchmarkReportDirectory.get().file("index.html").asFile
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+            Desktop.getDesktop().browse(report.toURI())
+        } else {
+            logger.lifecycle("Desktop browsing is unavailable. Report: ${report.absolutePath}")
+        }
+    }
+}
+
+tasks.register<Zip>("benchmarkArchive") {
+    group = "benchmark"
+    description = "Archives validated benchmark inputs and the generated report"
+    dependsOn("benchmarkReport")
+    destinationDirectory.set(layout.buildDirectory.dir("benchmark-archives"))
+    archiveFileName.set(providers.provider {
+        "zividomelive-benchmark-${Instant.now().toString().replace(':', '-')}.zip"
+    })
+    from(benchmarkResultsDirectory) {
+        into("benchmark-results")
+    }
+    from(benchmarkReportDirectory) {
+        into("benchmark-report")
+    }
+}
+
+val processingExecutable = providers.gradleProperty("processingExecutable")
+    .orElse(providers.environmentVariable("PROCESSING_EXECUTABLE"))
+    .orElse("AUTO")
+val benchmarkRevision = providers.gradleProperty("benchmarkRevision")
+    .orElse(providers.environmentVariable("GITHUB_SHA"))
+    .orElse(
+        providers.exec {
+            commandLine("git", "rev-parse", "HEAD")
+            isIgnoreExitValue = true
+        }.standardOutput.asText.map { revision ->
+            revision.trim().ifEmpty { "local-worktree" }
+        }
+    )
+
+data class ProcessingCli(val executable: File, val modern: Boolean)
+
+fun resolveExecutable(command: String): File? {
+    val requested = file(command)
+    if (requested.isAbsolute || command.contains(File.separatorChar)) {
+        return requested.takeIf { it.isFile && it.canExecute() }
+    }
+    val candidates = if (currentOS.isWindows) listOf(command, "$command.exe") else listOf(command)
+    return (System.getenv("PATH") ?: "")
+        .split(File.pathSeparator)
+        .asSequence()
+        .filter(String::isNotBlank)
+        .flatMap { directory -> candidates.asSequence().map { name -> file("$directory/$name") } }
+        .firstOrNull { it.isFile && it.canExecute() }
+}
+
+fun resolveProcessingCli(command: String): ProcessingCli? {
+    if (!command.equals("AUTO", ignoreCase = true)) {
+        val executable = resolveExecutable(command) ?: return null
+        val legacy = executable.nameWithoutExtension.equals("processing-java", ignoreCase = true)
+        return ProcessingCli(executable, modern = !legacy)
+    }
+
+    resolveExecutable("processing-java")?.let {
+        return ProcessingCli(it, modern = false)
+    }
+    resolveExecutable("processing")?.let {
+        return ProcessingCli(it, modern = true)
+    }
+    resolveExecutable("Processing")?.let {
+        return ProcessingCli(it, modern = true)
+    }
+    if (currentOS.isMacOsX) {
+        listOf(
+            file("/Applications/Processing.app/Contents/MacOS/Processing"),
+            file("$userHome/Applications/Processing.app/Contents/MacOS/Processing")
+        ).firstOrNull { it.isFile && it.canExecute() }?.let {
+            return ProcessingCli(it, modern = true)
+        }
+    }
+    if (currentOS.isWindows) {
+        listOfNotNull(
+            System.getenv("ProgramFiles"),
+            System.getenv("ProgramFiles(x86)")
+        ).map { file("$it/Processing/Processing.exe") }
+            .plus(
+                listOfNotNull(System.getenv("LOCALAPPDATA"))
+                    .map { file("$it/Programs/Processing/Processing.exe") }
+            )
+            .firstOrNull { it.isFile && it.canExecute() }
+            ?.let { return ProcessingCli(it, modern = true) }
+    }
+    if (currentOS.isLinux) {
+        listOf(
+            file("/snap/bin/processing"),
+            file("/usr/local/bin/processing"),
+            file("/usr/bin/processing")
+        ).firstOrNull { it.isFile && it.canExecute() }?.let {
+            return ProcessingCli(it, modern = true)
+        }
+        file("/opt").listFiles()
+            ?.asSequence()
+            ?.filter { it.isDirectory && it.name.startsWith("processing", ignoreCase = true) }
+            ?.map { it.resolve("processing") }
+            ?.firstOrNull { it.isFile && it.canExecute() }
+            ?.let { return ProcessingCli(it, modern = true) }
+    }
+    return null
+}
+
+fun processingCliNotFound(command: String): String {
+    val requested = if (command.equals("AUTO", ignoreCase = true)) {
+        "No Processing CLI was found on PATH or in the standard application location."
+    } else {
+        "Processing CLI '$command' was not found or is not executable."
+    }
+    return requested + " Install Processing using the official package for this OS, " +
+        "or set -PprocessingExecutable=<path> / PROCESSING_EXECUTABLE. On macOS, move " +
+        "Processing.app to /Applications. " +
+        "Modern Processing launchers are invoked automatically as 'Processing cli'."
+}
+
+tasks.register("benchmarkDoctor") {
+    group = "benchmark"
+    description = "Reports the Processing CLI and syntax that benchmark tasks will use"
+    doLast {
+        val configured = processingExecutable.get()
+        val resolved = resolveProcessingCli(configured)
+            ?: throw GradleException(processingCliNotFound(configured))
+        val syntax = if (resolved.modern) "Processing cli" else "processing-java"
+        logger.lifecycle("Processing CLI: ${resolved.executable.absolutePath} ($syntax)")
+    }
+}
+
+fun Exec.configureProcessingBenchmark(outputName: String) {
+    group = "benchmark"
+    dependsOn("deployBenchmarkLibrary")
+    workingDir(rootDir)
+    doFirst {
+        val command = processingExecutable.get()
+        val processingCli = resolveProcessingCli(command)
+            ?: throw GradleException(processingCliNotFound(command))
+        val installedLibrary = file(
+            "$sketchbookLocation/libraries/$libName/library/${libName}.jar"
+        )
+        check(installedLibrary.isFile) {
+            "ziviDomeLive is not installed in the Processing sketchbook. " +
+                "Run ./gradlew deployToProcessingSketchbook before this task."
+        }
+        executable(processingCli.executable.absolutePath)
+        if (processingCli.modern) {
+            args("cli")
+        }
+        args(
+            "--sketch=${file("examples/Tools/BenchmarkTool").absolutePath}",
+            "--output=${layout.buildDirectory.dir("processing-benchmark/$outputName").get().asFile.absolutePath}",
+            "--force",
+            "--run"
+        )
+        environment("ZIVIDOME_BENCHMARK_OUTPUT", benchmarkResultsDirectory.get().asFile.absolutePath)
+        environment("ZIVIDOME_BENCHMARK_REVISION", benchmarkRevision.get())
+    }
+}
+
+tasks.register("deployBenchmarkLibrary") {
+    group = "benchmark"
+    description = "Updates the Processing sketchbook library used by benchmarks without cleaning captured results"
+    dependsOn("jar", "writeLibraryProperties")
+    doLast {
+        val installRoot = file("$sketchbookLocation/libraries/$libName")
+        copy {
+            from(layout.buildDirectory.file("libs/${libName}.jar"))
+            from(configurations.runtimeClasspath)
+            into(installRoot.resolve("library"))
+        }
+        copy {
+            from(file("library.properties"))
+            into(installRoot)
+        }
+        logger.lifecycle(
+            "Benchmark library updated without cleaning results: ${installRoot.absolutePath}"
+        )
+    }
+}
+
+tasks.register<Exec>("runBenchmark") {
+    description = "Runs BenchmarkTool interactively with a configured Processing CLI"
+    configureProcessingBenchmark("interactive")
+}
+
+tasks.register<Exec>("benchmarkSuite") {
+    description = "Runs an automated BenchmarkTool suite and exits after writing structured results"
+    configureProcessingBenchmark("suite")
+    doFirst {
+        environment("ZIVIDOME_BENCHMARK_SUITE", providers.gradleProperty("benchmarkSuite").getOrElse("ALL"))
+        environment("ZIVIDOME_BENCHMARK_EXIT", "true")
+        environment("ZIVIDOME_BENCHMARK_SCENE", providers.gradleProperty("benchmarkScene").getOrElse("MEDIUM"))
+        environment(
+            "ZIVIDOME_BENCHMARK_RESOLUTION",
+            providers.gradleProperty("benchmarkResolution").getOrElse("2048")
+        )
+        environment(
+            "ZIVIDOME_BENCHMARK_PREVIEW",
+            providers.gradleProperty("benchmarkPreview").getOrElse("false")
+        )
+        environment(
+            "ZIVIDOME_BENCHMARK_NDI",
+            providers.gradleProperty("benchmarkNdi").getOrElse("false")
+        )
+        environment(
+            "ZIVIDOME_BENCHMARK_FPS",
+            providers.gradleProperty("benchmarkFps").getOrElse("1000")
+        )
+        environment(
+            "ZIVIDOME_BENCHMARK_GPU",
+            providers.gradleProperty("benchmarkGpu").getOrElse("false")
+        )
+        environment(
+            "ZIVIDOME_BENCHMARK_GPU_TIMER_POLICY",
+            providers.gradleProperty("benchmarkGpuTimerPolicy").getOrElse("AUTO")
+        )
+        environment(
+            "ZIVIDOME_BENCHMARK_WARMUP_FRAMES",
+            providers.gradleProperty("benchmarkWarmupFrames").getOrElse("600")
+        )
+        environment(
+            "ZIVIDOME_BENCHMARK_MEASUREMENT_FRAMES",
+            providers.gradleProperty("benchmarkMeasurementFrames").getOrElse("1800")
+        )
+        environment(
+            "ZIVIDOME_BENCHMARK_TRANSITION_BASELINE_FRAMES",
+            providers.gradleProperty("benchmarkTransitionBaselineFrames").getOrElse("120")
+        )
+        environment(
+            "ZIVIDOME_BENCHMARK_TRANSITION_POST_FRAMES",
+            providers.gradleProperty("benchmarkTransitionPostFrames").getOrElse("240")
+        )
+    }
+    finalizedBy("benchmarkReport")
 }
 
 val qualificationResultsDirectory = layout.buildDirectory.dir("test-results/qualification")
@@ -240,20 +574,119 @@ JUnit XML results: `../../test-results/qualification/`
     })
 }
 
-// Downloads pinned legacy libraries that are not available on Maven.
-val requiredLocalLibraries = listOf(
-    file("src/main/libs/controlP5.jar"),
-    file("src/main/libs/spout.jar"),
-    file("src/main/libs/Syphon.jar")
+// Downloads pinned legacy Processing libraries that are not available on Maven.
+data class PinnedProcessingDependency(
+    val name: String,
+    val url: String,
+    val archiveSha256: String,
+    val archiveJarPath: String,
+    val jarSha256: String,
+    val destinationName: String,
 )
 
-tasks.register<Exec>("downloadDependencies") {
-    group = "processing"
-    description = "Downloads checksum-verified ControlP5, Syphon, and Spout dependencies"
-    onlyIf {
-        requiredLocalLibraries.any { !it.isFile }
+val pinnedProcessingDependencies = listOf(
+    PinnedProcessingDependency(
+        "Syphon-4.0",
+        "https://api.github.com/repos/Syphon/Processing/releases/assets/59352362",
+        "0842c04d2332e3bfc0b601ae6dafb467b9ba8157934d584df378789750648798",
+        "Syphon/library/Syphon.jar",
+        "546af773807bb0329bc53cc9a9df44a9ed521eb839045fd2077a58625f4150c6",
+        "Syphon.jar",
+    ),
+    PinnedProcessingDependency(
+        "ControlP5-2.2.6",
+        "https://github.com/sojamo/controlp5/releases/download/v2.2.6/controlP5-2.2.6.zip",
+        "88bd4bdbb4f3d5cb77211004ac4796742eeae86d0a74726f3194cc316ad23fb3",
+        "controlP5/library/controlP5.jar",
+        "69e160f9cee979d631a4a9674f3d3b2016b66eb3e6f353918cda2b325ef3cc75",
+        "controlP5.jar",
+    ),
+    PinnedProcessingDependency(
+        "Spout-2.0.8.0",
+        "https://api.github.com/repos/leadedge/SpoutProcessing/releases/assets/188539046",
+        "65fff0a2779833073dbcd54fbbe862f43b2505cb04dd2a4fcb52b0d80c95b4ca",
+        "spout/library/spout.jar",
+        "74c6a8422590dc00ffc7a207c3c408f4b09f6da9390aae7718452095ea974cef",
+        "spout.jar",
+    ),
+)
+
+fun sha256(path: File): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    path.inputStream().buffered().use { input ->
+        val buffer = ByteArray(64 * 1024)
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            digest.update(buffer, 0, count)
+        }
     }
-    commandLine("bash", "$rootDir/download_dependencies.sh")
+    return digest.digest().joinToString("") { "%02x".format(it) }
+}
+
+tasks.register("downloadDependencies") {
+    group = "processing"
+    description = "Downloads checksum-verified ControlP5, Syphon, and Spout dependencies using the JVM"
+    doLast {
+        val librariesDirectory = file("src/main/libs").apply { mkdirs() }
+        for (dependency in pinnedProcessingDependencies) {
+            val destination = librariesDirectory.resolve(dependency.destinationName)
+            if (destination.isFile) {
+                val existingSha256 = sha256(destination)
+                check(existingSha256 == dependency.jarSha256) {
+                    "${dependency.name} JAR checksum mismatch: expected " +
+                        "${dependency.jarSha256}, got $existingSha256"
+                }
+                continue
+            }
+
+            val archive = temporaryDir.resolve("${dependency.destinationName}.zip")
+            val extractedJar = temporaryDir.resolve("${dependency.destinationName}.verified")
+            val connection = URI(dependency.url).toURL().openConnection() as HttpURLConnection
+            connection.instanceFollowRedirects = true
+            connection.connectTimeout = 30_000
+            connection.readTimeout = 60_000
+            connection.setRequestProperty("Accept", "application/octet-stream")
+            connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
+            connection.setRequestProperty("User-Agent", "ziviDomeLive-build")
+            try {
+                val responseCode = connection.responseCode
+                check(responseCode in 200..299) {
+                    "${dependency.name} download failed with HTTP $responseCode"
+                }
+                connection.inputStream.use { input ->
+                    Files.copy(input, archive.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                }
+            } finally {
+                connection.disconnect()
+            }
+
+            val archiveSha256 = sha256(archive)
+            check(archiveSha256 == dependency.archiveSha256) {
+                "${dependency.name} archive checksum mismatch: expected " +
+                    "${dependency.archiveSha256}, got $archiveSha256"
+            }
+            ZipFile(archive).use { zip ->
+                val entry = zip.getEntry(dependency.archiveJarPath)
+                    ?: throw GradleException(
+                        "${dependency.name} archive is missing ${dependency.archiveJarPath}")
+                zip.getInputStream(entry).use { input ->
+                    Files.copy(input, extractedJar.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                }
+            }
+            val jarSha256 = sha256(extractedJar)
+            check(jarSha256 == dependency.jarSha256) {
+                "${dependency.name} JAR checksum mismatch: expected " +
+                    "${dependency.jarSha256}, got $jarSha256"
+            }
+            Files.move(
+                extractedJar.toPath(),
+                destination.toPath(),
+                StandardCopyOption.REPLACE_EXISTING,
+            )
+            logger.lifecycle("Installed ${dependency.destinationName} ($jarSha256).")
+        }
+    }
 }
 
 tasks.named("compileJava") {
@@ -315,7 +748,6 @@ tasks.register<WriteProperties>("writeLibraryProperties") {
     property("tested.platform", libraryProperties.getProperty("tested.platform"))
     property("tested.processingVersion", libraryProperties.getProperty("tested.processingVersion"))
     property("library.copyright", libraryProperties.getProperty("library.copyright"))
-    property("library.dependencies", libraryProperties.getProperty("library.dependencies"))
     property("library.keywords", libraryProperties.getProperty("library.keywords"))
 }
 
@@ -323,6 +755,65 @@ tasks.register<WriteProperties>("writeLibraryProperties") {
 tasks.build.get().mustRunAfter("clean")
 tasks.assemble.get().mustRunAfter("clean")
 tasks.javadoc.get().mustRunAfter("assemble")
+tasks.javadoc {
+    // Physically categorized engine sources are implementation details, not Processing API.
+    exclude("**/_internal/**")
+
+    doLast {
+        // Temurin 17's default stylesheet imports this path but does not emit the file on every
+        // platform. Keep the import resolvable; the declared DejaVu families already include
+        // standard system fallbacks in the generated stylesheet.
+        val fontCompatibilityStylesheet = layout.buildDirectory
+            .file("docs/javadoc/resources/fonts/dejavu.css")
+            .get()
+            .asFile
+        Files.createDirectories(fontCompatibilityStylesheet.parentFile.toPath())
+        fontCompatibilityStylesheet.writeText(
+            "/* Intentionally empty: use the Javadoc stylesheet's system font fallbacks. */\n",
+            Charsets.UTF_8
+        )
+    }
+}
+
+tasks.register<Sync>("attachJavadocsToSite") {
+    group = "documentation"
+    description = "Attaches generated Javadocs to the canonical reference route of a built MkDocs site"
+    dependsOn("javadoc")
+
+    val exportedSite = layout.projectDirectory.dir("site")
+    val rootFavicon = exportedSite.file("favicon.ico")
+    from(layout.buildDirectory.dir("docs/javadoc"))
+    into(exportedSite.dir("reference"))
+    outputs.file(rootFavicon)
+
+    doFirst {
+        listOf(
+            exportedSite.file("index.html").asFile,
+            exportedSite.file("api/javadocs/index.html").asFile,
+            exportedSite.file("pt/api/javadocs/index.html").asFile
+        ).forEach { requiredPage ->
+            check(requiredPage.isFile) {
+                "MkDocs site must be built in both languages before attaching Javadocs: $requiredPage"
+            }
+        }
+
+        // 2.0 publishes one language-neutral Java reference. Remove the pre-freeze duplicate.
+        project.delete(exportedSite.dir("pt/reference"))
+    }
+
+    doLast {
+        check(exportedSite.file("reference/index.html").asFile.isFile) {
+            "Generated Javadocs were not attached to site/reference/index.html"
+        }
+        project.copy {
+            from(layout.projectDirectory.file("docs/assets/png/favicon.ico"))
+            into(exportedSite)
+        }
+        check(rootFavicon.asFile.isFile) {
+            "Root favicon was not attached for standalone Javadocs pages"
+        }
+    }
+}
 
 tasks.register("buildReleaseArtifacts") {
     group = "processing"
@@ -375,6 +866,7 @@ tasks.register("buildReleaseArtifacts") {
                 "LICENSE",
                 "CHANGELOG.md",
                 "CITATION.cff",
+                "codemeta.json",
                 ".zenodo.json",
                 "THIRD_PARTY.md",
                 "licenses/**",
@@ -432,6 +924,7 @@ val verifyProcessingPackage = tasks.register("verifyProcessingPackage") {
             "LICENSE",
             "CHANGELOG.md",
             "CITATION.cff",
+            "codemeta.json",
             ".zenodo.json",
             "THIRD_PARTY.md",
             "licenses/Apache-2.0.txt",
@@ -455,6 +948,7 @@ val verifyProcessingPackage = tasks.register("verifyProcessingPackage") {
 
         val zipFile = file("$releaseRoot/$libName.zip")
         val pdexFile = file("$releaseRoot/$libName.pdex")
+        val libraryJar = file("$releaseDirectory/library/${libName}.jar")
         val metadataFile = file("$releaseDirectory/library.properties")
         val contributionMetadataFile = file("$releaseRoot/$libName.txt")
         check(zipFile.isFile) { "Missing release archive: $zipFile" }
@@ -508,6 +1002,17 @@ val verifyProcessingPackage = tasks.register("verifyProcessingPackage") {
             "$libName.zip and $libName.pdex must be byte-identical"
         }
 
+        ZipFile(libraryJar).use { jar ->
+            val developmentEntries = jar.entries().asSequence().map { it.name }.filter { name ->
+                name.startsWith("com/victorvalentim/zividomelive/benchmark/report/")
+                    || name.startsWith("benchmark-results/")
+                    || name.startsWith("reports/benchmark/")
+            }.toList()
+            check(developmentEntries.isEmpty()) {
+                "Library JAR contains benchmark report development files: ${developmentEntries.joinToString()}"
+            }
+        }
+
         logger.lifecycle(
             "Processing package verified: metadata and legal files present; "
                 + "development-only files absent; ZIP and PDEX are byte-identical."
@@ -522,11 +1027,14 @@ tasks.register("deployToProcessingSketchbook") {
     description = "Installs the release package in the local Processing sketchbook"
     dependsOn("buildReleaseArtifacts")
 
-    val installDirectory = "$sketchbookLocation/libraries/$libName"
+    val installDirectory = file("$sketchbookLocation/libraries/$libName")
 
     doLast {
         println("Copy to sketchbook  $sketchbookLocation ...")
-        project.delete(file("$installDirectory/src/test"))
+        if (installDirectory.exists()) {
+            println("Removing previous library install at ${installDirectory.absolutePath} ...")
+            project.delete(installDirectory)
+        }
         copy {
             from(releaseDirectory)
             include(
@@ -534,6 +1042,7 @@ tasks.register("deployToProcessingSketchbook") {
                 "LICENSE",
                 "CHANGELOG.md",
                 "CITATION.cff",
+                "codemeta.json",
                 ".zenodo.json",
                 "THIRD_PARTY.md",
                 "licenses/**",
@@ -548,3 +1057,19 @@ tasks.register("deployToProcessingSketchbook") {
         }
     }
 }
+
+// BEGIN ZIVIDOMELIVE UTF-8 BUILD GUARD
+// Keep Java/Javadoc encoding deterministic across macOS, Windows and Linux,
+// even when the host locale or IDE launches Gradle with an ASCII default.
+tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
+    options.encoding = "UTF-8"
+}
+
+tasks.withType<org.gradle.api.tasks.javadoc.Javadoc>().configureEach {
+    (options as org.gradle.external.javadoc.StandardJavadocDocletOptions).apply {
+        encoding("UTF-8")
+        docEncoding("UTF-8")
+        charSet("UTF-8")
+    }
+}
+// END ZIVIDOMELIVE UTF-8 BUILD GUARD

@@ -14,6 +14,12 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -22,10 +28,19 @@ jobs:
           cache-dependency-path: requirements-docs.txt
 
       - name: Install dependencies
-        run: pip install -r requirements-docs.txt
+        run: python3 -m pip install -r requirements-docs.txt
+
+      - name: Build Javadocs
+        run: ./gradlew javadoc --console=plain
 
       - name: Build website
-        run: mkdocs build --strict
+        run: python3 -m mkdocs build --strict
+
+      - name: Attach Javadocs to website
+        run: ./gradlew attachJavadocsToSite --console=plain
+
+      - name: Validate exported website routes
+        run: python3 tools/validate_documentation.py --root . --site-dir site
 
       - name: Deploy website
         uses: JamesIves/github-pages-deploy-action@v4

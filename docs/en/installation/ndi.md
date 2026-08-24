@@ -1,13 +1,13 @@
 # NDI Runtime
 
 !!! warning "Experimental and unofficial integration"
-    NDI output in ziviDomeLive 1.5.0 is an experimental, community-maintained
+    NDI output in ziviDomeLive 2.0.0 is an experimental, community-maintained
     video sender. It is not an official Processing or NDI integration and is
     not affiliated with or endorsed by Vizrt NDI AB. There is no official NDI
     library supplied by Processing: NDI support is therefore not installed from
     Processing's Contribution Manager.
 
-    Version 1.5.0 sends video only. It does not provide NDI audio, reception,
+    Version 2.0.0 sends video only. It does not provide NDI audio, reception,
     tally, PTZ, or a discovery user interface. Qualify the exact sender,
     receiver, network, operating system, and frame format before production use.
 
@@ -25,7 +25,7 @@ ziviDomeLive
     -> NDI network
 ```
 
-The public `io.github.vicvalentim:devolay:2.2.0-vic.1` artifact is a
+The public `io.github.vicvalentim:devolay:2.2.0-vic.2` artifact is a
 **separated build**. It includes Devolay classes and desktop JNI binaries, but
 does not include the proprietary `Processing.NDI.Lib.x64.dll`, `libndi.dylib`,
 or `libndi.so.6`. ziviDomeLive intentionally does not use Devolay's integrated
@@ -82,7 +82,7 @@ itself.
 
 ## Linux
 
-NDI on Linux is experimental and not part of the qualified 1.5.0 output matrix.
+NDI on Linux is experimental and requires deployment-specific receiver qualification just like the other NDI targets.
 The public NDI Tools desktop bundle is provided for Windows and macOS; Linux
 users should obtain the current NDI SDK/runtime from the
 [official NDI SDK page](https://ndi.video/for-developers/ndi-sdk/) and accept
@@ -112,7 +112,7 @@ NDI initialization is lazy and begins only when publication is enabled:
 
 ```java
 OutputManager outputs = ziviDome.getOutputManager();
-outputs.toggleOutput("ndi");
+outputs.setOutputEnabled(OutputManager.OutputType.NDI, true);
 
 println(outputs.getOutputState(OutputManager.OutputType.NDI));
 println(outputs.getOutputFailureReason(OutputManager.OutputType.NDI));
@@ -128,11 +128,11 @@ Expected state after successful initialization is `ENABLED`. Common failures:
 
 The automated suite checks routing, RGBA conversion, progressive metadata,
 backpressure, and shutdown without opening a real NDI session. Successful
-production use still requires the [hardware qualification protocol](../qualification/1.5-release-readiness.md).
+production use still requires the [hardware qualification protocol](../qualification/2.0-release-readiness.md).
 
 ## Licensing Boundary
 
-Devolay is Apache-2.0 software; ziviDomeLive is GPL-2.0-only. The proprietary NDI
+Devolay and project-authored ziviDomeLive 2.0 material are Apache-2.0. The proprietary NDI
 Runtime is covered separately by the current NDI SDK license and distribution
 terms. Installing or redistributing the runtime does not make it part of either
 open-source license. Anyone distributing a product with NDI runtime binaries is

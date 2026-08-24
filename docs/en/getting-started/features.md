@@ -8,7 +8,7 @@
 - `STANDARD`: perspective Standard representation
 - `DOMEMASTER`: fisheye domemaster
 - `EQUIRECTANGULAR`: 2:1 spherical projection
-- `SKYBOX`: cubemap layout
+- `SKYBOX`: true equi-angular cubemap (EAC) cross layout
 
 Dedicated modes override effective routes without erasing their saved `ViewType` selections. Returning to `FULL` restores independent routing.
 

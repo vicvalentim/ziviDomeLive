@@ -1,67 +1,60 @@
-# External Integration
+---
+title: External Outputs
+icon: material/video-wireless-outline
+---
 
-External outputs are disabled by default and route independently in `RenderMode.FULL`.
+# External Outputs
 
-NDI is an experimental, unofficial video-only integration and requires a
-separately installed system runtime. Complete the [NDI Runtime](../installation/ndi.md)
-setup before enabling it.
+External outputs are optional. First choose **which representation** a destination should receive, then enable only the backend required by the installation and verify its real receiver state.
 
-## Configure Routes
-
-```java
-OutputManager output = dome.getOutputManager();
-output.setNdiView(zividomelive.ViewType.EQUIRECTANGULAR);
-output.setSyphonView(zividomelive.ViewType.FISHEYE_DOMEMASTER);
-output.setSpoutView(zividomelive.ViewType.STANDARD);
+```mermaid
+flowchart LR
+  V[Final ViewType] --> N[NDI<br/>network video]
+  V --> Y[Syphon<br/>macOS GPU sharing]
+  V --> S[Spout<br/>Windows GPU sharing]
+  N --> Q1[Receiver qualification]
+  Y --> Q2[Receiver qualification]
+  S --> Q3[Receiver qualification]
 ```
 
-Only the platform-valid local texture backend is available: Syphon on macOS or Spout on Windows.
+=== "NDI"
 
-## Toggle Publication
+    **What is it?** Network video output.  
+    **Platform:** availability depends on compatible Devolay/NDI native runtime and receiver qualification.  
+    **Select a view:** `setNdiView(ViewType...)`.  
+    **Enable/disable:** `setOutputEnabled(OutputType.NDI, boolean)`.
 
-```java
-output.toggleOutput("ndi");
-output.toggleOutput("syphon");
-output.toggleOutput("spout");
-```
+    ```java
+    OutputManager outputs = dome.getOutputManager();
+    outputs.setNdiView(ViewType.EQUIRECTANGULAR);
+    outputs.setOutputEnabled(OutputManager.OutputType.NDI, true);
 
-Unsupported local backends ignore the request. A repeated toggle disables an enabled backend. After an initialization failure, another explicit enable toggle retries initialization.
+    println(outputs.getOutputState(OutputManager.OutputType.NDI));
+    println(outputs.getOutputFailureReason(OutputManager.OutputType.NDI));
+    ```
 
-## Inspect Lifecycle
+    !!! tip "Qualification"
+        Test with a real NDI receiver before marking a platform as qualified.
 
-```java
-OutputManager.OutputState state =
-    output.getOutputState(OutputManager.OutputType.NDI);
-String reason = output.getOutputFailureReason(OutputManager.OutputType.NDI);
-```
+=== "Syphon"
 
-Availability, initialization, publication, and render demand are separate. An initialized backend does not require rendering until publication is enabled.
+    **What is it?** Platform-local GPU texture sharing on macOS.  
+    **Select a view:** `setSyphonView(ViewType...)`.  
+    **Enable/disable:** `setOutputEnabled(OutputType.SYPHON, boolean)`.
 
-## NDI Pipeline
+    Availability is not the same as successful initialization or receiver qualification.
 
-NDI is the GPU-to-CPU boundary:
+=== "Spout"
 
-1. The Processing draw thread calls `loadPixels()` after target rendering completes.
-2. ARGB pixels are copied into one of three reusable slots.
-3. A bounded latest-frame-wins queue limits latency.
-4. A dedicated worker converts to packed RGBA and sends a progressive frame.
-5. The worker performs no OpenGL calls.
+    **What is it?** Platform-local GPU texture sharing on Windows.  
+    **Select a view:** `setSpoutView(ViewType...)`.  
+    **Enable/disable:** `setOutputEnabled(OutputType.SPOUT, boolean)`.
 
-The default frame-rate metadata follows `dome.getTargetFrameRate()`. Use `setNdiFrameRate()` for fractional rates such as `60000/1001`.
+    Test with a real receiver on the Windows configuration that will be claimed as qualified.
 
-## Telemetry
+## State and troubleshooting
 
-```java
-output.getNdiCapturedFrames();
-output.getNdiSentFrames();
-output.getNdiDroppedFrames();
-output.getNdiFailedFrames();
-```
+Use `getOutputState(...)` and `getOutputFailureReason(...)` to distinguish unavailable, initialized/enabled and failed states. Do not infer output health only from a UI toggle.
 
-Dropped frames are intentional backpressure events. Failed frames identify capture or sender errors.
-
-## Shutdown and Resume
-
-`pause()` records enabled publications, stops outputs, and `resume()` attempts to restore them. Terminal `dispose()` releases resources and unregisters callbacks. NDI worker waiting is bounded; a blocked native send moves the backend to `STOPPING` and defers cleanup until the worker exits.
-
-Native receiver interoperability remains a hardware qualification item.
+??? abstract "Under the hood"
+    GPU/CPU boundaries, worker queues, buffers, latest-frame-wins behavior and native sharing details are documented in [Output Backends](../architecture/output-backends.md). They are not prerequisites for enabling an output.

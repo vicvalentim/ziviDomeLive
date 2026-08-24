@@ -2,6 +2,9 @@ package com.victorvalentim.zividomelive.render.camera;
 
 import com.victorvalentim.zividomelive.render.Quaternion;
 import org.junit.jupiter.api.Test;
+import processing.core.PConstants;
+import processing.core.PVector;
+import processing.event.MouseEvent;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -13,6 +16,18 @@ class OrbitCameraTest {
 	void defaultConstructorUsesDefaultDistance() {
 		OrbitCamera camera = new OrbitCamera();
 		assertEquals(1500f, camera.getDistance(), EPSILON);
+	}
+
+	@Test
+	void targetConstructorCopiesInitialTarget() {
+		PVector initialTarget = new PVector(1f, 2f, 3f);
+		OrbitCamera camera = new OrbitCamera(initialTarget, 250f);
+		initialTarget.set(9f, 9f, 9f);
+
+		assertEquals(250f, camera.getDistance(), EPSILON);
+		assertEquals(1f, camera.getTarget().x, EPSILON);
+		assertEquals(2f, camera.getTarget().y, EPSILON);
+		assertEquals(3f, camera.getTarget().z, EPSILON);
 	}
 
 	@Test
@@ -66,6 +81,135 @@ class OrbitCameraTest {
 	}
 
 	@Test
+	void goToInterpolatesTheWholePoseWithoutMutatingInputs() {
+		OrbitCamera camera = new OrbitCamera(100f);
+		PVector target = new PVector(10f, 20f, 30f);
+		Quaternion orientation = Quaternion.fromAxisAngle(0f, 1f, 0f, 0.75f);
+
+		camera.goTo(target, orientation, 200f);
+		target.set(99f, 99f, 99f);
+		settle(camera);
+
+		assertEquals(10f, camera.getTarget().x, EPSILON);
+		assertEquals(20f, camera.getTarget().y, EPSILON);
+		assertEquals(30f, camera.getTarget().z, EPSILON);
+		assertEquals(200f, camera.getDistance(), EPSILON);
+		assertQuaternionEquivalent(orientation, camera.getOrientation());
+	}
+
+	@Test
+	void immediateComponentSettersSynchronizeCurrentAndGoalPose() {
+		OrbitCamera camera = new OrbitCamera(100f);
+		Quaternion orientation = Quaternion.fromAxisAngle(1f, 0f, 0f, 0.5f);
+
+		camera.setTargetImmediate(new PVector(4f, 5f, 6f));
+		camera.setOrientationImmediate(orientation);
+		camera.setDistanceImmediate(75f);
+		camera.update();
+
+		assertEquals(4f, camera.getTarget().x, EPSILON);
+		assertEquals(5f, camera.getTarget().y, EPSILON);
+		assertEquals(6f, camera.getTarget().z, EPSILON);
+		assertEquals(75f, camera.getDistance(), EPSILON);
+		assertQuaternionEquivalent(orientation, camera.getOrientation());
+	}
+
+	@Test
+	void updateAtRestReusesTheImmutableOrientation() {
+		OrbitCamera camera = new OrbitCamera(100f);
+		Quaternion before = camera.getOrientation();
+
+		camera.update();
+
+		assertSame(before, camera.getOrientation());
+	}
+
+	@Test
+	void vectorRotationOverloadsSupportSmoothAndImmediateMotion() {
+		OrbitCamera camera = new OrbitCamera(100f);
+		PVector yAxis = new PVector(0f, 1f, 0f);
+
+		camera.rotateAroundImmediate(yAxis, 0.25f);
+		Quaternion immediate = camera.getOrientation();
+		assertQuaternionEquivalent(
+				Quaternion.fromAxisAngle(yAxis, 0.25f),
+				immediate);
+
+		camera.rotateAround(yAxis, 0.25f);
+		settle(camera);
+		assertQuaternionEquivalent(
+				Quaternion.fromAxisAngle(yAxis, 0.5f),
+				camera.getOrientation());
+	}
+
+	@Test
+	void mouseWheelChangesDistanceImmediatelyAndKeepsGoalSynchronized() {
+		OrbitCamera camera = new OrbitCamera(100f);
+		camera.setDistanceLimits(-1000f, 1000f);
+		camera.setWheelSteps(80f, 0.001f);
+
+		camera.mouseEvent(mouseEvent(MouseEvent.WHEEL, 0, 0, 0, 1));
+
+		assertEquals(180f, camera.getDistance(), EPSILON);
+		camera.update();
+		assertEquals(180f, camera.getDistance(), EPSILON,
+				"Direct wheel manipulation must not leave a delayed distance goal behind");
+	}
+
+	@Test
+	void defaultWheelStepsMatchTheSolarSystemNavigationContract() throws Exception {
+		OrbitCamera wheelCamera = new OrbitCamera(100f);
+		wheelCamera.setDistanceLimits(-1000f, 1000f);
+		wheelCamera.mouseEvent(mouseEvent(MouseEvent.WHEEL, 0, 0, 0, 1));
+		assertEquals(180f, wheelCamera.getDistance(), EPSILON);
+
+		java.lang.reflect.Field trackpadStep = OrbitCamera.class.getDeclaredField("wheelPadStep");
+		trackpadStep.setAccessible(true);
+		assertEquals(0.001f, trackpadStep.getFloat(wheelCamera), EPSILON);
+	}
+
+	@Test
+	void mouseDragChangesOrientationImmediatelyAndKeepsGoalSynchronized() {
+		OrbitCamera camera = new OrbitCamera(100f);
+		camera.setDragSensitivity(0.01f);
+		camera.mouseEvent(mouseEvent(MouseEvent.PRESS, 10, 20, PConstants.LEFT, 1));
+
+		camera.mouseEvent(mouseEvent(MouseEvent.DRAG, 20, 25, PConstants.LEFT, 1));
+
+		Quaternion expected = Quaternion.fromAxisAngle(1f, 0f, 0f, 0.05f)
+				.multiply(Quaternion.fromAxisAngle(0f, 1f, 0f, 0.10f))
+				.normalized();
+		assertQuaternionEquivalent(expected, camera.getOrientation());
+		camera.update();
+		assertQuaternionEquivalent(expected, camera.getOrientation());
+	}
+
+	@Test
+	void resetInputStatePreventsAStaleDragAnchorFromMovingTheCamera() {
+		OrbitCamera camera = new OrbitCamera(100f);
+		camera.mouseEvent(mouseEvent(MouseEvent.PRESS, 10, 20, PConstants.LEFT, 1));
+		camera.resetInputState();
+
+		camera.mouseEvent(mouseEvent(MouseEvent.DRAG, 200, 250, PConstants.LEFT, 1));
+
+		assertQuaternionEquivalent(new Quaternion(0f, 0f, 0f, 1f), camera.getOrientation());
+	}
+
+	@Test
+	void programmaticNavigationRemainsSmooth() {
+		OrbitCamera camera = new OrbitCamera(100f);
+		camera.setTarget(10f, 20f, 30f);
+		camera.zoom(80f);
+
+		assertEquals(0f, camera.getTarget().x, EPSILON);
+		assertEquals(100f, camera.getDistance(), EPSILON);
+
+		camera.update();
+		assertTrue(camera.getTarget().x > 0f && camera.getTarget().x < 10f);
+		assertTrue(camera.getDistance() > 100f && camera.getDistance() < 180f);
+	}
+
+	@Test
 	void resetRestoresOriginAndDistance() {
 		OrbitCamera camera = new OrbitCamera(100f);
 		camera.setTarget(5f, 5f, 5f);
@@ -78,15 +222,28 @@ class OrbitCameraTest {
 		assertEquals(0f, camera.getTarget().y, EPSILON);
 		assertEquals(0f, camera.getTarget().z, EPSILON);
 		Quaternion orientation = camera.getOrientation();
-		assertEquals(0f, orientation.x, EPSILON);
-		assertEquals(0f, orientation.y, EPSILON);
-		assertEquals(0f, orientation.z, EPSILON);
-		assertEquals(1f, Math.abs(orientation.w), EPSILON);
+		assertEquals(0f, orientation.x(), EPSILON);
+		assertEquals(0f, orientation.y(), EPSILON);
+		assertEquals(0f, orientation.z(), EPSILON);
+		assertEquals(1f, Math.abs(orientation.w()), EPSILON);
 	}
 
 	private static void settle(OrbitCamera camera) {
 		for (int i = 0; i < 200; i++) {
 			camera.update();
 		}
+	}
+
+	private static MouseEvent mouseEvent(int action, int x, int y, int button, int count) {
+		return new MouseEvent(null, System.currentTimeMillis(), action, 0, x, y, button, count);
+	}
+
+	private static void assertQuaternionEquivalent(Quaternion expected, Quaternion actual) {
+		float dot = Math.abs(
+				expected.x() * actual.x()
+						+ expected.y() * actual.y()
+						+ expected.z() * actual.z()
+						+ expected.w() * actual.w());
+		assertEquals(1f, dot, EPSILON);
 	}
 }

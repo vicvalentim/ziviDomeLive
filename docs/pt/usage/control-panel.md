@@ -47,14 +47,14 @@ Cada linha de orientação também possui number box editável. Entrada numéric
 - **Enable NDI/Syphon/Spout** altera o estado de publicação.
 - **NDI/Syphon/Spout View** altera somente a rota daquele output em `FULL`.
 
-Os toggles de publicação são donos das mudanças de backend. O `controlEvent()` da cena recebe o evento ControlP5 resultante uma vez; ele não deve alternar o mesmo backend novamente, salvo quando a cena deseja intencionalmente uma segunda transição.
+Os toggles de publicação são donos das mudanças de backend. O controller interno do painel registra seu próprio listener ControlP5; nem a facade nem `Scene` expõem `controlEvent()` em 2.0. Use getters/setters da facade ou `SceneActionMap` para comportamento da aplicação.
 
 ## Atalhos de Teclado
 
 | Tecla | Ação |
 |---|---|
 | `h` | Mostrar/ocultar o painel |
-| `m` | Alternar o `ViewType` legado configurado para preview |
+| `m` | Alternar o `ViewType` configurado para preview |
 | Esquerda / Direita | Cena anterior/próxima |
 
 O atalho `m` atualiza a rota armazenada mesmo enquanto um modo dedicado força outra view efetiva. A seleção volta a aparecer em `FULL`.

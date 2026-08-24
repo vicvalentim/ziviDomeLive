@@ -1,16 +1,28 @@
 # Manipulação de Eventos
 
-O construtor de `zividomelive` registra hooks `keyEvent` e `mouseEvent` no Processing. O painel ControlP5 interno registra um listener que encaminha eventos relevantes à cena ativa.
+O construtor de `ziviDomeLive` registra hooks `keyEvent` e `mouseEvent` no Processing. O painel ControlP5 interno pertence à facade e não expõe seus eventos por `Scene`.
 
 Implemente os callbacks na cena:
 
 ```java
 public void keyEvent(processing.event.KeyEvent event) {}
 public void mouseEvent(processing.event.MouseEvent event) {}
-public void controlEvent(controlP5.ControlEvent event) {}
 ```
 
 Não adicione encaminhamento no sketch principal, como `ziviDome.keyEvent(event)`. Isso entrega o mesmo evento duas vezes.
+
+Cenas com serviços podem mapear nomes estáveis de ações em vez de ramificar no
+callback cru:
+
+```java
+services.actions().bindKeyPressed("reload", 'R', services::requestReload);
+services.actions().register("reset-camera", () -> services.camera().orbit().reset());
+services.actions().trigger("reset-camera");
+```
+
+O runtime despacha as ações antes do callback cru da cena. O callback ainda executa;
+evite realizar a mesma operação nos dois caminhos. Os bindings
+são limpos automaticamente quando a cena perde ownership.
 
 ## Atalhos Globais
 
@@ -18,10 +30,10 @@ Não adicione encaminhamento no sketch principal, como `ziviDome.keyEvent(event)
 - `m`: alterna a view legada configurada para preview
 - Setas Esquerda/Direita: cena anterior/próxima
 
-Atalhos globais executam antes de o evento chegar à cena.
+Atalhos globais são processados pela facade sem exigir forwarding no sketch.
 
 ## Entrada de Câmera
 
-Com `setSceneCameraInputEnabled(true)`, eventos de mouse também chegam ao `OrbitCamera` em scene space. A câmera perspectiva Standard permanece um serviço separado.
+Com `setSceneCameraInputEnabled(true)` ou `services.camera().setInputEnabled(true)`, gestos de navegação chegam ao `OrbitCamera` em scene space em vez da câmera perspectiva Standard independente. Isso impede que um único drag ou evento da roda mova duas câmeras ao mesmo tempo.
 
 Todos os callbacks registrados são removidos no descarte terminal.

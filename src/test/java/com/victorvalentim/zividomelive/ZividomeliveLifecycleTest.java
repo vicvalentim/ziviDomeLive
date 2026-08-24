@@ -1,51 +1,78 @@
 package com.victorvalentim.zividomelive;
 
 import com.victorvalentim.zividomelive.manager.OutputManager;
-import com.victorvalentim.zividomelive.render.modes.FisheyeDomemaster;
-import com.victorvalentim.zividomelive.render.modes.StandardRenderer;
-import com.victorvalentim.zividomelive.support.ThreadManager;
+import com.victorvalentim.zividomelive.render.Quaternion;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
+import processing.core.PImage;
 import processing.opengl.PShader;
 import processing.opengl.PGraphicsOpenGL;
 
 import java.lang.reflect.Field;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class ZividomeliveLifecycleTest {
+	private static final float QUATERNION_EPSILON = 1.0e-5f;
+
+	private static void assertQuaternionEquivalent(Quaternion expected, Quaternion actual) {
+		float dot = Math.abs(
+				expected.x() * actual.x()
+						+ expected.y() * actual.y()
+						+ expected.z() * actual.z()
+						+ expected.w() * actual.w());
+		assertEquals(1.0f, dot, QUATERNION_EPSILON);
+	}
 
 	@Test
 	void constructorRejectsNullApplet() {
-		assertThrows(IllegalArgumentException.class, () -> new zividomelive(null));
+		assertThrows(IllegalArgumentException.class, () -> new ziviDomeLive(null));
 	}
 
 	@Test
 	void initialStateIsNotInitialized() {
-		zividomelive lib = new zividomelive(new PApplet());
-		assertEquals(zividomelive.InitState.NOT_INITIALIZED, lib.getInitState());
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		assertEquals(ziviDomeLive.InitState.NOT_INITIALIZED, lib.getInitState());
+	}
+
+	@Test
+	void drawingControlsIsSafeWhenOptionalControlP5IsUnavailable() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+
+		assertDoesNotThrow(lib::drawControlPanel);
 	}
 
 	@Test
 	void initializeManagersBeforeSetupKeepsStateUnchanged() {
-		zividomelive lib = new zividomelive(new PApplet());
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		lib.initializeManagers();
-		assertEquals(zividomelive.InitState.NOT_INITIALIZED, lib.getInitState(),
+		assertEquals(ziviDomeLive.InitState.NOT_INITIALIZED, lib.getInitState(),
 				"initializeManagers must not advance state before setup completes");
 	}
 
 	@Test
 	void setupTransitionsToSetupComplete() {
-		zividomelive lib = new zividomelive(new PApplet());
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		lib.setup();
-		assertEquals(zividomelive.InitState.SETUP_COMPLETE, lib.getInitState());
+		assertEquals(ziviDomeLive.InitState.SETUP_COMPLETE, lib.getInitState());
+	}
+
+	@Test
+	void setupHintsDisablesProcessingOpenGlConsoleReporter() {
+		HintTrackingApplet applet = new HintTrackingApplet();
+		ziviDomeLive lib = new ziviDomeLive(applet);
+
+		lib.setupHints();
+
+		assertTrue(applet.hints.contains(processing.core.PConstants.DISABLE_OPENGL_ERRORS));
 	}
 
 	@Test
 	void setupIsIdempotent() {
-		zividomelive lib = new zividomelive(new PApplet());
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		lib.setup();
 		OutputManager firstOutputManager = lib.getOutputManager();
 		Scene firstScene = lib.getSceneManager().getCurrentScene();
@@ -54,12 +81,12 @@ class ZividomeliveLifecycleTest {
 
 		assertSame(firstOutputManager, lib.getOutputManager());
 		assertSame(firstScene, lib.getSceneManager().getCurrentScene());
-		assertEquals(zividomelive.InitState.SETUP_COMPLETE, lib.getInitState());
+		assertEquals(ziviDomeLive.InitState.SETUP_COMPLETE, lib.getInitState());
 	}
 
 	@Test
 	void explicitSceneReplacesDefaultFallbackRegistration() {
-		zividomelive lib = new zividomelive(new PApplet());
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		lib.setup();
 		TrackingScene explicitScene = new TrackingScene("Explicit");
 
@@ -71,7 +98,7 @@ class ZividomeliveLifecycleTest {
 
 	@Test
 	void targetFrameRateDefaultsTo60AndRejectsInvalidValues() {
-		zividomelive lib = new zividomelive(new PApplet());
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		assertEquals(60, lib.getTargetFrameRate());
 
 		lib.setTargetFrameRate(0);
@@ -85,10 +112,86 @@ class ZividomeliveLifecycleTest {
 	}
 
 	@Test
+	void facadeRejectsInvalidResolutionBeforeDeferringAllocation() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+
+		assertThrows(IllegalArgumentException.class, () -> lib.resetGraphics(0));
+		assertThrows(IllegalArgumentException.class, () -> lib.resetGraphics(-1));
+		assertEquals(1024, lib.getOutputResolution());
+	}
+
+	@Test
+	void domemasterSizeIsClampedBeforeRenderersExist() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+
+		lib.setFishSize(-10f);
+		assertEquals(0f, lib.getFishSize());
+		lib.setFishSize(150f);
+		assertEquals(100f, lib.getFishSize());
+		lib.setFishSize(Float.NaN);
+		assertEquals(100f, lib.getFishSize());
+	}
+
+	@Test
+	void facadeCalibrationPreservesTheLastFiniteBoundedValue() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+
+		lib.setFov(500f);
+		assertEquals(360f, lib.getFov());
+		lib.setFov(Float.NaN);
+		assertEquals(360f, lib.getFov());
+
+		lib.setCurrentView(ViewType.SKYBOX);
+		lib.setCurrentView(null);
+		assertEquals(ViewType.SKYBOX, lib.getCurrentView());
+	}
+
+	@Test
+	void resettingControlsBeforeManagerInitializationIsSafe() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+
+		assertDoesNotThrow(lib::resetControls);
+	}
+
+	@Test
+	void environmentBackgroundStateIsConfigurableBeforeRendererInitialization() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		PImage image = new PImage(4, 2);
+
+		assertFalse(lib.hasEnvironmentBackground());
+		assertTrue(lib.isEnvironmentBackgroundVisible());
+		assertEquals(1.0f, lib.getEnvironmentBackgroundIntensity(), 1e-6f);
+		assertEquals(0.0f, lib.getEnvironmentBackgroundYawOffset(), 1e-6f);
+
+		lib.setEquirectangularBackground(image);
+		lib.setEnvironmentBackgroundVisible(false);
+		lib.setEnvironmentBackgroundIntensity(-2.0f);
+		lib.setEnvironmentBackgroundYawOffset(0.75f);
+
+		assertTrue(lib.hasEnvironmentBackground());
+		assertFalse(lib.isEnvironmentBackgroundVisible());
+		assertEquals(0.0f, lib.getEnvironmentBackgroundIntensity(), 1e-6f);
+		assertEquals(0.75f, lib.getEnvironmentBackgroundYawOffset(), 1e-6f);
+
+		lib.clearEnvironmentBackground();
+		assertFalse(lib.hasEnvironmentBackground());
+	}
+
+	@Test
+	void terminalDisposeReleasesTheFacadeBorrowedSourceReference() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		lib.setEquirectangularBackground(new PImage(4, 2));
+
+		lib.dispose();
+
+		assertFalse(lib.hasEnvironmentBackground());
+	}
+
+	@Test
 	void targetFrameRateDoesNotRestartAppletWhenValueIsUnchanged() throws Exception {
 		FrameRateTrackingApplet applet = new FrameRateTrackingApplet();
-		zividomelive lib = new zividomelive(applet);
-		setInitState(lib, zividomelive.InitState.SETUP_COMPLETE);
+		ziviDomeLive lib = new ziviDomeLive(applet);
+		setInitState(lib, ziviDomeLive.InitState.SETUP_COMPLETE);
 
 		lib.setTargetFrameRate(60);
 		assertEquals(0, applet.frameRateCalls);
@@ -101,15 +204,15 @@ class ZividomeliveLifecycleTest {
 
 	@Test
 	void setupStartsWithOutputsDisabled() {
-		zividomelive lib = new zividomelive(new PApplet());
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		lib.setup();
-		assertFalse(lib.isEnableOutput(), "Outputs should remain opt-in after setup");
+		assertFalse(lib.getOutputManager().isActive(), "Outputs should remain opt-in after setup");
 	}
 
 	@Test
 	void replacementFisheyeInheritsFacadeSizePercentage() {
 		StubApplet applet = new StubApplet();
-		zividomelive lib = new zividomelive(applet);
+		ziviDomeLive lib = new ziviDomeLive(applet);
 		lib.setFishSize(42.5f);
 
 		FisheyeDomemaster replacement = new FisheyeDomemaster(1024, "frag", "vert", applet);
@@ -121,19 +224,19 @@ class ZividomeliveLifecycleTest {
 	@Test
 	void failedRendererInitializationKeepsPostHookForRetry() {
 		TrackingApplet applet = new TrackingApplet();
-		zividomelive lib = new FailingRendererDome(applet);
+		ziviDomeLive lib = new FailingRendererDome(applet);
 		lib.setup();
 
 		lib.post();
 
-		assertEquals(zividomelive.InitState.SETUP_COMPLETE, lib.getInitState());
+		assertEquals(ziviDomeLive.InitState.SETUP_COMPLETE, lib.getInitState());
 		assertFalse(lib.isInitialized());
 		assertFalse(applet.postUnregistered, "post hook must remain registered after a partial failure");
 	}
 
 	@Test
 	void pauseResumeRestoresOnlyOutputsThatWereEnabled() throws Exception {
-		zividomelive lib = new zividomelive(new PApplet());
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		FakeOutputManager outputs = new FakeOutputManager(lib);
 		outputs.ndiEnabled = true;
 		outputs.syphonEnabled = true;
@@ -157,43 +260,9 @@ class ZividomeliveLifecycleTest {
 	}
 
 	@Test
-	void isEnableOutputDelegatesToOutputManager() {
-		zividomelive lib = new zividomelive(new PApplet());
-		lib.setup();
-
-		OutputManagerState state = readOutputState(lib);
-		assertEquals(state.anyEnabled, lib.isEnableOutput(),
-				"isEnableOutput must mirror the OutputManager enabled flags");
-	}
-
-	@Test
-	void stopDoesNotShutdownSharedThreadManager() {
-		zividomelive lib = new zividomelive(new PApplet());
-		lib.setup();
-
-		lib.stop();
-
-		assertFalse(ThreadManager.isShutdown(),
-				"The shared ThreadManager executor must stay alive across library instances");
-		assertFalse(lib.isInitialized());
-		assertEquals(zividomelive.InitState.NOT_INITIALIZED, lib.getInitState());
-	}
-
-	@Test
-	void disposeDoesNotShutdownSharedThreadManager() {
-		zividomelive lib = new zividomelive(new PApplet());
-		lib.setup();
-
-		lib.dispose();
-
-		assertFalse(ThreadManager.isShutdown(),
-				"The shared ThreadManager executor must stay alive after disposing one library instance");
-	}
-
-	@Test
 	void sceneManagerIsTheAuthorityForSceneUpdates() throws Exception {
 		PApplet applet = new PApplet();
-		zividomelive lib = new zividomelive(applet);
+		ziviDomeLive lib = new ziviDomeLive(applet);
 		SceneManager scenes = new SceneManager();
 		TrackingScene first = new TrackingScene("A");
 		TrackingScene second = new TrackingScene("B");
@@ -204,7 +273,7 @@ class ZividomeliveLifecycleTest {
 		StandardRenderer previewRenderer = new StandardRenderer(applet, 0, 0, first);
 		setField(lib, "standardRenderer", outputRenderer);
 		setField(lib, "standardRendererPreview", previewRenderer);
-		setInitState(lib, zividomelive.InitState.MANAGERS_READY);
+		setInitState(lib, ziviDomeLive.InitState.MANAGERS_READY);
 
 		scenes.nextScene();
 		lib.pre();
@@ -217,8 +286,31 @@ class ZividomeliveLifecycleTest {
 	}
 
 	@Test
+	void outputResolutionResetPolicyPreservesStandardCameraIdentityAndPose() throws Exception {
+		PApplet applet = new PApplet();
+		ziviDomeLive lib = new ziviDomeLive(applet);
+		StandardRenderer previousOutput = new StandardRenderer(applet, 0, 0, null);
+		StandardRenderer preview = new StandardRenderer(applet, 0, 0, null);
+		MouseControlledCamera camera = previousOutput.getCam();
+		camera.setDistance(4321.0f);
+		preview.setCam(camera);
+		setField(lib, "standardRenderer", previousOutput);
+		setField(lib, "standardRendererPreview", preview);
+
+		lib.resetGraphics(2048);
+		MouseControlledCamera preserved = lib.standardCameraForGraphicsReset();
+		StandardRenderer replacementOutput = new StandardRenderer(applet, 0, 0, null);
+		setField(lib, "standardRenderer", replacementOutput);
+		lib.restoreStandardCameraAfterGraphicsReset(preserved);
+
+		assertSame(camera, replacementOutput.getCam());
+		assertSame(camera, preview.getCam());
+		assertEquals(4321.0f, replacementOutput.getCam().getDistance(), 0.0001f);
+	}
+
+	@Test
 	void replacingSceneManagerDisposesPreviouslyOwnedActiveScene() {
-		zividomelive lib = new zividomelive(new PApplet());
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		TrackingScene previous = new TrackingScene("Previous");
 		lib.setScene(previous);
 
@@ -231,11 +323,29 @@ class ZividomeliveLifecycleTest {
 	}
 
 	@Test
+	void adoptingDetachedManagerConfiguresItsFirstSceneBeforeSetup() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		SceneManager replacement = new SceneManager();
+		ServiceAwareScene scene = new ServiceAwareScene();
+		replacement.registerScene(scene);
+
+		assertEquals(0, scene.setupCount,
+				"A detached manager cannot start a service-aware activation");
+
+		lib.setSceneManager(replacement);
+
+		assertEquals(1, scene.configureCount);
+		assertEquals(1, scene.setupCount);
+		assertSame(scene.services, scene.servicesSeenDuringSetup);
+		lib.dispose();
+	}
+
+	@Test
 	void pauseBlocksSceneUpdatesUntilResume() throws Exception {
-		zividomelive lib = new zividomelive(new PApplet());
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		TrackingScene scene = new TrackingScene("Paused");
 		lib.setScene(scene);
-		setInitState(lib, zividomelive.InitState.MANAGERS_READY);
+		setInitState(lib, ziviDomeLive.InitState.MANAGERS_READY);
 
 		lib.pause();
 		lib.pre();
@@ -249,7 +359,7 @@ class ZividomeliveLifecycleTest {
 	@Test
 	void disposeIsTerminalIdempotentAndDisposesActiveSceneOnce() {
 		TrackingApplet applet = new TrackingApplet();
-		zividomelive lib = new zividomelive(applet);
+		ziviDomeLive lib = new ziviDomeLive(applet);
 		TrackingScene scene = new TrackingScene("Owned");
 		lib.setScene(scene);
 
@@ -259,28 +369,258 @@ class ZividomeliveLifecycleTest {
 
 		assertEquals(1, scene.disposeCount);
 		assertEquals(0, lib.getSceneManager().getSceneCount());
-		assertEquals(zividomelive.InitState.NOT_INITIALIZED, lib.getInitState());
+		assertEquals(ziviDomeLive.InitState.NOT_INITIALIZED, lib.getInitState());
 		assertFalse(lib.isInitialized());
 		assertFalse(applet.registeredMethods.isEmpty());
 		assertEquals(applet.registeredMethods, applet.unregisteredMethods);
 	}
 
-	private record OutputManagerState(boolean anyEnabled) {}
+	@Test
+	void serviceAwareSceneIsConfiguredBeforeSetupAndClosedAfterDispose() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		ServiceAwareScene scene = new ServiceAwareScene();
 
-	private static void setOutputManager(zividomelive lib, OutputManager outputManager) throws Exception {
-		Field field = zividomelive.class.getDeclaredField("outputManager");
+		lib.setScene(scene);
+
+		assertEquals(1, scene.configureCount);
+		assertEquals(1, scene.setupCount);
+		assertNotNull(scene.servicesSeenDuringSetup);
+		SceneServices activation = scene.servicesSeenDuringSetup;
+
+		lib.dispose();
+
+		assertEquals(1, scene.disposeCount);
+		assertTrue(activation.isClosed());
+	}
+
+	@Test
+	void failedSetupStillDisposesSceneAndClosesItsActivation() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		FailingSetupScene scene = new FailingSetupScene();
+		ServiceAwareScene activation = scene;
+
+		assertThrows(IllegalStateException.class, () -> lib.setScene(scene));
+
+		assertNotNull(activation.services);
+		assertTrue(activation.services.isClosed());
+		assertEquals(1, activation.disposeCount);
+		lib.dispose();
+	}
+
+	@Test
+	void failedConfigureStillDisposesSceneAndClosesItsActivation() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		FailingConfigureScene scene = new FailingConfigureScene();
+
+		assertThrows(IllegalStateException.class, () -> lib.setScene(scene));
+
+		assertNotNull(scene.services);
+		assertTrue(scene.services.isClosed());
+		assertEquals(0, scene.setupCount);
+		assertEquals(1, scene.disposeCount);
+		lib.dispose();
+	}
+
+	@Test
+	void failedSceneDisposeStillClosesItsActivation() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		FailingDisposeScene scene = new FailingDisposeScene();
+		ServiceAwareScene activation = scene;
+		lib.setScene(scene);
+		SceneServices services = activation.services;
+
+		assertDoesNotThrow(lib::dispose);
+
+		assertEquals(1, activation.disposeCount);
+		assertTrue(services.isClosed());
+	}
+
+	@Test
+	void inactiveRegisteredSceneDoesNotOwnAnActivationContext() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		ServiceAwareScene active = new ServiceAwareScene();
+		ServiceAwareScene inactive = new ServiceAwareScene();
+
+		lib.setScene(active);
+		lib.registerScene(inactive);
+
+		assertSame(active.services, lib.getSceneServices(active));
+		assertNull(lib.getSceneServices(inactive));
+		lib.dispose();
+	}
+
+	@Test
+	void untouchedSceneEnvironmentServicePreservesFacadeOwnedBackground() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		PImage facadeSource = new PImage(4, 2);
+		lib.setEquirectangularBackground(facadeSource);
+		ServiceAwareScene first = new ServiceAwareScene();
+		ServiceAwareScene second = new ServiceAwareScene();
+
+		lib.setScene(first);
+		lib.registerScene(second);
+		lib.getSceneManager().nextScene();
+
+		assertSame(facadeSource, lib.getEnvironmentBackgroundSource());
+		lib.dispose();
+	}
+
+	@Test
+	void sceneEnvironmentServiceRestoresTheStateItTemporarilyOwned() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		PImage facadeSource = new PImage(4, 2);
+		PImage sceneSource = new PImage(8, 4);
+		lib.setEquirectangularBackground(facadeSource);
+		lib.setEnvironmentBackgroundVisible(false);
+		lib.setEnvironmentBackgroundIntensity(0.75f);
+		lib.setEnvironmentBackgroundYawOffset(0.25f);
+		Quaternion facadeOrientation = Quaternion.fromAxisAngle(0f, 1f, 0f, 0.2f);
+		lib.setEnvironmentBackgroundSourceOrientation(facadeOrientation);
+		ServiceAwareScene scene = new ServiceAwareScene();
+		ServiceAwareScene next = new ServiceAwareScene();
+		lib.setScene(scene);
+		lib.registerScene(next);
+
+		scene.services.environment().setEquirectangular(sceneSource);
+		scene.services.environment().setVisible(true);
+		scene.services.environment().setIntensity(1.5f);
+		scene.services.environment().setYawOffset(0.5f);
+		scene.services.environment().setOrientationAxisAngle(1f, 0f, 0f, 0.75f);
+		lib.getSceneManager().nextScene();
+
+		assertSame(facadeSource, lib.getEnvironmentBackgroundSource());
+		assertFalse(lib.isEnvironmentBackgroundVisible());
+		assertEquals(0.75f, lib.getEnvironmentBackgroundIntensity(), 1e-6f);
+		assertEquals(0.25f, lib.getEnvironmentBackgroundYawOffset(), 1e-6f);
+		assertQuaternionEquivalent(
+				facadeOrientation, lib.getEnvironmentBackgroundSourceOrientation());
+		lib.dispose();
+	}
+
+	@Test
+	void sceneCameraServiceRestoresTheInputStateItTemporarilyOwned() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		ServiceAwareScene scene = new ServiceAwareScene();
+		ServiceAwareScene next = new ServiceAwareScene();
+		lib.setScene(scene);
+		lib.registerScene(next);
+
+		scene.services.camera().setInputEnabled(true);
+		assertTrue(lib.isSceneCameraInputEnabled());
+
+		lib.getSceneManager().nextScene();
+
+		assertFalse(lib.isSceneCameraInputEnabled(),
+				"Closing a scene activation must restore the input state it replaced");
+		lib.dispose();
+	}
+
+	@Test
+	void requestedReloadIsExecutedAtFrameBoundaryWithFreshServices() throws Exception {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		ServiceAwareScene scene = new ServiceAwareScene();
+		lib.setScene(scene);
+		SceneServices firstActivation = scene.services;
+		setInitState(lib, ziviDomeLive.InitState.MANAGERS_READY);
+
+		firstActivation.requestReload();
+		lib.pre();
+
+		assertEquals(1, scene.disposeCount);
+		assertEquals(2, scene.setupCount);
+		assertEquals(2, scene.configureCount);
+		assertTrue(firstActivation.isClosed());
+		assertNotSame(firstActivation, scene.services);
+		assertFalse(scene.services.isClosed());
+		lib.dispose();
+	}
+
+	@Test
+	void portInputThatSwitchesSceneDoesNotUpdateTheDisposedActivation() throws Exception {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		TestInputPort<Integer> input = new TestInputPort<>();
+		PortSwitchingScene first = new PortSwitchingScene(lib, input);
+		TrackingScene second = new TrackingScene("Second");
+		lib.setScene(first);
+		lib.registerScene(second);
+		setInitState(lib, ziviDomeLive.InitState.MANAGERS_READY);
+
+		input.emit(1);
+		assertDoesNotThrow(lib::pre);
+
+		assertSame(second, lib.getSceneManager().getCurrentScene());
+		assertEquals(0, first.updateCount);
+		assertTrue(first.services.isClosed());
+		assertEquals(1, input.closeCount);
+		lib.dispose();
+	}
+
+	@Test
+	void facadeDispatchesSceneActionsWithoutReplacingRawCallbacks() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		ServiceAwareScene scene = new ServiceAwareScene();
+		lib.setScene(scene);
+		scene.services.actions().bindKeyPressed("test", 'x', () -> scene.actionCount++);
+
+		lib.keyEvent(new processing.event.KeyEvent(
+				null, 0, processing.event.KeyEvent.PRESS, 0, 'x', 0));
+
+		assertEquals(1, scene.actionCount);
+		assertEquals(1, scene.rawKeyCount);
+		lib.dispose();
+	}
+
+	@Test
+	void cameraTargetTrackingRunsAfterSceneUpdate() throws Exception {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		ServiceAwareScene scene = new ServiceAwareScene();
+		lib.setScene(scene);
+		scene.services.camera().trackTarget(() -> new processing.core.PVector(100, 20, -5));
+		setInitState(lib, ziviDomeLive.InitState.MANAGERS_READY);
+
+		lib.pre();
+
+		assertTrue(lib.getSceneCamera().getTarget().x > 0f);
+		lib.dispose();
+	}
+
+	@Test
+	void firstPreRebindsSceneServicesFromSetupThreadToProcessingAnimatorThread() throws Exception {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+		TrackingScene scene = new TrackingScene("Animator");
+		lib.setScene(scene);
+		setInitState(lib, ziviDomeLive.InitState.MANAGERS_READY);
+		AtomicReference<Throwable> failure = new AtomicReference<>();
+
+		Thread animator = new Thread(() -> {
+			try {
+				lib.pre();
+			} catch (Throwable error) {
+				failure.set(error);
+			}
+		}, "test-processing-animator");
+		animator.start();
+		animator.join();
+
+		assertNull(failure.get());
+		assertEquals(1, scene.updateCount);
+		lib.dispose();
+	}
+
+	private static void setOutputManager(ziviDomeLive lib, OutputManagerImpl outputManager) throws Exception {
+		Field field = ziviDomeLive.class.getDeclaredField("outputManager");
 		field.setAccessible(true);
 		field.set(lib, outputManager);
 	}
 
-	private static void setInitState(zividomelive lib, zividomelive.InitState state) throws Exception {
-		Field field = zividomelive.class.getDeclaredField("initState");
+	private static void setInitState(ziviDomeLive lib, ziviDomeLive.InitState state) throws Exception {
+		Field field = ziviDomeLive.class.getDeclaredField("initState");
 		field.setAccessible(true);
 		field.set(lib, state);
 	}
 
-	private static void setField(zividomelive lib, String fieldName, Object value) throws Exception {
-		Field field = zividomelive.class.getDeclaredField(fieldName);
+	private static void setField(ziviDomeLive lib, String fieldName, Object value) throws Exception {
+		Field field = ziviDomeLive.class.getDeclaredField(fieldName);
 		field.setAccessible(true);
 		field.set(lib, value);
 	}
@@ -289,12 +629,6 @@ class ZividomeliveLifecycleTest {
 		Field field = StandardRenderer.class.getDeclaredField("currentScene");
 		field.setAccessible(true);
 		return (Scene) field.get(renderer);
-	}
-
-	private OutputManagerState readOutputState(zividomelive lib) {
-		var om = lib.getOutputManager();
-		assertNotNull(om, "OutputManager must be created during setup");
-		return new OutputManagerState(om.isNdiEnabled() || om.isSpoutEnabled() || om.isSyphonEnabled());
 	}
 
 	private static class StubApplet extends PApplet {
@@ -312,6 +646,23 @@ class ZividomeliveLifecycleTest {
 		public void frameRate(float fps) {
 			frameRateCalls++;
 			lastFrameRate = fps;
+		}
+	}
+
+	private static class HintTrackingApplet extends StubApplet {
+		private final Set<Integer> hints = new LinkedHashSet<>();
+
+		@Override
+		public void hint(int which) {
+			hints.add(which);
+		}
+
+		@Override
+		public void textureMode(int mode) {
+		}
+
+		@Override
+		public void textureWrap(int wrap) {
 		}
 	}
 
@@ -363,7 +714,135 @@ class ZividomeliveLifecycleTest {
 		}
 	}
 
-	private static class FailingRendererDome extends zividomelive {
+	private static class ServiceAwareScene implements Scene {
+		private SceneServices services;
+		private SceneServices servicesSeenDuringSetup;
+		private int configureCount;
+		private int setupCount;
+		private int disposeCount;
+		private int actionCount;
+		private int rawKeyCount;
+
+		@Override
+		public void configure(SceneServices services) {
+			this.services = services;
+			configureCount++;
+		}
+
+		@Override
+		public void setupScene() {
+			servicesSeenDuringSetup = services;
+			setupCount++;
+		}
+
+		@Override
+		public void sceneRender(PGraphicsOpenGL graphics) {
+		}
+
+		@Override
+		public void keyEvent(processing.event.KeyEvent event) {
+			rawKeyCount++;
+		}
+
+		@Override
+		public void dispose() {
+			disposeCount++;
+		}
+	}
+
+	private static final class FailingSetupScene extends ServiceAwareScene {
+		@Override
+		public void setupScene() {
+			super.setupScene();
+			throw new IllegalStateException("setup failed");
+		}
+	}
+
+	private static final class FailingConfigureScene implements Scene {
+		private SceneServices services;
+		private int setupCount;
+		private int disposeCount;
+
+		@Override
+		public void configure(SceneServices services) {
+			this.services = services;
+			throw new IllegalStateException("configure failed");
+		}
+
+		@Override
+		public void setupScene() {
+			setupCount++;
+		}
+
+		@Override
+		public void sceneRender(processing.opengl.PGraphicsOpenGL pg) {
+		}
+
+		@Override
+		public void dispose() {
+			disposeCount++;
+		}
+	}
+
+	private static final class FailingDisposeScene extends ServiceAwareScene {
+		@Override
+		public void dispose() {
+			super.dispose();
+			throw new IllegalStateException("dispose failed");
+		}
+	}
+
+	private static final class PortSwitchingScene implements Scene {
+		private final ziviDomeLive lib;
+		private final TestInputPort<Integer> input;
+		private SceneServices services;
+		private int updateCount;
+
+		private PortSwitchingScene(ziviDomeLive lib, TestInputPort<Integer> input) {
+			this.lib = lib;
+			this.input = input;
+		}
+
+		@Override
+		public void configure(SceneServices services) {
+			this.services = services;
+		}
+
+		@Override
+		public void setupScene() {
+			services.ports().connectInput(input, ignored -> lib.getSceneManager().nextScene());
+		}
+
+		@Override
+		public void update() {
+			updateCount++;
+		}
+
+		@Override
+		public void sceneRender(PGraphicsOpenGL pg) {
+		}
+	}
+
+	private static final class TestInputPort<T> implements SceneInputPort<T> {
+		private java.util.function.Consumer<? super T> receiver;
+		private int closeCount;
+
+		@Override
+		public void start(java.util.function.Consumer<? super T> receiver) {
+			this.receiver = receiver;
+		}
+
+		private void emit(T value) {
+			receiver.accept(value);
+		}
+
+		@Override
+		public void close() {
+			closeCount++;
+		}
+	}
+
+	private static class FailingRendererDome extends ziviDomeLive {
 		FailingRendererDome(PApplet applet) {
 			super(applet);
 		}
@@ -374,14 +853,14 @@ class ZividomeliveLifecycleTest {
 		}
 	}
 
-	private static class FakeOutputManager extends OutputManager {
+	private static class FakeOutputManager extends OutputManagerImpl {
 		private boolean ndiEnabled;
 		private boolean spoutEnabled;
 		private boolean syphonEnabled;
 		private int shutdownCalls;
 		private int toggleCalls;
 
-		FakeOutputManager(zividomelive parent) {
+		FakeOutputManager(ziviDomeLive parent) {
 			super(parent);
 		}
 
@@ -401,7 +880,7 @@ class ZividomeliveLifecycleTest {
 		}
 
 		@Override
-		public void shutdownOutputs() {
+		void disableAll() {
 			shutdownCalls++;
 			ndiEnabled = false;
 			spoutEnabled = false;
@@ -409,20 +888,18 @@ class ZividomeliveLifecycleTest {
 		}
 
 		@Override
-		public void toggleOutput(String method) {
+		public void setOutputEnabled(OutputManager.OutputType outputType, boolean enabled) {
 			toggleCalls++;
-			switch (method) {
-				case "ndi":
-					ndiEnabled = !ndiEnabled;
+			switch (outputType) {
+				case NDI:
+					ndiEnabled = enabled;
 					break;
-				case "spout":
-					spoutEnabled = !spoutEnabled;
+				case SPOUT:
+					spoutEnabled = enabled;
 					break;
-				case "syphon":
-					syphonEnabled = !syphonEnabled;
+				case SYPHON:
+					syphonEnabled = enabled;
 					break;
-				default:
-					throw new IllegalArgumentException("Unexpected output: " + method);
 			}
 		}
 	}

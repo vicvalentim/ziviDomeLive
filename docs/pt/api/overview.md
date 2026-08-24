@@ -1,56 +1,72 @@
+---
+title: Visão Geral da API
+icon: material/api
+status: stable
+tags:
+  - API
+  - Arquitetura
+---
+
 # Visão Geral da API
 
-## Tipos Principais
+ziviDomeLive 2.0 possui uma entrada criativa deliberadamente pequena e libera mais controle de forma progressiva. Os níveis abaixo fazem parte do contrato documental e são verificados contra a superfície Java por testes automatizados.
 
-| Tipo | Responsabilidade |
-|---|---|
-| `zividomelive` | Integração Processing, lifecycle, renderização, calibração e acesso aos serviços |
-| `RenderMode` | Comportamento global de renderização |
-| `Scene` | Contrato de desenho e eventos do usuário |
-| `SceneManager` | Registro, ownership ativo, troca e descarte de cenas |
-| `OutputManager` | Roteamento e lifecycle de NDI, Syphon e Spout |
-| `OrbitCamera` | Câmera opcional em scene space compartilhada pelos targets |
-| `SphericalOrientation` | Acumulação cíclica de pitch/yaw/roll em um quaternion unitário |
-
-## Enums Públicos
-
-```java
-RenderMode.FULL
-RenderMode.STANDARD
-RenderMode.DOMEMASTER
-RenderMode.EQUIRECTANGULAR
-RenderMode.SKYBOX
+```mermaid
+flowchart TB
+  S[Stable<br/>sketches comuns] --> A[Advanced Stable<br/>projetos com lifecycle]
+  A --> E[Experimental<br/>medição e qualificação]
+  P[Callbacks Processing<br/>pontos de entrada do framework] -. invoca .-> S
+  I[Internal<br/>renderer · GL · UI · workers] -. implementa .-> S
+  I -. implementa .-> A
 ```
 
-`zividomelive.ViewType` continua disponível para rotas de preview e output. Sua ordem é sensível à compatibilidade e não deve ser alterada.
+## Nível 1 — Stable
 
-| Índice de `ViewType` | Valor | Representação |
-|---:|---|---|
-| 0 | `FISHEYE_DOMEMASTER` | Projeção circular fulldome |
-| 1 | `EQUIRECTANGULAR` | Projeção esférica 2:1 |
-| 2 | `CUBEMAP` | Layout de inspeção das seis faces |
-| 3 | `STANDARD` | Renderização perspectiva da cena |
+API recomendada para sketches Processing comuns:
 
-`StandardOutputAspectMode` seleciona `AUTO`, `ASPECT_16_9`, `ASPECT_16_10`,
-`ASPECT_4_3` ou `ASPECT_1_1` para o output Standard em alta resolução. Ele não
-redimensiona a janela de preview do Processing.
+| Tipo | Papel |
+|---|---|
+| `ziviDomeLive` | Facade do runtime, ownership de cenas, configuração e integração Processing |
+| `ziviDomeLive.StandardOutputAspectMode` | Política de aspecto do output Standard |
+| `Scene` | Contrato de extensão; apenas `sceneRender(PGraphicsOpenGL)` é obrigatório |
+| `SceneManager` | Registro e troca de cenas por identidade |
+| `RenderMode` | Modo de trabalho corrente do runtime |
+| `ViewType` | Representação roteada a um destino |
+| `LogMode` | Política de logging debug/release |
 
-`OutputManager.OutputState` distingue:
+Comece e permaneça aqui até uma necessidade concreta indicar o próximo nível.
 
-- `UNAVAILABLE`: não suportado ou última inicialização falhou
-- `AVAILABLE`: elegível para inicialização, sem recursos nativos
-- `INITIALIZED`: recursos nativos existem, publicação desabilitada
-- `ENABLED`: publicação habilitada
-- `STOPPING`: NDI sem publicação enquanto conclui limpeza limitada
+## Nível 2 — Advanced Stable
 
-## Compatibilidade
+Contratos públicos suportados para projetos lifecycle-aware ou tecnicamente exigentes:
 
-- O nome público em minúsculas `zividomelive` permanece inalterado.
-- `RenderMode.FULL` preserva o modelo legado de roteamento.
-- `renderFisheyeDomemaster()`, `renderEquirectangular()`, `renderCubemap()` e `renderStandard()` continuam como shims de compatibilidade depreciados.
-- Getters de renderers permanecem públicos na 1.x, mas a topologia interna não é um contrato permanente.
+- serviços de ativação: `SceneServices`, `FrameClock`, `SimulationTimeline`, `SceneTaskGroup`, `SceneAssets`, `SceneActionMap`, `SceneCameraService`, `SceneEnvironmentService`, `ScenePorts`, `SceneInputPort`, `SceneOutputPort`;
+- controle de output: `OutputManager`, `OutputType`, `OutputState`;
+- matemática/navegação reutilizável: `Quaternion`, `SphericalOrientation`, `OrbitCamera`.
 
-Os Javadocs gerados no pacote de release são a referência de assinaturas.
-Consulte [Classes Principais](core-classes.md) para ownership e estados,
-[Funções Operacionais](helper-functions.md) para controles de runtime e
-[Interface Scene](scene-interface.md) para o contrato de desenho.
+Advanced stable significa chamável e suportado, não pertencente à cena. Serviços fornecidos pelo runtime não podem ser construídos nem fechados pelo sketch.
+
+## Nível 3 — Experimental
+
+A camada de reporting/qualificação contém `PerformanceMode`, `PerformanceMetric`, `PerformanceSnapshot`, `MetricStatistics`, `GraphicsCapabilities`, `GpuTimerPolicy`, `GpuTimerBackend` e `GpuTimerArchitecture`.
+
+Métricas experimentais são evidência útil, mas seu vocabulário pode evoluir mais rapidamente que a API criativa. Tempo de parede na CPU e tempo decorrido na GPU não são intercambiáveis.
+
+## Superfície de callbacks Processing
+
+`pre`, `draw`, `post`, `keyEvent`, `mouseEvent`, `pause`, `resume`, `stop` e `dispose` são métodos públicos da facade porque o Processing os invoca. São pontos de integração, não uma segunda API que o sketch deva encaminhar manualmente.
+
+Nem `Scene` nem a facade expõem tipo de callback do ControlP5. O painel registra seu listener internamente; cenas recebem callbacks de teclado/mouse do Processing ou usam `SceneActionMap`.
+
+## Fronteira Internal
+
+Implementações de renderer, targets de cubemap, containers finais de frame, adapters Processing/GL, managers de UI, filas, executores e produtores de output são implementação package-private. Pastas físicas `_internal/` os categorizam para manutenção sem alterar seu modelo de colaboração package-private.
+
+!!! warning "Não deduza pela visibilidade"
+    Um nome de classe no texto de arquitetura não autoriza sua instanciação. Somente os tipos listados em Stable, Advanced Stable e Experimental são API pública 2.0.
+
+## Nenhuma superfície deprecated em 2.0
+
+O contrato final 2.0 não contém camada de compatibilidade `@Deprecated`. Entradas antigas de 1.x aparecem em [API 1.x Removida](deprecated.md) apenas para migração e preservação histórica.
+
+Para métodos, construtores e retornos exatos, consulte os [Javadocs gerados](javadocs.md). `PublicApiCompatibilityTest` é o freeze executável.

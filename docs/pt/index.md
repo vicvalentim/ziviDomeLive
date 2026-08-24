@@ -1,46 +1,91 @@
-# ziviDomeLive 1.5.0
+---
+title: ziviDomeLive
+icon: material/home-outline
+description: Crie fluxos visuais fulldome, esféricos e imersivos em tempo real no Processing.
+---
 
-![Splash do ziviDomeLive](../assets/images/splash.jpg){ width="520" }
+<div class="zd-hero" markdown>
+<div markdown>
 
-ziviDomeLive é uma biblioteca para Processing 4 voltada a gráficos fulldome, VR monoscópico e instalações imersivas em tempo real. Ela combina gerenciamento do ciclo de vida de cenas, renderização Standard e esférica independentes, calibração de domemaster e roteamento opcional por NDI, Syphon ou Spout.
+<div class="zd-hero__eyebrow">Biblioteca Processing · ziviDomeLive 2.0</div>
 
-A versão 1.5.0 consolida a arquitetura madura da geração 1.x. Ela preserva a fachada pública `zividomelive` e a ordem legada de `ViewType`, adicionando `RenderMode`, requisitos de renderização centralizados, ownership previsível do lifecycle, controles esféricos por quaternion e estados observáveis para outputs.
+# Crie para o domo, a esfera e a imagem ao vivo
 
-## Comece Aqui
+Construa fluxos visuais **fulldome, esféricos e imersivos em tempo real** a partir de uma única Scene do Processing e escolha como cada preview ou output será representado.
 
-1. Consulte os [requisitos do sistema](installation/requirements.md) e as [dependências](installation/dependencies.md).
-2. Instale o pacote seguindo os [passos de instalação](installation/installation-steps.md).
-3. Crie a primeira cena com o [guia rápido](getting-started/quickstart.md).
-4. Escolha entre roteamento independente e renderização dedicada em [Modos de Renderização](usage/basic-usage.md).
-5. Conheça o [painel de controle](usage/control-panel.md) e a [calibração esférica](usage/spherical-calibration.md).
-6. Consulte as [notas da versão 1.5.0](release-notes/1.5.0.md) antes de atualizar um sketch existente.
+<div class="zd-actions" markdown>
+[Comece a criar](getting-started/quickstart.md){ .md-button .md-button--primary }
+[Explore a API](api/artist-api-map.md){ .md-button }
+</div>
 
-## Contratos Estáveis da 1.5
+</div>
+<div class="zd-hero__image">
+<div class="zd-splash-stage" data-zd-splash>
+<canvas class="zd-splash-canvas" data-zd-splash-canvas width="566" height="480" role="img" aria-label="Esfera animada do splash do ziviDomeLive com cubos wireframe orbitais">Esfera animada do splash do ziviDomeLive</canvas>
+</div>
+</div>
+</div>
 
-- `Scene.sceneRender(PGraphicsOpenGL)` recebe um target já aberto; a biblioteca controla `beginDraw()` e `endDraw()`.
-- `RenderMode.FULL` é o padrão e preserva rotas independentes de preview e output.
-- A renderização Standard é independente da captura cubemap esférica.
-- Pitch, yaw e roll esféricos compõem deltas mínimos em um único quaternion normalizado; os valores da fachada continuam como acumuladores de controle.
-- O FOV do domemaster varia de `0..360`, com padrão `210`.
-- O Size% do domemaster varia de `0..100`, com padrão `100`.
-- Os presets de resolução de output são `1024`, `2048`, `3072` e `4096`.
-- A publicação por outputs externos começa desabilitada.
+## O que posso criar?
 
-## Domínios de Renderização
+<div class="grid cards" markdown>
 
-```text
-STANDARD
-Scene -> StandardRenderer -> target Standard
+- :material-monitor: **Standard**
 
-ESFÉRICO
-Scene -> seis faces cubemap -> equiretangular -> domemaster
-                              \-> layout cubemap
-```
+    Renderização em perspectiva para a janela do Processing e outputs visuais convencionais.
 
-A topologia esférica acima continua sendo um detalhe interno da geração 1.x. Ela não obriga futuras versões major a usar `PGraphicsOpenGL[]` nem a derivar domemaster de equiretangular.
+- :material-panorama-fisheye: **Domemaster**
 
-## Qualificação
+    Representação fisheye circular para projeção fulldome e calibração do domo.
 
-A suíte Java valida API, estado, lifecycle, routing, matemática, metadata e contratos de release sem exigir GPU. Comece pela [arquitetura de renderização](architecture/rendering-pipeline.md) e depois use o [protocolo do CalibrationTool](qualification/1.5-calibration-tool.md) e o [checklist de prontidão](qualification/1.5-release-readiness.md) em hardware qualificado. O repositório não fabrica imagens golden.
+- :material-earth: **Equirectangular**
 
-Consulte os [problemas conhecidos](known-issues.md) antes de uma implantação de produção.
+    Representação esférica 2:1 para fluxos de imagem 360°.
+
+- :material-cube-outline: **Skybox**
+
+    Layout de cubemap para inspeção e fluxos esféricos compatíveis.
+
+</div>
+
+!!! tip "Comece com uma Scene"
+    Um projeto básico precisa do runtime `ziviDomeLive` e de uma `Scene`. Coloque estado/simulação em `update()` e desenho em `sceneRender()`.
+
+## Escolha seu percurso
+
+<div class="grid cards" markdown>
+
+- :material-rocket-launch-outline: **Primeiro contato com ziviDomeLive**
+
+    Instale a biblioteca, execute o Guia Rápido e avance pelos oito exemplos de aprendizagem.
+
+    [Abrir o Guia Rápido →](getting-started/quickstart.md)
+
+- :material-palette-outline: **Criando uma obra ou instalação**
+
+    Aprenda RenderMode, Preview × Output, calibração esférica, câmera/navegação e outputs externos.
+
+    [Abrir o Guia Criativo →](usage/basic-usage.md)
+
+- :material-api: **Programando com a biblioteca**
+
+    Comece pelo Mapa da API para Artistas e use os Javadocs gerados para assinaturas exatas.
+
+    [Abrir o Mapa da API →](api/artist-api-map.md)
+
+- :material-source-branch: **Contribuindo ou pesquisando o engine**
+
+    Estude os domínios Standard/Esférico, backend OpenGL, lifecycle, threading e fronteiras de output.
+
+    [Abrir a arquitetura →](architecture/overview.md)
+
+</div>
+
+## Calibração pertence ao output, não ao zoom da cena
+
+Pitch/Yaw/Roll orientam o domínio esférico compartilhado. O Domemaster utiliza adicionalmente FOV e Size% para adequar a representação ao sistema físico de projeção.
+
+[Abrir Calibração Esférica](usage/spherical-calibration.md){ .md-button }
+
+??? abstract "Por dentro"
+    A versão 2.0 captura o domínio esférico em um cubemap nativo e deriva Domemaster, Equirectangular e Skybox dessa representação compartilhada. Esse detalhe de implementação pertence ao percurso de desenvolvimento; artistas podem permanecer no nível de `Scene`, `RenderMode`, `ViewType` e calibração.

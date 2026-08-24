@@ -1,30 +1,49 @@
 package com.victorvalentim.zividomelive;
 
-import com.victorvalentim.zividomelive.support.LogManager;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
 /**
- * Manages scenes and allows switching between them dynamically.
+ * Maintains an identity-ordered collection of scenes and switches their activation.
+ *
+ * <p>A detached manager selects its first registered scene but does not invoke lifecycle methods.
+ * Attaching it through {@link ziviDomeLive#setSceneManager(SceneManager)} installs the facade
+ * lifecycle and activates the selection with fresh {@link SceneServices}. Scene membership uses
+ * Java object identity ({@code ==}), not {@link Object#equals(Object)}.</p>
+ *
+ * <p>Mutation methods are intended for the Processing thread and are not thread-safe.</p>
+ *
+ * <p><strong>API stability:</strong> Stable.</p>
  */
 public class SceneManager {
 
+	interface LifecycleListener {
+		void beforeSetup(Scene scene);
+		void beforeDispose(Scene scene);
+		void afterDispose(Scene scene);
+	}
+
 	private final List<Scene> scenes; // List of registered scenes
 	private int currentSceneIndex = -1; // Index of the current scene (-1 when no scene is active)
+	private boolean currentSceneActive;
+	private LifecycleListener lifecycleListener;
 	private static final Logger LOGGER = LogManager.getLogger();
 	/**
-	 * Constructs a SceneManager.
+	 * Creates an empty, detached scene manager.
 	 */
 	public SceneManager() {
 		this.scenes = new ArrayList<>();
 	}
 
 	/**
-	 * Registers a new scene.
+	 * Registers a scene by instance identity.
 	 *
-	 * @param scene the scene to register
+	 * <p>The first registration becomes the selected scene. It is set up immediately only when
+	 * this manager is already attached to a facade; otherwise setup begins when attached.</p>
+	 *
+	 * @param scene scene to register; {@code null} and duplicate instances are ignored
 	 */
 	public void registerScene(Scene scene) {
 		if (scene == null) {
@@ -32,7 +51,7 @@ public class SceneManager {
 			return;
 		}
 
-		if (scenes.contains(scene)) {
+		if (indexOfIdentity(scene) >= 0) {
 			LOGGER.warning("Scene already registered: " + scene.getName());
 			return;
 		}
@@ -41,7 +60,7 @@ public class SceneManager {
 		if (currentSceneIndex == -1) {
 			// Automatically set the first scene as current if none is active
 			currentSceneIndex = 0;
-			scene.setupScene();
+			setupScene(scene);
 			LOGGER.info("First scene registered and set as current: " + scene.getName());
 		} else {
 			LOGGER.info("Scene registered: " + scene.getName());
@@ -51,7 +70,7 @@ public class SceneManager {
 	/**
 	 * Activates a scene by instance; registers it first if it is not in the manager yet.
 	 *
-	 * @param scene scene to activate
+	 * @param scene scene instance to activate; {@code null} is ignored
 	 */
 	public void activateScene(Scene scene) {
 		if (scene == null) {
@@ -59,15 +78,19 @@ public class SceneManager {
 			return;
 		}
 
-		int index = scenes.indexOf(scene);
+		int index = indexOfIdentity(scene);
 		if (index == -1) {
 			scenes.add(scene);
 			index = scenes.size() - 1;
 			LOGGER.info("Scene auto-registered during activation: " + scene.getName());
 		}
 
-		if (currentSceneIndex == index) {
+		if (currentSceneIndex == index && currentSceneActive) {
 			LOGGER.info("Scene already active, skipping reinitialization: " + scene.getName());
+			return;
+		}
+		if (currentSceneIndex == index) {
+			setupScene(scene);
 			return;
 		}
 
@@ -75,7 +98,7 @@ public class SceneManager {
 		currentSceneIndex = index;
 		disposeScene(previousIndex);
 		Scene activeScene = scenes.get(currentSceneIndex);
-		activeScene.setupScene();
+		setupScene(activeScene);
 		LOGGER.info("Scene activated: " + activeScene.getName());
 	}
 
@@ -83,10 +106,10 @@ public class SceneManager {
 	 * Returns true when the manager already contains the provided scene instance.
 	 *
 	 * @param scene scene to check
-	 * @return true if scene is already managed
+	 * @return {@code true} if that exact scene instance is already managed
 	 */
 	public boolean containsScene(Scene scene) {
-		return scenes.contains(scene);
+		return indexOfIdentity(scene) >= 0;
 	}
 
 	/**
@@ -99,7 +122,7 @@ public class SceneManager {
 	}
 
 	/**
-	 * Switches to the next scene in the list.
+	 * Switches to the next scene in registration order, wrapping at the end.
 	 */
 	public void nextScene() {
 		if (scenes.isEmpty()) {
@@ -113,14 +136,14 @@ public class SceneManager {
 		if (previousIndex != currentSceneIndex) {
 			disposeScene(previousIndex);
 			Scene newScene = getCurrentScene();
-			newScene.setupScene();
+			setupScene(newScene);
 			LOGGER.info("Switched to the next scene: " + newScene.getName());
 		}
 	}
 
 
 	/**
-	 * Switches to the previous scene in the list.
+	 * Switches to the previous scene in registration order, wrapping at the beginning.
 	 */
 	public void previousScene() {
 		if (scenes.isEmpty()) {
@@ -133,7 +156,7 @@ public class SceneManager {
 		if (previousIndex != currentSceneIndex) {
 			disposeScene(previousIndex);
 			Scene newScene = getCurrentScene();
-			newScene.setupScene();
+			setupScene(newScene);
 			LOGGER.info("Switched to the previous scene: " + newScene.getName());
 		} else {
 			LOGGER.info("No change in scene: still on " + getCurrentScene().getName());
@@ -143,7 +166,7 @@ public class SceneManager {
 	/**
 	 * Returns the current scene.
 	 *
-	 * @return the current scene or null if no scene is active
+	 * @return selected scene, or {@code null} when no scene is registered
 	 */
 	public Scene getCurrentScene() {
 		if (scenes.isEmpty() || currentSceneIndex == -1) {
@@ -153,9 +176,9 @@ public class SceneManager {
 	}
 
 	/**
-	 * Sets the scene to the specified index, if valid.
+	 * Selects and activates the scene at the supplied registration index.
 	 *
-	 * @param index the index of the scene to switch to
+	 * @param index zero-based registration index; invalid values are ignored
 	 */
 	public void setCurrentSceneIndex(int index) {
 		if (index < 0 || index >= scenes.size()) {
@@ -164,7 +187,10 @@ public class SceneManager {
 		}
 
 		if (currentSceneIndex == index) {
-			return; // already active, do not reinitialize
+			if (!currentSceneActive) {
+				setupScene(getCurrentScene());
+			}
+			return;
 		}
 
 		int previousIndex = currentSceneIndex;
@@ -172,7 +198,7 @@ public class SceneManager {
 		disposeScene(previousIndex);
 		Scene newScene = getCurrentScene();
 		if (newScene != null) {
-			newScene.setupScene();
+			setupScene(newScene);
 			LOGGER.info("Scene set to index " + index + ": " + newScene.getName());
 		}
 	}
@@ -183,14 +209,55 @@ public class SceneManager {
 	 * @param index index of the scene to dispose; ignored if out of range
 	 */
 	private void disposeScene(int index) {
-		if (index < 0 || index >= scenes.size()) {
+		if (index < 0 || index >= scenes.size() || !currentSceneActive) {
 			return;
 		}
-		try {
-			scenes.get(index).dispose();
-		} catch (RuntimeException e) {
-			LOGGER.warning("Error disposing scene " + scenes.get(index).getName() + ": " + e.getMessage());
+		currentSceneActive = false;
+		disposeActivation(scenes.get(index));
+	}
+
+	private void disposeActivation(Scene scene) {
+		if (lifecycleListener != null) {
+			try {
+				lifecycleListener.beforeDispose(scene);
+			} catch (RuntimeException | LinkageError error) {
+				LOGGER.warning("Error preparing scene disposal " + scene.getName()
+						+ ": " + error.getMessage());
+			}
 		}
+		try {
+			scene.dispose();
+		} catch (RuntimeException | LinkageError error) {
+			LOGGER.warning("Error disposing scene " + scene.getName() + ": " + error.getMessage());
+		} finally {
+			if (lifecycleListener != null) {
+				try {
+					lifecycleListener.afterDispose(scene);
+				} catch (RuntimeException | LinkageError error) {
+					LOGGER.warning("Error releasing scene " + scene.getName()
+							+ ": " + error.getMessage());
+				}
+			}
+		}
+	}
+
+	/**
+	 * Performs one complete dispose/setup cycle for the active scene.
+	 *
+	 * <p>This method does not defer work. From scene code, prefer
+	 * {@link SceneServices#requestReload()}, which schedules the cycle at a safe frame boundary.</p>
+	 *
+	 * @return {@code true} when an attached, active scene was reloaded
+	 */
+	public boolean reloadCurrentScene() {
+		if (currentSceneIndex < 0 || currentSceneIndex >= scenes.size() || !currentSceneActive) {
+			return false;
+		}
+		Scene scene = scenes.get(currentSceneIndex);
+		disposeScene(currentSceneIndex);
+		setupScene(scene);
+		LOGGER.info("Scene reloaded: " + scene.getName());
+		return true;
 	}
 
 	/**
@@ -209,5 +276,50 @@ public class SceneManager {
 	void detachScenes() {
 		scenes.clear();
 		currentSceneIndex = -1;
+		currentSceneActive = false;
+	}
+
+	void setLifecycleListener(LifecycleListener lifecycleListener) {
+		if (this.lifecycleListener == lifecycleListener) {
+			return;
+		}
+		if (this.lifecycleListener != null && currentSceneActive) {
+			disposeScene(currentSceneIndex);
+		}
+		this.lifecycleListener = lifecycleListener;
+		if (lifecycleListener != null && !currentSceneActive) {
+			Scene current = getCurrentScene();
+			if (current != null) {
+				setupScene(current);
+			}
+		}
+	}
+
+	private void setupScene(Scene scene) {
+		if (lifecycleListener == null) {
+			return;
+		}
+		try {
+			lifecycleListener.beforeSetup(scene);
+			scene.setupScene();
+			currentSceneActive = true;
+		} catch (RuntimeException | LinkageError error) {
+			currentSceneActive = false;
+			disposeActivation(scene);
+			throw error;
+		}
+	}
+
+	boolean isCurrentSceneActive() {
+		return currentSceneActive;
+	}
+
+	private int indexOfIdentity(Scene target) {
+		for (int index = 0; index < scenes.size(); index++) {
+			if (scenes.get(index) == target) {
+				return index;
+			}
+		}
+		return -1;
 	}
 }

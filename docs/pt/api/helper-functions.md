@@ -3,9 +3,9 @@
 ## Logging
 
 ```java
-zividomelive.enableDebugLogging();
-zividomelive.enableReleaseLogging();
-zividomelive.setLogMode(LogManager.Mode.DEBUG);
+ziviDomeLive.enableDebugLogging();
+ziviDomeLive.enableReleaseLogging();
+ziviDomeLive.setLogMode(LogManager.Mode.DEBUG);
 ```
 
 Configure o logging antes de construir a fachada quando precisar de diagnóstico de startup.
@@ -32,10 +32,26 @@ camera.setDistanceLimits(100, 5000);
 camera.setCollapseGuard(20);
 ```
 
-A câmera da cena transforma o scene space e é distinta de pitch/yaw/roll esféricos, do `CameraManager` das seis faces e da câmera perspectiva Standard.
+A câmera da cena transforma o scene space e é distinta de pitch/yaw/roll esféricos, da tabela canônica `CubemapFace` de seis faces e da câmera perspectiva Standard. Seu quaternion entra automaticamente no lookup do Environment; alvo e distância nunca afetam o fundo infinito.
 
 Desabilite o input da câmera no descarte da cena proprietária para que cenas
 seguintes não herdem drag ou roda do mouse sem intenção.
+
+## Background de Ambiente
+
+```java
+PImage stars = loadImage("textures/8k_stars_milky_way.jpg");
+dome.setEquirectangularBackground(stars);
+dome.setEnvironmentBackgroundVisible(true);
+dome.setEnvironmentBackgroundIntensity(1.0f);
+dome.setEnvironmentBackgroundYawOffset(0.0f);
+```
+
+A fonte LDR pública é uma `PImage` emprestada; a biblioteca resolve sua textura GPU gerenciada pelo Processing e a amostra como mapa equiretangular. Uma única fonte lógica e um único conjunto de `visible`, `intensity` visual e `yawOffset` de longitude alimentam os passes de preview/output Standard, domemaster, equiretangular e skybox. Cenas que usam services também podem chamar `setOrientationAxisAngle(...)` para alinhar diretamente o lookup da fonte sem girar os controles do domo nem a geometria da cena. O passe em far depth roda depois de `sceneRender()`, então chamadas `background()` da cena não o apagam e a geometria em primeiro plano permanece na frente.
+
+Standard combina sua base perspectiva com o quaternion da câmera de cena compartilhada. Os modos esféricos compõem Pitch/Yaw/Roll compartilhados seguidos pelo mesmo quaternion da câmera de cena. Alvo e distância orbital nunca transladam o panorama. Quem usa a fachada diretamente chama `clearEnvironmentBackground()` ao fim do ownership. Cenas com serviços podem usar `services.environment()`, que restaura automaticamente o estado substituído; a `PImage` emprestada nunca é descartada pela ziviDomeLive.
+
+Carregamento HDR, mapas IBL e ambient occlusion ainda não são habilitados por este helper.
 
 ## Diagnóstico de Output
 
