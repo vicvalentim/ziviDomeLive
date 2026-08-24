@@ -47,7 +47,7 @@ dome.setEnvironmentBackgroundIntensity(1.0f);
 dome.setEnvironmentBackgroundYawOffset(0.0f);
 ```
 
-A fonte LDR pública é uma `PImage` emprestada; a biblioteca resolve sua textura GPU gerenciada pelo Processing e a amostra como mapa equiretangular. Uma única fonte lógica e um único conjunto de `visible`, `intensity` visual e `yawOffset` de longitude alimentam os passes de preview/output Standard, domemaster, equiretangular e skybox. O passe em far depth roda depois de `sceneRender()`, então chamadas `background()` da cena não o apagam e a geometria em primeiro plano permanece na frente.
+A fonte LDR pública é uma `PImage` emprestada; a biblioteca resolve sua textura GPU gerenciada pelo Processing e a amostra como mapa equiretangular. Uma única fonte lógica e um único conjunto de `visible`, `intensity` visual e `yawOffset` de longitude alimentam os passes de preview/output Standard, domemaster, equiretangular e skybox. Cenas que usam services também podem chamar `setOrientationAxisAngle(...)` para alinhar diretamente o lookup da fonte sem girar os controles do domo nem a geometria da cena. O passe em far depth roda depois de `sceneRender()`, então chamadas `background()` da cena não o apagam e a geometria em primeiro plano permanece na frente.
 
 Standard combina sua base perspectiva com o quaternion da câmera de cena compartilhada. Os modos esféricos compõem Pitch/Yaw/Roll compartilhados seguidos pelo mesmo quaternion da câmera de cena. Alvo e distância orbital nunca transladam o panorama. Quem usa a fachada diretamente chama `clearEnvironmentBackground()` ao fim do ownership. Cenas com serviços podem usar `services.environment()`, que restaura automaticamente o estado substituído; a `PImage` emprestada nunca é descartada pela ziviDomeLive.
 

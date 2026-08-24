@@ -28,6 +28,11 @@ status: stable
 
 Do not document `ViewType` as another runtime mode: it is a routing representation.
 
+`SKYBOX` preserves the qualified cross face order but uses a real equi-angular cubemap (EAC)
+transform inside every face: normalized face coordinates are converted with
+`tan((2u - 1) * PI/4)` before sampling the native cubemap. It is therefore not the old linear
+face-grid approximation.
+
 ## Resolution and calibration
 
 The established facade uses `resetGraphics(int)` to request output-target recreation. Documentation and examples must keep this implemented API name.

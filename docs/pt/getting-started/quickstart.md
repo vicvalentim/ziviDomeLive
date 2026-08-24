@@ -15,15 +15,11 @@ Crie uma primeira cena funcional, mantenha o estado da animação coerente e tes
 
 ```java
 import com.victorvalentim.zividomelive.*;
-import processing.opengl.PGraphicsOpenGL;
-
-// Processing contributed-library runtime dependencies:
 import controlP5.*;
-import codeanticode.syphon.*;
-import spout.*;
+import processing.opengl.PGraphicsOpenGL;
 ```
 
-Os imports de Syphon/Spout são dependências de runtime da distribuição da biblioteca. Você não precisa configurar nem aprender esses sistemas para criar uma cena básica.
+ControlP5 é uma biblioteca Processing externa obrigatória e todos os exemplos distribuídos a importam. Instale-a explicitamente pelo Gerenciador de Contribuições; ziviDomeLive não promete instalação transitiva por `library.properties`. Syphon e Spout continuam integrações opcionais de plataforma e não devem ser importadas por sketches que não usam suas APIs diretamente.
 
 ## 2. Crie o runtime
 

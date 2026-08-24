@@ -8,7 +8,7 @@ The tag is a publication event, not an experiment.
 2. review the final hero/Mermaid diagrams and attach only real installed-package captures as visual evidence;
 3. run the final automated pre-release workflow or the equivalent commands locally;
 4. inspect generated ZIP/TXT/PDEX;
-5. install the generated Processing package and run the eight examples/tools;
+5. install the generated Processing package and run all ten examples/tools;
 6. confirm only actually qualified platform/backend combinations are claimed;
 7. verify citation/Zenodo metadata and the software DOI;
 8. confirm the working tree is clean and record the final HEAD.

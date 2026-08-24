@@ -54,9 +54,9 @@ Experimental metrics are useful evidence, but their vocabulary may evolve faster
 
 ## Processing callback surface
 
-`pre`, `draw`, `post`, `keyEvent`, `mouseEvent`, `pause`, `resume`, `stop`, `dispose` and `controlEvent` are public facade methods because Processing or ControlP5 invokes them. They are integration entry points, not a second API that sketches should forward manually.
+`pre`, `draw`, `post`, `keyEvent`, `mouseEvent`, `pause`, `resume`, `stop` and `dispose` are public facade methods because Processing invokes them. They are integration entry points, not a second API that sketches should forward manually.
 
-`Scene` deliberately has no `controlEvent`. The built-in ControlP5 panel is runtime-owned; scenes receive Processing key/mouse callbacks or use `SceneActionMap`.
+Neither `Scene` nor the facade exposes a ControlP5 callback type. The built-in panel registers its listener internally; scenes receive Processing key/mouse callbacks or use `SceneActionMap`.
 
 ## Internal boundary
 

@@ -60,8 +60,8 @@
   - `tasks()`: activation-scoped background work on the shared executor;
   - `assets()`: Processing images, shaders, and retained shapes;
   - `actions()`: named key/mouse actions while retaining raw Scene callbacks;
-  - `camera()`: scene-space orbit camera, input, and target tracking;
-  - `environment()`: activation-owned environment overrides;
+  - `camera()`: scene-space orbit camera, input, target tracking, root-level pose helpers, and explicit camera-synchronized view lighting;
+  - `environment()`: activation-owned environment overrides, including fixed source-image orientation;
   - `ports()`: bounded activation-owned bindings for optional external message adapters;
   - `requestReload()`: deferred reload at a safe frame boundary.
 - `parent()`, `scene()`, `renderQueue()`, `onDispose()`, `isClosed()`, and `close()` are not artist-facing. Keep runtime ownership internal rather than restoring these escape hatches.
@@ -73,6 +73,7 @@
 - Scene-controlled: simulation rate/position, task submission, asset requests, action bindings, camera pose/configuration, optional mouse enablement, target tracking, and activation environment values.
 - A scene never closes a runtime-supplied service. Only the input/output port provider SPI exposes `AutoCloseable`, so adapter authors can implement lifecycle while `ScenePorts` retains activation ownership.
 - `SceneTaskGroup` submits callback-based work to the package-private, process-wide `SharedTaskExecutor`; never create an executor per scene and never expose the executor or a `Future` to artist code. The removed public `ThreadManager` is not part of 2.0.
+- The shared executor sizes its fixed worker pool from `Runtime.availableProcessors()` so one process can use every processor the JVM reports, while retaining bounded admission and non-blocking rejection.
 - Facade disposal closes each activation's `SceneTaskGroup` and cancels its work, but does not shut down the process-wide daemon executor. The bounded NDI sender worker is an intentional output-specific exception with its own native lifecycle.
 - Background work must not call Processing/OpenGL APIs. Render-thread publication belongs to the activation queue, and old-activation work must not reach a new activation of the same scene.
 - `SceneAssets` creates Processing/GPU-facing assets on the bound render thread. Borrowed resources drop references on disposal; owned native/GPU resources need deterministic disposers.
@@ -111,16 +112,18 @@
   - `_internal/render/modes/EquirectangularRenderer.java`: cubemap to equirectangular;
   - `_internal/render/modes/FisheyeDomemaster.java`: equirectangular to domemaster;
   - `_internal/render/modes/StandardRenderer.java` and `CubemapViewRenderer.java`: optional viewers.
-- `ViewType` and `RenderMode` are top-level public enums. Keep `ViewType` declaration order stable because ControlP5 dropdowns map by index.
+- `ViewType` and `RenderMode` are top-level public enums. ControlP5 dropdowns use an explicit stable ID-to-`ViewType` mapping; do not couple UI behavior or persisted values to enum ordinals.
 - Resolution changes are deferred: setters record a pending reset; renderer/FBO allocation happens at a safe draw boundary.
 - Shader resources are packaged under `data/shaders`; keep Gradle copying and runtime paths aligned.
-- Preserve environment infinity: camera rotation affects the environment, while target translation and orbit distance do not.
+- A native cubemap is readable only after all six faces and mipmaps complete in one nanosecond-stamped capture batch; the publication barrier must not sleep or spin on the render thread.
+- SKYBOX is the qualified real-EAC cross: each face uses tangent-mapped equi-angular coordinates while preserving the established face slots and legacy orientation transforms.
+- Preserve environment infinity: camera rotation affects the environment, while target translation and orbit distance do not. Fixed source-image orientation composes independently from dome controls and scene geometry.
 - Prefer pure math/state extraction for renderer tests and avoid OpenGL contexts when behavior can be tested independently.
 
 ## Input, controls, outputs, and integrations
 - Built-in keys remain: `h` toggles the panel, `m` cycles `ViewType`, and Left/Right switch scenes when ControlP5 text input is inactive.
 - The facade automatically routes Processing key/mouse callbacks to named actions and the active Scene's raw callbacks. Sketches must not forward them again.
-- `ControlManager` owns ControlP5 widgets. `ziviDomeLive.controlEvent(ControlEvent)` is a public Processing/ControlP5 callback adapter for the built-in panel, not a Scene callback or artist command; do not restore `Scene.controlEvent(...)`.
+- `ControlManager` owns ControlP5 widgets and registers its listener internally. Neither `ziviDomeLive` nor `Scene` exposes `ControlEvent`; do not restore either public callback surface.
 - Guard ControlP5 2.2.6 key-code indexing through `ControlP5KeyEventBridge`, and never register package-private UI implementation objects as Processing callback targets.
 - `OutputManager` coordinates NDI, Syphon, and Spout with independent view routing. Outputs start opt-in/disabled after setup; do not reintroduce automatic publication.
 - Syphon is macOS-gated, Spout is Windows-gated, and NDI initializes when enabled and supported. Linux has reduced local texture-sharing support.
@@ -153,7 +156,7 @@
 - Important suites cover SceneManager/lifecycle, public API compatibility, camera/quaternion math, timeline/clock, output lifecycle, and render-state logic.
 - Any Services change must cover configure-before-setup, first activation, switch, reload, fresh services, disposal order, old-task isolation, state restoration, and idempotence.
 - Compile every affected Processing example against the just-built library artifact, not an unrelated sketchbook installation. SolarSystem remains the minimum numerical/lifecycle regression sketch:
-  `processing-java --sketch=examples/SolarSystem --output=/tmp/zividomelive-solarsystem-build --force --build`.
+  `processing-java --sketch=examples/Advanced/SolarSystem --output=/tmp/zividomelive-solarsystem-build --force --build`.
 - Documentation qualification builds the bilingual MkDocs export, runs `./gradlew attachJavadocsToSite` to place one canonical Java reference at `site/reference`, and validates the exported routes with `python3 tools/validate_documentation.py --root . --site-dir site`. Portuguese pages must link back to that canonical tree rather than duplicate Javadocs below `site/pt`.
 - Run `git diff --check` and inspect the final public surface. Build success alone does not prove lifecycle or artist-facing API quality.
 
@@ -162,4 +165,4 @@
 - Release artifacts: `./gradlew buildReleaseArtifacts`; sketchbook deployment: `./gradlew deployToProcessingSketchbook`.
 - Docs use MkDocs Material, Mermaid diagrams, and bilingual suffix files. Keep API/reference pages, executable examples, release notes, and the packaged artifact mutually consistent.
 - Use `LogManager.getLogger()`; debug logs are also written under `/tmp/zividomelive/logs` on non-Windows.
-- The 2.0 project-authored licensing authority is Apache-2.0. Historical releases and third-party material keep their original terms. Preserve `LICENSE`, citation metadata, bilingual license pages, `THIRD_PARTY.md`, `examples/SolarSystem/THIRD_PARTY.md`, and `examples/SolarSystem/ASSET_PROVENANCE.json` in sync; never collapse NASA/JPL scientific provenance, Solar System Scope/INOVE CC BY 4.0 textures, or ESO/S. Brunier CC BY 4.0 media into the project Apache license.
+- The 2.0 project-authored licensing authority is Apache-2.0. Historical releases and third-party material keep their original terms. Preserve `LICENSE`, citation metadata, bilingual license pages, `THIRD_PARTY.md`, `examples/Advanced/SolarSystem/THIRD_PARTY.md`, and `examples/Advanced/SolarSystem/ASSET_PROVENANCE.json` in sync; never collapse NASA/JPL scientific provenance, Solar System Scope/INOVE CC BY 4.0 textures, or ESO/S. Brunier CC BY 4.0 media into the project Apache license.

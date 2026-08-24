@@ -39,8 +39,8 @@ The `SolarSystem` example deliberately separates four provenance layers:
 Detailed file-by-file credits, source links, integrity hashes and the unresolved
 historical-background decision are recorded in:
 
-- [`examples/SolarSystem/THIRD_PARTY.md`](examples/SolarSystem/THIRD_PARTY.md)
-- [`examples/SolarSystem/ASSET_PROVENANCE.json`](examples/SolarSystem/ASSET_PROVENANCE.json)
+- [`examples/Advanced/SolarSystem/THIRD_PARTY.md`](examples/Advanced/SolarSystem/THIRD_PARTY.md)
+- [`examples/Advanced/SolarSystem/ASSET_PROVENANCE.json`](examples/Advanced/SolarSystem/ASSET_PROVENANCE.json)
 
 The ziviDomeLive Apache-2.0 license does not relicense the Solar System Scope or
 ESO media assets and does not claim authorship of underlying NASA/JPL scientific
@@ -51,7 +51,7 @@ facts/data.
 The Paul Bourke calibration images retain their original redistribution
 conditions. Their authorship, source URLs, integrity hashes and terms are
 documented in
-[`examples/CalibrationTool/THIRD_PARTY.md`](examples/CalibrationTool/THIRD_PARTY.md).
+[`examples/Tools/CalibrationTool/THIRD_PARTY.md`](examples/Tools/CalibrationTool/THIRD_PARTY.md).
 
 No third-party material is relicensed merely because it is distributed beside
 Apache-2.0 project code.

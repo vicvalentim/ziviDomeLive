@@ -60,7 +60,7 @@ python3 tools/validate_documentation.py \
   --release-dir release
 ```
 
-Open `reference/index.html`, confirm the eight examples are discoverable and compile/run them from the installed package. A repository-classpath run is not package-installation evidence.
+Open `reference/index.html`, confirm all ten examples/tools are discoverable and compile/run them from the installed package. A repository-classpath run is not package-installation evidence.
 
 ## GPU visual and calibration
 

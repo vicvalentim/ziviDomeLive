@@ -2,7 +2,7 @@
 
 ## Runtime
 
-- Processing 4; a versão 2.0.0 compila e executa seus testes Java automatizados contra o Processing core `4.5.6`. A qualificação do Processing instalado/plataforma é registrada separadamente nas evidências da release.
+- Processing 4 (revisão `1285` ou mais recente). A compatibilidade de código-fonte pode ser auditada contra a distribuição oficial do Processing 4.0 com `./gradlew compileProcessing4Baseline -Pprocessing4BaselineLibrary=/caminho/para/processing-4.0/core/library`. Os testes automatizados regulares usam Processing 4.5.6; essa versão testada não substitui a linha-base de compatibilidade 4.0, e compilação estática não substitui qualificação física de runtime.
 - Renderizador `P3D`
 - `pixelDensity(1)` recomendado para estabilidade entre displays
 - GPU e driver capazes de expor OpenGL 4.1; os shaders empacotados usam GLSL 4.10

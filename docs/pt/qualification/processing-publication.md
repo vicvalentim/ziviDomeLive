@@ -1,11 +1,16 @@
 ---
-title: "Publicação como Processing Contributed Library"
+title: "Template do Procedimento de Publicação como Processing Contributed Library"
 icon: material/check-decagram-outline
 status: qualification
 ---
-# Publicação como Processing Contributed Library
+# Template do Procedimento de Publicação como Processing Contributed Library
 
-Este checklist pertence à superfície de **manutenção/publicação**, não ao percurso de aprendizagem do artista.
+Este checklist é um **template reutilizável do procedimento de manutenção/publicação**, não um
+ledger de status nem parte do percurso de aprendizagem do artista. Registre o estado autoritativo
+de cada execução em
+[`maintainer/release-evidence.md`](https://github.com/vicvalentim/ziviDomeLive/blob/release/2.0.0/maintainer/release-evidence.md)
+e no artefato de CI vinculado ao SHA de código-fonte qualificado. Nunca copie o estado de conclusão para
+este template nem o deduza de uma qualificação antiga.
 
 ## Artefato de publicação
 
@@ -17,7 +22,7 @@ O pacote Processing deve ser autocontido para instalação, exemplos, source, re
 
 - [ ] URL pública estável apresenta abstract conciso e audiência pretendida
 - [ ] instalação separa Contribution Manager, artefato de release e build do source
-- [ ] os oito exemplos executáveis estão listados, com tutoriais/manual linkados quando úteis
+- [ ] os dez exemplos/tools executáveis estão listados, com tutoriais/manual linkados quando úteis
 - [ ] baseline Processing/Java, renderer, `pixelDensity(1)`, dependências e limitações estão declarados
 - [ ] sistemas/versões Processing testados têm evidência ou aparecem explicitamente sem qualificação
 - [ ] `library.keywords` e data de atualização documental estão visíveis
@@ -70,7 +75,7 @@ O pacote final deve conter:
 
 - [ ] `library/`
 - [ ] `reference/index.html`
-- [ ] `examples/` com seis learning examples + `CalibrationTool` + `BenchmarkTool`
+- [ ] `examples/` com `GettingStarted/`, `Advanced/` e `Tools/`, contendo os oito learning examples + `CalibrationTool` + `BenchmarkTool`
 - [ ] `src/` sem `src/test/`
 - [ ] `library.properties`
 - [ ] licença e notices de terceiros
@@ -79,7 +84,7 @@ O pacote final deve conter:
 
 Não deve conter relatórios locais de benchmark, evidência maintainer-only, `.DS_Store`, testes ou helper JARs locais excluídos pelo contrato de release.
 
-Abra/execute os oito exemplos **a partir do pacote instalado**.
+Abra/execute os dez exemplos/tools **a partir do pacote instalado**.
 
 ## PUBLICATION METADATA
 

@@ -60,7 +60,7 @@ python3 tools/validate_documentation.py \
   --release-dir release
 ```
 
-Abra `reference/index.html`, confirme os oito exemplos e compile/execute cada um a partir do pacote instalado. Execução pelo classpath do repositório não é evidência de instalação.
+Abra `reference/index.html`, confirme os dez exemplos/tools e compile/execute cada um a partir do pacote instalado. Execução pelo classpath do repositório não é evidência de instalação.
 
 ## Visual GPU e calibração
 

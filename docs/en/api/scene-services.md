@@ -37,8 +37,8 @@ class ServiceScene implements Scene {
 | `tasks()` | Background CPU/I/O | Bounded keyed submission, result/error callbacks | Shared executor, cancellation, frame-boundary publication |
 | `assets()` | Images/shaders/shapes | Requests and retained shapes | Render-thread creation and cache shutdown |
 | `actions()` | Named input | Bind, trigger, unregister | Dispatch order and activation cleanup |
-| `camera()` | Scene-space navigation | Pose, input, tracking | Once-per-frame update and stale-anchor reset |
-| `environment()` | Background overrides | Image, visibility, intensity, yaw | Conditional restoration on deactivation |
+| `camera()` | Scene-space navigation and opt-in view lighting | Pose, input, tracking, light-rig call | Once-per-frame update and stale-anchor reset |
+| `environment()` | Background overrides | Image, visibility, intensity, longitude yaw, fixed source orientation | Conditional restoration on deactivation |
 | `ports()` | Optional adapters | Connect bounded input/output ports | Drain limit, telemetry and closure |
 | `requestReload()` | Lifecycle | Ask for reload | Execute at a safe frame boundary |
 
@@ -74,6 +74,23 @@ services.tasks().submitIfIdle(
 ## Environment restoration
 
 The environment service restores only values it changed and only while facade state still matches the value it applied. A later owner is never overwritten by stale cleanup.
+
+## Camera-synchronized view lighting
+
+`camera().applyWithViewLighting(pg)` is an explicit alternative to `camera().apply(pg)`. It applies
+the current orbit transform, clears the target's lights, and installs a neutral ambient light plus
+a warm spotlight located at the scene-camera position and aimed at its current look-at target.
+Additional lights may be added afterward.
+
+The call only reads the already-updated camera pose. It does not advance interpolation, so every
+cubemap face in the same Processing frame observes the same position and direction. Lighting is
+never enabled automatically; use ordinary `apply(pg)` when a scene owns a different lighting
+model or shader pipeline.
+
+Ordinary scenes can stay on the root wildcard import: `setDistanceLimits`, `setCollapseGuard`,
+`setLerpFactor`, `setDragSensitivity`, and `snapToAxisAngle` forward the common orbit operations.
+The advanced `orbit()` accessor remains available when code intentionally works with
+`render.camera.OrbitCamera` or `render.Quaternion` directly.
 
 ## Reload
 

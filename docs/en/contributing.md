@@ -64,7 +64,7 @@ Preview the manual with `python3 -m mkdocs serve`. This deliberately avoids lega
 
 ## Project Contracts
 
-- Keep `ViewType` order unchanged.
+- Keep the explicit ControlP5 UI ID ↔ `ViewType` mapping stable; do not persist enum ordinals.
 - Keep English and Portuguese pages paired and update `mkdocs.yml` navigation together.
 - Do not call `beginDraw()` or `endDraw()` inside a `Scene`.
 - Preserve deferred output-resolution reset.

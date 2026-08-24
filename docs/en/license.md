@@ -32,5 +32,5 @@ Apache-2.0 does not relicense third-party software, scientific data or media.
 - `SolarSystem/data/textures/eso0932a.jpg` is credited **ESO/S. Brunier,
   CC BY 4.0**.
 
-See `THIRD_PARTY.md` and `examples/SolarSystem/THIRD_PARTY.md` for the
+See `THIRD_PARTY.md` and `examples/Advanced/SolarSystem/THIRD_PARTY.md` for the
 file-by-file boundary and integrity record.

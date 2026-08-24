@@ -10,6 +10,7 @@ import argparse
 import hashlib
 import json
 import re
+import subprocess
 import sys
 import zipfile
 import xml.etree.ElementTree as ElementTree
@@ -22,7 +23,19 @@ EXPECTED_DOI = "10.5281/zenodo.15671506"
 EXPECTED_LICENSE = "Apache-2.0"
 RENDER_MODES = {"FULL", "STANDARD", "DOMEMASTER", "EQUIRECTANGULAR", "SKYBOX"}
 VIEW_TYPES = {"STANDARD", "DOMEMASTER", "EQUIRECTANGULAR", "SKYBOX"}
-EXAMPLES = {"EmptyProject", "Basic", "SphereParticle", "InfiniteBackground", "FulldomePBR", "SolarSystem", "CalibrationTool", "BenchmarkTool"}
+EXAMPLE_LAYOUT = {
+    "EmptyProject": "GettingStarted/EmptyProject",
+    "Basic": "GettingStarted/Basic",
+    "NamedActions": "GettingStarted/NamedActions",
+    "PortLoopback": "GettingStarted/PortLoopback",
+    "SphereParticle": "Advanced/SphereParticle",
+    "InfiniteBackground": "Advanced/InfiniteBackground",
+    "FulldomePBR": "Advanced/FulldomePBR",
+    "SolarSystem": "Advanced/SolarSystem",
+    "CalibrationTool": "Tools/CalibrationTool",
+    "BenchmarkTool": "Tools/BenchmarkTool",
+}
+EXAMPLES = set(EXAMPLE_LAYOUT)
 CUSTOM_TASKS = {
     "qualificationTests", "buildReleaseArtifacts", "attachJavadocsToSite",
     "verifyReleaseTag",
@@ -115,9 +128,9 @@ def public_text_files(root: Path):
 
 def check_required(root,c):
     for rel in [
-        'README.md', 'CHANGELOG.md', 'THIRD_PARTY.md', 'mkdocs.yml',
-        'examples/SolarSystem/THIRD_PARTY.md',
-        'examples/SolarSystem/ASSET_PROVENANCE.json',
+        'README.md', 'CHANGELOG.md', 'THIRD_PARTY.md', 'SECURITY.md', 'mkdocs.yml',
+        'examples/Advanced/SolarSystem/THIRD_PARTY.md',
+        'examples/Advanced/SolarSystem/ASSET_PROVENANCE.json',
         'requirements-docs.txt', 'library.properties', 'CITATION.cff',
         '.zenodo.json', 'examples', 'src/main/java', 'docs/en', 'docs/pt',
         'docs/en/research-software.md', 'docs/pt/research-software.md',
@@ -151,13 +164,34 @@ def release_evidence_complete(root: Path) -> bool:
     if not p.exists(): return False
     return re.search(r'\b(?:UNVERIFIED|PENDING)\b|\[ \]', read(p)) is None
 
+
+def qualified_source_revision(root: Path) -> str | None:
+    """Return the single full source SHA declared by the physical evidence ledger."""
+    matches = re.findall(
+        r'(?mi)^Qualified source revision:\s*`([0-9a-f]{40})`\s*$',
+        read(root/'maintainer/release-evidence.md'),
+    )
+    return matches[0] if len(matches) == 1 else None
+
+
+def git_output(root: Path, *args: str) -> str:
+    """Run a read-only Git query in the checkout and return normalized stdout."""
+    result = subprocess.run(
+        ['git', '-c', 'core.fsmonitor=false', *args],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
+
 def check_metadata(root,c):
     props=parse_props(root/'library.properties')
     if props.get('prettyVersion') != EXPECTED_VERSION: c.error(f"library.properties prettyVersion != {EXPECTED_VERSION}")
     if not props.get('version','').isdigit(): c.error('library.properties version must be an integer release counter')
     try:
         minrev=int(props.get('minRevision',''))
-        if minrev < 1285: c.error('minRevision predates the declared Processing 4 baseline; verify Processing revision mapping')
+        if minrev < 1285: c.error('minRevision predates the Processing 4.0 baseline (revision 1285)')
     except ValueError: c.error('minRevision must be an integer')
     tested_values = {
         key: props.get(key, '').strip()
@@ -171,7 +205,7 @@ def check_metadata(root,c):
     if not source_props:
         c.error('release.properties missing or empty: it is the source for generated library.properties')
     else:
-        for key in ('name','version','authors','url','categories','sentence','paragraph','minRevision','maxRevision','tested.platform','tested.processingVersion','library.copyright','library.dependencies','library.keywords'):
+        for key in ('name','version','authors','url','categories','sentence','paragraph','minRevision','maxRevision','tested.platform','tested.processingVersion','library.copyright','library.keywords'):
             if source_props.get(key) != props.get(key):
                 c.error(f'release.properties and library.properties differ for {key}')
         source_tested = {key: source_props.get(key, '').strip() for key in ('tested.platform','tested.processingVersion')}
@@ -197,7 +231,7 @@ def check_metadata(root,c):
     if zen.get('license') != EXPECTED_LICENSE:
         c.error('.zenodo.json license mismatch')
 
-    solar_notice=read(root/'examples/SolarSystem/THIRD_PARTY.md')
+    solar_notice=read(root/'examples/Advanced/SolarSystem/THIRD_PARTY.md')
     for token in (
             'JPL Solar System Dynamics', 'Solar System Scope', 'INOVE',
             'NASA is an upstream data/imagery source', 'ESO/S. Brunier',
@@ -205,7 +239,7 @@ def check_metadata(root,c):
         if token not in solar_notice:
             c.error(f'SolarSystem provenance notice missing: {token}')
 
-    manifest_path=root/'examples/SolarSystem/ASSET_PROVENANCE.json'
+    manifest_path=root/'examples/Advanced/SolarSystem/ASSET_PROVENANCE.json'
     try:
         provenance=json.loads(read(manifest_path))
     except Exception as e:
@@ -215,7 +249,7 @@ def check_metadata(root,c):
     if provenance.get('projectLicense') != EXPECTED_LICENSE:
         c.error('SolarSystem provenance projectLicense mismatch')
 
-    solar_root=root/'examples/SolarSystem'
+    solar_root=root/'examples/Advanced/SolarSystem'
     dataset=provenance.get('dataset', {})
     dataset_path=solar_root/dataset.get('path', '')
     if not dataset_path.is_file():
@@ -391,6 +425,13 @@ def check_research_integrity(root,c):
             'human responsibility for AI-assisted contributions'):
         if token not in conduct: c.error(f'CODE_OF_CONDUCT.md is missing: {token}')
 
+    security=read(root/'SECURITY.md')
+    for token in (
+            '| 2.0.x   | Yes', '| 1.x.x   | No',
+            'Do not open a public issue', 'Report a vulnerability',
+            'victorvalentim.com', 'within 72 hours'):
+        if token not in security: c.error(f'SECURITY.md is missing: {token}')
+
     contribution_requirements = {
         'docs/en/contributing.md': [
             'Contributing development', 'git clone https://github.com/YOUR-USERNAME/ziviDomeLive.git',
@@ -466,9 +507,21 @@ def check_api(root,c):
 def check_examples(root,c):
     ex=root/'examples'
     if not ex.exists(): return
-    actual={p.name for p in ex.iterdir() if p.is_dir()}
-    missing=EXAMPLES-actual
-    if missing: c.error('missing required examples/tools: '+', '.join(sorted(missing)))
+    for example, relative_path in EXAMPLE_LAYOUT.items():
+        sketch = ex/relative_path/f'{example}.pde'
+        if not sketch.is_file():
+            c.error(f'missing categorized example/tool: examples/{relative_path}/{example}.pde')
+        else:
+            source = read(sketch)
+            if 'import controlP5.*;' not in source:
+                c.error(f'categorized example/tool must import required ControlP5: {example}')
+            for platform_import in ('import codeanticode.syphon.', 'import spout.'):
+                if platform_import in source:
+                    c.error(f'example/tool imports optional platform backend directly: {example}')
+        if not (ex/relative_path/'README.md').is_file():
+            c.error(f'categorized example/tool is missing README.md: examples/{relative_path}')
+        if (ex/example).exists():
+            c.error(f'example/tool remains outside its category: examples/{example}')
 
 def check_language_parity(root,c):
     en=root/'docs/en'; pt=root/'docs/pt'
@@ -640,19 +693,23 @@ def check_package(path: Path,c):
     for suffix in ['/README.md', '/CHANGELOG.md', '/CITATION.cff', '/THIRD_PARTY.md']:
         if not any_suffix(suffix): c.error(f'package missing {suffix.lstrip("/")}')
     for suffix in [
-            '/examples/SolarSystem/THIRD_PARTY.md',
-            '/examples/SolarSystem/ASSET_PROVENANCE.json']:
+            '/examples/Advanced/SolarSystem/THIRD_PARTY.md',
+            '/examples/Advanced/SolarSystem/ASSET_PROVENANCE.json']:
         if not any_suffix(suffix):
             c.error(f'package missing provenance file {suffix.lstrip("/")}')
-    if any_suffix('/examples/SolarSystem/data/textures/background.jpg'):
+    if any_suffix('/examples/Advanced/SolarSystem/data/textures/background.jpg'):
         c.error('package contains unresolved SolarSystem background.jpg')
     if not any('/library/' in n for n in names): c.error('package missing library/ content')
     if not any('/src/' in n for n in names): c.error('package missing src/ content')
-    for ex in EXAMPLES:
-        if not any(f'/examples/{ex}/' in n for n in names): c.error(f'package missing example/tool {ex}')
+    for example, relative_path in EXAMPLE_LAYOUT.items():
+        if not any(f'/examples/{relative_path}/' in n for n in names):
+            c.error(f'package missing categorized example/tool {example}')
     if not any_suffix('/LICENSE') and not any_suffix('/LICENSE.txt'): c.error('package missing project license')
     for n in names:
-        bad=('/src/test/' in n or '/build/reports/' in n or '/benchmark-results/' in n or n.endswith('/.DS_Store') or n.endswith('.DS_Store'))
+        bad=(
+            '/src/test/' in n or '/src/main/libs/' in n or '/build/reports/' in n
+            or '/benchmark-results/' in n or n.endswith('/.DS_Store') or n.endswith('.DS_Store')
+        )
         if bad: c.error(f'package contains forbidden generated/test file: {n}')
 
 def check_release_dir(path:Path,c):
@@ -660,10 +717,40 @@ def check_release_dir(path:Path,c):
     for name in ['ziviDomeLive.zip','ziviDomeLive.txt','ziviDomeLive.pdex']:
         if not (path/name).exists(): c.error(f'release sibling missing: {name}')
 
-def check_evidence(root,c):
+def check_evidence(root,c,historical=False):
     p=root/'maintainer/release-evidence.md'
     if not p.exists(): c.error('maintainer/release-evidence.md missing'); return
     if not release_evidence_complete(root): c.error('release evidence still contains UNVERIFIED/PENDING/unchecked gates')
+    qualified_revision = qualified_source_revision(root)
+    if qualified_revision is None:
+        c.error('release evidence must declare exactly one full lowercase Qualified source revision SHA')
+        return
+    if historical:
+        return
+    try:
+        dirty = git_output(root, 'status', '--porcelain', '--untracked-files=all')
+        head = git_output(root, 'rev-parse', 'HEAD')
+        git_output(root, 'cat-file', '-e', f'{qualified_revision}^{{commit}}')
+    except (OSError, subprocess.CalledProcessError) as error:
+        c.error(f'cannot verify release evidence against the Git checkout: {error}')
+        return
+    if dirty:
+        c.error('release evidence is stale: current pre-tag gate requires a clean working tree')
+    if head == qualified_revision:
+        return
+    try:
+        git_output(root, 'merge-base', '--is-ancestor', qualified_revision, head)
+        commit_count = int(git_output(root, 'rev-list', '--count', f'{qualified_revision}..{head}'))
+        changed = set(filter(None, git_output(
+            root, 'diff', '--name-only', f'{qualified_revision}..{head}').splitlines()))
+    except subprocess.CalledProcessError:
+        c.error(f'release evidence is stale: qualified source {qualified_revision} is not an ancestor of HEAD {head}')
+        return
+    evidence_only = {'maintainer/release-evidence.md'}
+    if commit_count != 1 or not changed or not changed.issubset(evidence_only):
+        c.error(
+            f'release evidence is stale: HEAD {head} differs from qualified source '
+            f'{qualified_revision} by more than the single evidence-only ledger commit')
 
 def check_editorial_system(root,c):
     mk=read(root/'mkdocs.yml')
@@ -814,6 +901,7 @@ def main():
     ap.add_argument('--release-dir',type=Path)
     ap.add_argument('--site-dir',type=Path)
     ap.add_argument('--release-evidence',action='store_true')
+    ap.add_argument('--historical-release-evidence',action='store_true')
     ap.add_argument('--skip-links',action='store_true')
     args=ap.parse_args(); root=Path(args.root).resolve(); c=Check()
     check_required(root,c)
@@ -834,7 +922,12 @@ def main():
     if args.site_dir:
         site = args.site_dir if args.site_dir.is_absolute() else root/args.site_dir
         check_exported_site(root, site.resolve(), c)
-    if args.release_evidence: check_evidence(root,c)
+    if args.release_evidence and args.historical_release_evidence:
+        c.error('--release-evidence and --historical-release-evidence are mutually exclusive')
+    elif args.release_evidence:
+        check_evidence(root,c)
+    elif args.historical_release_evidence:
+        check_evidence(root,c,historical=True)
     return c.report()
 
 if __name__=='__main__': raise SystemExit(main())

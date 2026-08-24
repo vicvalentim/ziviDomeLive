@@ -18,7 +18,7 @@ Advanced Stable é superfície pública suportada com pré-requisitos mais rigor
 | Trabalho | `SceneTaskGroup` | Trabalho em background bounded/nomeado em executor compartilhado |
 | Assets | `SceneAssets` | Criação de assets Processing na render thread e limpeza da ativação |
 | Input | `SceneActionMap` | Bindings nomeados compatíveis com callbacks raw da Scene |
-| Câmera | `SceneCameraService` | Uma orbit camera scene-space e tracking de target |
+| Câmera | `SceneCameraService` | Uma orbit camera scene-space, tracking de target e rig de luz de vista opt-in |
 | Environment | `SceneEnvironmentService` | Overrides da ativação com restauração segura |
 | Integração | `ScenePorts`, `SceneInputPort`, `SceneOutputPort` | SPI protocol-agnostic bounded para adapters |
 
@@ -34,8 +34,12 @@ Todos são acessados por `SceneServices`; nenhum serviço concreto possui constr
 - `SphericalOrientation` mantém valores cíclicos de pitch/yaw/roll e uma atitude normalizada;
 - `OrbitCamera` realiza manipulação direta imediata e movimento programático opcionalmente suave.
 
+`SceneCameraService.applyWithViewLighting(...)` aplica a transformação orbital e um spotlight na
+posição da câmera, apontado ao target corrente. A chamada é explícita e substitui as luzes
+fixed-function correntes; iluminação de shader customizado continua pertencendo à cena.
+
 Movimento de câmera scene-space e calibração do domo são independentes: alterar target/distance da órbita não redefine pitch/yaw/roll nem FOV do domemaster.
 
 ## Promessa de compatibilidade
 
-Tipos Advanced Stable integram o snapshot exato da API 2.0. Restrições de lifecycle, ordem de enums e ausência de campos públicos mutáveis são testadas. Tipos internos do engine não serão promovidos para este nível apenas porque um caller solicita acesso raw.
+Tipos Advanced Stable integram o snapshot exato da API 2.0. Restrições de lifecycle, membros dos enums e ausência de campos públicos mutáveis são testados. Tipos internos do engine não serão promovidos para este nível apenas porque um caller solicita acesso raw.

@@ -3,7 +3,15 @@
 Release target: `v2.0.0`  
 Status: **VERIFIED — PRE-TAG GATES COMPLETE**
 
-This file is the completed pre-tag evidence ledger for ziviDomeLive 2.0.0. All applicable release gates below have concrete results and evidence references.
+Qualified source revision: `16796f2005cf74f7148e677c9345156d5d03e4eb`
+
+This file is the completed pre-tag evidence ledger for the source revision above. That
+revision identifies the code and assets that were physically qualified; the later commit that
+records this ledger is evidence-only and is not a new qualified source revision. The current
+pre-tag validator permits that one evidence-only commit, requires a clean worktree, and rejects
+any later source, build, example, workflow, or documentation change. Use
+`--historical-release-evidence` only to audit this ledger without claiming it matches the current
+checkout.
 
 ## Repository state
 

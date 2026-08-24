@@ -7,7 +7,7 @@ These examples form the first learning path for the library. Qualification tools
 
 ## EmptyProject
 
-A minimal multi-file starter template with one `Scene`, one `SceneManager`, automatic Processing hooks, an intentionally empty `sceneRender()`, and an intentionally empty sketch `draw()`.
+A minimal multi-file starter template with one facade-owned `Scene`, automatic Processing hooks, an intentionally empty `sceneRender()`, and an intentionally empty sketch `draw()`.
 
 Start here when creating a project from scratch.
 
@@ -26,9 +26,17 @@ Demonstrates two managed scenes and the `RenderMode` API. In `Scene1`, press:
 
 Use Left/Right arrows to switch between the rotating pillars and the static six-face alignment grid.
 
-## SphereParticle
+## NamedActions
 
-A larger scene example that runs bounded simulation work through `SceneServices.tasks()`, isolates results to the current activation, and keeps graphics calls on the render thread. Click or drag to add particles.
+Demonstrates activation-owned key-code and mouse actions, named registration and programmatic
+triggering. The actions move a lit sphere through a 3D composition. Its explicit
+`applyWithViewLighting(...)` call attaches an ambient/spotlight rig to the scene camera and aims it
+at the current target.
+
+## PortLoopback
+
+Demonstrates the bounded `ScenePorts` adapter SPI without adding a transport dependency. Integer
+messages drive a 3D signal ring and a non-blocking output adapter reports the applied level.
 
 All learning examples preserve `sceneRender(PGraphicsOpenGL)` and never call `ziviDome.draw()` manually.
 

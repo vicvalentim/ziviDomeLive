@@ -23,13 +23,39 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install documentation dependencies
+        run: python3 -m pip install -r requirements-docs.txt
+
       - name: Verify release tag
         env:
           RELEASE_TAG: ${{ github.ref_name }}
         run: ./gradlew verifyReleaseTag -PreleaseTag="$RELEASE_TAG"
 
+      - name: Clean, test and build
+        run: ./gradlew clean test build --console=plain
+
       - name: Run automated qualification
         run: ./gradlew qualificationTests --console=plain
+
+      - name: Bind automated evidence to checkout revision
+        run: printf '%s\n' "$GITHUB_SHA" > build/reports/qualification/checkout-revision.txt
+
+      - name: Validate release evidence
+        run: python3 tools/validate_documentation.py --root . --release-evidence
+
+      - name: Build documentation in strict mode
+        run: python3 -m mkdocs build --strict
+
+      - name: Attach generated Javadocs
+        run: ./gradlew attachJavadocsToSite --console=plain
+
+      - name: Validate exported documentation routes
+        run: python3 tools/validate_documentation.py --root . --site-dir site
 
       - name: Upload automated qualification evidence
         if: always()
@@ -39,13 +65,12 @@ jobs:
           path: |
             build/reports/qualification/
             build/test-results/qualification/
+            site/
+            maintainer/release-evidence.md
           if-no-files-found: warn
           retention-days: 90
 
-      - name: Validate release evidence
-        run: python3 tools/validate_documentation.py --root . --release-evidence
-
-      - name: Build with Gradle
+      - name: Build release artifacts
         id: build
         run: ./gradlew buildReleaseArtifacts --console=plain
 

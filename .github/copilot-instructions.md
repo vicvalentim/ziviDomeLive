@@ -68,7 +68,7 @@ The floating domemaster may add a spherical requirement while the global mode is
 - `Scene.sceneRender(PGraphicsOpenGL)` receives a target whose draw lifecycle is already open.
 - A scene must never call `beginDraw()` or `endDraw()`.
 - Processing key/mouse events are routed automatically to named actions and the active Scene's raw callbacks; sketches must not forward them again.
-- `ziviDomeLive.controlEvent(ControlEvent)` adapts the built-in ControlP5 panel only. It is not forwarded to Scene, and the removed `Scene.controlEvent(...)` must not be restored.
+- `ControlManager` registers its ControlP5 listener internally. Neither `ziviDomeLive` nor `Scene` exposes `ControlEvent`; do not restore either removed callback surface.
 - Scene activation ownership uses instance identity; do not mix `equals()` registration with identity-scoped services.
 
 ## Services and Processing Input
@@ -173,11 +173,11 @@ python3 tools/validate_documentation.py --root . \
 python3 -m mkdocs build --strict
 ./gradlew attachJavadocsToSite --console=plain
 python3 tools/validate_documentation.py --root . --site-dir site
-processing-java --sketch=examples/SolarSystem \
+processing-java --sketch=examples/Advanced/SolarSystem \
   --output=/tmp/zividomelive-solarsystem-build --force --build
 ```
 
 Run only the validation tiers relevant to the change, but do not omit `clean test build` for
 public API/lifecycle work. Automated tests do not prove GPU visual parity or NDI/Syphon/Spout
-interoperability. Use `examples/CalibrationTool/` and
+interoperability. Use `examples/Tools/CalibrationTool/` and
 `docs/qualification/2.0-release-readiness.md` on qualified hardware.

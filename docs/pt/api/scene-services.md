@@ -37,8 +37,8 @@ class ServiceScene implements Scene {
 | `tasks()` | CPU/I/O em background | Submissão nomeada limitada, callbacks de resultado/erro | Executor compartilhado, cancelamento, publicação na fronteira do frame |
 | `assets()` | Imagens/shaders/shapes | Requests e shapes retidos | Criação na render thread e shutdown do cache |
 | `actions()` | Input nomeado | Bind, trigger, unregister | Ordem de dispatch e limpeza da ativação |
-| `camera()` | Navegação scene-space | Pose, input, tracking | Update uma vez por frame e reset de âncoras |
-| `environment()` | Overrides de background | Imagem, visibilidade, intensidade, yaw | Restauração condicional ao desativar |
+| `camera()` | Navegação scene-space e iluminação de vista opt-in | Pose, input, tracking, chamada do rig | Update uma vez por frame e reset de âncoras |
+| `environment()` | Overrides de background | Imagem, visibilidade, intensidade, yaw de longitude, orientação fixa da fonte | Restauração condicional ao desativar |
 | `ports()` | Adapters opcionais | Conectar ports bounded de input/output | Limite de drain, telemetria e fechamento |
 | `requestReload()` | Lifecycle | Solicitar reload | Executar em fronteira segura de frame |
 
@@ -74,6 +74,23 @@ services.tasks().submitIfIdle(
 ## Restauração de Environment
 
 O serviço restaura somente valores que alterou e apenas enquanto o estado da facade ainda corresponde ao valor aplicado. Limpeza antiga nunca sobrescreve um owner posterior.
+
+## Iluminação sincronizada à câmera
+
+`camera().applyWithViewLighting(pg)` é uma alternativa explícita a `camera().apply(pg)`. Ela aplica
+a transformação orbital corrente, limpa as luzes do target e instala uma luz ambiente neutra mais
+um spotlight na posição da câmera de cena, apontado para seu target corrente. Luzes adicionais
+podem ser aplicadas depois.
+
+A chamada apenas lê a pose já atualizada da câmera. Ela não avança interpolação, portanto todas as
+faces do cubemap no mesmo frame do Processing observam posição e direção idênticas. A iluminação
+nunca é habilitada automaticamente; use `apply(pg)` quando a cena possui outro modelo de luz ou
+pipeline de shader.
+
+Cenas comuns podem permanecer apenas com o wildcard do pacote raiz: `setDistanceLimits`,
+`setCollapseGuard`, `setLerpFactor`, `setDragSensitivity` e `snapToAxisAngle` encaminham as
+operações orbitais usuais. O acesso avançado `orbit()` continua disponível quando o código usa
+intencionalmente `render.camera.OrbitCamera` ou `render.Quaternion` de forma direta.
 
 ## Reload
 

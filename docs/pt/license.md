@@ -34,5 +34,5 @@ A Apache-2.0 não relicencia software, dados científicos ou mídia de terceiros
 - `SolarSystem/data/textures/eso0932a.jpg` preserva o crédito
   **ESO/S. Brunier, CC BY 4.0**.
 
-Consulte `THIRD_PARTY.md` e `examples/SolarSystem/THIRD_PARTY.md` para a
+Consulte `THIRD_PARTY.md` e `examples/Advanced/SolarSystem/THIRD_PARTY.md` para a
 fronteira arquivo a arquivo e o registro de integridade.

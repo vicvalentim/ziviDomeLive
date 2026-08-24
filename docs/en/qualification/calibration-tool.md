@@ -10,7 +10,9 @@ status: qualification
 !!! warning "Capture must be evidence"
     A final image for this page must be captured from the installed, qualified 2.0 package and record the active scene, `ViewType`, resolution and calibration state. No editorial mockup is accepted as qualification evidence.
 
-## Scene 1 — Cube Focus and Color
+The tool starts on **Paul Bourke Environment Background** in `DOMEMASTER` with FOV `210°`, Size `100%`, and global pitch/yaw/roll at `0°`. A fixed `90°` rotation around X is applied directly to the Environment source lookup, keeping image alignment independent from dome orientation and scene geometry. The `0` key restores this exact startup state.
+
+## Cube Focus and Color
 
 Six GLSL 4.10 targets form a closed cube around the observer. Each face uses explicit local `0..1` coordinates so grids, geometric references, focus features, color ramps and annotations form one continuous spherical calibration surface.
 
@@ -26,9 +28,9 @@ The scene contains:
 
 Pixel-sized features are exact only when a cubemap face is sampled one to one. Their degradation through another projection, resolution, codec or receiver is part of what the tool is intended to reveal.
 
-## Scene 2 — Paul Bourke 360 Degree Sphere
+## Initial scene — Paul Bourke Environment Background
 
-The second scene maps one of four original, unmodified Paul Bourke v14 equirectangular test patterns to the inside of a complete sphere centered at `(0, 0, 0)`. The sphere has diameter 1800 units, north pole `+Z`, south pole `-Z`, and an equator on `Z=0`.
+The initial scene supplies one of four original, unmodified Paul Bourke v14 equirectangular test patterns through `SceneEnvironmentService`. The library-owned far-depth pass is translation-invariant, composes the source-image alignment independently from the shared spherical orientation, and follows the same source in Standard, Domemaster, Equirectangular, and Skybox views.
 
 The source follows the active output-resolution bucket when an external output is enabled. With outputs disabled, the nearest bucket is selected from the Processing window.
 
@@ -39,12 +41,14 @@ The source follows the active output-resolution bucket when an external output i
 | 3072 (3k) | `spherical4800.png` (4800 × 2400) |
 | 4096 (4k) | `spherical8192.png` (8192 × 4096) |
 
-Scene 2 also provides a slow, time-quantized rotation for observing aliasing and playback discontinuity:
+The Paul Bourke scene also provides a slow, time-quantized rotation for observing aliasing and playback discontinuity:
 
 - `Space`: toggle one revolution per 60 seconds;
 - `T`: switch between 30 fps / 1800 positions and 60 fps / 3600 positions;
 - `,` / `.`: step backward / forward by one degree and pause;
-- `C`: restore source orientation and pause.
+- `C`: restore source orientation and pause;
+- `V`: toggle Environment visibility;
+- `D` / `B`: decrease / increase Environment intensity.
 
 The rotation profile does not change Processing's global frame rate.
 
@@ -64,18 +68,18 @@ Use Left/Right arrows to switch scenes.
 | `Y` | Add 90° yaw |
 | `R` | Add 90° roll |
 | `F` | Toggle floating Domemaster preview |
-| `0` | Restore canonical projection state |
+| `0` | Restore the startup projection state |
 
 The example starts in `RenderMode.FULL`. View selection therefore exercises the same independent Preview/Output routing model documented for normal projects.
 
 ## Recommended qualification sequence
 
-1. Start from the canonical reset state (`0`).
-2. Inspect Scene 1 in Domemaster, Equirectangular, Skybox and Standard.
+1. Start on the Paul Bourke Environment Background in the startup/reset state (`0`).
+2. Switch to Cube Focus and Color and inspect it in Domemaster, Equirectangular, Skybox and Standard.
 3. Apply `P`, `Y` and `R` independently and verify continuous orientation across the spherical projections.
 4. In Domemaster, vary FOV and Size% and confirm that they solve angular coverage and physical image fitting rather than Scene camera movement.
 5. Toggle the floating preview and confirm it does not redefine external-output resolution.
-6. Switch to Scene 2 and inspect poles, equator, longitude continuity and the slow rotation profile.
+6. Return to the Paul Bourke scene and inspect poles, equator, longitude continuity, translation invariance, visibility/intensity controls and the slow rotation profile.
 7. Repeat on every GPU/platform/output configuration that will be claimed as tested for the release.
 8. Record screenshots and receiver evidence from the **actual installed package or qualified checkout**.
 

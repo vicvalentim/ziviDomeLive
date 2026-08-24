@@ -8,7 +8,7 @@
 - `STANDARD`: representação perspectiva Standard
 - `DOMEMASTER`: domemaster fisheye
 - `EQUIRECTANGULAR`: projeção esférica 2:1
-- `SKYBOX`: layout cubemap
+- `SKYBOX`: layout em cruz de cubemap equiangular (EAC) real
 
 Modos dedicados substituem as rotas efetivas sem apagar as seleções `ViewType` salvas. Voltar para `FULL` restaura o roteamento independente.
 

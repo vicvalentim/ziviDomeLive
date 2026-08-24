@@ -8,7 +8,12 @@
 | Syphon for Processing `4.0` | Compartilhamento GPU de textura | macOS |
 | Spout for Processing `2.0.8.0` | Compartilhamento GPU de textura | Windows |
 
-Instale dependências pelo Gerenciador de Contribuições quando disponíveis. Use somente a biblioteca de output local compatível com o sistema, mas mantenha todas as dependências declaradas quando o gerenciador de pacotes do Processing solicitá-las.
+ControlP5 é obrigatório em todos os exemplos distribuídos e deve ser instalado explicitamente
+pelo Gerenciador de Contribuições do Processing. `library.properties` não promete resolução
+transitiva. O core ainda degrada defensivamente quando ControlP5 está ausente, desativando o painel.
+Syphon e Spout são integrações opcionais de plataforma; quando ausentes, o output correspondente
+fica `UNAVAILABLE`. Instale essas integrações pelo Gerenciador de Contribuições somente quando
+precisar delas.
 
 ## Dependência Java Incluída
 
@@ -24,7 +29,10 @@ habilitar esse output.
 
 ## Bootstrap do Código-Fonte
 
-`compileJava` executa `downloadDependencies` quando algum JAR local está ausente. O bootstrap baixa assets imutáveis e verifica os checksums SHA-256 do arquivo e do JAR antes da instalação.
+`compileJava` executa a tarefa Gradle/JVM multiplataforma `downloadDependencies`. Ela usa uma URL
+versionada do ControlP5 e IDs imutáveis de assets GitHub para Syphon/Spout, verificando os
+checksums SHA-256 do archive e do JAR antes da instalação. Bash, `unzip` e `sha256sum` não são
+necessários.
 
 ```bash
 ./gradlew downloadDependencies
@@ -32,3 +40,6 @@ habilitar esse output.
 ```
 
 Não substitua URLs fixas por assets mutáveis `latest`. Atualize versão e checksums em conjunto depois de verificação independente.
+
+Para tarefas de deploy, configure um sketchbook não padrão com
+`-PprocessingSketchbook=/caminho/do/sketchbook` ou `PROCESSING_SKETCHBOOK`.

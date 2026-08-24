@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -83,6 +84,12 @@ class ReleaseMetadataTest {
 
         assertEquals("2.0.0", generated.getProperty("prettyVersion"));
         assertEquals("1285", generated.getProperty("minRevision"));
+        String build = read("build.gradle.kts");
+        assertTrue(build.contains("compileProcessing4Baseline"));
+        assertTrue(build.contains("processing4BaselineLibrary"));
+        assertFalse(release.containsKey("library.dependencies"));
+        assertFalse(generated.containsKey("library.dependencies"));
+        assertFalse(build.contains("property(\"library.dependencies\""));
 
         String evidence = read("maintainer/release-evidence.md");
         boolean releaseEvidenceComplete = !java.util.regex.Pattern
@@ -111,12 +118,120 @@ class ReleaseMetadataTest {
                 "Zenodo metadata must not reintroduce a generic VR/XR product identity");
     }
 
+	@Test
+	void examplesRequireControlP5WithoutRequiringPlatformOutputLibraries() throws IOException {
+		for (String relativePath : List.of(
+				"GettingStarted/EmptyProject", "GettingStarted/Basic",
+				"GettingStarted/NamedActions", "GettingStarted/PortLoopback",
+				"Advanced/SphereParticle", "Advanced/InfiniteBackground",
+				"Advanced/FulldomePBR", "Advanced/SolarSystem")) {
+			String example = Path.of(relativePath).getFileName().toString();
+			String source = read("examples/" + relativePath + "/" + example + ".pde");
+			assertTrue(source.contains("import controlP5.*;"), example);
+			assertFalse(source.contains("import codeanticode.syphon."), example);
+			assertFalse(source.contains("import spout."), example);
+			assertFalse(source.contains("import com.victorvalentim.zividomelive.render."), example);
+			assertFalse(source.contains("setSceneManager("), example);
+		}
+		assertTrue(Files.isDirectory(PROJECT_ROOT.resolve("examples/Tools/CalibrationTool")));
+		assertTrue(Files.isDirectory(PROJECT_ROOT.resolve("examples/Tools/BenchmarkTool")));
+		for (String relativePath : List.of(
+				"GettingStarted/EmptyProject", "GettingStarted/Basic",
+				"GettingStarted/NamedActions", "GettingStarted/PortLoopback",
+				"Advanced/SphereParticle", "Advanced/InfiniteBackground",
+				"Advanced/FulldomePBR", "Advanced/SolarSystem",
+				"Tools/CalibrationTool", "Tools/BenchmarkTool")) {
+			assertTrue(
+					Files.isRegularFile(PROJECT_ROOT.resolve("examples/" + relativePath + "/README.md")),
+					relativePath + " must include its own README.md");
+			String example = Path.of(relativePath).getFileName().toString();
+			String source = read("examples/" + relativePath + "/" + example + ".pde");
+			assertTrue(source.contains("import controlP5.*;"), relativePath);
+			assertFalse(source.contains("import codeanticode.syphon."), relativePath);
+			assertFalse(source.contains("import spout."), relativePath);
+		}
+		for (String quickstart : List.of(
+				"docs/en/getting-started/quickstart.md",
+				"docs/pt/getting-started/quickstart.md")) {
+			String source = read(quickstart);
+			assertTrue(source.contains("import controlP5.*;"), quickstart);
+			assertFalse(source.contains("import codeanticode.syphon."), quickstart);
+			assertFalse(source.contains("import spout."), quickstart);
+		}
+	}
+
+	@Test
+	void newExamplesCalibrationAndSecurityMatchTheFinalTwoPointZeroContracts()
+			throws IOException {
+		String actions = read("examples/GettingStarted/NamedActions/NamedActions.pde");
+		assertTrue(actions.contains("applyWithViewLighting(pg)"));
+		assertTrue(actions.contains("snapToAxisAngle("));
+		assertTrue(actions.contains("ziviDome.setPitch(PI);"));
+		assertTrue(actions.contains("ziviDome.setYaw(PI);"));
+		assertTrue(actions.contains("ziviDome.setRoll(0f);"));
+		assertTrue(actions.indexOf("ziviDome.setPitch(PI);") < actions.indexOf("ziviDome.setScene("));
+		assertTrue(actions.indexOf("ziviDome.setYaw(PI);") < actions.indexOf("ziviDome.setScene("));
+		assertFalse(actions.contains("Quaternion"));
+		assertTrue(actions.contains("pg.sphere("));
+		assertTrue(actions.contains("pg.box("));
+		assertTrue(actions.contains("public void update()"));
+
+		String ports = read("examples/GettingStarted/PortLoopback/PortLoopback.pde");
+		assertTrue(ports.contains("services.ports().connectInput"));
+		assertTrue(ports.contains("snapToAxisAngle("));
+		assertTrue(ports.contains("ziviDome.setPitch(PI);"));
+		assertTrue(ports.contains("ziviDome.setYaw(PI);"));
+		assertTrue(ports.contains("ziviDome.setRoll(0f);"));
+		assertTrue(ports.indexOf("ziviDome.setPitch(PI);") < ports.indexOf("ziviDome.setScene("));
+		assertTrue(ports.indexOf("ziviDome.setYaw(PI);") < ports.indexOf("ziviDome.setScene("));
+		assertFalse(ports.contains("Quaternion"));
+		assertTrue(ports.contains("services.ports().connectOutput"));
+		assertTrue(ports.contains("pg.vertex("));
+		assertTrue(ports.contains("pg.sphere("));
+		assertTrue(ports.contains("pg.box("));
+		assertTrue(ports.contains("public void update()"));
+
+		String calibration = read(
+				"examples/Tools/CalibrationTool/BourkeEnvironmentScene.pde");
+		String calibrationTool = read(
+				"examples/Tools/CalibrationTool/CalibrationTool.pde");
+		assertTrue(calibration.contains("services.environment()"));
+		assertTrue(calibration.contains("environment.setEquirectangular(pattern)"));
+		assertTrue(calibration.contains(
+				"environment.setOrientationAxisAngle(1f, 0f, 0f, SOURCE_PITCH)"));
+		assertTrue(calibration.contains("pg.background(0, 0, 0, 0)"));
+		assertFalse(calibration.contains("sphereVertex("));
+		assertFalse(Files.exists(PROJECT_ROOT.resolve(
+				"examples/Tools/CalibrationTool/BourkeSphereScene.pde")));
+		assertTrue(calibrationTool.contains(
+				"ziviDome.setScene(new BourkeEnvironmentScene(ziviDome));"));
+		assertTrue(calibrationTool.contains(
+				"ziviDome.registerScene(new CubeCalibrationScene());"));
+		assertTrue(calibrationTool.indexOf("setScene(new BourkeEnvironmentScene")
+				< calibrationTool.indexOf("registerScene(new CubeCalibrationScene"));
+		assertTrue(calibrationTool.contains("ziviDome.setCurrentView(ViewType.DOMEMASTER);"));
+		assertTrue(calibrationTool.contains("ziviDome.setFishSize(100f);"));
+		assertTrue(calibrationTool.contains("ziviDome.setFov(210f);"));
+		assertTrue(calibrationTool.contains("ziviDome.setPitch(0f);"));
+		assertTrue(calibrationTool.contains("ziviDome.setYaw(0f);"));
+		assertTrue(calibrationTool.contains("ziviDome.setRoll(0f);"));
+		assertTrue(calibrationTool.indexOf("resetCalibrationState();")
+				< calibrationTool.indexOf("printCalibrationState();"));
+
+		String security = read("SECURITY.md");
+		assertTrue(security.contains("| 2.0.x   | Yes"));
+		assertTrue(security.contains("| 1.x.x   | No"));
+		assertTrue(security.contains("Do not open a public issue"));
+		assertTrue(security.contains("Report a vulnerability"));
+	}
+
     @Test
     void releasePackageAndWorkflowsKeepPublicationGates() throws IOException {
         String build = read("build.gradle.kts");
         String automated = read(".github/workflows/automated-qualification.yml");
         String preRelease = read(".github/workflows/pre-release.yml");
         String release = read(".github/workflows/release.yml");
+        String dependencySubmission = read(".github/workflows/gradle.yml");
 
         assertTrue(build.contains("verifyProcessingPackage"));
         assertTrue(build.contains("buildReleaseArtifacts"));
@@ -130,8 +245,11 @@ class ReleaseMetadataTest {
         // The actual release gate happens before a tag is created.
         assertTrue(preRelease.contains("./gradlew clean test build --console=plain"));
         assertTrue(preRelease.contains("./gradlew qualificationTests --console=plain"));
+        assertTrue(preRelease.contains("checkout-revision.txt"));
         assertTrue(preRelease.contains("--release-evidence"));
         assertTrue(preRelease.contains("python3 -m mkdocs build --strict"));
+        assertTrue(preRelease.contains("./gradlew attachJavadocsToSite --console=plain"));
+        assertTrue(preRelease.contains("--site-dir site"));
         assertTrue(preRelease.contains("./gradlew buildReleaseArtifacts --console=plain"));
         assertTrue(preRelease.contains("--package release/ziviDomeLive.zip"));
         assertTrue(preRelease.contains("actions/upload-artifact@v4"));
@@ -143,17 +261,30 @@ class ReleaseMetadataTest {
         // A tag reproduces and audits the already-qualified revision; it is not the
         // first place where release readiness is discovered.
         assertTrue(release.contains("./gradlew verifyReleaseTag"));
+        assertTrue(release.contains("actions/setup-java@v4"));
+        assertTrue(release.contains("java-version: 17"));
+        assertTrue(release.contains("actions/setup-python@v5"));
+        assertTrue(release.contains("python3 -m pip install -r requirements-docs.txt"));
+        assertTrue(release.contains("./gradlew clean test build --console=plain"));
         assertTrue(release.contains("./gradlew qualificationTests --console=plain"));
+        assertTrue(release.contains("checkout-revision.txt"));
         assertTrue(release.contains("actions/upload-artifact@v4"));
         assertTrue(release.contains("build/reports/qualification/"));
         assertTrue(release.contains("build/test-results/qualification/"));
         assertTrue(release.contains("--release-evidence"));
+        assertTrue(release.contains("python3 -m mkdocs build --strict"));
+        assertTrue(release.contains("./gradlew attachJavadocsToSite --console=plain"));
+        assertTrue(release.contains("--site-dir site"));
         assertTrue(release.contains("./gradlew buildReleaseArtifacts --console=plain"));
         assertTrue(release.contains("--package release/ziviDomeLive.zip"));
         assertTrue(release.contains("softprops/action-gh-release@v2"));
         assertTrue(release.indexOf("actions/upload-artifact@v4")
                 < release.indexOf("./gradlew buildReleaseArtifacts --console=plain"),
                 "tagged qualification evidence must be archived before buildReleaseArtifacts runs clean");
+
+        assertTrue(dependencySubmission.contains("name: Gradle Dependency Submission"));
+        assertTrue(dependencySubmission.contains("dependency-submission:"));
+        assertFalse(dependencySubmission.contains("build -x test"));
     }
 
 	private static Properties loadProperties(String relativePath) throws IOException {

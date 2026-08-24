@@ -5,6 +5,12 @@ Estes exemplos apresentam padrões de projetos criativos maiores, preservando os
 !!! note "Política de evidência visual"
     Capturas finais dos exemplos pertencem à qualificação do pacote instalado. Até existir essa evidência, esta página descreve os sketches executáveis sem publicar screenshot simulada.
 
+## SphereParticle
+
+Executa simulação bounded por `SceneServices.tasks()`, isola resultados imutáveis na ativação
+corrente e mantém todas as chamadas Processing/OpenGL na render thread. Clique ou arraste para
+adicionar partículas.
+
 ## InfiniteBackground
 
 Qualifica o Environment LDR compartilhado com fontes equiretangulares real e sintética. O exemplo exercita visibilidade, intensidade, offset de longitude, oclusão em far depth e orientação Standard/esférica sem geometria sky pertencente à cena.

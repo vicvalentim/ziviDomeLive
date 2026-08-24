@@ -48,7 +48,7 @@ The project focuses on **monoscopic spherical and fulldome image production**. I
 | Standard | Perspective render | Processing window, conventional display, development preview |
 | Domemaster | Circular fisheye | Dome playback, lens/projector calibration, planetarium work |
 | Equirectangular | 2:1 spherical image | 360° media workflows and spherical inspection |
-| Skybox | Cubemap layout | Face/orientation inspection and compatible pipelines |
+| Skybox | True equi-angular cubemap (EAC) cross | Lower intra-face angular distortion, face/orientation inspection and compatible pipelines |
 
 `RenderMode.FULL` keeps preview and external-output `ViewType` routes independent. A dedicated render mode temporarily chooses one effective representation without erasing the saved routes.
 
@@ -143,7 +143,7 @@ The 2.0 API is organized by teaching level and stability, not by the Java `publi
 | **Stable** | Normal Processing sketches; smallest recommended path | `ziviDomeLive`, `StandardOutputAspectMode`, `Scene`, `SceneManager`, `RenderMode`, `ViewType`, `LogMode` |
 | **Advanced Stable** | Projects needing lifecycle-aware time, tasks, assets, actions, camera, environment, ports, typed outputs or reusable math | `SceneServices`, `FrameClock`, `SimulationTimeline`, `SceneTaskGroup`, `SceneAssets`, `SceneActionMap`, `SceneCameraService`, `SceneEnvironmentService`, `ScenePorts`, `SceneInputPort`, `SceneOutputPort`, `OutputManager`, `OutputType`, `OutputState`, `Quaternion`, `SphericalOrientation`, `OrbitCamera` |
 | **Experimental** | Measurement and qualification; source compatibility may change in a major/minor revision | `PerformanceMode`, `PerformanceMetric`, `PerformanceSnapshot`, `MetricStatistics`, `GraphicsCapabilities`, `GpuTimerPolicy`, `GpuTimerBackend`, `GpuTimerArchitecture` |
-| **Processing callbacks** | Public only because Processing/ControlP5 discovers or invokes them | `pre`, `draw`, `post`, `keyEvent`, `mouseEvent`, `pause`, `resume`, `stop`, `dispose`, `controlEvent` on the facade |
+| **Processing callbacks** | Public only because Processing invokes them | `pre`, `draw`, `post`, `keyEvent`, `mouseEvent`, `pause`, `resume`, `stop`, `dispose` on the facade |
 | **Internal** | Renderer graph, OpenGL targets, UI, queues, workers and output producers; not callable API | Physical `_internal/` source categories and package-private implementation types |
 
 There is **no deprecated level in 2.0**. Removed 1.x symbols are recorded in the [migration history](docs/en/api/deprecated.md) and changelog, not kept as permanent aliases.
@@ -160,7 +160,7 @@ There is **no deprecated level in 2.0**. Removed 1.x symbols are recorded in the
 | `tasks()` | Bounded keyed background work with frame-boundary callbacks |
 | `assets()` | Activation-aware Processing images, shaders and shapes |
 | `actions()` | Named key/mouse actions while retaining raw callbacks |
-| `camera()` | Scene-space orbit camera, input and target tracking |
+| `camera()` | Scene-space orbit camera, input, target tracking and opt-in view lighting |
 | `environment()` | Activation-owned environment overrides |
 | `ports()` | Bounded optional external-message adapters |
 | `requestReload()` | Deferred reload at a safe frame boundary |
@@ -174,7 +174,7 @@ Scenes do not construct or close these services. Background tasks must not call 
 - `RenderMode` answers **how the runtime should work now**: `FULL`, `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR` or `SKYBOX`.
 - `ViewType` answers **which final representation a destination receives**: `STANDARD`, `DOMEMASTER`, `EQUIRECTANGULAR` or `SKYBOX`.
 
-The declaration order of `ViewType` is part of the 2.0 contract because the ControlP5 panel maps choices by index.
+The ControlP5 panel maps stable UI IDs explicitly to `ViewType`; enum ordinals are not an artist-facing persistence or routing contract.
 
 ### Spherical calibration
 
@@ -213,7 +213,7 @@ Visible ControlP5 controls own pointer gestures. A scene camera must not orbit o
 
 | Requirement | 2.0 contract |
 |---|---|
-| Processing | Processing 4; automated dependencies currently use Processing core 4.5.6 |
+| Processing | Processing 4 (revision 1285+); source compatibility is audited against 4.0, while routine automation uses 4.5.6 |
 | Renderer | `P3D` / `PGraphicsOpenGL` |
 | Java source build | Java 17 |
 | Pixel density | `pixelDensity(1)` for deterministic target dimensions |
@@ -229,9 +229,9 @@ The target is macOS, Windows and Linux for core rendering, with platform-specifi
 
 | Dependency | Purpose | Distribution |
 |---|---|---|
-| ControlP5 2.2.6 | Built-in runtime controls | Processing dependency |
-| Syphon for Processing 4.0 | macOS GPU texture sharing | Processing dependency |
-| Spout for Processing 2.0.8.0 | Windows GPU texture sharing | Processing dependency |
+| ControlP5 2.2.6 | Built-in runtime controls | Required external Processing library; install explicitly; defensive fallback disables the panel when absent |
+| Syphon for Processing 4.0 | macOS GPU texture sharing | Optional; output is unavailable when absent |
+| Spout for Processing 2.0.8.0 | Windows GPU texture sharing | Optional; output is unavailable when absent |
 | Devolay 2.2.0-vic.2 | Java/JNI NDI sender integration | Bundled Maven artifact; NDI Runtime is separate |
 
 See [Dependencies](docs/en/installation/dependencies.md), [NDI Runtime](docs/en/installation/ndi.md), [Known Issues](docs/en/known-issues.md) and [Third-party notices](THIRD_PARTY.md).
@@ -271,14 +271,16 @@ Source development uses Gradle and is not the normal artist installation path.
 
 | Level | Sketch | Focus |
 |---|---|---|
-| Foundation | `EmptyProject` | Minimal one-scene template |
-| Foundation | `Basic` | Two scenes, switching and render modes |
-| Foundation | `SphereParticle` | Lifecycle-safe background simulation |
-| Advanced | `InfiniteBackground` | Translation-invariant environment |
-| Advanced | `FulldomePBR` | Retained geometry, shaders and scene camera |
-| Advanced | `SolarSystem` | Time, assets, actions, camera tracking and double-precision orbital simulation |
-| Qualification | `CalibrationTool` | Orientation, projection and dome calibration |
-| Qualification | `BenchmarkTool` | Reproducible performance evidence |
+| Getting Started | `GettingStarted/EmptyProject` | Minimal one-scene template |
+| Getting Started | `GettingStarted/Basic` | Two scenes, switching and render modes |
+| Getting Started | `GettingStarted/NamedActions` | Named key-code/mouse actions and programmatic triggers |
+| Getting Started | `GettingStarted/PortLoopback` | Bounded scene input and non-blocking output port SPI |
+| Advanced | `Advanced/SphereParticle` | Lifecycle-safe background simulation |
+| Advanced | `Advanced/InfiniteBackground` | Translation-invariant environment |
+| Advanced | `Advanced/FulldomePBR` | Retained geometry, shaders and scene camera |
+| Advanced | `Advanced/SolarSystem` | Time, assets, actions, camera tracking and double-precision orbital simulation |
+| Tools | `Tools/CalibrationTool` | Orientation, projection and dome calibration |
+| Tools | `Tools/BenchmarkTool` | Reproducible performance evidence |
 
 Browse [`examples/`](examples/) or the [examples guide](https://vicvalentim.github.io/ziviDomeLive/examples/basic/).
 
@@ -348,6 +350,6 @@ The repository preserves the architectural history from the original 1.x rendere
 
 Project-authored material in the ziviDomeLive **2.0 release line** is distributed under the **[Apache License 2.0](LICENSE)** (`Apache-2.0`), except where a file or third-party notice states otherwise. Published releases through `v1.5.0` retain the `GPL-2.0-only` terms under which those versions were originally released; the 2.0 relicensing does not revoke historical grants.
 
-Third-party software, scientific data and media retain their own provenance and terms. In `SolarSystem`, the curated astronomical dataset records NASA/JPL scientific-data provenance, while the planetary/space texture pack is credited to **Solar System Scope / INOVE under CC BY 4.0** and explicitly identifies NASA imagery/elevation data only as its upstream basis. The retained `eso0932a.jpg` panorama is credited separately to **ESO/S. Brunier under CC BY 4.0**. See [`THIRD_PARTY.md`](THIRD_PARTY.md) and [`examples/SolarSystem/THIRD_PARTY.md`](examples/SolarSystem/THIRD_PARTY.md).
+Third-party software, scientific data and media retain their own provenance and terms. In `SolarSystem`, the curated astronomical dataset records NASA/JPL scientific-data provenance, while the planetary/space texture pack is credited to **Solar System Scope / INOVE under CC BY 4.0** and explicitly identifies NASA imagery/elevation data only as its upstream basis. The retained `eso0932a.jpg` panorama is credited separately to **ESO/S. Brunier under CC BY 4.0**. See [`THIRD_PARTY.md`](THIRD_PARTY.md) and [`examples/Advanced/SolarSystem/THIRD_PARTY.md`](examples/Advanced/SolarSystem/THIRD_PARTY.md).
 
 Copyright © 2024–2026 Victor Valentim.

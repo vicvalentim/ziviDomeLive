@@ -64,7 +64,7 @@ Visualize o manual com `python3 -m mkdocs serve`. Isso evita executáveis MkDocs
 
 ## Contratos do Projeto
 
-- Mantenha a ordem de `ViewType` inalterada.
+- Mantenha estável o mapeamento explícito ID da UI ControlP5 ↔ `ViewType`; não persista ordinals do enum.
 - Mantenha páginas em inglês e português pareadas e atualize a navegação de `mkdocs.yml` em conjunto.
 - Não chame `beginDraw()` nem `endDraw()` dentro de uma `Scene`.
 - Preserve o reset adiado da resolução de output.

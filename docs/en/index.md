@@ -57,7 +57,7 @@ Build real-time **fulldome, spherical and immersive visual workflows** from one 
 
 - :material-rocket-launch-outline: **New to ziviDomeLive**
 
-    Install the library, run the Quickstart and continue through the six learning examples.
+    Install the library, run the Quickstart and continue through the eight learning examples.
 
     [Open the Quickstart →](getting-started/quickstart.md)
 

@@ -94,7 +94,7 @@ Build Java 17 limpo, suítes JUnit/qualification, MkDocs strict, Javadocs e chec
 
 ### Nível 3 — Distribuição Processing
 
-Instalar ZIP/PDEX em sketchbook limpo, abrir `reference/index.html` e compilar/executar os oito exemplos do pacote instalado.
+Instalar ZIP/PDEX em sketchbook limpo, abrir `reference/index.html` e compilar/executar os dez exemplos/tools do pacote instalado.
 
 ### Nível 4 — Qualificação visual/performance
 

@@ -5,6 +5,12 @@ These examples show larger creative-project patterns while preserving the same S
 !!! note "Visual evidence policy"
     Final example captures belong to installed-package qualification. Until that evidence exists, this page describes the executable sketches without publishing a mock screenshot.
 
+## SphereParticle
+
+Runs bounded simulation work through `SceneServices.tasks()`, isolates immutable results to the
+current activation, and keeps every Processing/OpenGL call on the render thread. Click or drag to
+add particles.
+
 ## InfiniteBackground
 
 Qualifies the shared LDR Environment background with real and synthetic equirectangular sources. It exercises visibility, intensity, longitude offset, far-depth occlusion, and Standard/spherical orientation without scene-owned sky geometry.

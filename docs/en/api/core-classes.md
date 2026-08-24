@@ -53,7 +53,7 @@ Prefer facade `setScene`/`registerScene`. A replacement manager is attached to f
 
 ## RenderMode and ViewType
 
-`RenderMode` is runtime policy; `ViewType` is a final representation. `FULL` preserves independent routes. The exact enum orders are frozen and verified.
+`RenderMode` is runtime policy; `ViewType` is a final representation. `FULL` preserves independent routes. The panel maps its stable option IDs explicitly and does not expose `ViewType.ordinal()` as a UI contract.
 
 ## LogMode
 

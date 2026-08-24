@@ -36,6 +36,9 @@ jobs:
       - name: Automated qualification
         run: ./gradlew qualificationTests --console=plain
 
+      - name: Bind automated evidence to checkout revision
+        run: printf '%s\n' "$GITHUB_SHA" > build/reports/qualification/checkout-revision.txt
+
       - name: Documentation contract and manual evidence gate
         run: python3 tools/validate_documentation.py --root . --release-evidence
 

@@ -54,9 +54,9 @@ Métricas experimentais são evidência útil, mas seu vocabulário pode evoluir
 
 ## Superfície de callbacks Processing
 
-`pre`, `draw`, `post`, `keyEvent`, `mouseEvent`, `pause`, `resume`, `stop`, `dispose` e `controlEvent` são métodos públicos da facade porque Processing ou ControlP5 os invoca. São pontos de integração, não uma segunda API que o sketch deva encaminhar manualmente.
+`pre`, `draw`, `post`, `keyEvent`, `mouseEvent`, `pause`, `resume`, `stop` e `dispose` são métodos públicos da facade porque o Processing os invoca. São pontos de integração, não uma segunda API que o sketch deva encaminhar manualmente.
 
-`Scene` deliberadamente não possui `controlEvent`. O painel ControlP5 pertence ao runtime; cenas recebem callbacks de teclado/mouse do Processing ou usam `SceneActionMap`.
+Nem `Scene` nem a facade expõem tipo de callback do ControlP5. O painel registra seu listener internamente; cenas recebem callbacks de teclado/mouse do Processing ou usam `SceneActionMap`.
 
 ## Fronteira Internal
 

@@ -57,7 +57,7 @@ Construa fluxos visuais **fulldome, esféricos e imersivos em tempo real** a par
 
 - :material-rocket-launch-outline: **Primeiro contato com ziviDomeLive**
 
-    Instale a biblioteca, execute o Guia Rápido e avance pelos seis exemplos de aprendizagem.
+    Instale a biblioteca, execute o Guia Rápido e avance pelos oito exemplos de aprendizagem.
 
     [Abrir o Guia Rápido →](getting-started/quickstart.md)
 

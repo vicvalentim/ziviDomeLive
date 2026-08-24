@@ -1,11 +1,15 @@
 ---
-title: "Processing Contributed Library Publication"
+title: "Processing Contributed Library Publication Procedure Template"
 icon: material/check-decagram-outline
 status: qualification
 ---
-# Processing Contributed Library Publication
+# Processing Contributed Library Publication Procedure Template
 
-This checklist is a **maintainer/publication** surface. It is not part of the artist learning path.
+This checklist is a reusable **maintainer/publication procedure template**, not a status ledger and
+not part of the artist learning path. Keep every run's authoritative status in
+[`maintainer/release-evidence.md`](https://github.com/vicvalentim/ziviDomeLive/blob/release/2.0.0/maintainer/release-evidence.md)
+and its CI artifact bound to the qualified source SHA. Never copy completion state back into this
+template or infer it from an older qualification.
 
 ## Publication artifact
 
@@ -17,7 +21,7 @@ The generated Processing library must remain self-contained for installation, ex
 
 - [ ] stable public URL presents a concise abstract and the intended audience
 - [ ] installation distinguishes Contribution Manager, release artifact and source build
-- [ ] all eight executable examples are listed, with tutorials/manual linked when useful
+- [ ] all ten executable examples/tools are listed, with tutorials/manual linked when useful
 - [ ] Processing/Java baseline, renderer, `pixelDensity(1)`, dependencies and limitations are stated
 - [ ] tested systems/Processing versions are either backed by evidence or explicitly left unqualified
 - [ ] `library.keywords` and the documentation-update date are visible
@@ -73,7 +77,7 @@ The final package must include and expose:
 
 - [ ] `library/`
 - [ ] `reference/index.html`
-- [ ] `examples/` with the six learning examples plus `CalibrationTool` and `BenchmarkTool`
+- [ ] `examples/` with `GettingStarted/`, `Advanced/`, and `Tools/`, containing all eight learning examples plus `CalibrationTool` and `BenchmarkTool`
 - [ ] `src/` without `src/test/`
 - [ ] `library.properties`
 - [ ] project/source license and third-party notices
@@ -82,7 +86,7 @@ The final package must include and expose:
 
 It must not contain local benchmark reports, maintainer-only generated evidence, `.DS_Store`, tests or local helper JARs excluded by the release packaging contract.
 
-Open/run all eight examples **from the installed package**.
+Open/run all ten examples/tools **from the installed package**.
 
 ## PUBLICATION METADATA
 

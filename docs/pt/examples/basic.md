@@ -7,7 +7,7 @@ Estes exemplos formam o primeiro percurso de aprendizagem da biblioteca. Ferrame
 
 ## EmptyProject
 
-Template inicial mínimo em múltiplos arquivos com uma `Scene`, um `SceneManager`, hooks automáticos do Processing, `sceneRender()` intencionalmente vazio e `draw()` também vazio.
+Template inicial mínimo em múltiplos arquivos com uma `Scene` pertencente à facade, hooks automáticos do Processing, `sceneRender()` intencionalmente vazio e `draw()` também vazio.
 
 Comece aqui ao criar um projeto do zero.
 
@@ -26,9 +26,18 @@ Demonstra duas cenas gerenciadas e a API `RenderMode`. Em `Scene1`, pressione:
 
 Use as setas Esquerda/Direita para alternar entre os pilares rotativos e a grade estática de alinhamento com seis faces.
 
-## SphereParticle
+## NamedActions
 
-Exemplo de cena maior que executa trabalho de simulação bounded por `SceneServices.tasks()`, isola resultados na ativação atual e mantém chamadas gráficas na render thread. Clique ou arraste para adicionar partículas.
+Demonstra actions de key-code e mouse pertencentes à ativação, registro nomeado e trigger
+programático. As actions movem uma esfera iluminada numa composição 3D. A chamada explícita
+`applyWithViewLighting(...)` prende um rig de luz ambiente/spot à câmera da cena e o aponta para o
+target corrente.
+
+## PortLoopback
+
+Demonstra o SPI bounded de adapters `ScenePorts` sem adicionar dependência de transporte.
+Mensagens inteiras controlam um anel 3D de sinais, e um adapter de output não bloqueante relata o
+nível aplicado.
 
 Todos os exemplos de aprendizagem preservam `sceneRender(PGraphicsOpenGL)` e nunca chamam `ziviDome.draw()` manualmente.
 

@@ -134,7 +134,7 @@ The scenes are synthetic and deterministic: the same configuration repeats the s
 | `STANDARD` | Conventional rectangular view |
 | `DOMEMASTER` | Fisheye projection for fulldome |
 | `EQUIRECTANGULAR` | 360° panoramic projection |
-| `SKYBOX` | Cubemap face inspection |
+| `SKYBOX` | True EAC cubemap cross and face inspection |
 
 Without an external output, Standard resolution is tied to the Processing window. In spherical
 modes, it controls the preview cubemap. With NDI, Syphon, or Spout enabled, resolution represents

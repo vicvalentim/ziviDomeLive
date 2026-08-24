@@ -28,6 +28,11 @@ status: stable
 
 Não documente `ViewType` como outro modo de runtime: ele representa uma rota de saída.
 
+`SKYBOX` preserva a ordem qualificada das faces na cruz, mas usa transformação de cubemap
+equiangular (EAC) real dentro de cada face: coordenadas normalizadas são convertidas por
+`tan((2u - 1) * PI/4)` antes da amostragem do cubemap nativo. Portanto, não é a aproximação linear
+antiga de grade de faces.
+
 ## Resolução e calibração
 
 A fachada consolidada usa `resetGraphics(int)` para solicitar recriação dos targets de output. Documentação e exemplos devem preservar esse nome de API implementado.

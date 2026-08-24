@@ -23,7 +23,7 @@ Para instalação manual, use o artefato empacotado do release correspondente. N
 1. Baixe `ziviDomeLive.zip` ou `ziviDomeLive.pdex`.
 2. Extraia a pasta superior `ziviDomeLive`.
 3. Mova-a para o diretório `libraries` do sketchbook indicado nas preferências do Processing.
-4. Instale ControlP5 e a dependência de output da plataforma.
+4. Instale explicitamente a biblioteca externa obrigatória ControlP5; instale Syphon ou Spout somente quando precisar do output opcional correspondente à plataforma.
 5. Reinicie o Processing.
 
 O pacote inclui Devolay, mas não o NDI Runtime proprietário. Usuários NDI devem
@@ -37,6 +37,9 @@ libraries/ziviDomeLive/
   library.properties
   library/
   examples/
+    GettingStarted/
+    Advanced/
+    Tools/
   reference/
 ```
 

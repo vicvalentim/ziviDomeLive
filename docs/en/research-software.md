@@ -94,7 +94,7 @@ Clean Java 17 build, JUnit/qualification suites, strict MkDocs build, Javadocs a
 
 ### Level 3 — Processing distribution
 
-Install generated ZIP/PDEX into a clean sketchbook, open `reference/index.html`, and compile/run all eight examples from the installed package.
+Install generated ZIP/PDEX into a clean sketchbook, open `reference/index.html`, and compile/run all ten examples/tools from the installed package.
 
 ### Level 4 — Visual/performance qualification
 
