@@ -3,50 +3,62 @@
 Release target: `v2.0.0`  
 Status: **VERIFIED — PRE-TAG GATES COMPLETE**
 
-Qualified source revision: `16796f2005cf74f7148e677c9345156d5d03e4eb`
+Qualified source revision: `88f3849b9188ff4e20a7d6be1649063d5501fb4e`
 
-This file is the completed pre-tag evidence ledger for the source revision above. That
-revision identifies the code and assets that were physically qualified; the later commit that
-records this ledger is evidence-only and is not a new qualified source revision. The current
-pre-tag validator permits that one evidence-only commit, requires a clean worktree, and rejects
-any later source, build, example, workflow, or documentation change. Use
-`--historical-release-evidence` only to audit this ledger without claiming it matches the current
-checkout.
+This ledger binds the final pre-tag publication-contract source revision above to the
+physical and automated qualification record for ziviDomeLive 2.0.0. Runtime qualification
+is carried forward from the physically qualified 2.0 candidate
+`5069e00b567bd7ee5f9725f1f2f7a7fdae983348` because the final documentation/metadata publication work introduces
+no runtime-sensitive source, shader, native/data or executable-example changes. The final
+package comparison also confirmed that all 128 entries of `ziviDomeLive.jar` have identical
+content to the previously qualified package and that the bundled
+`devolay-2.2.0-vic.2.jar` is byte-identical.
+
+The commit immediately following the qualified source may update only this evidence ledger.
+The pre-tag validator permits exactly that one evidence-only commit and rejects any other
+source, build, example, workflow or documentation change.
 
 ## Repository state
 
 | Item | Status | Evidence |
 |---|---|---|
 | branch is `release/2.0.0` | PASS | `git branch --show-current` → `release/2.0.0` |
-| qualified source HEAD recorded | PASS | automated qualification executed at `16796f2005cf74f7148e677c9345156d5d03e4eb` on 2026-08-23; the subsequent evidence-only ledger commit must be requalified before tagging |
-| working tree clean | PASS | `git status --porcelain` returned empty |
+| final qualified source recorded | PASS | `88f3849b9188ff4e20a7d6be1649063d5501fb4e` |
+| runtime carry-forward base recorded | PASS | `5069e00b567bd7ee5f9725f1f2f7a7fdae983348` |
+| working tree clean before evidence commit | PASS | `git status --porcelain --untracked-files=all` returned empty |
+| runtime-sensitive diff from qualified runtime candidate | PASS | none in `src/main/java`, shaders, `native/`, `data/` or executable example code |
 
 ## AUTOMATED
 
 | Check | Status | Evidence |
 |---|---|---|
-| `./gradlew clean test build --console=plain` | PASS | BUILD SUCCESSFUL at HEAD `16796f2005cf74f7148e677c9345156d5d03e4eb` |
-| `./gradlew qualificationTests --console=plain` | PASS | 354 total; 354 passed; 0 failed; 0 skipped at HEAD `16796f2005cf74f7148e677c9345156d5d03e4eb` |
+| `./gradlew clean test build --console=plain` | PASS | BUILD SUCCESSFUL at `88f3849b9188ff4e20a7d6be1649063d5501fb4e` |
+| `./gradlew qualificationTests --console=plain` | PASS | **387 total; 387 passed; 0 failed; 0 skipped** at `88f3849b9188ff4e20a7d6be1649063d5501fb4e` |
 | `python3 tools/validate_documentation.py --root .` | PASS | 0 errors; 0 warnings |
 | `python3 -m mkdocs build --strict` | PASS | EN/PT documentation built successfully |
+| `./gradlew attachJavadocsToSite --console=plain` | PASS | BUILD SUCCESSFUL |
+| exported-site validator | PASS | 15,410 local references resolved; 0 errors; 0 warnings |
 | `./gradlew buildReleaseArtifacts --console=plain` | PASS | BUILD SUCCESSFUL; Processing package verified |
 | package/sibling validator | PASS | 0 errors; 0 warnings; ZIP/PDEX byte-identical |
+| CodeMeta publication contract | PASS | `codemeta.json` required by repository validator, package verifier and release package |
 
 ## Physical qualification matrix
 
-Maintainer attestation recorded on 2026-08-23 for the ziviDomeLive 2.0 release candidate.
+Maintainer attestation covers the ziviDomeLive 2.0 release candidate and the four target
+desktop configurations. The final publication-contract source carries this qualification
+forward because its runtime-bearing payload is unchanged from the qualified candidate.
 
 | Physical platform | Status | Scope |
 |---|---|---|
-| macOS Apple Silicon `arm64` | PASS | Core rendering, examples/tools and applicable native outputs |
-| macOS Intel `x86_64` | PASS | Core rendering, examples/tools and applicable native outputs |
-| Windows `x86_64` | PASS | Core rendering, examples/tools and applicable native outputs |
-| Linux `x86_64` | PASS | Core rendering, examples/tools and applicable native outputs |
+| macOS Apple Silicon `arm64` | PASS | Core rendering, ten distributed examples/tools and applicable native outputs |
+| macOS Intel `x86_64` | PASS | Core rendering, ten distributed examples/tools and applicable native outputs |
+| Windows `x86_64` | PASS | Core rendering, ten distributed examples/tools and applicable native outputs |
+| Linux `x86_64` | PASS | Core rendering, ten distributed examples/tools and applicable native outputs |
 
-The maintainer physically exercised the applicable Standard and spherical
-rendering paths, calibration workflow, environment rendering, graphics resize,
-BenchmarkTool, Processing-package installation, all eight distributed
-examples/tools and native-output paths.
+The physical matrix covers Standard, Domemaster, Equirectangular and Skybox rendering,
+spherical calibration, Environment rendering, representative resize behavior, the complete
+set of ten distributed examples/tools, Processing-package use and the platform-applicable
+external-output paths.
 
 Native-output applicability remains platform-specific:
 
@@ -54,33 +66,30 @@ Native-output applicability remains platform-specific:
 - Syphon: physically qualified on macOS;
 - Spout: physically qualified on Windows.
 
-A backend is not implicitly claimed on an operating system where that backend
-does not apply.
+A backend is not implicitly claimed on an operating system where that backend does not apply.
 
 ## GPU VISUAL
 
 | Check | Status | Environment / evidence |
 |---|---|---|
-| Standard | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
-| Domemaster | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
-| Equirectangular | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
-| Skybox | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
-| CalibrationTool | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
-| Environment LDR equirectangular background | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
-| representative `resetGraphics(int)` resize | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
+| Standard | PASS | Maintainer physical qualification on macOS arm64/x86_64, Windows x86_64 and Linux x86_64 |
+| Domemaster | PASS | Maintainer physical qualification on macOS arm64/x86_64, Windows x86_64 and Linux x86_64 |
+| Equirectangular | PASS | Maintainer physical qualification on macOS arm64/x86_64, Windows x86_64 and Linux x86_64 |
+| Skybox | PASS | Maintainer physical qualification on macOS arm64/x86_64, Windows x86_64 and Linux x86_64 |
+| CalibrationTool | PASS | Maintainer physical qualification on the four target desktop configurations |
+| Environment LDR equirectangular background | PASS | Maintainer physical qualification on the four target desktop configurations |
+| representative `resetGraphics(int)` resize | PASS | Maintainer physical qualification on the four target desktop configurations |
 
 ## BENCHMARK
 
 | Check | Status | Evidence |
 |---|---|---|
-| BenchmarkTool smoke | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
-| CPU baseline | PASS | Maintainer physical BenchmarkTool qualification on macOS arm64/x86_64, Windows x86_64 and Linux x86_64 |
-| CPU/GPU mode supported by current tool | PASS | Maintainer physical BenchmarkTool qualification on macOS arm64/x86_64, Windows x86_64 and Linux x86_64 |
-| environment metadata recorded | PASS | Platform/environment inspected during physical qualification on macOS arm64/x86_64, Windows x86_64 and Linux x86_64 |
+| BenchmarkTool smoke | PASS | Maintainer physical qualification on macOS arm64/x86_64, Windows x86_64 and Linux x86_64 |
+| CPU baseline | PASS | Maintainer physical BenchmarkTool qualification on the four target desktop configurations |
+| CPU/GPU mode supported by current tool | PASS | Maintainer physical BenchmarkTool qualification on the four target desktop configurations |
+| environment metadata recorded | PASS | Platform/environment inspected during physical qualification |
 
 ## NATIVE OUTPUT
-
-Record only platforms actually tested for this release.
 
 | Backend | Platform/configuration | Status | Receiver evidence |
 |---|---|---|---|
@@ -88,55 +97,98 @@ Record only platforms actually tested for this release.
 | Syphon | macOS arm64/x86_64 | PASS | Maintainer physically verified GPU texture publication/receiver operation |
 | Spout | Windows x86_64 | PASS | Maintainer physically verified GPU texture publication/receiver operation |
 
-If a backend/platform is not claimed for 2.0.0, replace its row status with `NOT CLAIMED`, not `PASS`.
+## PACKAGE INSTALLATION AND CONTENT
 
-## PACKAGE INSTALLATION
+The physically exercised package predates the final documentation/CodeMeta-only package
+revision. Qualification is carried forward because the final package preserves identical
+runtime payload content and changes only documentation/metadata publication surfaces.
 
 | Check | Status | Evidence |
 |---|---|---|
-| generated ZIP/PDEX installed in clean sketchbook | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
-| `reference/index.html` opens | PASS | full local documentation preview returned HTTP 200 for EN `/reference/index.html` and PT `/pt/reference/index.html` |
-| `src/` present; `src/test/` absent | PASS | generated package inspection: `src/` present; `src/test/` absent |
-| EmptyProject | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
-| Basic | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
-| SphereParticle | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
-| InfiniteBackground | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
-| FulldomePBR | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
-| SolarSystem | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
-| CalibrationTool | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
-| BenchmarkTool | PASS | Maintainer physical qualification attestation, 2026-08-23: macOS Apple Silicon arm64, macOS Intel x86_64, Windows x86_64 and Linux x86_64 |
-| no local reports/helper artifacts/`.DS_Store` | PASS | generated package inspection found no `.DS_Store`, `__MACOSX`, build reports, test-results or benchmark-results |
+| Processing package installation on qualified candidate | PASS | Maintainer physical qualification on target platforms |
+| final package structure | PASS | `verifyProcessingPackage` + package validator |
+| final `ziviDomeLive.jar` runtime payload | PASS | 128 JAR entries content-identical to the previously qualified package |
+| final bundled Devolay | PASS | `devolay-2.2.0-vic.2.jar` byte-identical to the previously qualified package |
+| `reference/index.html` generated | PASS | Javadocs attached and exported-site validator passed |
+| `src/` present; `src/test/` absent | PASS | generated package inspection |
+| EmptyProject | PASS | physical qualification carried forward |
+| Basic | PASS | physical qualification carried forward |
+| NamedActions | PASS | physical qualification carried forward |
+| PortLoopback | PASS | physical qualification carried forward |
+| SphereParticle | PASS | physical qualification carried forward |
+| InfiniteBackground | PASS | physical qualification carried forward |
+| FulldomePBR | PASS | physical qualification carried forward |
+| SolarSystem | PASS | physical qualification carried forward |
+| CalibrationTool | PASS | physical qualification carried forward |
+| BenchmarkTool | PASS | physical qualification carried forward |
+| development-only artifacts absent | PASS | package verifier + package validator |
 
 ## PUBLICATION METADATA
 
 | Check | Status | Evidence |
 |---|---|---|
 | `library.properties` validated | PASS | documentation/package validator: 0 errors; 0 warnings |
-| ZIP/TXT/PDEX stable siblings present | PASS | `buildReleaseArtifacts` + package/sibling validator |
-| software DOI externally verified | PASS | DOI `10.5281/zenodo.15671506` resolves to Zenodo; DataCite HTTP 200, state `findable`, publication year 2026, title `ziviDomeLive: Processing library for immersive fulldome visuals`, creator `Valentim, Victor` |
-| CFF / Zenodo / README / MkDocs consistent | PASS | documentation validator: 0 errors; 0 warnings |
-| Processing minimum revision confirmed | PASS | `minRevision=1285` is the declared Processing 4 baseline; enforced by `library.properties`, `release.properties`, `ReleaseMetadataTest`, documentation validator and generated release package |
-| tested-platform claims match evidence | PASS | `tested.platform` and `tested.processingVersion` remain intentionally blank; physical platform qualification is recorded in this ledger and no package-level claim is fabricated without a single canonical Processing-version record |
-| GitBook DOI absent/null | PASS | `maintainer/gitbook-publication-plan.md` records `documentation_doi: null` intentionally until real registration |
-| GitBook ISBN absent/null | PASS | `maintainer/gitbook-publication-plan.md` records `documentation_isbn: null` intentionally until real registration |
+| `CITATION.cff` validated | PASS | version, DOI and Apache-2.0 contract |
+| `codemeta.json` validated | PASS | Processing Contributed Library identity, version, DOI, license and scope checks |
+| `.zenodo.json` validated | PASS | version and Apache-2.0 contract |
+| README / MkDocs / metadata consistency | PASS | documentation validator: 0 errors; 0 warnings |
+| Processing minimum revision confirmed | PASS | `minRevision=1285` |
+| tested-platform scalar fields | PASS | remain intentionally blank; physical matrix is recorded in this ledger |
+| generic VR/XR metadata | PASS | absent from current product metadata contract |
+| GitBook DOI | PASS | absent/null until a real registration exists |
+| GitBook ISBN | PASS | absent/null until a real registration exists |
+
+### Pre-tag local artifact hashes
+
+These hashes identify the release artifacts generated locally from qualified source
+`88f3849b9188ff4e20a7d6be1649063d5501fb4e` after the CodeMeta publication contract was integrated. A later
+release-workflow rebuild may have different archive bytes if ZIP timestamps differ; the
+release workflow must still pass the same package/content contracts.
+
+- `ziviDomeLive.zip`: `55fc3ade4bdcefbcc04408d82a52fd1b8ebe788c4915e14668fd8b8abd3241ba`
+- `ziviDomeLive.pdex`: `55fc3ade4bdcefbcc04408d82a52fd1b8ebe788c4915e14668fd8b8abd3241ba`
+- `ziviDomeLive.txt`: `f112898b3ef90ea7b5d38f56849e53c6432cf7a0ccc6247f737dfdd2167d8d74`
+- ZIP/PDEX byte identity: PASS
+- `codemeta.json` present in ZIP/PDEX: PASS
 
 ## DOCUMENTATION FREEZE
 
 | Check | Status | Evidence |
 |---|---|---|
-| raster diagram placeholders removed; Mermaid diagrams and hero asset reviewed | PASS | maintainer visual review of generated EN/PT site; heroes and Mermaid diagrams rendered correctly with no provisional/broken visual assets; `mkdocs build --strict` PASS |
-| EN/PT facts synchronized | PASS | documentation validator: 0 errors/0 warnings; critical EN/PT fact-parity review passed for About, License, 2.0 release notes and OpenGL backend |
-| Javadocs match public signatures | PASS | `PublicApiCompatibilityTest` protects the frozen 2.0 public baseline; 354/354 qualification PASS; Javadocs generated successfully |
-| no roadmap feature presented as current | PASS | documentation validator 0 errors/0 warnings plus release-scope review; future features remain confined to roadmap/history |
-| no generic VR/headset runtime claim | PASS | documentation validator 0 errors/0 warnings; current references are explicit exclusions or historical context, not product claims |
-| no documentation-only renderer/API change | PASS | `git diff --name-status 16796f2^ 16796f2 -- src/main/java` returned empty; licensing/provenance migration made no renderer/API source change |
-| CHANGELOG synchronized | PASS | final licensing/provenance diff reviewed; 2.0 changelog records Apache-2.0 migration and corrected third-party provenance |
+| EN/PT documentation build | PASS | `python3 -m mkdocs build --strict` |
+| exported documentation routes | PASS | 15,410 local references resolved; 0 errors; 0 warnings |
+| Javadocs match current public signatures | PASS | generated successfully; qualification suite 387/387 PASS |
+| no roadmap feature presented as current | PASS | documentation validator 0 errors/0 warnings |
+| no generic VR/headset-runtime product claim | PASS | current metadata and documentation contract |
+| Processing Contributed Library identity | PASS | README + CodeMeta + Processing package metadata |
+| no runtime change during final documentation/metadata integration | PASS | runtime-sensitive tree diff from `5069e00b567bd7ee5f9725f1f2f7a7fdae983348` is empty |
+| CHANGELOG/release documentation synchronized | PASS | current documentation validator passed |
+
+## Runtime qualification carry-forward
+
+Physical qualification was not repeated merely for documentation/metadata packaging changes.
+The carry-forward is bounded by the following evidence:
+
+1. qualified runtime candidate: `5069e00b567bd7ee5f9725f1f2f7a7fdae983348`;
+2. final publication-contract source: `88f3849b9188ff4e20a7d6be1649063d5501fb4e`;
+3. no changes between those revisions in `src/main/java`, shaders, native/data payloads or
+   executable `.pde`/`.java` example code;
+4. `ziviDomeLive.jar`: 128 entries with content identical to the previously qualified package;
+5. `devolay-2.2.0-vic.2.jar`: byte-identical to the previously qualified package;
+6. all 387 automated qualification tests pass at the final publication-contract source;
+7. documentation, exported-site and Processing-package validators pass with 0 errors and
+   0 warnings.
+
+This carry-forward applies only to the bounded documentation/metadata/build-test delta above.
+Any later runtime-sensitive change invalidates it and requires renewed qualification.
 
 ## Tag authorization
 
 Final maintainer decision: **PASS — PRE-TAG EVIDENCE COMPLETE**
 
-Tag `v2.0.0` only after the committed ledger state itself passes the final automated gate successfully without changing HEAD.
+Tag `v2.0.0` only on the evidence-only commit that immediately follows qualified source
+`88f3849b9188ff4e20a7d6be1649063d5501fb4e`, after that committed ledger state passes the final
+`--release-evidence` gate successfully.
 
 ## Devolay 2.2.0-vic.2 physical qualification
 
