@@ -14,9 +14,6 @@ void settings() {
 void setup() {
   ziviDome = new ziviDomeLive(this);
   ziviDome.setup();
-  ziviDome.setPitch(PI);
-  ziviDome.setYaw(PI);
-  ziviDome.setRoll(0f);
   ziviDome.setScene(new PortLoopbackScene());
 }
 
@@ -38,12 +35,18 @@ class PortLoopbackScene implements Scene {
   }
 
   public void setupScene() {
-    camera.snapToAxisAngle(0f, 0f, 0f, 1f, 0f, 0f, -0.28f, 1150f);
-    camera.setInputEnabled(false);
+    camera.setDistanceLimits(-2500f, -320f);
+    camera.setCollapseGuard(260f);
+    camera.setDragSensitivity(0.01f);
+    camera.setLerpFactor(0.18f);
+    camera.orbit().setWheelSteps(-80f, -0.001f);
+    resetCamera();
+    camera.setInputEnabled(true);
     input = new ManualIntegerInput();
     services.ports().connectInput(input, this::applyLevel);
     output = services.ports().connectOutput(new ConsoleOutput(services.applet()));
-    services.applet().println("[PortLoopback] use + and - to enqueue input messages.");
+    services.applet().println(
+      "[PortLoopback] use + and - for messages; drag/zoom to navigate; R resets camera.");
   }
 
   public void update() {
@@ -69,7 +72,9 @@ class PortLoopbackScene implements Scene {
     if (event.getAction() != KeyEvent.PRESS || input == null) {
       return;
     }
-    if (event.getKey() == '+' || event.getKey() == '=') {
+    if (event.getKey() == 'r' || event.getKey() == 'R') {
+      resetCamera();
+    } else if (event.getKey() == '+' || event.getKey() == '=') {
       input.publish(level + 1);
     } else if (event.getKey() == '-') {
       input.publish(level - 1);
@@ -91,6 +96,10 @@ class PortLoopbackScene implements Scene {
   private void applyLevel(Integer requestedLevel) {
     level = constrain(requestedLevel, 1, 8);
     output.offer("level=" + level);
+  }
+
+  private void resetCamera() {
+    camera.snapToAxisAngle(0f, 0f, 0f, 1f, 0f, 0f, -0.28f, -1150f);
   }
 
   private void drawSignalRing(PGraphicsOpenGL pg) {

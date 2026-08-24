@@ -31,13 +31,18 @@ Use as setas Esquerda/Direita para alternar entre os pilares rotativos e a grade
 Demonstra actions de key-code e mouse pertencentes à ativação, registro nomeado e trigger
 programático. As actions movem uma esfera iluminada numa composição 3D. A chamada explícita
 `applyWithViewLighting(...)` prende um rig de luz ambiente/spot à câmera da cena e o aponta para o
-target corrente.
+target corrente. A distância orbital inicial negativa posiciona a composição no hemisfério frontal
+do Domemaster sem alterar a calibração global de Pitch/Yaw/Roll. Arraste para orbitar, use a roda
+do mouse ou trackpad para zoom e pressione `R` para restaurar a câmera centralizada; o clique move
+a esfera sem disputar o gesto de arrasto da navegação.
 
 ## PortLoopback
 
 Demonstra o SPI bounded de adapters `ScenePorts` sem adicionar dependência de transporte.
 Mensagens inteiras controlam um anel 3D de sinais, e um adapter de output não bloqueante relata o
-nível aplicado.
+nível aplicado. Sua câmera adota a mesma convenção de distância negativa centralizada no
+Domemaster: arraste para orbitar, use a roda do mouse ou trackpad para zoom e pressione `R` para
+restaurar a vista inicial.
 
 Todos os exemplos de aprendizagem preservam `sceneRender(PGraphicsOpenGL)` e nunca chamam `ziviDome.draw()` manualmente.
 

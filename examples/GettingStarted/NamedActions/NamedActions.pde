@@ -13,9 +13,6 @@ void settings() {
 void setup() {
   ziviDome = new ziviDomeLive(this);
   ziviDome.setup();
-  ziviDome.setPitch(PI);
-  ziviDome.setYaw(PI);
-  ziviDome.setRoll(0f);
   ziviDome.setScene(new NamedActionsScene());
 }
 
@@ -46,8 +43,13 @@ class NamedActionsScene implements Scene {
   }
 
   public void setupScene() {
-    camera.snapToAxisAngle(0f, 0f, 0f, 1f, 0f, 0f, -0.32f, 1100f);
-    camera.setInputEnabled(false);
+    camera.setDistanceLimits(-2400f, -280f);
+    camera.setCollapseGuard(240f);
+    camera.setDragSensitivity(0.01f);
+    camera.setLerpFactor(0.18f);
+    camera.orbit().setWheelSteps(-80f, -0.001f);
+    resetCamera();
+    camera.setInputEnabled(true);
     actions.bindKeyPressed("color.next", 'c', this::nextColor);
     actions.bindKeyCodePressed(
       "target.left", java.awt.event.KeyEvent.VK_J, () -> moveBy(-40f, 0f));
@@ -57,10 +59,10 @@ class NamedActionsScene implements Scene {
       "target.forward", java.awt.event.KeyEvent.VK_I, () -> moveBy(0f, -40f));
     actions.bindKeyCodePressed(
       "target.back", java.awt.event.KeyEvent.VK_K, () -> moveBy(0f, 40f));
-    actions.bindMouse("target.press", MouseEvent.PRESS, this::moveToPointer);
-    actions.bindMouse("target.drag", MouseEvent.DRAG, this::moveToPointer);
+    actions.bindMouse("target.click", MouseEvent.CLICK, this::moveToPointer);
     actions.register("target.center", this::centerTarget);
     actions.bindKeyPressed("target.center.key", '0', () -> actions.trigger("target.center"));
+    actions.bindKeyPressed("camera.reset", 'r', this::resetCamera);
   }
 
   public void update() {
@@ -115,6 +117,10 @@ class NamedActionsScene implements Scene {
     targetX = 0f;
     targetZ = 0f;
     actionCount++;
+  }
+
+  private void resetCamera() {
+    camera.snapToAxisAngle(0f, 0f, 0f, 1f, 0f, 0f, -0.32f, -1100f);
   }
 
   private void drawGround(PGraphicsOpenGL pg) {

@@ -31,12 +31,17 @@ Use Left/Right arrows to switch between the rotating pillars and the static six-
 Demonstrates activation-owned key-code and mouse actions, named registration and programmatic
 triggering. The actions move a lit sphere through a 3D composition. Its explicit
 `applyWithViewLighting(...)` call attaches an ambient/spotlight rig to the scene camera and aims it
-at the current target.
+at the current target. The initial negative orbit distance places the composition in the
+Domemaster front hemisphere without changing global Pitch/Yaw/Roll calibration. Drag to orbit,
+use the mouse wheel or trackpad to zoom, and press `R` to restore the centered camera; clicking
+moves the sphere without competing with drag navigation.
 
 ## PortLoopback
 
 Demonstrates the bounded `ScenePorts` adapter SPI without adding a transport dependency. Integer
-messages drive a 3D signal ring and a non-blocking output adapter reports the applied level.
+messages drive a 3D signal ring and a non-blocking output adapter reports the applied level. Its
+camera uses the same Domemaster-centered negative-distance convention: drag to orbit, use the
+mouse wheel or trackpad to zoom, and press `R` to restore the initial view.
 
 All learning examples preserve `sceneRender(PGraphicsOpenGL)` and never call `ziviDome.draw()` manually.
 
