@@ -7,8 +7,8 @@ package com.victorvalentim.zividomelive;
  * <p>Dedicated render modes temporarily override configured view selections without
  * mutating them.</p>
  *
- * <p>The declaration order is part of the 2.x contract because the built-in Processing UI maps
- * view choices by ordinal.</p>
+ * <p>The built-in Processing UI uses an explicit value mapping; callers must use enum values
+ * rather than persisting or exchanging their declaration ordinals.</p>
  *
  * <p><strong>API stability:</strong> Stable.</p>
  *
@@ -21,6 +21,6 @@ public enum ViewType {
 	DOMEMASTER,
 	/** Equirectangular spherical projection. */
 	EQUIRECTANGULAR,
-	/** Cubemap skybox view. */
+	/** Equi-angular cubemap (EAC) cross view for face/orientation inspection. */
 	SKYBOX
 }

@@ -64,7 +64,7 @@ class ControlManager {
         resetControls();
         applyRenderModeVisibility();
 
-        parentControlListener = parent::controlEvent;
+        parentControlListener = this::handleEvent;
         cp5.addListener(parentControlListener);
     }
 

@@ -79,10 +79,10 @@ class ControlManagerScopeTest {
 				assertEquals(ControlPanelLayout.yFor(controlName), getPosition(controller)[1], controlName);
 			}
 
-			assertEquals(ViewType.SKYBOX.ordinal(),
+			assertEquals(ControlPanelLayout.indexForView(ViewType.SKYBOX),
 					getValue(getController(cp5, "View Mode")));
 			assertEquals(2, getValue(getController(cp5, "Output Resolution")));
-			assertEquals(ViewType.EQUIRECTANGULAR.ordinal(),
+			assertEquals(ControlPanelLayout.indexForView(ViewType.EQUIRECTANGULAR),
 					getValue(getController(cp5, "NDI View")));
 			assertLocalOutputControls(cp5);
 		} finally {
@@ -185,7 +185,7 @@ class ControlManagerScopeTest {
 			assertNotNull(dropdown);
 			assertEquals(ControlPanelLayout.yFor("spoutToggle"), getPosition(toggle)[1]);
 			assertEquals(ControlPanelLayout.yFor("Spout View"), getPosition(dropdown)[1]);
-			assertEquals(ViewType.STANDARD.ordinal(), getValue(dropdown));
+			assertEquals(ControlPanelLayout.indexForView(ViewType.STANDARD), getValue(dropdown));
 			assertNull(getController(cp5, "syphonToggle"));
 			assertNull(getController(cp5, "Syphon View"));
 		} else if (localOutput == ControlPanelLayout.LocalOutput.SYPHON) {
@@ -195,7 +195,7 @@ class ControlManagerScopeTest {
 			assertNotNull(dropdown);
 			assertEquals(ControlPanelLayout.yFor("syphonToggle"), getPosition(toggle)[1]);
 			assertEquals(ControlPanelLayout.yFor("Syphon View"), getPosition(dropdown)[1]);
-			assertEquals(ViewType.SKYBOX.ordinal(), getValue(dropdown));
+			assertEquals(ControlPanelLayout.indexForView(ViewType.SKYBOX), getValue(dropdown));
 			assertNull(getController(cp5, "spoutToggle"));
 			assertNull(getController(cp5, "Spout View"));
 		} else {

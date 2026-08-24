@@ -7,7 +7,6 @@ import com.victorvalentim.zividomelive.performance.*;
 import processing.core.*;
 import processing.event.*;
 import processing.opengl.*;
-import controlP5.*;
 import java.util.LinkedHashSet;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -317,7 +316,7 @@ public class ziviDomeLive {
 		try {
 			outputManager = new OutputManagerImpl(this);
 			LOGGER.info("OutputManager initialized without active outputs.");
-		} catch (Exception e) {
+		} catch (Exception | LinkageError e) {
 			LOGGER.severe("Error initializing OutputManager: " + e.getMessage());
 		}
 
@@ -452,12 +451,22 @@ public class ziviDomeLive {
 				}
 			}
 
-			controlManager = new ControlManager(
-					p,
-					this,
-					outputResolution
-			);
-			LOGGER.info("ControlManager initialized.");
+			try {
+				controlManager = new ControlManager(
+						p,
+						this,
+						outputResolution
+				);
+				LOGGER.info("ControlManager initialized.");
+			} catch (Exception | LinkageError controlError) {
+				controlManager = null;
+				LOGGER.warning(
+						"ControlP5 panel is unavailable; rendering will continue without UI: "
+								+ controlError.getClass().getSimpleName()
+								+ ": "
+								+ controlError.getMessage()
+				);
+			}
 
 			initState = InitState.MANAGERS_READY;
 			LOGGER.info("Managers initialized successfully.");
@@ -1247,6 +1256,9 @@ public class ziviDomeLive {
 	 * Draws the control panel if it is set to be shown.
 	 */
 	void drawControlPanel() {
+		if (controlManager == null) {
+			return;
+		}
 		controlManager.syncPanelVisibility(showControlPanel);
 		if (!showControlPanel) {
 			return;
@@ -1593,7 +1605,7 @@ public class ziviDomeLive {
 						break;
 
 					case 'm':
-						setCurrentView(ViewType.values()[(getCurrentView().ordinal() + 1) % ViewType.values().length]);
+						setCurrentView(ControlPanelLayout.nextView(getCurrentView()));
 						LOGGER.info("Switching view to: " + getCurrentView());
 						break;
 				}
@@ -1692,24 +1704,6 @@ public class ziviDomeLive {
 		if (services != null && !services.isClosed()) {
 			services.actions().dispatch(event);
 		}
-	}
-
-	/**
-	 * Processing Callback used by the built-in ControlP5 interface.
-	 *
-	 * <p>This method is public for callback integration only. It is not a scene input command and
-	 * sketches must not call it directly.</p>
-	 *
-	 * @param theEvent the ControlEvent object containing details of the control event
-	 */
-	public void controlEvent(ControlEvent theEvent) {
-		if (disposed || paused) {
-			return;
-		}
-		if (controlManager != null) {
-			controlManager.handleEvent(theEvent);
-		}
-
 	}
 
 	/**

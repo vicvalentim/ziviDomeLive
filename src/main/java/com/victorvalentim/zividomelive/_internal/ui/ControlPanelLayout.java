@@ -49,11 +49,11 @@ final class ControlPanelLayout {
             new SphericalControlSpec("size", 0.0, 100.0, 100.0f)
     );
 
-    private static final List<String> VIEW_LABELS = List.of(
-            "Standard",
-            "Domemaster",
-            "Equirectangular",
-            "Skybox"
+    private static final List<ViewOption> VIEW_OPTIONS = List.of(
+            new ViewOption(ViewType.STANDARD, "Standard"),
+            new ViewOption(ViewType.DOMEMASTER, "Domemaster"),
+            new ViewOption(ViewType.EQUIRECTANGULAR, "Equirectangular"),
+            new ViewOption(ViewType.SKYBOX, "Skybox")
     );
 
     private static final List<Integer> OUTPUT_RESOLUTIONS = List.of(1024, 2048, 3072, 4096);
@@ -120,15 +120,26 @@ final class ControlPanelLayout {
     }
 
     static List<String> viewLabels() {
-        return VIEW_LABELS;
+        return VIEW_OPTIONS.stream().map(ViewOption::label).toList();
     }
 
     static ViewType viewForIndex(int index) {
-        return ViewType.values()[index];
+        return VIEW_OPTIONS.get(index).view();
     }
 
     static int indexForView(ViewType view) {
-        return view == null ? ViewType.DOMEMASTER.ordinal() : view.ordinal();
+        ViewType effective = view == null ? ViewType.DOMEMASTER : view;
+        for (int index = 0; index < VIEW_OPTIONS.size(); index++) {
+            if (VIEW_OPTIONS.get(index).view() == effective) {
+                return index;
+            }
+        }
+        throw new IllegalArgumentException("Unsupported view: " + effective);
+    }
+
+    static ViewType nextView(ViewType current) {
+        int nextIndex = (indexForView(current) + 1) % VIEW_OPTIONS.size();
+        return viewForIndex(nextIndex);
     }
 
     static List<Integer> outputResolutions() {
@@ -165,6 +176,9 @@ final class ControlPanelLayout {
     }
 
     record SphericalControlSpec(String name, double minimum, double maximum, float defaultValue) {
+    }
+
+    private record ViewOption(ViewType view, String label) {
     }
 
     record ControlVisibility(

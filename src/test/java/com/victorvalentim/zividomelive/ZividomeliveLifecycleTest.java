@@ -39,6 +39,13 @@ class ZividomeliveLifecycleTest {
 	}
 
 	@Test
+	void drawingControlsIsSafeWhenOptionalControlP5IsUnavailable() {
+		ziviDomeLive lib = new ziviDomeLive(new PApplet());
+
+		assertDoesNotThrow(lib::drawControlPanel);
+	}
+
+	@Test
 	void initializeManagersBeforeSetupKeepsStateUnchanged() {
 		ziviDomeLive lib = new ziviDomeLive(new PApplet());
 		lib.initializeManagers();

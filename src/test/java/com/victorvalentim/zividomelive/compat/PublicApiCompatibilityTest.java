@@ -143,11 +143,11 @@ class PublicApiCompatibilityTest {
 	}
 
 	@Test
-	void publicEnumNamesAndOrderAreDeliberate() {
-		assertArrayEquals(new ViewType[]{
+	void publicEnumNamesAndRequiredOrdersAreDeliberate() {
+		assertEquals(Set.of(
 				ViewType.STANDARD, ViewType.DOMEMASTER,
 				ViewType.EQUIRECTANGULAR, ViewType.SKYBOX
-		}, ViewType.values());
+		), Set.of(ViewType.values()));
 		assertArrayEquals(new RenderMode[]{
 				RenderMode.FULL, RenderMode.STANDARD, RenderMode.DOMEMASTER,
 				RenderMode.EQUIRECTANGULAR, RenderMode.SKYBOX
@@ -314,7 +314,6 @@ class PublicApiCompatibilityTest {
 	void final20MethodSnapshotIsExact() {
 		assertDeclaredApi(ziviDomeLive.class,
 				"clearEnvironmentBackground():void",
-				"controlEvent(ControlEvent):void",
 				"disablePerformanceProfiling():void",
 				"dispose():void",
 				"draw():void",
@@ -513,6 +512,20 @@ class PublicApiCompatibilityTest {
 				"selectBackend(GpuTimerArchitecture,int,int):GpuTimerBackend");
 		assertDeclaredApi(GpuTimerArchitecture.class,
 				"detect(String,String,String,String):GpuTimerArchitecture");
+	}
+
+	@Test
+	void facadePublicApiDoesNotExposeOptionalProcessingLibraries() {
+		Set<String> forbiddenPackages = Set.of("controlP5", "codeanticode.syphon", "spout");
+		for (Method method : ziviDomeLive.class.getDeclaredMethods()) {
+			if (!Modifier.isPublic(method.getModifiers())) {
+				continue;
+			}
+			assertFalse(forbiddenPackages.contains(method.getReturnType().getPackageName()), method::toString);
+			for (Class<?> parameterType : method.getParameterTypes()) {
+				assertFalse(forbiddenPackages.contains(parameterType.getPackageName()), method::toString);
+			}
+		}
 	}
 
 	@Test

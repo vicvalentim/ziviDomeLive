@@ -146,15 +146,21 @@ class ControlPanelLayoutTest {
 	}
 
 	@Test
-	void viewLabelsMatchFinalViewTypeOrder() {
+	void viewLabelsAndIdsUseAnExplicitStableMapping() {
 		assertEquals(
 				List.of("Standard", "Domemaster", "Equirectangular", "Skybox"),
 				ControlPanelLayout.viewLabels());
-		for (int index = 0; index < ViewType.values().length; index++) {
-			assertEquals(ViewType.values()[index], ControlPanelLayout.viewForIndex(index));
-			assertEquals(index, ControlPanelLayout.indexForView(ViewType.values()[index]));
-		}
-		assertEquals(ViewType.DOMEMASTER.ordinal(), ControlPanelLayout.indexForView(null));
+		assertEquals(ViewType.STANDARD, ControlPanelLayout.viewForIndex(0));
+		assertEquals(ViewType.DOMEMASTER, ControlPanelLayout.viewForIndex(1));
+		assertEquals(ViewType.EQUIRECTANGULAR, ControlPanelLayout.viewForIndex(2));
+		assertEquals(ViewType.SKYBOX, ControlPanelLayout.viewForIndex(3));
+		assertEquals(0, ControlPanelLayout.indexForView(ViewType.STANDARD));
+		assertEquals(1, ControlPanelLayout.indexForView(ViewType.DOMEMASTER));
+		assertEquals(2, ControlPanelLayout.indexForView(ViewType.EQUIRECTANGULAR));
+		assertEquals(3, ControlPanelLayout.indexForView(ViewType.SKYBOX));
+		assertEquals(1, ControlPanelLayout.indexForView(null));
+		assertEquals(ViewType.DOMEMASTER, ControlPanelLayout.nextView(ViewType.STANDARD));
+		assertEquals(ViewType.STANDARD, ControlPanelLayout.nextView(ViewType.SKYBOX));
 	}
 
 	@Test

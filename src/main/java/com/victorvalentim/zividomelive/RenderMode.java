@@ -20,6 +20,6 @@ public enum RenderMode {
 	DOMEMASTER,
 	/** Render the equirectangular representation. */
 	EQUIRECTANGULAR,
-	/** Render the cubemap skybox representation. */
+	/** Render the equi-angular cubemap (EAC) cross representation. */
 	SKYBOX
 }
