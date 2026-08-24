@@ -1,5 +1,6 @@
 package com.victorvalentim.zividomelive;
 
+import com.victorvalentim.zividomelive.render.Quaternion;
 import processing.core.PImage;
 
 import java.util.Objects;
@@ -25,10 +26,13 @@ public final class SceneEnvironmentService {
     private float appliedIntensity;
     private float previousYawOffset;
     private float appliedYawOffset;
+    private Quaternion previousSourceOrientation;
+    private Quaternion appliedSourceOrientation;
     private boolean sourceTouched;
     private boolean visibleTouched;
     private boolean intensityTouched;
     private boolean yawOffsetTouched;
+    private boolean sourceOrientationTouched;
     private boolean closed;
 
     SceneEnvironmentService(ziviDomeLive parent) {
@@ -119,6 +123,43 @@ public final class SceneEnvironmentService {
         return parent.getEnvironmentBackgroundYawOffset();
     }
 
+    /**
+     * Sets a fixed axis-angle rotation applied directly to the equirectangular source lookup.
+     * This aligns the background image without changing dome pitch/yaw/roll or scene geometry.
+     *
+     * @param axisX rotation-axis X component
+     * @param axisY rotation-axis Y component
+     * @param axisZ rotation-axis Z component
+     * @param angle rotation angle in radians
+     * @throws IllegalArgumentException when a component is non-finite or a non-zero rotation has
+     *                                  a zero-length axis
+     */
+    public void setOrientationAxisAngle(
+            float axisX,
+            float axisY,
+            float axisZ,
+            float angle) {
+        ensureOpen();
+        if (!sourceOrientationTouched) {
+            previousSourceOrientation = parent.getEnvironmentBackgroundSourceOrientation();
+            sourceOrientationTouched = true;
+        }
+        Quaternion orientation = Quaternion.fromAxisAngle(axisX, axisY, axisZ, angle);
+        parent.setEnvironmentBackgroundSourceOrientation(orientation);
+        appliedSourceOrientation = parent.getEnvironmentBackgroundSourceOrientation();
+    }
+
+    /** Resets the source-image alignment to identity for this activation. */
+    public void resetOrientation() {
+        ensureOpen();
+        if (!sourceOrientationTouched) {
+            previousSourceOrientation = parent.getEnvironmentBackgroundSourceOrientation();
+            sourceOrientationTouched = true;
+        }
+        parent.setEnvironmentBackgroundSourceOrientation(null);
+        appliedSourceOrientation = parent.getEnvironmentBackgroundSourceOrientation();
+    }
+
     void close() {
         if (closed) {
             return;
@@ -137,11 +178,23 @@ public final class SceneEnvironmentService {
                 parent.getEnvironmentBackgroundYawOffset(), appliedYawOffset)) {
             parent.setEnvironmentBackgroundYawOffset(previousYawOffset);
         }
+        if (sourceOrientationTouched && sameQuaternion(
+                parent.getEnvironmentBackgroundSourceOrientation(), appliedSourceOrientation)) {
+            parent.setEnvironmentBackgroundSourceOrientation(previousSourceOrientation);
+        }
         closed = true;
     }
 
     private static boolean sameFloat(float left, float right) {
         return Float.floatToIntBits(left) == Float.floatToIntBits(right);
+    }
+
+    private static boolean sameQuaternion(Quaternion left, Quaternion right) {
+        return left == right || left != null && right != null
+                && sameFloat(left.x(), right.x())
+                && sameFloat(left.y(), right.y())
+                && sameFloat(left.z(), right.z())
+                && sameFloat(left.w(), right.w());
     }
 
     private void ensureOpen() {

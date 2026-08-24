@@ -21,6 +21,7 @@ final class EnvironmentState {
 	private boolean visible = true;
 	private float intensity = 1.0f;
 	private float yawOffset;
+	private Quaternion sourceOrientation = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
 	private Quaternion sceneCameraOrientation = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
 
 	/**
@@ -104,6 +105,29 @@ final class EnvironmentState {
 	 */
 	public float getYawOffset() {
 		return yawOffset;
+	}
+
+	/**
+	 * Sets the fixed rotational alignment applied directly to source-image lookup directions.
+	 * @param orientation source orientation, or {@code null} for identity
+	 */
+	public void setSourceOrientation(Quaternion orientation) {
+		if (orientation == null) {
+			sourceOrientation = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+			return;
+		}
+		if (orientation == sourceOrientation) {
+			return;
+		}
+		sourceOrientation = orientation.normalized();
+	}
+
+	/**
+	 * Returns the fixed source-image orientation used by Environment lookup.
+	 * @return current unit orientation
+	 */
+	public Quaternion getSourceOrientation() {
+		return sourceOrientation;
 	}
 
 	/**

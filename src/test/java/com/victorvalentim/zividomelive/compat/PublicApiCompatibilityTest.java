@@ -422,12 +422,18 @@ class PublicApiCompatibilityTest {
 				"bindMouse(String,int,Consumer):void", "clear():void", "register(String,Runnable):void",
 				"size():int", "trigger(String):boolean", "unregister(String):void");
 		assertDeclaredApi(SceneCameraService.class,
-				"apply(PGraphicsOpenGL):void", "clearTargetTracking():void",
+				"apply(PGraphicsOpenGL):void", "applyWithViewLighting(PGraphicsOpenGL):void",
+				"clearTargetTracking():void",
 				"isTrackingTarget():boolean", "orbit():OrbitCamera", "setInputEnabled(boolean):void",
+				"setCollapseGuard(float):void", "setDistanceLimits(float,float):void",
+				"setDragSensitivity(float):void", "setLerpFactor(float):void",
+				"snapToAxisAngle(float,float,float,float,float,float,float,float):void",
 				"trackTarget(Supplier):void");
 		assertDeclaredApi(SceneEnvironmentService.class,
 				"clear():void", "getIntensity():float", "getYawOffset():float", "isVisible():boolean",
+				"resetOrientation():void",
 				"setEquirectangular(PImage):void", "setIntensity(float):void",
+				"setOrientationAxisAngle(float,float,float,float):void",
 				"setVisible(boolean):void", "setYawOffset(float):void");
 		assertDeclaredApi(ScenePorts.class,
 				"connectInput(SceneInputPort,Consumer):void",

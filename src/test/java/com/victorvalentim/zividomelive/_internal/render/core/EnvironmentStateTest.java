@@ -23,6 +23,7 @@ class EnvironmentStateTest {
 		assertTrue(state.isVisible());
 		assertEquals(1.0f, state.getIntensity(), 1.0e-6f);
 		assertEquals(0.0f, state.getYawOffset(), 1.0e-6f);
+		assertIdentity(state.getSourceOrientation());
 	}
 
 	@Test
@@ -96,5 +97,27 @@ class EnvironmentStateTest {
 		assertEquals(0f, stored.y(), EPSILON);
 		assertEquals(0f, stored.z(), EPSILON);
 		assertEquals(1f, stored.w(), EPSILON);
+	}
+
+	@Test
+	void sourceOrientationIsIndependentAndNullRestoresIdentity() {
+		EnvironmentState state = new EnvironmentState();
+		Quaternion source = Quaternion.fromAxisAngle(1f, 0f, 0f, (float) Math.PI * 0.5f);
+
+		state.setSourceOrientation(source);
+
+		assertEquals(source.x(), state.getSourceOrientation().x(), EPSILON);
+		assertEquals(source.w(), state.getSourceOrientation().w(), EPSILON);
+		assertIdentity(state.getSceneCameraOrientation());
+
+		state.setSourceOrientation(null);
+		assertIdentity(state.getSourceOrientation());
+	}
+
+	private static void assertIdentity(Quaternion orientation) {
+		assertEquals(0f, orientation.x(), EPSILON);
+		assertEquals(0f, orientation.y(), EPSILON);
+		assertEquals(0f, orientation.z(), EPSILON);
+		assertEquals(1f, orientation.w(), EPSILON);
 	}
 }

@@ -2169,6 +2169,14 @@ public class ziviDomeLive {
 		return environmentState.getYawOffset();
 	}
 
+	void setEnvironmentBackgroundSourceOrientation(Quaternion orientation) {
+		environmentState.setSourceOrientation(orientation);
+	}
+
+	Quaternion getEnvironmentBackgroundSourceOrientation() {
+		return environmentState.getSourceOrientation();
+	}
+
 	/**
 	 * Enables or disables built-in mouse handling for the scene camera.
 	 * When enabled, the library forwards mouse drag/wheel events to

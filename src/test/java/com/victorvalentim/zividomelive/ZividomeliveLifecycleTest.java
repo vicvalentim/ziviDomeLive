@@ -1,6 +1,7 @@
 package com.victorvalentim.zividomelive;
 
 import com.victorvalentim.zividomelive.manager.OutputManager;
+import com.victorvalentim.zividomelive.render.Quaternion;
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
 import processing.core.PImage;
@@ -15,6 +16,16 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ZividomeliveLifecycleTest {
+	private static final float QUATERNION_EPSILON = 1.0e-5f;
+
+	private static void assertQuaternionEquivalent(Quaternion expected, Quaternion actual) {
+		float dot = Math.abs(
+				expected.x() * actual.x()
+						+ expected.y() * actual.y()
+						+ expected.z() * actual.z()
+						+ expected.w() * actual.w());
+		assertEquals(1.0f, dot, QUATERNION_EPSILON);
+	}
 
 	@Test
 	void constructorRejectsNullApplet() {
@@ -456,6 +467,8 @@ class ZividomeliveLifecycleTest {
 		lib.setEnvironmentBackgroundVisible(false);
 		lib.setEnvironmentBackgroundIntensity(0.75f);
 		lib.setEnvironmentBackgroundYawOffset(0.25f);
+		Quaternion facadeOrientation = Quaternion.fromAxisAngle(0f, 1f, 0f, 0.2f);
+		lib.setEnvironmentBackgroundSourceOrientation(facadeOrientation);
 		ServiceAwareScene scene = new ServiceAwareScene();
 		ServiceAwareScene next = new ServiceAwareScene();
 		lib.setScene(scene);
@@ -465,12 +478,15 @@ class ZividomeliveLifecycleTest {
 		scene.services.environment().setVisible(true);
 		scene.services.environment().setIntensity(1.5f);
 		scene.services.environment().setYawOffset(0.5f);
+		scene.services.environment().setOrientationAxisAngle(1f, 0f, 0f, 0.75f);
 		lib.getSceneManager().nextScene();
 
 		assertSame(facadeSource, lib.getEnvironmentBackgroundSource());
 		assertFalse(lib.isEnvironmentBackgroundVisible());
 		assertEquals(0.75f, lib.getEnvironmentBackgroundIntensity(), 1e-6f);
 		assertEquals(0.25f, lib.getEnvironmentBackgroundYawOffset(), 1e-6f);
+		assertQuaternionEquivalent(
+				facadeOrientation, lib.getEnvironmentBackgroundSourceOrientation());
 		lib.dispose();
 	}
 
