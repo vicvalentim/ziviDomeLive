@@ -1,0 +1,90 @@
+{
+  "@context": "https://w3id.org/codemeta/3.1",
+  "@type": "SoftwareSourceCode",
+  "name": "ziviDomeLive",
+  "description": "Open-source Processing 4 Contributed Library for real-time fulldome, spherical and immersive audiovisual rendering, creative coding, artistic research, research-creation, education and live performance.",
+  "identifier": "https://doi.org/10.5281/zenodo.15671506",
+  "version": "2.0.0",
+  "codeRepository": "https://github.com/vicvalentim/ziviDomeLive",
+  "issueTracker": "https://github.com/vicvalentim/ziviDomeLive/issues",
+  "url": "https://vicvalentim.github.io/ziviDomeLive/",
+  "readme": "https://github.com/vicvalentim/ziviDomeLive/blob/release/2.0.0/README.md",
+  "buildInstructions": "https://vicvalentim.github.io/ziviDomeLive/installation/installation-steps/",
+  "releaseNotes": "https://github.com/vicvalentim/ziviDomeLive/blob/release/2.0.0/docs/en/release-notes/2.0.0.md",
+  "license": "https://spdx.org/licenses/Apache-2.0",
+  "developmentStatus": "active",
+  "dateCreated": "2024-10-23",
+  "applicationCategory": "Processing Contributed Library",
+  "applicationSubCategory": "Creative coding, artistic research and immersive audiovisual media",
+  "programmingLanguage": "Java",
+  "runtimePlatform": "Processing 4 / Java 17",
+  "operatingSystem": [
+    "macOS",
+    "Windows",
+    "Linux"
+  ],
+  "keywords": [
+    "Processing Contributed Library",
+    "Processing library",
+    "Processing",
+    "creative coding",
+    "computational art",
+    "artistic research",
+    "research-creation",
+    "immersive media",
+    "fulldome",
+    "spherical rendering",
+    "real-time rendering",
+    "audiovisual",
+    "planetarium",
+    "Java",
+    "OpenGL",
+    "education",
+    "NDI",
+    "Syphon",
+    "Spout",
+    "open source"
+  ],
+  "author": [
+    {
+      "@type": "Person",
+      "@id": "https://orcid.org/0000-0002-0282-7947",
+      "givenName": "Victor",
+      "familyName": "Valentim",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Federal University of Reconcavo da Bahia — CECULT"
+      }
+    }
+  ],
+  "maintainer": {
+    "@type": "Person",
+    "@id": "https://orcid.org/0000-0002-0282-7947",
+    "givenName": "Victor",
+    "familyName": "Valentim"
+  },
+  "softwareRequirements": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "Processing",
+      "softwareVersion": "4",
+      "url": "https://processing.org/"
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "name": "ControlP5",
+      "softwareVersion": "2.2.6",
+      "codeRepository": "https://github.com/sojamo/controlp5"
+    }
+  ],
+  "referencePublication": {
+    "@type": "ScholarlyArticle",
+    "name": "ziviDomeLive como artefato de pesquisa e experimentação em arte e tecnologia para criação de experiências audiovisuais ao vivo em fulldome",
+    "url": "https://files.cercomp.ufg.br/weby/up/777/o/ziviDomeLive_como_artefato_de_pesquisa_e_experimentac%CC%A7a%CC%83o_em_arte_e_tecnologia_para_criac%CC%A7a%CC%83o_de_experie%CC%82ncias_audiovisuais_ao_vivo_em_fulldome.pdf"
+  },
+  "relatedLink": [
+    "https://hdl.handle.net/1843/981",
+    "https://science.ecosyste.ms/projects/36511",
+    "https://vicvalentim.github.io/ziviDomeLive/"
+  ]
+}
