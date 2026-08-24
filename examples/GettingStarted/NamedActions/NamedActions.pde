@@ -1,8 +1,5 @@
 import com.victorvalentim.zividomelive.*;
 import controlP5.*;
-import processing.event.MouseEvent;
-import processing.opengl.PGraphicsOpenGL;
-
 ziviDomeLive ziviDome;
 
 void settings() {

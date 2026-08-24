@@ -19,12 +19,33 @@ The installable ziviDomeLive package includes this Devolay artifact. The
 proprietary NDI Runtime is not bundled and remains governed by its own current
 license and distribution terms.
 
+## Syphon for Processing macOS universal compatibility asset
+
+The ziviDomeLive `v2.0.0` release publishes this separate compatibility asset:
+
+- Asset: `Syphon-for-Processing-4.0-macOS-universal-community.zip`
+- SHA-256: `59996d8e984c8662e1b964768861e28faa04ab9495daa641a0e14a5a1bf35995`
+- Purpose: temporary universal macOS native payload for Syphon for Processing 4.0
+- Native architectures: `arm64` and `x86_64`
+- Upstream Processing wrapper: <https://github.com/Syphon/Processing>
+- Upstream Java/JNI bridge: <https://github.com/Syphon/Java>
+- Upstream native framework: <https://github.com/Syphon/Syphon-Framework>
+- License: Syphon Framework and Implementations License (BSD-style)
+- Status: community compatibility build; not an official Syphon Project release
+
+The compatibility ZIP is a separate release asset and is not bundled inside
+`ziviDomeLive.zip`/`.pdex`. Its included `LICENSE.txt` reproduces the upstream
+Syphon redistribution notice and disclaimer. The ziviDomeLive Apache-2.0
+license does not relicense Syphon.
+
 ## Processing dependencies
 
-ControlP5, Syphon and Spout are declared Processing dependencies. Their local
-bootstrap JARs are used to compile the project and are not redistributed in the
-installable package. Users obtain those libraries through their respective
-Processing installation channels. Each dependency retains its upstream license.
+ControlP5, Syphon and Spout are external Processing dependencies. Their local
+bootstrap JARs are used to compile the project and are not bundled in the
+installable ziviDomeLive Processing package. Users normally obtain them through
+their respective Processing installation channels. The Apple Silicon Syphon
+compatibility ZIP documented above is an explicitly separate release asset.
+Each dependency retains its upstream license.
 
 ## SolarSystem scientific data and media
 

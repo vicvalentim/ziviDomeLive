@@ -24,8 +24,8 @@ The generated Processing library must remain self-contained for installation, ex
 - [ ] all ten executable examples/tools are listed, with tutorials/manual linked when useful
 - [ ] Processing/Java baseline, renderer, `pixelDensity(1)`, dependencies and limitations are stated
 - [ ] tested systems/Processing versions are either backed by evidence or explicitly left unqualified
-- [ ] `library.keywords` and the documentation-update date are visible
-- [ ] latest stable release and the untagged 2.0 development state are not confused
+- [ ] `library.keywords` and versioned release metadata are visible
+- [ ] README, metadata, documentation and release artifacts identify the same 2.0.0 release contract
 - [ ] direct stable-release links use the common `ziviDomeLive` basename for ZIP/TXT/PDEX
 
 ### Package and reference
@@ -77,7 +77,7 @@ The final package must include and expose:
 
 - [ ] `library/`
 - [ ] `reference/index.html`
-- [ ] `examples/` with `GettingStarted/`, `Advanced/`, and `Tools/`, containing all eight learning examples plus `CalibrationTool` and `BenchmarkTool`
+- [ ] `examples/` with `GettingStarted/`, `Advanced/`, and `Tools/`, containing all eight learning examples plus `CalibrationTool` and `BenchmarkTool` (ten distributed sketches/tools total)
 - [ ] `src/` without `src/test/`
 - [ ] `library.properties`
 - [ ] project/source license and third-party notices

@@ -24,9 +24,6 @@
 
 ---
 
-> [!IMPORTANT]
-> **2.0.0 is the next major release line and is currently untagged.** The public 2.0 contract is frozen in this branch, but the `v2.0.0` tag must not be created until the release-evidence ledger is complete. The latest published stable tag remains [v1.5.0](https://github.com/vicvalentim/ziviDomeLive/releases/tag/v1.5.0). Capability, automated coverage and physical platform qualification are reported separately.
-
 ## Overview
 
 ziviDomeLive lets one Processing scene feed conventional perspective, fulldome fisheye, 2:1 equirectangular and skybox representations in real time. It coordinates scene activation, spherical calibration, preview routing and optional NDI, Syphon or Spout publication while keeping ordinary sketch code close to Processing.
@@ -75,7 +72,7 @@ Standard rendering stays independent. When a spherical representation is needed,
 
 ```java
 import com.victorvalentim.zividomelive.*;
-import processing.opengl.PGraphicsOpenGL;
+import controlP5.*;
 
 ziviDomeLive dome;
 
@@ -230,20 +227,37 @@ Visible ControlP5 controls own pointer gestures. A scene camera must not orbit o
 
 The target is macOS, Windows and Linux for core rendering, with platform-specific optional outputs. The exact `tested.platform` and `tested.processingVersion` release fields remain blank until the [2.0 evidence ledger](maintainer/release-evidence.md) is complete. This is intentional: a supported design is not the same as a qualified release configuration.
 
-**Documentation last updated:** 2026-08-23.
 **Processing `library.keywords`:** fulldome, spherical rendering, domemaster, immersive media, creative coding, Processing, OpenGL, planetarium, NDI, Syphon, Spout, real-time graphics.
 
 ## Dependencies
 
-| Dependency | Purpose | Distribution |
-|---|---|---|
-| ControlP5 2.2.6 | Built-in runtime controls | Required external Processing library; install explicitly; defensive fallback disables the panel when absent |
-| Syphon for Processing 4.0 | macOS GPU texture sharing | Optional; output is unavailable when absent |
-| Spout for Processing 2.0.8.0 | Windows GPU texture sharing | Optional; output is unavailable when absent |
-| Devolay 2.2.0-vic.2 | Java/JNI NDI sender integration | Bundled Maven artifact; NDI Runtime is separate |
+| Dependency | Purpose | Distribution | Repository |
+|---|---|---|---|
+| ControlP5 2.2.6 | Built-in runtime controls | Required external Processing library; install explicitly; defensive fallback disables the panel when absent | [sojamo/controlp5](https://github.com/sojamo/controlp5) |
+| Syphon for Processing 4.0 | macOS GPU texture sharing | Optional. Upstream package for Intel macOS; Apple Silicon users can use the community universal compatibility build below | [Syphon/Processing](https://github.com/Syphon/Processing) |
+| Spout for Processing 2.0.8.0 | Windows GPU texture sharing | Optional; output is unavailable when absent | [leadedge/SpoutProcessing](https://github.com/leadedge/SpoutProcessing) |
+| Devolay 2.2.0-vic.2 | Java/JNI NDI sender integration | Bundled Maven artifact; NDI Runtime is separate | [vicvalentim/devolay](https://github.com/vicvalentim/devolay) |
+
+### Syphon on Apple Silicon
+
+The upstream **Syphon for Processing 4.0** package does not currently ship the
+native Apple Silicon payload required by Processing 4 on `macos-aarch64`.
+ziviDomeLive therefore publishes a temporary **community compatibility build**
+for macOS containing universal `arm64` + `x86_64` native binaries.
+
+- Download: [Syphon-for-Processing-4.0-macOS-universal-community.zip](https://github.com/vicvalentim/ziviDomeLive/releases/download/v2.0.0/Syphon-for-Processing-4.0-macOS-universal-community.zip)
+- SHA-256: `59996d8e984c8662e1b964768861e28faa04ab9495daa641a0e14a5a1bf35995`
+- Upstream wrapper: [Syphon/Processing](https://github.com/Syphon/Processing)
+- Native framework: [Syphon/Syphon-Framework](https://github.com/Syphon/Syphon-Framework)
+- Java/JNI bridge: [Syphon/Java](https://github.com/Syphon/Java)
+
+This compatibility asset is **not an official Syphon Project release** and does
+not change the Syphon API used by ziviDomeLive. Quit Processing, replace the
+existing Sketchbook `libraries/Syphon/` folder with the extracted package, then
+restart Processing. The archive includes the upstream Syphon license and keeps
+the original Syphon for Processing 4.0 library identity.
 
 See [Dependencies](docs/en/installation/dependencies.md), [NDI Runtime](docs/en/installation/ndi.md), [Known Issues](docs/en/known-issues.md) and [Third-party notices](THIRD_PARTY.md).
-
 ## Installation
 
 ### Processing Contribution Manager

@@ -63,13 +63,13 @@ Uma submissão JOSS futura ainda precisa de comparação citada e peer-reviewed 
 |---|---|---|
 | Licença open source | `LICENSE`, `THIRD_PARTY.md`, notices empacotados | Pronto para review |
 | Statement of need/audiência | README e esta página | Pronto para review |
-| Instalação/dependências | README, Instalação, Gradle/bootstrap e pacote Processing | Pronto; evidência do pacote instalado é pré-tag |
-| Exemplos de uso | Seis sketches de aprendizagem e duas ferramentas de qualificação | Pronto; execução final instalada é pré-tag |
+| Instalação/dependências | README, Instalação, Gradle/bootstrap e pacote Processing | Pronto; a evidência do pacote instalado é registrada por release |
+| Exemplos de uso | Oito sketches de aprendizagem e duas ferramentas de qualificação | Pronto; a execução do pacote instalado é registrada por release |
 | Documentação de API | Teste de freeze, Javadocs, níveis da API, guia EN/PT | Pronto para review |
 | Testes automatizados | Suítes JUnit, `qualificationTests`, workflows CI | Pronto; totais atuais pertencem à evidência gerada |
 | Testes científicos/visuais manuais | Protocolos de calibração/benchmark, checklist de receivers | Protocolo pronto; evidência de hardware incompleta |
 | Diretrizes de comunidade | Guia de contribuição, issue tracker, suporte | Pronto para review |
-| Citação/autoria | `CITATION.cff`, `.zenodo.json`, DOI/ORCID | Verificação externa do DOI segue pré-tag |
+| Citação/autoria | `CITATION.cff`, `.zenodo.json`, DOI/ORCID | Os metadados do DOI do software são versionados e verificáveis externamente |
 | Comparação do estado do campo | Gap explícito acima | **Não pronto** |
 | Impacto de pesquisa | Política de evidência abaixo | **Não pronto sem evidência externa concreta** |
 | Paper de software | Nenhum `paper.md` alegado em 2.0 | **Não submetido** |

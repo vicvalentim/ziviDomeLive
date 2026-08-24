@@ -332,8 +332,9 @@ def check_processing_homepage(root,c):
         if heading not in text: c.error(f'Processing homepage section missing: {heading}')
     required_tokens = [
         'Processing 4', 'Java 17', 'pixelDensity(1)', 'P3D',
-        '2026-08-23', 'library.keywords', 'ziviDomeLive.zip',
+        'library.keywords', 'ziviDomeLive.zip',
         'ziviDomeLive.txt', 'ziviDomeLive.pdex', 'reference/index.html',
+        'import controlP5.*;',
     ]
     for token in required_tokens:
         if token not in text: c.error(f'Processing homepage information missing: {token}')
@@ -341,10 +342,15 @@ def check_processing_homepage(root,c):
         if example not in text: c.error(f'Processing homepage does not list example/tool: {example}')
     if not all(token in text for token in ('tested.platform', 'tested.processingVersion', 'qualification')):
         c.error('Processing homepage does not distinguish tested metadata from pending qualification')
-    if not re.search(r'(?is)2\.0\.0.*untagged|untagged.*2\.0\.0', text):
-        c.error('Processing homepage does not disclose that 2.0.0 is currently untagged')
-    if not re.search(r'(?is)(?:latest published stable|published stable).*1\.5\.0', text):
-        c.error('Processing homepage does not identify the latest published stable release')
+    for provisional in (
+            'currently untagged',
+            'latest published stable',
+            'Documentation last updated:',
+    ):
+        if provisional.lower() in text.lower():
+            c.error(
+                f'Processing homepage contains provisional release text: {provisional}'
+            )
 
 def check_api_levels(root,c):
     surfaces = {
@@ -375,7 +381,8 @@ def check_research_readiness(root,c):
             'PIBITI/UFRB Call no. 05/2026', 'Victor Hugo Soares Valentim',
             'Tiago Silva Rosa', 'David Siqueira de Araujo', 'CECULT/UFRB',
             'science.ecosyste.ms/projects/36511', 'XIII International Symposium',
-            'research-integrity.md', '```mermaid',
+            'research-integrity.md', 'Eight learning sketches plus two qualification tools',
+            '```mermaid',
         ],
         'docs/pt/research-software.md': [
             'Declaração de necessidade', 'Estado da área', 'Impacto de pesquisa',
@@ -385,7 +392,8 @@ def check_research_readiness(root,c):
             'Victor Hugo Soares Valentim', 'Tiago Silva Rosa',
             'David Siqueira de Araujo', 'CECULT/UFRB',
             'science.ecosyste.ms/projects/36511', 'XIII Simpósio Internacional',
-            'research-integrity.md', '```mermaid',
+            'research-integrity.md', 'Oito sketches de aprendizagem e duas ferramentas de qualificação',
+            '```mermaid',
         ],
     }
     for rel, tokens in requirements.items():
@@ -469,20 +477,26 @@ def check_research_integrity(root,c):
 def check_release_documents(root,c):
     changelog=read(root/'CHANGELOG.md')
     for token in [
-        '## [2.0.0] - Unreleased', '### Public API freeze',
+        '## [2.0.0]', '### Public API freeze',
         '### Breaking changes', '### Added — Scene lifecycle and services',
         '### Performance and allocation work',
         '### Documentation and research-software readiness',
-        '### Validation', '### Release gates still open',
+        '### Validation', '### Release qualification',
         '### Not included in 2.0.0', '## [1.5.0]', '## [1.4.0]',
     ]:
         if token not in changelog: c.error(f'CHANGELOG 2.0/history detail missing: {token}')
     for rel in ('docs/en/release-notes/2.0.0.md', 'docs/pt/release-notes/2.0.0.md'):
         text=read(root/rel)
         if len(text.splitlines()) < 180: c.error(f'release notes are not sufficiently detailed: {rel}')
-        release_status = 'Unreleased' if rel.startswith('docs/en/') else 'Não lançada'
-        for token in ('2.0.0', '```mermaid', 'SceneServices', 'OutputType', release_status):
-            if token not in text: c.error(f'release notes {rel} are missing: {token}')
+        for token in ('2.0.0', '```mermaid', 'SceneServices', 'OutputType'):
+            if token not in text:
+                c.error(f'release notes {rel} are missing: {token}')
+        if re.search(
+                r'(?i)\\bUnreleased\\b|Não lançada|sem tag|untagged',
+                text):
+            c.error(
+                f'release notes {rel} contain provisional release status'
+            )
 
 def enum_constants(src, enum_name):
     txt=read(src)
@@ -735,7 +749,7 @@ def check_evidence(root,c,historical=False):
         c.error(f'cannot verify release evidence against the Git checkout: {error}')
         return
     if dirty:
-        c.error('release evidence is stale: current pre-tag gate requires a clean working tree')
+        c.error('release evidence is stale: current release gate requires a clean working tree')
     if head == qualified_revision:
         return
     try:
@@ -894,6 +908,75 @@ def check_editorial_system(root,c):
     for token in ('python3 -m pip install -r requirements-docs.txt', 'python3 -m mkdocs serve'):
         if token not in readme: c.error(f'local MkDocs setup guidance missing: {token}')
 
+
+def check_syphon_compatibility_asset(root,c):
+    asset_name = "Syphon-for-Processing-4.0-macOS-universal-community.zip"
+    asset_url = "https://github.com/vicvalentim/ziviDomeLive/releases/download/v2.0.0/Syphon-for-Processing-4.0-macOS-universal-community.zip"
+    asset_sha = "59996d8e984c8662e1b964768861e28faa04ab9495daa641a0e14a5a1bf35995"
+
+    required = {
+        'README.md': (
+            asset_name, asset_url, asset_sha,
+            'Syphon/Processing',
+            'Syphon/Syphon-Framework',
+            'Syphon/Java',
+            'arm64',
+            'x86_64',
+        ),
+        'docs/en/installation/dependencies.md': (
+            asset_name, asset_url, asset_sha,
+            'Syphon/Processing',
+            'Syphon/Syphon-Framework',
+            'Syphon/Java',
+        ),
+        'docs/pt/installation/dependencies.md': (
+            asset_name, asset_url, asset_sha,
+            'Syphon/Processing',
+            'Syphon/Syphon-Framework',
+            'Syphon/Java',
+        ),
+        'docs/en/installation/requirements.md': (
+            asset_name, asset_url,
+        ),
+        'docs/pt/installation/requirements.md': (
+            asset_name, asset_url,
+        ),
+        'docs/en/installation/installation-steps.md': (
+            asset_name, asset_url,
+        ),
+        'docs/pt/installation/installation-steps.md': (
+            asset_name, asset_url,
+        ),
+        'docs/en/known-issues.md': (
+            asset_name, asset_url, 'macos-aarch64',
+        ),
+        'docs/pt/known-issues.md': (
+            asset_name, asset_url, 'macos-aarch64',
+        ),
+        'docs/en/release-notes/2.0.0.md': (
+            asset_name, 'arm64', 'x86_64',
+        ),
+        'docs/pt/release-notes/2.0.0.md': (
+            asset_name, 'arm64', 'x86_64',
+        ),
+        'THIRD_PARTY.md': (
+            asset_name, asset_sha,
+            'Syphon/Processing',
+            'Syphon/Syphon-Framework',
+            'Syphon/Java',
+            'not an official Syphon Project release',
+        ),
+    }
+
+    for rel,tokens in required.items():
+        page = read(root/rel)
+        for token in tokens:
+            if token not in page:
+                c.error(
+                    f'Syphon Apple Silicon compatibility documentation '
+                    f'missing in {rel}: {token}'
+                )
+
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument('--root',default='.')
@@ -908,6 +991,7 @@ def main():
     check_metadata(root,c)
     check_claims(root,c)
     check_processing_homepage(root,c)
+    check_syphon_compatibility_asset(root,c)
     check_api(root,c)
     check_api_levels(root,c)
     check_examples(root,c)

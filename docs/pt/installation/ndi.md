@@ -81,8 +81,7 @@ não o próprio arquivo.
 
 ## Linux
 
-NDI no Linux é experimental e não integra a matriz de outputs qualificados da
-2.0.0. O pacote desktop público NDI Tools é oferecido para Windows e macOS;
+NDI no Linux é experimental e exige qualificação de receiver específica da implantação, assim como os demais alvos NDI. O pacote desktop público NDI Tools é oferecido para Windows e macOS;
 usuários Linux devem obter o SDK/runtime atual na
 [página oficial do NDI SDK](https://ndi.video/for-developers/ndi-sdk/) e aceitar
 sua licença durante a instalação.

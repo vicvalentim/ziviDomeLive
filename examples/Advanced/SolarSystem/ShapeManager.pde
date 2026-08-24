@@ -1,6 +1,3 @@
-import processing.core.*;
-import processing.opengl.*;
-
 public class ShapeManager {
   private final PApplet pApplet;
   private final SceneAssets assets;

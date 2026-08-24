@@ -16,7 +16,6 @@ Create a first working scene, keep animation state coherent and switch to Domema
 ```java
 import com.victorvalentim.zividomelive.*;
 import controlP5.*;
-import processing.opengl.PGraphicsOpenGL;
 ```
 
 ControlP5 is a required external Processing library and every distributed example imports it. Install it explicitly through the Contribution Manager; ziviDomeLive does not claim transitive installation through `library.properties`. Syphon and Spout remain optional platform integrations and must not be imported by sketches that do not use their APIs directly.

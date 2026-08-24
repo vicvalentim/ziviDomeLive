@@ -1,7 +1,5 @@
 import com.victorvalentim.zividomelive.*;
 import controlP5.*;
-import processing.event.KeyEvent;
-import processing.opengl.PGraphicsOpenGL;
 import java.util.function.Consumer;
 
 ziviDomeLive ziviDome;

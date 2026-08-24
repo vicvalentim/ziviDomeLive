@@ -1,4 +1,3 @@
-import processing.opengl.*;
 import java.util.List;
 
 class Renderer {

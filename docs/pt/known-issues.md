@@ -14,16 +14,28 @@ Possíveis medidas:
 
 - Mantenha outputs externos desabilitados quando não estiverem em uso.
 - Use uma combinação estável de driver e Processing na máquina de destino.
-- No Apple Silicon, compare Processing ARM nativo e Intel/Rosetta quando Syphon for necessário.
+- No macOS, qualifique a combinação exata de Processing/Syphon/GPU usada na implantação.
 - Reduza a resolução de output enquanto isola o pass que falha.
 
 ## Apple Silicon e Syphon
 
-A interoperabilidade completa com Syphon pode exigir Processing Intel sob Rosetta 2. Renderização ARM nativa e Syphon são questões separadas de qualificação.
+O pacote upstream do Syphon for Processing 4.0 não fornece atualmente o
+payload nativo `macos-aarch64` necessário ao Processing 4. Essa lacuna pode
+aparecer como falha de carregamento JNI/biblioteca nativa em Apple Silicon.
 
+Use o build comunitário universal de compatibilidade do ziviDomeLive:
+
+[Syphon-for-Processing-4.0-macOS-universal-community.zip](https://github.com/vicvalentim/ziviDomeLive/releases/download/v2.0.0/Syphon-for-Processing-4.0-macOS-universal-community.zip)
+
+O pacote contém slices nativos `arm64` + `x86_64` e não é uma release oficial
+do Syphon Project. Substitua `libraries/Syphon/` em vez de mesclar arquivos.
+Veja [Dependências](installation/dependencies.md) para checksum e proveniência
+upstream.
+
+Rosetta 2 não é o caminho normal de compatibilidade desse build.
 ## Outputs Externos no Linux
 
-A renderização principal deve funcionar no Linux, mas as integrações atuais do Processing não oferecem Syphon ou Spout nessa plataforma, e o suporte nativo a NDI permanece reduzido/não qualificado.
+A renderização principal é suportada no Linux. Syphon e Spout não estão disponíveis nessa plataforma; o output de vídeo NDI é experimental e usa Devolay com um NDI Runtime oficial instalado separadamente. A combinação exata de runtime, driver, rede e receiver Linux ainda deve ser qualificada para implantação.
 
 ## Qualificação de Outputs Nativos
 

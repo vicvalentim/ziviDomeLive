@@ -63,13 +63,13 @@ A future JOSS submission still needs a peer-reviewed, cited comparison with comm
 |---|---|---|
 | Open-source license | `LICENSE`, `THIRD_PARTY.md`, packaged notices | Ready for review |
 | Statement of need/audience | README and this page | Ready for review |
-| Installation/dependencies | README, Installation section, Gradle/bootstrap and Processing package | Ready; installed-package evidence remains pre-tag |
-| Example usage | Six learning sketches plus two qualification tools | Ready; final installed-package run remains pre-tag |
+| Installation/dependencies | README, Installation section, Gradle/bootstrap and Processing package | Ready; installed-package evidence is recorded per release |
+| Example usage | Eight learning sketches plus two qualification tools | Ready; installed-package execution is recorded per release |
 | API documentation | Public API freeze test, Javadocs, API levels, EN/PT guide | Ready for review |
 | Automated tests | JUnit suites, `qualificationTests`, CI workflows | Ready; exact current totals belong to generated evidence |
 | Manual scientific/visual checks | Calibration and benchmark protocols, receiver checklist | Protocol ready; hardware evidence incomplete |
 | Community guidelines | Contributing guide, issue tracker, support path | Ready for review |
-| Citation/authorship | `CITATION.cff`, `.zenodo.json`, DOI/ORCID metadata | External DOI record verification remains pre-tag |
+| Citation/authorship | `CITATION.cff`, `.zenodo.json`, DOI/ORCID metadata | Software DOI metadata is versioned and externally verifiable |
 | State-of-field comparison | Explicit gap above | **Not ready** |
 | Research impact | Evidence policy below | **Not ready without concrete external evidence** |
 | Software paper | No `paper.md` is claimed in 2.0 | **Not submitted** |

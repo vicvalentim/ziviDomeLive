@@ -2,10 +2,6 @@ import com.victorvalentim.zividomelive.*;
 import com.victorvalentim.zividomelive.manager.OutputManager;
 import com.victorvalentim.zividomelive.performance.*;
 import controlP5.*;
-import processing.core.PApplet;
-import processing.core.PShape;
-import processing.opengl.PGraphicsOpenGL;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;

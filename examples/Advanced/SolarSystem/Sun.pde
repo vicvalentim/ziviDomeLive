@@ -1,9 +1,6 @@
 // ——————————————————————————————————————————————————————————————————————
 // Sun — Classe que representa o Sol no sistema (corpo fixo)
 // ——————————————————————————————————————————————————————————————————————
-import processing.core.*;
-import processing.opengl.*;
-
 public class Sun implements CelestialBody {
     private final PApplet pApplet;
 

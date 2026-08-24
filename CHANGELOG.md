@@ -2,7 +2,7 @@
 
 All notable project changes are recorded here. Version 2.0 follows the final public API freeze; earlier sections preserve the historical contract of their release and must not be read as current 2.0 API documentation.
 
-## [2.0.0] - Unreleased
+## [2.0.0]
 
 Version 2.0.0 is a deliberate major-version reset. It preserves the Processing-oriented `Scene` extension model while replacing the exposed 1.x implementation surface with a small, lifecycle-safe, typed API. Internally, spherical rendering moves to a native GPU cubemap with sibling final projections.
 
@@ -215,12 +215,12 @@ An exact reflection-based snapshot freezes public types, methods, constructors, 
 - Documentation validation covers EN/PT parity, source links, exported HTML/CSS/sitemap routes, canonical Javadocs, metadata, API vocabulary, Processing homepage requirements, research-software readiness and strict MkDocs.
 - GPU image quality, projector/lens behavior and NDI/Syphon/Spout interoperability remain manual target-hardware gates.
 
-### Release gates still open
+### Release qualification
 
-- `v2.0.0` remains untagged until `maintainer/release-evidence.md` contains no unresolved applicable gate.
-- Exact `tested.platform` and `tested.processingVersion` metadata remains blank until installed-package and physical qualification justify it.
-- The external software DOI record must be verified before tagging.
-- Final example/tool screenshots must be captured from the installed qualified package if they are to serve as release evidence.
+- Release qualification is bound to an exact source revision and generated Processing package.
+- Automated validation, installed-package execution, GPU visual checks and native-output interoperability are recorded in `maintainer/release-evidence.md`.
+- Platform support and backend availability remain distinct from physically qualified configurations.
+- The `v2.0.0` tag identifies the exact release revision accepted by the final qualification gate.
 
 ### Not included in 2.0.0
 

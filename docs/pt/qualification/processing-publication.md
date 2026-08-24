@@ -25,8 +25,8 @@ O pacote Processing deve ser autocontido para instalação, exemplos, source, re
 - [ ] os dez exemplos/tools executáveis estão listados, com tutoriais/manual linkados quando úteis
 - [ ] baseline Processing/Java, renderer, `pixelDensity(1)`, dependências e limitações estão declarados
 - [ ] sistemas/versões Processing testados têm evidência ou aparecem explicitamente sem qualificação
-- [ ] `library.keywords` e data de atualização documental estão visíveis
-- [ ] latest stable e o estado 2.0 sem tag não são confundidos
+- [ ] `library.keywords` e metadados versionados da release estão visíveis
+- [ ] README, metadata, documentação e artefatos identificam o mesmo contrato de release 2.0.0
 - [ ] links da release estável usam o basename comum `ziviDomeLive` para ZIP/TXT/PDEX
 
 ### Pacote e referência
@@ -75,7 +75,7 @@ O pacote final deve conter:
 
 - [ ] `library/`
 - [ ] `reference/index.html`
-- [ ] `examples/` com `GettingStarted/`, `Advanced/` e `Tools/`, contendo os oito learning examples + `CalibrationTool` + `BenchmarkTool`
+- [ ] `examples/` com `GettingStarted/`, `Advanced/` e `Tools/`, contendo oito exemplos de aprendizagem e duas ferramentas de qualificação (`CalibrationTool` e `BenchmarkTool`), dez sketches/ferramentas no total
 - [ ] `src/` sem `src/test/`
 - [ ] `library.properties`
 - [ ] licença e notices de terceiros

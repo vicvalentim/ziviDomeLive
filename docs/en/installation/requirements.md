@@ -18,7 +18,7 @@ The practical requirement depends on scene complexity, output resolution, and si
 | Capability | macOS | Windows | Linux |
 |---|---|---|---|
 | Standard and spherical rendering | Supported | Supported | Supported |
-| NDI video sender | Experimental; separate NDI Runtime and receiver qualification required | Experimental; separate NDI Runtime and receiver qualification required | Experimental, reduced, and unqualified |
+| NDI video sender | Experimental; separate NDI Runtime and receiver qualification required | Experimental; separate NDI Runtime and receiver qualification required | Experimental; separate NDI Runtime and receiver qualification required |
 | Syphon | Platform backend | Not available | Not available |
 | Spout | Not available | Platform backend | Not available |
 
@@ -26,9 +26,14 @@ The practical requirement depends on scene complexity, output resolution, and si
 
 ## Apple Silicon
 
-The Processing/Syphon stack used by this project may require the Intel Processing build under Rosetta 2 for complete Syphon interoperability. Native ARM rendering without Syphon can still be used, but must be qualified with the target sketch and driver.
+Native Apple Silicon and Intel Processing configurations are valid ziviDomeLive targets.
 
-Before deployment, review [Known Issues](../known-issues.md),
-[NDI Runtime](ndi.md), the
-[Calibration Tool Protocol](../qualification/calibration-tool.md), and
-[Release Readiness](../qualification/2.0-release-readiness.md).
+For Syphon specifically, the upstream Syphon for Processing 4.0 distribution does not currently include the native `macos-aarch64` payload needed by Processing 4. Apple Silicon users can install the ziviDomeLive community universal compatibility asset (`arm64` + `x86_64`):
+
+[Syphon-for-Processing-4.0-macOS-universal-community.zip](https://github.com/vicvalentim/ziviDomeLive/releases/download/v2.0.0/Syphon-for-Processing-4.0-macOS-universal-community.zip)
+
+This package is external to the ziviDomeLive Processing library and is not an official Syphon Project release. Rosetta 2 is not a general ziviDomeLive requirement.
+
+See [Dependencies](dependencies.md) for installation and checksum details.
+
+Before deployment, review [Known Issues](../known-issues.md), [NDI Runtime](ndi.md), the [Calibration Tool Protocol](../qualification/calibration-tool.md), and [Release Readiness](../qualification/2.0-release-readiness.md).

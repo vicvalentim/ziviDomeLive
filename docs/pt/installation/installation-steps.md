@@ -7,15 +7,27 @@ Depois da publicação do pacote 2.0.0:
 1. Abra o Processing.
 2. Selecione **Sketch > Import Library > Add Library...**.
 3. Pesquise por **ziviDomeLive**.
-4. Instale a biblioteca e suas dependências declaradas.
-5. Reinicie o Processing.
+4. Instale ziviDomeLive.
+5. Instale **ControlP5** explicitamente pelo Gerenciador de Contribuições caso ainda não esteja instalado.
+6. Reinicie o Processing.
 
 Após a instalação, abra **File > Examples > Contributed Libraries > ziviDomeLive > EmptyProject**. A cena vazia deve iniciar sem erros de shader ou dependência. Pressione `h` para confirmar que o painel de controle pode ser exibido e ocultado.
 
-NDI é opcional e não pode ser instalado pelo Gerenciador de Contribuições do
-Processing. Instale separadamente o [Runtime NDI](ndi.md) do sistema antes de
-habilitar o output de vídeo NDI experimental.
+NDI é opcional e não pode ser instalado pelo Gerenciador de Contribuições do Processing. Instale separadamente o [Runtime NDI](ndi.md) do sistema antes de habilitar o output de vídeo NDI experimental.
 
+### Apple Silicon + Syphon
+
+O pacote upstream do Syphon for Processing 4.0 não inclui atualmente o payload
+nativo Apple Silicon exigido pelo Processing 4.
+
+1. Baixe [Syphon-for-Processing-4.0-macOS-universal-community.zip](https://github.com/vicvalentim/ziviDomeLive/releases/download/v2.0.0/Syphon-for-Processing-4.0-macOS-universal-community.zip).
+2. Feche completamente o Processing.
+3. Faça backup ou remova `libraries/Syphon/` no Sketchbook.
+4. Extraia o ZIP dentro de `libraries/`, resultando em `libraries/Syphon/`.
+5. Reinicie o Processing.
+
+Não mescle sobre uma instalação Syphon antiga. Veja
+[Dependências](dependencies.md) para proveniência e SHA-256.
 ## Artefato de Release
 
 Para instalação manual, use o artefato empacotado do release correspondente. Não instale o ZIP do código-fonte como biblioteca Processing:

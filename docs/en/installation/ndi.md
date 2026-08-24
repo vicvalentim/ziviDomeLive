@@ -82,7 +82,7 @@ itself.
 
 ## Linux
 
-NDI on Linux is experimental and not part of the qualified 2.0.0 output matrix.
+NDI on Linux is experimental and requires deployment-specific receiver qualification just like the other NDI targets.
 The public NDI Tools desktop bundle is provided for Windows and macOS; Linux
 users should obtain the current NDI SDK/runtime from the
 [official NDI SDK page](https://ndi.video/for-developers/ndi-sdk/) and accept
