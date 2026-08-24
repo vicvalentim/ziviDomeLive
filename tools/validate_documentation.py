@@ -115,7 +115,7 @@ class ExportedReferenceParser(HTMLParser):
                         self.references.append((name, url))
 
 def public_text_files(root: Path):
-    roots=[root/'README.md',root/'library.properties',root/'CITATION.cff',root/'.zenodo.json']
+    roots=[root/'README.md',root/'library.properties',root/'CITATION.cff',root/'codemeta.json',root/'.zenodo.json']
     for p in roots:
         if p.exists(): yield p
     for lang in ('en','pt'):
@@ -132,7 +132,7 @@ def check_required(root,c):
         'examples/Advanced/SolarSystem/THIRD_PARTY.md',
         'examples/Advanced/SolarSystem/ASSET_PROVENANCE.json',
         'requirements-docs.txt', 'library.properties', 'CITATION.cff',
-        '.zenodo.json', 'examples', 'src/main/java', 'docs/en', 'docs/pt',
+        'codemeta.json', '.zenodo.json', 'examples', 'src/main/java', 'docs/en', 'docs/pt',
         'docs/en/research-software.md', 'docs/pt/research-software.md',
         'docs/en/release-notes/2.0.0.md', 'docs/pt/release-notes/2.0.0.md',
         'docs/en/tags.md', 'docs/pt/tags.md',
@@ -230,6 +230,34 @@ def check_metadata(root,c):
     if zen.get('version') != EXPECTED_VERSION: c.error('.zenodo.json version mismatch')
     if zen.get('license') != EXPECTED_LICENSE:
         c.error('.zenodo.json license mismatch')
+
+    try:
+        codemeta=json.loads(read(root/'codemeta.json'))
+    except Exception as e:
+        c.error(f'codemeta.json is invalid JSON: {e}'); codemeta={}
+    if codemeta.get('@type') != 'SoftwareSourceCode':
+        c.error('codemeta.json @type must remain SoftwareSourceCode')
+    if codemeta.get('version') != EXPECTED_VERSION:
+        c.error('codemeta.json version mismatch')
+    if codemeta.get('identifier') != f'https://doi.org/{EXPECTED_DOI}':
+        c.error('codemeta.json DOI identifier mismatch')
+    if codemeta.get('applicationCategory') != 'Processing Contributed Library':
+        c.error('codemeta.json applicationCategory must be Processing Contributed Library')
+    if 'Processing 4 Contributed Library' not in str(codemeta.get('description', '')):
+        c.error('codemeta.json description must identify the project as a Processing 4 Contributed Library')
+    codemeta_license=str(codemeta.get('license', ''))
+    if codemeta_license not in {EXPECTED_LICENSE, f'https://spdx.org/licenses/{EXPECTED_LICENSE}'}:
+        c.error('codemeta.json license mismatch')
+    codemeta_claim_text=' '.join([
+        str(codemeta.get('description','')),
+        str(codemeta.get('applicationCategory','')),
+        str(codemeta.get('applicationSubCategory','')),
+        *map(str, codemeta.get('keywords',[])),
+    ])
+    if re.search(r'(?i)(^|[,\s])VR([,\s]|$)|(^|[,\s])XR([,\s]|$)', codemeta_claim_text):
+        c.error('codemeta.json contains generic VR/XR product metadata outside the 2.0 public contract')
+    if re.search(r'(?i)\bresearch software\b', codemeta_claim_text):
+        c.error('codemeta.json redefines the Processing Contributed Library as research software')
 
     solar_notice=read(root/'examples/Advanced/SolarSystem/THIRD_PARTY.md')
     for token in (
@@ -704,7 +732,9 @@ def check_package(path: Path,c):
     def any_suffix(s): return any(n.endswith(s) for n in names)
     for suffix in ['/library.properties','/reference/index.html']:
         if not any_suffix(suffix): c.error(f'package missing {suffix.lstrip("/")}')
-    for suffix in ['/README.md', '/CHANGELOG.md', '/CITATION.cff', '/THIRD_PARTY.md']:
+    for suffix in [
+            '/README.md', '/CHANGELOG.md', '/CITATION.cff', '/codemeta.json',
+            '/.zenodo.json', '/THIRD_PARTY.md']:
         if not any_suffix(suffix): c.error(f'package missing {suffix.lstrip("/")}')
     for suffix in [
             '/examples/Advanced/SolarSystem/THIRD_PARTY.md',

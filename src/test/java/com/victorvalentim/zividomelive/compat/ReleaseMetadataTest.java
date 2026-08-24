@@ -31,6 +31,7 @@ class ReleaseMetadataTest {
 		assertTrue(read("build.gradle.kts").contains("version = \"" + RELEASE_VERSION + "\""));
 		assertTrue(read("CITATION.cff").contains("version: \"" + RELEASE_VERSION + "\""));
 		assertTrue(read(".zenodo.json").contains("\"version\": \"" + RELEASE_VERSION + "\""));
+		assertTrue(read("codemeta.json").contains("\"version\": \"" + RELEASE_VERSION + "\""));
 		assertTrue(read("CHANGELOG.md").contains("## [" + RELEASE_VERSION + "]"));
 	}
 
@@ -116,6 +117,21 @@ class ReleaseMetadataTest {
                 java.util.regex.Pattern.compile("(?i)(^|[\\\"',:\\s])(VR|XR)([\\\"',:\\s]|$)")
                         .matcher(zenodo).find(),
                 "Zenodo metadata must not reintroduce a generic VR/XR product identity");
+
+
+        String codemeta = read("codemeta.json");
+        assertTrue(codemeta.contains("\"@type\": \"SoftwareSourceCode\""));
+        assertTrue(codemeta.contains("\"applicationCategory\": \"Processing Contributed Library\""));
+        assertTrue(codemeta.contains("\"identifier\": \"https://doi.org/10.5281/zenodo.15671506\""));
+        assertTrue(codemeta.contains("\"license\": \"https://spdx.org/licenses/Apache-2.0\""));
+        assertFalse(
+                java.util.regex.Pattern.compile("(?i)\\bresearch software\\b")
+                        .matcher(codemeta).find(),
+                "CodeMeta must preserve the Processing Contributed Library identity");
+        assertFalse(
+                java.util.regex.Pattern.compile("(?i)(^|[\\\"',:\\s])(VR|XR)([\\\"',:\\s]|$)")
+                        .matcher(codemeta).find(),
+                "CodeMeta must not reintroduce a generic VR/XR product identity");
     }
 
 	@Test
@@ -238,6 +254,7 @@ class ReleaseMetadataTest {
 
         assertTrue(build.contains("verifyProcessingPackage"));
         assertTrue(build.contains("buildReleaseArtifacts"));
+        assertTrue(build.contains("\"codemeta.json\""));
 
         // Continuous automated qualification.
         assertTrue(automated.contains("./gradlew qualificationTests --console=plain"));
