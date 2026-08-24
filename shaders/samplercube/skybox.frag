@@ -9,6 +9,8 @@ uniform int faceInversions[6];
 
 out vec4 FragColor;
 
+const float PI = 3.1415926535897932384626433832795;
+
 const int SLOT_TOP = 0;
 const int SLOT_LEFT = 1;
 const int SLOT_CENTER = 2;
@@ -23,14 +25,17 @@ const int FACE_NEGATIVE_Y = 3;
 const int FACE_POSITIVE_Z = 4;
 const int FACE_NEGATIVE_Z = 5;
 
-vec3 applyEAC(vec3 dir) {
-    vec3 absDir = abs(dir);
-    float dominantAxis = max(max(absDir.x, absDir.y), absDir.z);
-    return dir / max(dominantAxis, 0.000001);
+vec3 safeNormalize(vec3 direction) {
+    return direction * inversesqrt(max(dot(direction, direction), 1.0e-20));
 }
 
-vec4 sampleCubemapEAC(vec3 dir) {
-    return texture(cubemap, applyEAC(normalize(dir)));
+vec4 sampleCubemapDirection(vec3 direction) {
+    vec3 unitDirection = safeNormalize(direction);
+    return textureGrad(
+            cubemap,
+            unitDirection,
+            dFdx(unitDirection),
+            dFdy(unitDirection));
 }
 
 vec3 applyLegacyFaceTransform(vec3 dir, int rotation, int invert) {
@@ -86,23 +91,26 @@ bool resolveOriginalCubemapViewSlot(vec2 st, out int faceIndex, out vec2 faceUV)
     return false;
 }
 
-vec3 directionForCanonicalFace(int faceIndex, vec2 faceUV) {
+vec3 directionForEquiangularFace(int faceIndex, vec2 faceUV) {
+    // A real EAC face spaces angles uniformly. At the edges tan(+-PI/4) reaches +-1.
+    vec2 faceAngles = (faceUV * 2.0 - 1.0) * (PI * 0.25);
+    vec2 facePlane = tan(faceAngles);
     if (faceIndex == FACE_POSITIVE_X) {
-        return vec3(0.5, faceUV.y - 0.5, 0.5 - faceUV.x);
+        return vec3(1.0, facePlane.y, -facePlane.x);
     }
     if (faceIndex == FACE_NEGATIVE_X) {
-        return vec3(-0.5, faceUV.y - 0.5, faceUV.x - 0.5);
+        return vec3(-1.0, facePlane.y, facePlane.x);
     }
     if (faceIndex == FACE_POSITIVE_Y) {
-        return vec3(faceUV.x - 0.5, 0.5, 0.5 - faceUV.y);
+        return vec3(facePlane.x, 1.0, -facePlane.y);
     }
     if (faceIndex == FACE_NEGATIVE_Y) {
-        return vec3(faceUV.x - 0.5, -0.5, faceUV.y - 0.5);
+        return vec3(facePlane.x, -1.0, facePlane.y);
     }
     if (faceIndex == FACE_POSITIVE_Z) {
-        return vec3(faceUV.x - 0.5, faceUV.y - 0.5, 0.5);
+        return vec3(facePlane.x, facePlane.y, 1.0);
     }
-    return vec3(0.5 - faceUV.x, faceUV.y - 0.5, -0.5);
+    return vec3(-facePlane.x, facePlane.y, -1.0);
 }
 
 void main() {
@@ -119,9 +127,9 @@ void main() {
         return;
     }
 
-    vec3 dir = directionForCanonicalFace(faceIndex, faceUV);
+    vec3 dir = directionForEquiangularFace(faceIndex, faceUV);
     dir = applyLegacyFaceTransform(dir, faceRotations[faceIndex], faceInversions[faceIndex]);
     dir.z = -dir.z;
 
-    FragColor = sampleCubemapEAC(dir);
+    FragColor = sampleCubemapDirection(dir);
 }

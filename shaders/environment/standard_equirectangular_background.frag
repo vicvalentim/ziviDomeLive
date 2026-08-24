@@ -16,7 +16,7 @@ out vec4 FragColor;
 const float PI = 3.1415926535897932384626433832795;
 
 vec2 equirectangularUv(vec3 dir) {
-    dir = normalize(dir);
+    dir *= inversesqrt(max(dot(dir, dir), 1.0e-20));
     float theta = atan(-dir.x, -dir.z) - yawOffset;
     float u = fract(theta / (2.0 * PI));
     float v = acos(clamp(dir.y, -1.0, 1.0)) / PI;
@@ -51,10 +51,11 @@ vec4 sampleEnvironmentLinear(vec2 uv) {
 }
 
 void main() {
-	vec3 worldDirection = normalize(
+	vec3 worldDirection =
 			environmentDirection.x * cameraRight
 			+ environmentDirection.y * cameraUp
-			+ environmentDirection.z * cameraBackward);
+			+ environmentDirection.z * cameraBackward;
+	worldDirection *= inversesqrt(max(dot(worldDirection, worldDirection), 1.0e-20));
 	worldDirection = (environmentRotation * vec4(worldDirection, 0.0)).xyz;
 	vec2 environmentUV = equirectangularUv(worldDirection);
 	environmentUV = environmentUV * environmentUvScale + environmentUvOffset;

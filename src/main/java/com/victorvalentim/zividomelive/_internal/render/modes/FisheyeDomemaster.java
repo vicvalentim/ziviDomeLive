@@ -16,7 +16,6 @@ class FisheyeDomemaster {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final int CUBEMAP_TEXTURE_UNIT = 1;
     private PGraphics domemaster;
-    private PGraphics domemasterSize;
     private final PShader samplerCubeShader;
     private final int resolution;
     private float sizePercentage;
@@ -52,16 +51,6 @@ class FisheyeDomemaster {
             glAdapter.dispose(domemaster);
         }
         domemaster = glAdapter.createGraphics(parent, resolution, resolution, PApplet.P2D);
-    }
-
-    /**
-     * Initializes or reinitializes the PGraphics object for the domemaster size.
-     */
-    private void initializeDomemasterSize() {
-        if (domemasterSize != null) {
-            glAdapter.dispose(domemasterSize);
-        }
-        domemasterSize = glAdapter.createGraphics(parent, resolution, resolution, PApplet.P2D);
     }
 
     /**
@@ -113,18 +102,18 @@ class FisheyeDomemaster {
         if (domemaster == null) {
             initializeDomemaster();
         }
-        if (domemasterSize == null) {
-            initializeDomemasterSize();
-        }
 
         PGraphicsOpenGL target = (PGraphicsOpenGL) domemaster;
         target.beginDraw();
         boolean cubemapBound = false;
+        boolean shaderTouched = false;
         try {
             target.background(0, 0); // Set transparent background
             samplerCubeShader.set("fov", fov);
+            samplerCubeShader.set("sizePercentage", sizePercentage);
             samplerCubeShader.set("resolution", target.width, target.height);
             samplerCubeShader.set("cubemap", CUBEMAP_TEXTURE_UNIT);
+            shaderTouched = true;
             target.shader(samplerCubeShader);
             glAdapter.bindCubemapTextureScoped(
                     target, nativeCubemap, CUBEMAP_TEXTURE_UNIT, cubemapBindingState);
@@ -136,19 +125,15 @@ class FisheyeDomemaster {
                     glAdapter.restoreCubemapTexture(target, cubemapBindingState);
                 }
             } finally {
-                target.endDraw();
+                try {
+                    if (shaderTouched) {
+                        target.resetShader();
+                    }
+                } finally {
+                    target.endDraw();
+                }
             }
         }
-
-        applySizePass();
-    }
-
-    private void applySizePass() {
-        float adjustedSize = resolution * (sizePercentage / 100.0f);
-        domemasterSize.beginDraw();
-        domemasterSize.background(0, 0); // Set transparent background
-        domemasterSize.image(domemaster, (domemasterSize.width - adjustedSize) / 2, (domemasterSize.height - adjustedSize) / 2, adjustedSize, adjustedSize);
-        domemasterSize.endDraw();
     }
 
     /**
@@ -157,10 +142,10 @@ class FisheyeDomemaster {
      * @return the PGraphics object representing the domemaster projection
      */
     public PGraphicsOpenGL getDomemasterGraphics() {
-        if (domemasterSize == null) {
-            initializeDomemasterSize();
+        if (domemaster == null) {
+            initializeDomemaster();
         }
-        return (PGraphicsOpenGL) domemasterSize;
+        return (PGraphicsOpenGL) domemaster;
     }
 
     /**
@@ -170,10 +155,6 @@ class FisheyeDomemaster {
         if (domemaster != null) {
             glAdapter.dispose(domemaster);
             domemaster = null;
-        }
-        if (domemasterSize != null) {
-            glAdapter.dispose(domemasterSize);
-            domemasterSize = null;
         }
     }
 }

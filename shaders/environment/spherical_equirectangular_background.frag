@@ -39,7 +39,7 @@ vec3 directionForCanonicalFace(int face, vec2 faceUV) {
 }
 
 vec2 equirectangularUv(vec3 dir) {
-    dir = normalize(dir);
+    dir *= inversesqrt(max(dot(dir, dir), 1.0e-20));
     float theta = atan(-dir.x, -dir.z) - yawOffset;
     float u = fract(theta / (2.0 * PI));
     float v = acos(clamp(dir.y, -1.0, 1.0)) / PI;

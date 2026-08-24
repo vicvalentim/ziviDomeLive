@@ -158,12 +158,10 @@ final class EnvironmentBackgroundRenderer {
 			PGL pgl,
 			CubemapFace face,
 			Quaternion sphericalOrientation) {
-		Quaternion spherical = sphericalOrientation == null
-				? new Quaternion(0.0f, 0.0f, 0.0f, 1.0f)
-				: sphericalOrientation;
-		Quaternion environmentOrientation = spherical
-				.multiply(state.getSceneCameraOrientation())
-				.normalized();
+		Quaternion environmentOrientation = CubemapRenderer.composeEnvironmentOrientation(
+				sphericalOrientation,
+				state.getSceneCameraOrientation(),
+				state.getSourceOrientation());
 		return sphericalCompatibilityPass().renderCubemapFace(
 				target,
 				pgl,
@@ -217,34 +215,44 @@ final class EnvironmentBackgroundRenderer {
 		if (!isRenderable()) {
 			return false;
 		}
-		NativeEnvironmentShader shader = standardShader();
-		if (target == null || shader == null) {
-			warnUnavailable("Standard view");
-			return false;
-		}
-
-		configureEnvironmentSampler(target, shader);
-		shader.set("cameraRight", target.cameraInv.m00, target.cameraInv.m10, target.cameraInv.m20);
-		shader.set("cameraUp", target.cameraInv.m01, target.cameraInv.m11, target.cameraInv.m21);
-		shader.set("cameraBackward", target.cameraInv.m02, target.cameraInv.m12, target.cameraInv.m22);
-		state.getSceneCameraOrientation().toMatrix(standardEnvironmentRotation);
-		shader.set("environmentRotation", standardEnvironmentRotation);
-
-		PGL pgl = target.beginPGL();
+		boolean stateCaptured = false;
+		boolean stylePushed = false;
+		boolean matrixPushed = false;
+		boolean shaderTouched = false;
 		try {
-			snapshotAndConfigureBackgroundState(pgl);
-		} catch (RuntimeException error) {
-			warnRenderFailure(error);
-			return false;
-		} finally {
-			target.endPGL();
-		}
+			NativeEnvironmentShader shader = standardShader();
+			if (target == null || shader == null) {
+				warnUnavailable("Standard view");
+				return false;
+			}
 
-		try {
+			configureEnvironmentSampler(target, shader);
+			shader.set("cameraRight", target.cameraInv.m00, target.cameraInv.m10, target.cameraInv.m20);
+			shader.set("cameraUp", target.cameraInv.m01, target.cameraInv.m11, target.cameraInv.m21);
+			shader.set("cameraBackward", target.cameraInv.m02, target.cameraInv.m12, target.cameraInv.m22);
+			CubemapRenderer.composeEnvironmentOrientation(
+					null,
+					state.getSceneCameraOrientation(),
+					state.getSourceOrientation())
+					.toMatrix(standardEnvironmentRotation);
+			shader.set("environmentRotation", standardEnvironmentRotation);
+
+			PGL pgl = target.beginPGL();
+			try {
+				snapshotBackgroundState(pgl);
+				stateCaptured = true;
+				configureBackgroundState(pgl);
+			} finally {
+				target.endPGL();
+			}
+
 			target.pushStyle();
+			stylePushed = true;
 			target.pushMatrix();
+			matrixPushed = true;
 			target.resetMatrix();
 			target.noStroke();
+			shaderTouched = true;
 			target.shader(shader);
 			target.sphere(Math.max(target.cameraNear * 2.0f, target.cameraFar * 0.95f));
 			target.flush();
@@ -255,14 +263,19 @@ final class EnvironmentBackgroundRenderer {
 			warnRenderFailure(error);
 			return false;
 		} finally {
-			target.resetShader();
-			target.popMatrix();
-			target.popStyle();
-			PGL restorePgl = target.beginPGL();
-			try {
-				restoreBackgroundState(restorePgl);
-			} finally {
-				target.endPGL();
+			if (target != null) {
+				if (shaderTouched) {
+					runCleanup(target::resetShader);
+				}
+				if (matrixPushed) {
+					runCleanup(target::popMatrix);
+				}
+				if (stylePushed) {
+					runCleanup(target::popStyle);
+				}
+				if (stateCaptured) {
+					restoreCapturedBackgroundState(target);
+				}
 			}
 		}
 	}
@@ -295,7 +308,7 @@ final class EnvironmentBackgroundRenderer {
 	private boolean savedCullFaceEnabled;
 	private boolean savedScissorTestEnabled;
 
-	private void snapshotAndConfigureBackgroundState(PGL pgl) {
+	private void snapshotBackgroundState(PGL pgl) {
 		savedDepthTestEnabled = pgl.isEnabled(PGL.DEPTH_TEST);
 		savedBlendEnabled = pgl.isEnabled(PGL.BLEND);
 		savedCullFaceEnabled = pgl.isEnabled(PGL.CULL_FACE);
@@ -304,13 +317,41 @@ final class EnvironmentBackgroundRenderer {
 		savedDepthMask.clear();
 		pgl.getIntegerv(GL_DEPTH_FUNC, savedDepthFunction);
 		pgl.getBooleanv(PGL.DEPTH_WRITEMASK, savedDepthMask);
+	}
 
+	private void configureBackgroundState(PGL pgl) {
 		pgl.enable(PGL.DEPTH_TEST);
 		pgl.depthFunc(PGL.LEQUAL);
 		pgl.depthMask(false);
 		pgl.disable(PGL.BLEND);
 		pgl.disable(PGL.CULL_FACE);
 		pgl.disable(PGL.SCISSOR_TEST);
+	}
+
+	private void restoreCapturedBackgroundState(PGraphicsOpenGL target) {
+		PGL restorePgl = null;
+		try {
+			restorePgl = target.beginPGL();
+			restoreBackgroundState(restorePgl);
+		} catch (RuntimeException error) {
+			warnRenderFailure(error);
+		} finally {
+			if (restorePgl != null) {
+				try {
+					target.endPGL();
+				} catch (RuntimeException error) {
+					warnRenderFailure(error);
+				}
+			}
+		}
+	}
+
+	private void runCleanup(Runnable cleanup) {
+		try {
+			cleanup.run();
+		} catch (RuntimeException error) {
+			warnRenderFailure(error);
+		}
 	}
 
 	private void restoreBackgroundState(PGL pgl) {

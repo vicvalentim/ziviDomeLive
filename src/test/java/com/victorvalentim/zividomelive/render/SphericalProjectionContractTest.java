@@ -55,6 +55,23 @@ class SphericalProjectionContractTest {
 				"Longitude must wrap instead of clamping at the -Z seam");
 	}
 
+	@Test
+	void equiangularCubemapFacesSpaceAnglesUniformly() {
+		double edge = equiangularPlaneCoordinate(0.0);
+		double quarter = equiangularPlaneCoordinate(0.25);
+		double center = equiangularPlaneCoordinate(0.5);
+		double threeQuarter = equiangularPlaneCoordinate(0.75);
+		double oppositeEdge = equiangularPlaneCoordinate(1.0);
+
+		assertEquals(-1.0, edge, EPSILON);
+		assertEquals(-Math.sqrt(2.0) + 1.0, quarter, EPSILON);
+		assertEquals(0.0, center, EPSILON);
+		assertEquals(Math.sqrt(2.0) - 1.0, threeQuarter, EPSILON);
+		assertEquals(1.0, oppositeEdge, EPSILON);
+		assertEquals(Math.PI / 8.0, Math.atan(quarter) - Math.atan(edge), EPSILON);
+		assertEquals(Math.PI / 8.0, Math.atan(center) - Math.atan(quarter), EPSILON);
+	}
+
 	private static double[] equirectangularDirection(double u, double v) {
 		double theta = u * 2.0 * Math.PI;
 		double phi = v * Math.PI;
@@ -64,6 +81,10 @@ class SphericalProjectionContractTest {
 				-sinPhi * Math.sin(theta),
 				Math.cos(phi),
 				-sinPhi * Math.cos(theta)};
+	}
+
+	private static double equiangularPlaneCoordinate(double faceUv) {
+		return Math.tan((faceUv * 2.0 - 1.0) * Math.PI * 0.25);
 	}
 
 	/**

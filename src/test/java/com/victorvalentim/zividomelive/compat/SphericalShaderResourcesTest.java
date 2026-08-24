@@ -47,6 +47,28 @@ class SphericalShaderResourcesTest {
 				() -> assertTrue(buildScript.contains("into(\"data/shaders\")")));
 	}
 
+	@Test
+	void projectionShadersUseRealEquiangularMathAndDerivativeAwareSampling() throws IOException {
+		Path samplerCube = PROJECT_ROOT.resolve("shaders/samplercube");
+		String equirectangular = Files.readString(samplerCube.resolve("equirectangular.frag"));
+		String fisheye = Files.readString(samplerCube.resolve("fisheye.frag"));
+		String skybox = Files.readString(samplerCube.resolve("skybox.frag"));
+
+		assertAll("projection quality contracts",
+				() -> assertTrue(equirectangular.contains("textureGrad(")),
+				() -> assertTrue(fisheye.contains("textureGrad(")),
+				() -> assertTrue(fisheye.contains("uniform float sizePercentage;")),
+				() -> assertTrue(fisheye.contains("uv /= sizeScale;")),
+				() -> assertTrue(fisheye.contains("fwidth(r)")),
+				() -> assertTrue(fisheye.contains("smoothstep(")),
+				() -> assertTrue(skybox.contains("const float PI =")),
+				() -> assertTrue(skybox.contains("facePlane = tan(faceAngles)")),
+				() -> assertTrue(skybox.contains("textureGrad(")),
+				() -> assertFalse(equirectangular.contains("applyEAC")),
+				() -> assertFalse(fisheye.contains("applyEAC")),
+				() -> assertFalse(skybox.contains("applyEAC")));
+	}
+
 	private static void assertShader(
 			Path shader,
 			boolean processingFragment,

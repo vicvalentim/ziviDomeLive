@@ -8,14 +8,17 @@ out vec4 FragColor;
 
 const float PI = 3.1415926535897932384626433832795;
 
-vec3 applyEAC(vec3 dir) {
-    vec3 absDir = abs(dir);
-    float dominantAxis = max(max(absDir.x, absDir.y), absDir.z);
-    return dir / max(dominantAxis, 0.000001);
+vec3 safeNormalize(vec3 direction) {
+    return direction * inversesqrt(max(dot(direction, direction), 1.0e-20));
 }
 
-vec4 sampleCubemapEAC(vec3 dir) {
-    return texture(cubemap, applyEAC(normalize(dir)));
+vec4 sampleCubemapDirection(vec3 direction) {
+    vec3 unitDirection = safeNormalize(direction);
+    return textureGrad(
+            cubemap,
+            unitDirection,
+            dFdx(unitDirection),
+            dFdy(unitDirection));
 }
 
 void main() {
@@ -48,5 +51,5 @@ void main() {
             -sinPhi * cosTheta
     );
 
-    FragColor = sampleCubemapEAC(dir);
+    FragColor = sampleCubemapDirection(dir);
 }

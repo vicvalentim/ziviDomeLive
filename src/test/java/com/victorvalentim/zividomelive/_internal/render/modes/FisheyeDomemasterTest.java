@@ -4,8 +4,13 @@ package com.victorvalentim.zividomelive;
 
 import org.junit.jupiter.api.Test;
 import processing.core.PApplet;
+import processing.core.PGraphics;
 import processing.opengl.PShader;
 
+import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -63,5 +68,27 @@ class FisheyeDomemasterTest {
 		new FisheyeDomemaster(1024, "samplercube.frag", "samplercube.vert", applet);
 
 		assertEquals(List.of("samplercube.frag|samplercube.vert"), applet.loadedShaders);
+	}
+
+	@Test
+	void ownsExactlyOnePGraphicsTarget() {
+		List<Field> graphicsFields = Arrays.stream(FisheyeDomemaster.class.getDeclaredFields())
+				.filter(field -> PGraphics.class.isAssignableFrom(field.getType()))
+				.toList();
+
+		assertEquals(1, graphicsFields.size());
+		assertEquals("domemaster", graphicsFields.get(0).getName());
+	}
+
+	@Test
+	void shaderAppliesSizePercentageInCenteredCoordinates() throws Exception {
+		String shader = Files.readString(Path.of(
+				System.getProperty("user.dir"), "shaders/samplercube/fisheye.frag"));
+
+		assertTrue(shader.contains("uniform float sizePercentage;"));
+		assertTrue(shader.contains("sizePercentage, 0.0, 100.0"));
+		assertTrue(shader.contains("uv /= sizeScale;"));
+		assertTrue(shader.contains("FragColor = vec4(0.0);"));
+		assertFalse(shader.contains("image("));
 	}
 }

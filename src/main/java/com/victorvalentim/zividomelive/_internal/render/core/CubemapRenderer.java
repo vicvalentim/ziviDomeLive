@@ -28,6 +28,7 @@ import java.util.function.Consumer;
  * conventions. Any framebuffer-origin conversion is isolated to the blit step.</p>
  */
 class CubemapRenderer implements PConstants {
+    private static final int SHAPE_ANTIALIAS_SAMPLES = 4;
     private static final float DEFAULT_NEAR_PLANE = 1.0f;
     private static final float DEFAULT_FAR_PLANE = 1122000.0f;
     private static final Logger LOGGER = LogManager.getLogger();
@@ -52,6 +53,7 @@ class CubemapRenderer implements PConstants {
     private final PMatrix3D captureOrientationMatrix = new PMatrix3D();
     private final PMatrix3D environmentOrientationMatrix = new PMatrix3D();
     private final Consumer<PGL> resolvedFaceBlit = this::blitResolvedFace;
+    private final CubemapCaptureBarrier captureBarrier = new CubemapCaptureBarrier();
     private int resolvedSourceFramebufferId;
 
     /**
@@ -285,9 +287,11 @@ class CubemapRenderer implements PConstants {
         effectiveOrientation.toMatrix(captureOrientationMatrix);
         composeEnvironmentOrientation(
                 effectiveOrientation,
-                environmentState.getSceneCameraOrientation())
+                environmentState.getSceneCameraOrientation(),
+                environmentState.getSourceOrientation())
                 .toMatrix(environmentOrientationMatrix);
 
+        captureBarrier.begin(System.nanoTime());
         try {
             for (int faceIndex = 0; faceIndex < CubemapFace.count(); faceIndex++) {
                 CubemapFace face = CubemapFace.at(faceIndex);
@@ -301,15 +305,22 @@ class CubemapRenderer implements PConstants {
                             captureFieldOfView,
                             monitor,
                             profiling);
+                    captureBarrier.completeFace(face);
                 } finally {
                     if (profiling) monitor.record(faceMetric(face), faceStarted);
                 }
             }
 
             refreshNativeCubemapMipmaps();
+            if (nativeCubemapTarget == null || !nativeCubemapTarget.isAllocated()) {
+                throw new IllegalStateException(
+                        "Native cubemap target became unavailable before batch publication.");
+            }
+            captureBarrier.publish(System.nanoTime());
             nativeCubemapUnavailableWarningLogged = false;
             return true;
         } catch (RuntimeException error) {
+            captureBarrier.abort();
             LOGGER.warning(
                     "Native cubemap capture failed; spherical frame skipped: "
                             + error.getMessage());
@@ -397,7 +408,7 @@ class CubemapRenderer implements PConstants {
      * @return native cubemap target, or {@code null} when unsupported/unavailable
      */
     public CubemapTarget getNativeCubemapTarget() {
-        return nativeCubemapTarget;
+        return captureBarrier.isReadable() ? nativeCubemapTarget : null;
     }
 
     /**
@@ -406,7 +417,9 @@ class CubemapRenderer implements PConstants {
      * @return {@code true} when {@code GL_TEXTURE_CUBE_MAP} capture is available
      */
     public boolean hasNativeCubemapTarget() {
-        return nativeCubemapTarget != null && nativeCubemapTarget.isAllocated();
+        return captureBarrier.isReadable()
+                && nativeCubemapTarget != null
+                && nativeCubemapTarget.isAllocated();
     }
 
     /**
@@ -497,16 +510,25 @@ class CubemapRenderer implements PConstants {
         return environmentState;
     }
 
+    /** Composes fixed source alignment after dome and scene-camera lookup rotations. */
     static Quaternion composeEnvironmentOrientation(
             Quaternion sphericalOrientation,
-            Quaternion sceneCameraOrientation) {
+            Quaternion sceneCameraOrientation,
+            Quaternion sourceOrientation) {
         Quaternion spherical = sphericalOrientation == null
                 ? new Quaternion(0.0f, 0.0f, 0.0f, 1.0f)
                 : sphericalOrientation;
         Quaternion sceneCamera = sceneCameraOrientation == null
                 ? new Quaternion(0.0f, 0.0f, 0.0f, 1.0f)
                 : sceneCameraOrientation;
-        return spherical.multiply(sceneCamera).normalized();
+        Quaternion source = sourceOrientation == null
+                ? new Quaternion(0.0f, 0.0f, 0.0f, 1.0f)
+                : sourceOrientation;
+        return source.multiply(spherical.multiply(sceneCamera)).normalized();
+    }
+
+    static int shapeAntialiasSamples() {
+        return SHAPE_ANTIALIAS_SAMPLES;
     }
 
     /**
@@ -552,7 +574,8 @@ class CubemapRenderer implements PConstants {
                             parent,
                             resolution,
                             resolution,
-                            P3D);
+                            P3D,
+                            SHAPE_ANTIALIAS_SAMPLES);
 
             if (LogManager.isDebugEnabled()) {
                 LOGGER.fine(
@@ -605,6 +628,7 @@ class CubemapRenderer implements PConstants {
     }
 
     private void disposeNativeCubemapTarget() {
+        captureBarrier.reset();
         if (nativeCubemapTarget != null) {
             nativeCubemapTarget.dispose();
             nativeCubemapTarget = null;
