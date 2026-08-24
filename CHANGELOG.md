@@ -8,6 +8,26 @@ Version 2.0.0 is a deliberate major-version reset. It preserves the Processing-o
 
 The Java package remains `com.victorvalentim.zividomelive`. The public facade is `ziviDomeLive`.
 
+### License and provenance
+
+- Relicensed project-authored ziviDomeLive material in the 2.0 release line
+  under the Apache License 2.0 (`Apache-2.0`).
+- Preserved published releases through `v1.5.0` under their original
+  `GPL-2.0-only` terms.
+- Added a file-level `SolarSystem` provenance manifest with integrity hashes.
+- Recorded `solar2.json` as a project-maintained astronomical-data snapshot with
+  NASA/JPL scientific-data provenance, without claiming the underlying
+  scientific facts/data as project-authored Apache-2.0 content.
+- Corrected planetary/space texture attribution to **Solar System Scope / INOVE
+  under CC BY 4.0**, recording NASA elevation/imagery only as the upstream basis
+  stated by Solar System Scope.
+- Recorded `eso0932a.jpg` separately as **ESO/S. Brunier, CC BY 4.0**.
+- Prevented the unresolved historical `background.jpg` from receiving an
+  invented credit; it must be removed or independently resolved before release.
+- Preserved Devolay under Apache-2.0, the proprietary NDI Runtime under its own
+  terms, and Paul Bourke calibration assets under their documented
+  redistribution conditions.
+
 ### Public API freeze
 
 The final surface is classified and protected as follows:

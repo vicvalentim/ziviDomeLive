@@ -8,7 +8,7 @@ authors:
     given-names: Victor
     orcid: "https://orcid.org/0000-0002-0282-7947"
     affiliation: "UFRB – Center for Culture, Languages and Applied Technologies (CECULT)"
-license: GPL-2.0-only
+license: Apache-2.0
 keywords:
   - fulldome
   - Processing

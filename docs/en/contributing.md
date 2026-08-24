@@ -34,6 +34,19 @@ Participation is governed by the [Code of Conduct](https://github.com/vicvalenti
 
 Thank you for helping ziviDomeLive remain useful, teachable and sustainable.
 
+## Contribution License
+
+Unless explicitly agreed otherwise before submission, any contribution
+intentionally submitted for inclusion in the ziviDomeLive 2.0 release line is
+submitted under the **Apache License 2.0**, the same license used for
+project-authored 2.0 material. Contributors must have the right to submit their
+work under those terms.
+
+Do not submit third-party code, datasets, images, textures, shaders or other
+material as if it were project-authored Apache-2.0 content. External material
+must preserve its real source, creator/credit, applicable license or usage terms,
+and modification status where the upstream license requires it.
+
 ## Local Checks
 
 Use Java 17 and run:

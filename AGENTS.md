@@ -162,4 +162,4 @@
 - Release artifacts: `./gradlew buildReleaseArtifacts`; sketchbook deployment: `./gradlew deployToProcessingSketchbook`.
 - Docs use MkDocs Material, Mermaid diagrams, and bilingual suffix files. Keep API/reference pages, executable examples, release notes, and the packaged artifact mutually consistent.
 - Use `LogManager.getLogger()`; debug logs are also written under `/tmp/zividomelive/logs` on non-Windows.
-- Licensing/version metadata is not fully consistent across files; verify authoritative release metadata before changing it.
+- The 2.0 project-authored licensing authority is Apache-2.0. Historical releases and third-party material keep their original terms. Preserve `LICENSE`, citation metadata, bilingual license pages, `THIRD_PARTY.md`, `examples/SolarSystem/THIRD_PARTY.md`, and `examples/SolarSystem/ASSET_PROVENANCE.json` in sync; never collapse NASA/JPL scientific provenance, Solar System Scope/INOVE CC BY 4.0 textures, or ESO/S. Brunier CC BY 4.0 media into the project Apache license.

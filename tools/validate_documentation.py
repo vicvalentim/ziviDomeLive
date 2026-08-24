@@ -7,6 +7,7 @@ GPU, receiver or installed-package runtime qualification.
 """
 from __future__ import annotations
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -18,6 +19,7 @@ from urllib.parse import unquote, urlsplit
 
 EXPECTED_VERSION = "2.0.0"
 EXPECTED_DOI = "10.5281/zenodo.15671506"
+EXPECTED_LICENSE = "Apache-2.0"
 RENDER_MODES = {"FULL", "STANDARD", "DOMEMASTER", "EQUIRECTANGULAR", "SKYBOX"}
 VIEW_TYPES = {"STANDARD", "DOMEMASTER", "EQUIRECTANGULAR", "SKYBOX"}
 EXAMPLES = {"EmptyProject", "Basic", "SphereParticle", "InfiniteBackground", "FulldomePBR", "SolarSystem", "CalibrationTool", "BenchmarkTool"}
@@ -64,6 +66,14 @@ def read(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 class ExportedReferenceParser(HTMLParser):
     """Collect browser-visible local references from generated HTML."""
 
@@ -106,6 +116,8 @@ def public_text_files(root: Path):
 def check_required(root,c):
     for rel in [
         'README.md', 'CHANGELOG.md', 'THIRD_PARTY.md', 'mkdocs.yml',
+        'examples/SolarSystem/THIRD_PARTY.md',
+        'examples/SolarSystem/ASSET_PROVENANCE.json',
         'requirements-docs.txt', 'library.properties', 'CITATION.cff',
         '.zenodo.json', 'examples', 'src/main/java', 'docs/en', 'docs/pt',
         'docs/en/research-software.md', 'docs/pt/research-software.md',
@@ -172,13 +184,84 @@ def check_metadata(root,c):
     if not m or m.group(1)!=EXPECTED_VERSION: c.error('CITATION.cff version mismatch')
     m=re.search(r'(?m)^doi:\s*["\']?([^"\'\s]+)',cff)
     if not m or m.group(1)!=EXPECTED_DOI: c.error('CITATION.cff software DOI mismatch')
+    m=re.search(r'(?m)^license:\s*["\']?([^"\'\s]+)',cff)
+    if not m or m.group(1)!=EXPECTED_LICENSE:
+        c.error('CITATION.cff license mismatch')
+    license_text=read(root/'LICENSE')
+    if 'Apache License' not in license_text or 'Version 2.0, January 2004' not in license_text:
+        c.error('repository LICENSE is not the Apache License 2.0 text')
     try: zen=json.loads(read(root/'.zenodo.json'))
     except Exception as e:
         c.error(f'.zenodo.json is invalid JSON: {e}'); zen={}
     if zen.get('version') != EXPECTED_VERSION: c.error('.zenodo.json version mismatch')
+    if zen.get('license') != EXPECTED_LICENSE:
+        c.error('.zenodo.json license mismatch')
+
+    solar_notice=read(root/'examples/SolarSystem/THIRD_PARTY.md')
+    for token in (
+            'JPL Solar System Dynamics', 'Solar System Scope', 'INOVE',
+            'NASA is an upstream data/imagery source', 'ESO/S. Brunier',
+            'CC BY 4.0'):
+        if token not in solar_notice:
+            c.error(f'SolarSystem provenance notice missing: {token}')
+
+    manifest_path=root/'examples/SolarSystem/ASSET_PROVENANCE.json'
+    try:
+        provenance=json.loads(read(manifest_path))
+    except Exception as e:
+        c.error(f'SolarSystem ASSET_PROVENANCE.json is invalid JSON: {e}')
+        provenance={}
+
+    if provenance.get('projectLicense') != EXPECTED_LICENSE:
+        c.error('SolarSystem provenance projectLicense mismatch')
+
+    solar_root=root/'examples/SolarSystem'
+    dataset=provenance.get('dataset', {})
+    dataset_path=solar_root/dataset.get('path', '')
+    if not dataset_path.is_file():
+        c.error('SolarSystem provenance dataset path is missing')
+    elif dataset.get('sha256') != sha256_file(dataset_path):
+        c.error('SolarSystem solar2.json SHA-256 differs from provenance manifest')
+
+    texture_entries=provenance.get('assets', [])
+    if not texture_entries:
+        c.error('SolarSystem provenance manifest contains no media assets')
+    for entry in texture_entries:
+        rel=entry.get('path', '')
+        asset_path=solar_root/rel
+        if not rel or not asset_path.is_file():
+            c.error(f'SolarSystem provenance asset missing: {rel or "<empty path>"}')
+            continue
+        if entry.get('sha256') != sha256_file(asset_path):
+            c.error(f'SolarSystem asset SHA-256 differs from provenance manifest: {rel}')
+        if rel.startswith('data/textures/2k_') or rel.startswith('data/textures/8k_'):
+            if entry.get('creator') != 'Solar System Scope':
+                c.error(f'Solar System Scope creator attribution missing: {rel}')
+            if entry.get('developer') != 'INOVE':
+                c.error(f'INOVE developer attribution missing: {rel}')
+            if entry.get('license') != 'CC-BY-4.0':
+                c.error(f'Solar System Scope texture license mismatch: {rel}')
+        if rel == 'data/textures/eso0932a.jpg':
+            if entry.get('creatorCredit') != 'ESO/S. Brunier':
+                c.error('ESO panorama credit must remain exactly ESO/S. Brunier')
+            if entry.get('license') != 'CC-BY-4.0':
+                c.error('ESO panorama license mismatch')
+
+    if (solar_root/'data/textures/background.jpg').exists():
+        c.error(
+            'unresolved SolarSystem data/textures/background.jpg remains in the tree; '
+            'remove it or independently resolve its provenance before release')
     zen_claim_text=' '.join([str(zen.get('description','')), *map(str, zen.get('keywords',[]))])
     if re.search(r'(?i)(^|[,\s])VR([,\s]|$)|(^|[,\s])XR([,\s]|$)', zen_claim_text):
         c.error('.zenodo.json contains generic VR/XR product metadata outside the 2.0 public contract')
+    current_license_surfaces = {
+        'docs/en/about.md': '| **License** | Apache-2.0 |',
+        'docs/pt/about.md': '| **Licença** | Apache-2.0 |',
+    }
+    for rel, expected in current_license_surfaces.items():
+        if expected not in read(root/rel):
+            c.error(f'current project license is stale in {rel}: expected Apache-2.0')
+
     all_public='\n'.join(read(p) for p in public_text_files(root))
     if EXPECTED_DOI not in all_public: c.warn('software DOI not found in current public documentation text')
     if re.search(r'10\.5281/zenodo\.(?:X+|0{4,}|<[^>]+>)',all_public,re.I): c.error('fake/placeholder Zenodo DOI found')
@@ -556,6 +639,13 @@ def check_package(path: Path,c):
         if not any_suffix(suffix): c.error(f'package missing {suffix.lstrip("/")}')
     for suffix in ['/README.md', '/CHANGELOG.md', '/CITATION.cff', '/THIRD_PARTY.md']:
         if not any_suffix(suffix): c.error(f'package missing {suffix.lstrip("/")}')
+    for suffix in [
+            '/examples/SolarSystem/THIRD_PARTY.md',
+            '/examples/SolarSystem/ASSET_PROVENANCE.json']:
+        if not any_suffix(suffix):
+            c.error(f'package missing provenance file {suffix.lstrip("/")}')
+    if any_suffix('/examples/SolarSystem/data/textures/background.jpg'):
+        c.error('package contains unresolved SolarSystem background.jpg')
     if not any('/library/' in n for n in names): c.error('package missing library/ content')
     if not any('/src/' in n for n in names): c.error('package missing src/ content')
     for ex in EXAMPLES:

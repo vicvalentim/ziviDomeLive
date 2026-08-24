@@ -130,7 +130,7 @@ exige o [protocolo de qualificação de hardware](../qualification/2.0-release-r
 
 ## Limite de Licenciamento
 
-Devolay é Apache-2.0; ziviDomeLive é GPL-2.0-only. O NDI Runtime proprietário é
+Devolay e o material de autoria do projeto na linha ziviDomeLive 2.0 são Apache-2.0. O NDI Runtime proprietário é
 coberto separadamente pela licença e pelos termos de distribuição atuais do NDI
 SDK. Instalar ou redistribuir o runtime não o transforma em parte de nenhuma das
 licenças open source. Quem distribuir um produto com binários do NDI Runtime é

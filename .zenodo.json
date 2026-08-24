@@ -3,7 +3,7 @@
   "upload_type": "software",
   "description": "ziviDomeLive is a Java library for Processing for real-time fulldome, spherical, and immersive rendering workflows. It provides explicit render modes, independent Standard and native samplerCube spherical pipelines, real-time scene lifecycle management, and optional NDI, Syphon, or Spout output routing.",
   "version": "2.0.0",
-  "license": "GPL-2.0-only",
+  "license": "Apache-2.0",
   "creators": [
     {
       "name": "Valentim, Victor",

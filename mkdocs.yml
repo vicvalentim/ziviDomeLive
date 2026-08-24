@@ -5,7 +5,7 @@ repo_name: GitHub
 edit_uri: edit/main/docs/
 site_description: Technical documentation for ziviDomeLive real-time fulldome, spherical and immersive rendering workflows in Processing
 site_author: Victor Valentim
-copyright: Copyright &copy; 2024-2026 Victor Valentim - GPL-2.0-only
+copyright: Copyright &copy; 2024-2026 Victor Valentim - Apache-2.0
 docs_dir: docs
 site_dir: site
 use_directory_urls: true

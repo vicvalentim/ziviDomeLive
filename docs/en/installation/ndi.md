@@ -132,7 +132,7 @@ production use still requires the [hardware qualification protocol](../qualifica
 
 ## Licensing Boundary
 
-Devolay is Apache-2.0 software; ziviDomeLive is GPL-2.0-only. The proprietary NDI
+Devolay and project-authored ziviDomeLive 2.0 material are Apache-2.0. The proprietary NDI
 Runtime is covered separately by the current NDI SDK license and distribution
 terms. Installing or redistributing the runtime does not make it part of either
 open-source license. Anyone distributing a product with NDI runtime binaries is

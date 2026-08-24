@@ -34,6 +34,19 @@ A participação segue o [Código de Conduta](https://github.com/vicvalentim/ziv
 
 Obrigado por ajudar a manter a ziviDomeLive útil, ensinável e sustentável.
 
+## Licença das Contribuições
+
+Salvo acordo explícito em contrário feito antes da submissão, qualquer
+contribuição intencionalmente enviada para inclusão na linha ziviDomeLive 2.0 é
+submetida sob a **Apache License 2.0**, a mesma licença do material 2.0 de
+autoria do projeto. A pessoa que contribui deve possuir os direitos necessários
+para submeter o material nesses termos.
+
+Não submeta código, datasets, imagens, texturas, shaders ou outros materiais de
+terceiros como se fossem conteúdo Apache-2.0 de autoria do projeto. Material
+externo deve preservar a fonte real, autoria/crédito, licença ou termos de uso
+aplicáveis e a indicação de alterações quando exigida pela licença upstream.
+
 ## Verificações Locais
 
 Use Java 17 e execute:

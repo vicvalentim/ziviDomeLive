@@ -19,7 +19,7 @@ ziviDomeLive is an open-source Java library for **Processing 4** that turns one 
 | **Platform** | Processing 4 and Java 17 |
 | **Primary domain** | Real-time monoscopic fulldome and spherical rendering |
 | **Representations** | Standard, Domemaster, Equirectangular and Skybox |
-| **License** | GPL-2.0-only |
+| **License** | Apache-2.0 |
 | **Software DOI** | [10.5281/zenodo.15671506](https://doi.org/10.5281/zenodo.15671506) |
 | **Source** | [github.com/vicvalentim/ziviDomeLive](https://github.com/vicvalentim/ziviDomeLive) |
 

@@ -17,6 +17,7 @@ class ReleaseMetadataTest {
 	private static final Path PROJECT_ROOT = Path.of(System.getProperty("user.dir"));
 	private static final String RELEASE_VERSION = "2.0.0";
 	private static final String PROCESSING_RELEASE_NUMBER = "11";
+	private static final String PROJECT_LICENSE = "Apache-2.0";
 
 	@Test
 	void releaseVersionIsAlignedAcrossMetadata() throws IOException {
@@ -31,6 +32,38 @@ class ReleaseMetadataTest {
 		assertTrue(read(".zenodo.json").contains("\"version\": \"" + RELEASE_VERSION + "\""));
 		assertTrue(read("CHANGELOG.md").contains("## [" + RELEASE_VERSION + "]"));
 	}
+
+    @Test
+    void releaseLicenseAndSolarSystemProvenanceAreAligned() throws IOException {
+        assertTrue(read("CITATION.cff").contains("license: " + PROJECT_LICENSE));
+        assertTrue(read(".zenodo.json").contains("\"license\": \"" + PROJECT_LICENSE + "\""));
+        assertTrue(read("LICENSE").contains("Apache License"));
+        assertTrue(read("LICENSE").contains("Version 2.0, January 2004"));
+
+        String thirdParty = read("THIRD_PARTY.md");
+        assertTrue(thirdParty.contains("Solar System Scope"));
+        assertTrue(thirdParty.contains("INOVE"));
+        assertTrue(thirdParty.contains("CC BY 4.0"));
+        assertTrue(thirdParty.contains("ESO/S. Brunier"));
+        assertTrue(thirdParty.contains("NASA/JPL"));
+
+        String solarNotice = read("examples/SolarSystem/THIRD_PARTY.md");
+        assertTrue(solarNotice.contains("JPL Solar System Dynamics"));
+        assertTrue(solarNotice.contains("Solar System Scope"));
+        assertTrue(solarNotice.contains("NASA is an upstream data/imagery source"));
+        assertTrue(solarNotice.contains("ESO/S. Brunier"));
+        assertTrue(solarNotice.contains("CC BY 4.0"));
+
+        String provenance = read("examples/SolarSystem/ASSET_PROVENANCE.json");
+        assertTrue(provenance.contains("\"projectLicense\": \"" + PROJECT_LICENSE + "\""));
+        assertTrue(provenance.contains("\"license\": \"CC-BY-4.0\""));
+        assertTrue(provenance.contains("\"creatorCredit\": \"ESO/S. Brunier\""));
+
+        assertFalse(
+                Files.exists(PROJECT_ROOT.resolve(
+                        "examples/SolarSystem/data/textures/background.jpg")),
+                "unresolved SolarSystem background.jpg must not be present in a release-ready tree");
+    }
 
     @Test
     void generatedProcessingMetadataKeepsReleaseQualificationFields() throws IOException {

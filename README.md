@@ -11,7 +11,7 @@
 [![Java](https://img.shields.io/badge/Java-17-ED8B00)](https://adoptium.net/)
 [![Documentation](https://img.shields.io/badge/docs-MkDocs-526CFE)](https://vicvalentim.github.io/ziviDomeLive/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15671506.svg)](https://doi.org/10.5281/zenodo.15671506)
-[![License](https://img.shields.io/badge/license-GPL--2.0--only-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 [Documentation](https://vicvalentim.github.io/ziviDomeLive/) ·
 [Installation](#installation) ·
@@ -346,6 +346,8 @@ The repository preserves the architectural history from the original 1.x rendere
 
 ## License
 
-ziviDomeLive is distributed under **[GPL-2.0-only](LICENSE)**. Bundled components and calibration assets are recorded in [`THIRD_PARTY.md`](THIRD_PARTY.md).
+Project-authored material in the ziviDomeLive **2.0 release line** is distributed under the **[Apache License 2.0](LICENSE)** (`Apache-2.0`), except where a file or third-party notice states otherwise. Published releases through `v1.5.0` retain the `GPL-2.0-only` terms under which those versions were originally released; the 2.0 relicensing does not revoke historical grants.
+
+Third-party software, scientific data and media retain their own provenance and terms. In `SolarSystem`, the curated astronomical dataset records NASA/JPL scientific-data provenance, while the planetary/space texture pack is credited to **Solar System Scope / INOVE under CC BY 4.0** and explicitly identifies NASA imagery/elevation data only as its upstream basis. The retained `eso0932a.jpg` panorama is credited separately to **ESO/S. Brunier under CC BY 4.0**. See [`THIRD_PARTY.md`](THIRD_PARTY.md) and [`examples/SolarSystem/THIRD_PARTY.md`](examples/SolarSystem/THIRD_PARTY.md).
 
 Copyright © 2024–2026 Victor Valentim.
