@@ -1131,7 +1131,7 @@ public class ziviDomeLive {
 	 */
 	public void draw() {
 		if (disposed || paused || initState != InitState.MANAGERS_READY) {
-			p.background(0, 0);
+			p.background(0, 0, 0, 0);
 			return;
 		}
 

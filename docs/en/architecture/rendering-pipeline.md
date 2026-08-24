@@ -18,3 +18,9 @@ A spherical cubemap should be captured once per frame and reused by all requeste
 ## Final views
 
 An internal immutable-per-frame boundary carries final representations to preview and output producers. Users select those representations through `ViewType`; neither the container nor producer operations are public.
+
+Every final off-screen view begins at RGBA `(0, 0, 0, 0)`. Alpha remains part of the internal
+Scene → renderer → final view → preview/output path. Scene backgrounds and visible configured
+Environment images are explicit content rather than library fallbacks. The primary Processing
+window and external receivers can have their own compositor/alpha limitations; those limitations
+do not change the final framebuffer contract.

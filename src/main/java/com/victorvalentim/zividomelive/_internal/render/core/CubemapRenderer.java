@@ -340,7 +340,7 @@ class CubemapRenderer implements PConstants {
         captureGraphics.beginDraw();
         try {
             captureGraphics.resetMatrix();
-            captureGraphics.background(0, 0);
+            captureGraphics.clear();
             configureCameraForFace(
                     captureGraphics,
                     orientation,

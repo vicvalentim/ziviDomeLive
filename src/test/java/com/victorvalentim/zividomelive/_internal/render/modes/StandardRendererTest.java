@@ -10,6 +10,7 @@ import processing.opengl.PGraphicsOpenGL;
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -68,6 +69,52 @@ class StandardRendererTest {
 	}
 
 	@Test
+	void defaultFrameStartsTransparentWhenSceneAndEnvironmentDoNotDraw() throws Exception {
+		PApplet applet = new PApplet();
+		applet.width = 640;
+		applet.height = 480;
+		StandardRenderer renderer = new StandardRenderer(applet, 0, 0, graphics -> { });
+		TrackingGraphics target = installTarget(renderer, 640, 480);
+
+		renderer.render();
+
+		assertEquals(1, target.clearCalls);
+		assertEquals(0, target.backgroundCalls);
+		assertFalse(renderer.hasEnvironmentBackground());
+	}
+
+	@Test
+	void disabledEnvironmentLeavesDefaultFrameTransparent() throws Exception {
+		PApplet applet = new PApplet();
+		applet.width = 640;
+		applet.height = 480;
+		StandardRenderer renderer = new StandardRenderer(applet, 0, 0, graphics -> { });
+		renderer.setEquirectangularBackground(new PImage(4, 2, PApplet.ARGB));
+		renderer.setEnvironmentBackgroundVisible(false);
+		TrackingGraphics target = installTarget(renderer, 640, 480);
+
+		renderer.render();
+
+		assertEquals(1, target.clearCalls);
+		assertEquals(0, target.backgroundCalls);
+	}
+
+	@Test
+	void skyColorBecomesOpaqueOnlyAfterExplicitRequest() throws Exception {
+		PApplet applet = new PApplet();
+		applet.width = 640;
+		applet.height = 480;
+		StandardRenderer renderer = new StandardRenderer(applet, 0, 0, graphics -> { });
+		renderer.setSkyColor(10, 20, 30);
+		TrackingGraphics target = installTarget(renderer, 640, 480);
+
+		renderer.render();
+
+		assertEquals(0, target.clearCalls);
+		assertEquals(1, target.backgroundCalls);
+	}
+
+	@Test
 	void clipFactorsAreFinitePositiveAndDerivedFromEffectiveNear() throws Exception {
 		StandardRenderer renderer = new StandardRenderer(new PApplet(), 0, 0, null);
 
@@ -98,9 +145,22 @@ class StandardRendererTest {
 		return field.getFloat(renderer);
 	}
 
+	private static TrackingGraphics installTarget(
+			StandardRenderer renderer,
+			int width,
+			int height) throws Exception {
+		TrackingGraphics target = new TrackingGraphics(width, height);
+		Field standardView = StandardRenderer.class.getDeclaredField("standardView");
+		standardView.setAccessible(true);
+		standardView.set(renderer, target);
+		return target;
+	}
+
 	private static final class TrackingGraphics extends PGraphicsOpenGL {
 		private int beginDrawCalls;
 		private int endDrawCalls;
+		private int clearCalls;
+		private int backgroundCalls;
 
 		TrackingGraphics(int width, int height) {
 			this.width = width;
@@ -118,13 +178,18 @@ class StandardRendererTest {
 		}
 
 		@Override
+		public void clear() {
+			clearCalls++;
+		}
+
+		@Override
 		public void perspective(float fov, float aspect, float zNear, float zFar) {
 			// No OpenGL context is needed for lifecycle verification.
 		}
 
 		@Override
 		public void background(float red, float green, float blue) {
-			// No OpenGL context is needed for lifecycle verification.
+			backgroundCalls++;
 		}
 
 		@Override

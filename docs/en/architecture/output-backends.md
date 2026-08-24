@@ -24,3 +24,8 @@ Spout is the Windows platform-local GPU texture-sharing backend. Qualification r
 ## Routing invariant
 
 Backends consume final views; they should not own scene rendering logic. `OutputManager` selects the destination view and publishes the corresponding final target.
+
+The final target carries RGBA. NDI encodes Processing ARGB pixels as packed RGBA without replacing
+alpha, while Syphon and Spout receive the completed Processing texture directly. Receiver support
+must be qualified separately: a receiver or window compositor that discards alpha does not redefine
+the library's transparent framebuffer contract.

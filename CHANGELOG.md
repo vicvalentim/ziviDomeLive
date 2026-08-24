@@ -93,6 +93,8 @@ An exact reflection-based snapshot freezes public types, methods, constructors, 
 ### Changed — Rendering behavior
 
 - Kept Standard rendering independent from spherical capture.
+- Made transparent RGBA `(0, 0, 0, 0)` the default for every library-owned Standard and spherical final target; only Scene drawing, configured visible Environment content, or an explicit retained Standard sky-colour request makes covered pixels opaque.
+- Preserved cubemap alpha through all samplerCube projections, kept the Domemaster exterior and `Size%=0` transparent, and clear projection targets on allocation, every pass and failed/unavailable inputs so stale opaque frames cannot be republished.
 - Reused one spherical cubemap capture for all spherical projections/consumers required in a frame.
 - Removed the equirectangular intermediate from the active Domemaster path.
 - Preserved cubemap face orientation and previous skybox cross-layout behavior.

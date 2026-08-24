@@ -25,8 +25,8 @@ import processing.opengl.PGraphicsOpenGL;
  * output instances can share the same camera via {@link #setCam(MouseControlledCamera)} so that
  * both always show the same framing at different resolutions.</p>
  *
- * <p>An infinite sky background is painted before each scene render. The sky colour can be
- * customised via {@link #setSkyColor(int, int, int)}.</p>
+ * <p>The target starts transparent on every frame. The retained compatibility method
+ * {@link #setSkyColor(int, int, int)} opts into an opaque infinite sky colour explicitly.</p>
  *
  * <p>This renderer must only be driven from the Processing draw thread. It calls
  * {@code beginDraw()} and {@code endDraw()} internally; {@link Scene#sceneRender} must
@@ -53,10 +53,11 @@ class StandardRenderer {
      */
     private final int fixedHeight;
 
-    /** Sky background colour (R, G, B). Default: dark space blue. */
-    private int skyR = 10;
-    private int skyG = 10;
-    private int skyB = 30;
+    /** Sky background colour (R, G, B), used only after an explicit request. */
+    private int skyR;
+    private int skyG;
+    private int skyB;
+    private boolean skyColorExplicitlySet;
 
     /**
      * Near clipping plane multiplier. {@code near = distance * nearFactor}.
@@ -153,6 +154,17 @@ class StandardRenderer {
         }
         standardView = glAdapter.createGraphics(
                 parent, width, height, PApplet.P3D, SHAPE_ANTIALIAS_SAMPLES);
+        clearStandardView();
+    }
+
+    /** Establishes the transparent default immediately after allocation. */
+    private void clearStandardView() {
+        standardView.beginDraw();
+        try {
+            standardView.clear();
+        } finally {
+            standardView.endDraw();
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -179,6 +191,7 @@ class StandardRenderer {
         this.skyR = r;
         this.skyG = g;
         this.skyB = b;
+        this.skyColorExplicitlySet = true;
     }
 
     /**
@@ -218,7 +231,7 @@ class StandardRenderer {
      * <ol>
      *   <li>Allocate or reallocate the off-screen buffer if dimensions changed.</li>
      *   <li>Update camera position from quaternion + distance.</li>
-     *   <li>Fill the buffer with the sky colour (infinite background).</li>
+     *   <li>Clear the buffer to transparent, unless an opaque sky colour was explicitly set.</li>
      *   <li>Apply camera transform.</li>
      *   <li>Delegate to {@link Scene#sceneRender(PGraphicsOpenGL)} — the scene must
      *       <em>not</em> call {@code beginDraw()}/{@code endDraw()}.</li>
@@ -244,7 +257,11 @@ class StandardRenderer {
             float far    = dist * farFactor;
             float aspect = (float) standardView.width / standardView.height;
             standardView.perspective(VERTICAL_FOV_RADIANS, aspect, near, far);
-            standardView.background(skyR, skyG, skyB);
+            if (skyColorExplicitlySet) {
+                standardView.background(skyR, skyG, skyB);
+            } else {
+                standardView.clear();
+            }
             getCam().apply(standardView);
 
             if (currentScene != null) {

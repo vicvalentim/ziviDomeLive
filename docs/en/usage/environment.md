@@ -22,4 +22,8 @@ dome.setEnvironmentBackgroundYawOffset(0.0f);
 - behavior: observer-centred and translation-invariant;
 - shared use: Standard, Domemaster, Equirectangular and Skybox rendering paths.
 
+Without a source, or while visibility is disabled, Environment draws nothing and the library-owned
+background stays transparent. Configuring and showing a source is an explicit request to render
+that image; its texture alpha is preserved by both Standard and spherical Environment shaders.
+
 Environment is not a lighting model. Version 2.0 does **not** claim HDR loading, IBL, irradiance maps, specular prefiltering, BRDF LUT integration, ambient occlusion or a general PBR environment engine. Those belong to future roadmap work.

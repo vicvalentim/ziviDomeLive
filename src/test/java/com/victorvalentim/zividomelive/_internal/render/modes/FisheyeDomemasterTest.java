@@ -89,6 +89,7 @@ class FisheyeDomemasterTest {
 		assertTrue(shader.contains("sizePercentage, 0.0, 100.0"));
 		assertTrue(shader.contains("uv /= sizeScale;"));
 		assertTrue(shader.contains("FragColor = vec4(0.0);"));
+		assertTrue(shader.contains("color.a * coverage"));
 		assertFalse(shader.contains("image("));
 	}
 }

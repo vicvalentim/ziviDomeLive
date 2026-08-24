@@ -22,4 +22,9 @@ dome.setEnvironmentBackgroundYawOffset(0.0f);
 - comportamento: centrado no observador e invariante à translação;
 - uso compartilhado: caminhos Standard, Domemaster, Equirectangular e Skybox.
 
+Sem uma fonte, ou enquanto a visibilidade estiver desabilitada, Environment não desenha nada e o
+background pertencente à biblioteca permanece transparente. Configurar e exibir uma fonte é um
+pedido explícito para renderizar essa imagem; o alpha da textura é preservado pelos shaders de
+Environment Standard e esférico.
+
 Environment não é um modelo de iluminação. A versão 2.0 **não** declara carregamento HDR, IBL, mapas de irradiância, prefilter especular, BRDF LUT, ambient occlusion nem um engine PBR geral de environment. Esses itens pertencem ao roadmap futuro.

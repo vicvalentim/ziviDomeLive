@@ -47,6 +47,7 @@ class EquirectangularRenderer {
             glAdapter.dispose(equirectangular);
         }
         equirectangular = glAdapter.createGraphics(parent, resolution * 2, resolution, PApplet.P2D);
+        clearEquirectangular();
     }
 
     /**
@@ -56,6 +57,7 @@ class EquirectangularRenderer {
      */
     public void render(CubemapTarget nativeCubemap) {
         if (nativeCubemap == null || !nativeCubemap.isAllocated() || samplerCubeShader == null) {
+            clearEquirectangularAfterFailure(null);
             if (!unavailableWarningLogged) {
                 LOGGER.warning("Native cubemap or equirectangular samplerCube shader unavailable; skipping render.");
                 unavailableWarningLogged = true;
@@ -67,6 +69,7 @@ class EquirectangularRenderer {
             unavailableWarningLogged = false;
             renderFailureWarningLogged = false;
         } catch (RuntimeException error) {
+            clearEquirectangularAfterFailure(error);
             if (!renderFailureWarningLogged) {
                 LOGGER.warning("Native equirectangular samplerCube render failed: "
                         + error.getMessage());
@@ -85,7 +88,9 @@ class EquirectangularRenderer {
         boolean cubemapBound = false;
         boolean shaderTouched = false;
         try {
-            target.background(0, 0);
+            target.clear();
+            target.noStroke();
+            target.blendMode(PApplet.REPLACE);
             samplerCubeShader.set("resolution", target.width, target.height);
             samplerCubeShader.set("cubemap", CUBEMAP_TEXTURE_UNIT);
             shaderTouched = true;
@@ -107,6 +112,28 @@ class EquirectangularRenderer {
                 } finally {
                     target.endDraw();
                 }
+            }
+        }
+    }
+
+    private void clearEquirectangular() {
+        if (equirectangular == null) {
+            return;
+        }
+        equirectangular.beginDraw();
+        try {
+            equirectangular.clear();
+        } finally {
+            equirectangular.endDraw();
+        }
+    }
+
+    private void clearEquirectangularAfterFailure(RuntimeException failure) {
+        try {
+            clearEquirectangular();
+        } catch (RuntimeException clearError) {
+            if (failure != null) {
+                failure.addSuppressed(clearError);
             }
         }
     }

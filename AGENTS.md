@@ -118,6 +118,7 @@
 - A native cubemap is readable only after all six faces and mipmaps complete in one nanosecond-stamped capture batch; the publication barrier must not sleep or spin on the render thread.
 - SKYBOX is the qualified real-EAC cross: each face uses tangent-mapped equi-angular coordinates while preserving the established face slots and legacy orientation transforms.
 - Preserve environment infinity: camera rotation affects the environment, while target translation and orbit distance do not. Fixed source-image orientation composes independently from dome controls and scene geometry.
+- Every library-owned off-screen render target starts at transparent RGBA `(0, 0, 0, 0)`. A Scene may explicitly draw its own background, and a configured visible Environment may cover pixels; absent/disabled Environment must not replace transparency. Preserve alpha through final views and outputs when the backend supports it, while documenting receiver/window-compositor limitations separately.
 - Prefer pure math/state extraction for renderer tests and avoid OpenGL contexts when behavior can be tested independently.
 
 ## Input, controls, outputs, and integrations

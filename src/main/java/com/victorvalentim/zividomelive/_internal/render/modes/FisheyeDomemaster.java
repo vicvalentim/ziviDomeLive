@@ -51,6 +51,7 @@ class FisheyeDomemaster {
             glAdapter.dispose(domemaster);
         }
         domemaster = glAdapter.createGraphics(parent, resolution, resolution, PApplet.P2D);
+        clearDomemaster();
     }
 
     /**
@@ -79,6 +80,7 @@ class FisheyeDomemaster {
      */
     public void applyShader(CubemapTarget nativeCubemap, float fov) {
         if (nativeCubemap == null || !nativeCubemap.isAllocated() || samplerCubeShader == null) {
+            clearDomemasterAfterFailure(null);
             if (!unavailableWarningLogged) {
                 LOGGER.warning("Native cubemap or fisheye samplerCube shader unavailable; skipping shader pass.");
                 unavailableWarningLogged = true;
@@ -90,6 +92,7 @@ class FisheyeDomemaster {
             unavailableWarningLogged = false;
             renderFailureWarningLogged = false;
         } catch (RuntimeException error) {
+            clearDomemasterAfterFailure(error);
             if (!renderFailureWarningLogged) {
                 LOGGER.warning("Native fisheye samplerCube render failed: "
                         + error.getMessage());
@@ -108,7 +111,9 @@ class FisheyeDomemaster {
         boolean cubemapBound = false;
         boolean shaderTouched = false;
         try {
-            target.background(0, 0); // Set transparent background
+            target.clear();
+            target.noStroke();
+            target.blendMode(PApplet.REPLACE);
             samplerCubeShader.set("fov", fov);
             samplerCubeShader.set("sizePercentage", sizePercentage);
             samplerCubeShader.set("resolution", target.width, target.height);
@@ -132,6 +137,28 @@ class FisheyeDomemaster {
                 } finally {
                     target.endDraw();
                 }
+            }
+        }
+    }
+
+    private void clearDomemaster() {
+        if (domemaster == null) {
+            return;
+        }
+        domemaster.beginDraw();
+        try {
+            domemaster.clear();
+        } finally {
+            domemaster.endDraw();
+        }
+    }
+
+    private void clearDomemasterAfterFailure(RuntimeException failure) {
+        try {
+            clearDomemaster();
+        } catch (RuntimeException clearError) {
+            if (failure != null) {
+                failure.addSuppressed(clearError);
             }
         }
     }

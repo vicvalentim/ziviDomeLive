@@ -68,6 +68,7 @@ class CubemapViewRenderer {
             glAdapter.dispose(cubemap);
         }
         cubemap = glAdapter.createGraphics(parent, resolution * 2, resolution * 3 / 2, PApplet.P2D);
+        clearCubemap();
     }
 
     /**
@@ -101,6 +102,7 @@ class CubemapViewRenderer {
      */
     public void drawCubemapToGraphics(CubemapTarget nativeCubemap) {
         if (nativeCubemap == null || !nativeCubemap.isAllocated() || samplerCubeShader == null) {
+            clearCubemapAfterFailure(null);
             if (!unavailableWarningLogged) {
                 LOGGER.warning("Native cubemap or cubemap layout samplerCube shader unavailable; skipping render.");
                 unavailableWarningLogged = true;
@@ -112,6 +114,7 @@ class CubemapViewRenderer {
             unavailableWarningLogged = false;
             renderFailureWarningLogged = false;
         } catch (RuntimeException error) {
+            clearCubemapAfterFailure(error);
             if (!renderFailureWarningLogged) {
                 LOGGER.warning("Native cubemap layout samplerCube render failed: "
                         + error.getMessage());
@@ -129,7 +132,9 @@ class CubemapViewRenderer {
         boolean cubemapBound = false;
         boolean shaderTouched = false;
         try {
-            cubemap.background(0, 0);
+            cubemap.clear();
+            cubemap.noStroke();
+            cubemap.blendMode(PApplet.REPLACE);
             samplerCubeShader.set("resolution", cubemap.width, cubemap.height);
             samplerCubeShader.set("cubemap", CUBEMAP_TEXTURE_UNIT);
             samplerCubeShader.set("layoutFaces", CUBEMAP_LAYOUT_FACE_ORDER);
@@ -154,6 +159,28 @@ class CubemapViewRenderer {
                 } finally {
                     cubemap.endDraw();
                 }
+            }
+        }
+    }
+
+    private void clearCubemap() {
+        if (cubemap == null) {
+            return;
+        }
+        cubemap.beginDraw();
+        try {
+            cubemap.clear();
+        } finally {
+            cubemap.endDraw();
+        }
+    }
+
+    private void clearCubemapAfterFailure(RuntimeException failure) {
+        try {
+            clearCubemap();
+        } catch (RuntimeException clearError) {
+            if (failure != null) {
+                failure.addSuppressed(clearError);
             }
         }
     }

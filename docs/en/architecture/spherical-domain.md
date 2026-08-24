@@ -23,3 +23,9 @@ and mipmaps complete. This is an atomic logical batch, not a sleep or an asserti
 context can rasterize six cameras literally at once.
 
 Pitch/Yaw/Roll belongs to the shared spherical orientation. Domemaster additionally applies its FOV and Size% calibration controls.
+
+Each cubemap face starts transparent, and its alpha is sampled unchanged by Equirectangular and
+Skybox. Domemaster multiplies sampled alpha only by its derivative-based circle coverage: pixels
+outside the circle remain transparent, a smaller Size% leaves the newly exposed area transparent,
+and `Size%=0` yields a fully transparent final target. Missing/failed projection inputs clear the
+destination rather than retaining an earlier frame.

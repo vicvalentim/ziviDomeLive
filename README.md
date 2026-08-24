@@ -180,6 +180,14 @@ The ControlP5 panel maps stable UI IDs explicitly to `ViewType`; enum ordinals a
 
 Pitch, yaw and roll orient the shared spherical domain. Domemaster FOV controls angular coverage; Size% fits the circular image to the physical lens/projector path and is not scene-camera zoom. Output resolution changes are deferred to a safe render boundary.
 
+### Transparent final frames
+
+Every library-owned Standard, Domemaster, Equirectangular and Skybox target starts at transparent
+RGBA `(0, 0, 0, 0)`. A Scene remains free to call `background(...)`, `clear()` or draw fullscreen
+geometry, and a configured visible Environment is rendered as explicit content. Preview copies and
+NDI/Syphon/Spout publication consume the same alpha-bearing final targets; a primary Processing
+window or external receiver may still composite or discard alpha according to its own contract.
+
 ### External outputs
 
 Outputs start disabled and must be enabled explicitly through the typed `OutputManager` API:
