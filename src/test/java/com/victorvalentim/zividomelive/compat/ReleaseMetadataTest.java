@@ -47,21 +47,21 @@ class ReleaseMetadataTest {
         assertTrue(thirdParty.contains("ESO/S. Brunier"));
         assertTrue(thirdParty.contains("NASA/JPL"));
 
-        String solarNotice = read("examples/SolarSystem/THIRD_PARTY.md");
+        String solarNotice = read("examples/Advanced/SolarSystem/THIRD_PARTY.md");
         assertTrue(solarNotice.contains("JPL Solar System Dynamics"));
         assertTrue(solarNotice.contains("Solar System Scope"));
         assertTrue(solarNotice.contains("NASA is an upstream data/imagery source"));
         assertTrue(solarNotice.contains("ESO/S. Brunier"));
         assertTrue(solarNotice.contains("CC BY 4.0"));
 
-        String provenance = read("examples/SolarSystem/ASSET_PROVENANCE.json");
+        String provenance = read("examples/Advanced/SolarSystem/ASSET_PROVENANCE.json");
         assertTrue(provenance.contains("\"projectLicense\": \"" + PROJECT_LICENSE + "\""));
         assertTrue(provenance.contains("\"license\": \"CC-BY-4.0\""));
         assertTrue(provenance.contains("\"creatorCredit\": \"ESO/S. Brunier\""));
 
         assertFalse(
                 Files.exists(PROJECT_ROOT.resolve(
-                        "examples/SolarSystem/data/textures/background.jpg")),
+                        "examples/Advanced/SolarSystem/data/textures/background.jpg")),
                 "unresolved SolarSystem background.jpg must not be present in a release-ready tree");
     }
 
