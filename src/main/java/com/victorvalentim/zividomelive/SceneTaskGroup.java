@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -135,6 +136,9 @@ public final class SceneTaskGroup {
         try {
             SharedTaskExecutor.execute(future);
             return true;
+        } catch (RejectedExecutionException error) {
+            tasks.remove(normalized, future);
+            return false;
         } catch (RuntimeException error) {
             tasks.remove(normalized, future);
             throw error;

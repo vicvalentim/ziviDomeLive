@@ -11,6 +11,14 @@ import static org.junit.jupiter.api.Assertions.*;
 class SceneTaskGroupTest {
 
     @Test
+    void sharedExecutorQueueIsBounded() {
+        assertEquals(256, SharedTaskExecutor.queueCapacity());
+        assertEquals(
+                Math.max(1, Runtime.getRuntime().availableProcessors()),
+                SharedTaskExecutor.workerCount());
+    }
+
+    @Test
     void keyedSubmissionPreventsDuplicateInFlightWork() throws Exception {
         SceneTaskGroup group = new SceneTaskGroup(2);
         CountDownLatch started = new CountDownLatch(1);
