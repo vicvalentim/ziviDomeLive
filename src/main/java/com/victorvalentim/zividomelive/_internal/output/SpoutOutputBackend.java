@@ -11,7 +11,7 @@ import spout.Spout;
 import java.util.logging.Logger;
 
 /** Concrete Windows Spout backend that publishes Processing textures directly. */
-final class SpoutOutputBackend {
+final class SpoutOutputBackend implements LocalTextureOutputBackend {
 
 	private static final String SENDER_NAME = "ziviDomeLive Spout";
 
@@ -32,7 +32,8 @@ final class SpoutOutputBackend {
 	}
 
 	/** Creates the native sender without enabling publication. */
-	void initialize(PGraphicsOpenGL graphics, int initialResolution) {
+	@Override
+	public void initialize(PGraphicsOpenGL graphics, int initialResolution) {
 		if (!supported || sender != null || unavailable) {
 			return;
 		}
@@ -89,7 +90,8 @@ final class SpoutOutputBackend {
 	}
 
 	/** Enables or disables publication without destroying the native sender. */
-	void setEnabled(boolean requested, PGraphicsOpenGL graphics, int initialResolution) {
+	@Override
+	public void setEnabled(boolean requested, PGraphicsOpenGL graphics, int initialResolution) {
 		if (!requested) {
 			enabled = false;
 			return;
@@ -117,7 +119,8 @@ final class SpoutOutputBackend {
 	}
 
 	/** Publishes a completed Processing texture with no CPU readback. */
-	void send(PGraphicsOpenGL graphics) {
+	@Override
+	public void send(PGraphicsOpenGL graphics) {
 		if (!isEnabled() || graphics == null) {
 			return;
 		}
@@ -147,7 +150,8 @@ final class SpoutOutputBackend {
 	}
 
 	/** Updates native dimensions after a deferred renderer reset. */
-	void notifyResolutionChanged(PGraphicsOpenGL graphics) {
+	@Override
+	public void notifyResolutionChanged(PGraphicsOpenGL graphics) {
 		if (sender == null) {
 			return;
 		}
@@ -175,7 +179,8 @@ final class SpoutOutputBackend {
 	}
 
 	/** Releases the native sender during terminal output shutdown. */
-	void shutdown() {
+	@Override
+	public void shutdown() {
 		enabled = false;
 		disposeSender();
 		width = -1;
@@ -216,7 +221,8 @@ final class SpoutOutputBackend {
 		return state(isEnabled());
 	}
 
-	OutputManager.OutputState state(boolean effectivelyEnabled) {
+	@Override
+	public OutputManager.OutputState state(boolean effectivelyEnabled) {
 		return OutputManagerImpl.resolveOutputState(
 				supported, unavailable, sender != null, effectivelyEnabled, false);
 	}
@@ -225,15 +231,18 @@ final class SpoutOutputBackend {
 		return supported;
 	}
 
-	boolean isEnabled() {
+	@Override
+	public boolean isEnabled() {
 		return supported && enabled && sender != null;
 	}
 
-	boolean isInitialized() {
+	@Override
+	public boolean isInitialized() {
 		return sender != null;
 	}
 
-	String failureReason() {
+	@Override
+	public String failureReason() {
 		return failureReason;
 	}
 }

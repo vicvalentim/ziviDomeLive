@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class OutputBackendSeparationTest {
 
 	@Test
-	void backendsAreConcreteFinalServicesWithoutFactoryLayer() {
+	void nativeBackendsRemainConcreteFinalServicesBehindAnOptionalContract() {
 		for (Class<?> backend : new Class<?>[]{
 				NdiOutputBackend.class,
 				SpoutOutputBackend.class,
@@ -28,16 +28,16 @@ class OutputBackendSeparationTest {
 			assertFalse(backend.isInterface(), backend.getName());
 			assertFalse(Modifier.isAbstract(backend.getModifiers()), backend.getName());
 		}
+		assertFalse(Modifier.isPublic(LocalTextureOutputBackend.class.getModifiers()));
+		assertTrue(LocalTextureOutputBackend.class.isInterface());
 	}
 
 	@Test
 	void eachNativeResourceIsOwnedOnlyByItsConcreteBackend() throws Exception {
 		assertEquals(NdiOutputBackend.class,
 				OutputManagerImpl.class.getDeclaredField("ndiBackend").getType());
-		assertEquals(SpoutOutputBackend.class,
-				OutputManagerImpl.class.getDeclaredField("spoutBackend").getType());
-		assertEquals(SyphonOutputBackend.class,
-				OutputManagerImpl.class.getDeclaredField("syphonBackend").getType());
+		assertEquals(LocalTextureOutputBackend.class,
+				OutputManagerImpl.class.getDeclaredField("localTextureOutput").getType());
 
 		assertTrue(hasFieldWithTypeName(
 				NdiOutputBackend.class, "me.walkerknapp.devolay.DevolaySender"));

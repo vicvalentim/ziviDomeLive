@@ -122,6 +122,26 @@ class OutputManagerHardeningTest {
 	}
 
 	@Test
+	void ndiConnectionGateSkipsReadbackAtZeroReceiversAndPollsAtBoundedIntervals() {
+		long interval = NdiOutputBackend.CONNECTION_POLL_INTERVAL_NANOS;
+		NdiOutputBackend.ConnectionPollGate gate =
+				new NdiOutputBackend.ConnectionPollGate(interval);
+
+		assertTrue(gate.shouldPoll(100L));
+		gate.record(0, 100L);
+		assertFalse(gate.hasConnections());
+		assertFalse(gate.shouldPoll(100L + interval - 1L));
+		assertTrue(gate.shouldPoll(100L + interval));
+
+		gate.record(2, 100L + interval);
+		assertTrue(gate.hasConnections());
+		assertFalse(gate.shouldPoll(100L + interval + 1L));
+
+		gate.failOpen(100L + interval * 2L);
+		assertTrue(gate.hasConnections(), "query failure must preserve publication behavior");
+	}
+
+	@Test
 	void ndiNormalStopReturnsImmediatelyAndTerminalShutdownOwnsTheBoundedWait() throws Exception {
 		NdiOutputBackend backend = new NdiOutputBackend(60, 25);
 		CountDownLatch started = new CountDownLatch(1);

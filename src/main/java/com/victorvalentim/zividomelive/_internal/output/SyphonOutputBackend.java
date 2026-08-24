@@ -11,7 +11,7 @@ import processing.opengl.PGraphicsOpenGL;
 import java.util.logging.Logger;
 
 /** Concrete macOS Syphon backend that publishes Processing textures directly. */
-final class SyphonOutputBackend {
+final class SyphonOutputBackend implements LocalTextureOutputBackend {
 
 	private static final String SERVER_NAME = "ziviDomeLive Syphon";
 
@@ -64,6 +64,11 @@ final class SyphonOutputBackend {
 		}
 	}
 
+	@Override
+	public void initialize(PGraphicsOpenGL graphics, int initialResolution) {
+		initialize();
+	}
+
 	/** Enables or disables publication without destroying the native server. */
 	void setEnabled(boolean requested) {
 		if (!requested) {
@@ -92,8 +97,14 @@ final class SyphonOutputBackend {
 		logger.info("Syphon frame publication enabled.");
 	}
 
+	@Override
+	public void setEnabled(boolean requested, PGraphicsOpenGL graphics, int initialResolution) {
+		setEnabled(requested);
+	}
+
 	/** Publishes a completed Processing texture with no CPU readback. */
-	void send(PGraphicsOpenGL graphics) {
+	@Override
+	public void send(PGraphicsOpenGL graphics) {
 		if (!isEnabled() || graphics == null) {
 			return;
 		}
@@ -117,7 +128,8 @@ final class SyphonOutputBackend {
 	}
 
 	/** Releases the native server during terminal output shutdown. */
-	void shutdown() {
+	@Override
+	public void shutdown() {
 		enabled = false;
 		SyphonServer currentServer = server;
 		server = null;
@@ -152,7 +164,8 @@ final class SyphonOutputBackend {
 		return state(isEnabled());
 	}
 
-	OutputManager.OutputState state(boolean effectivelyEnabled) {
+	@Override
+	public OutputManager.OutputState state(boolean effectivelyEnabled) {
 		return OutputManagerImpl.resolveOutputState(
 				supported, unavailable, server != null, effectivelyEnabled, false);
 	}
@@ -161,15 +174,23 @@ final class SyphonOutputBackend {
 		return supported;
 	}
 
-	boolean isEnabled() {
+	@Override
+	public boolean isEnabled() {
 		return supported && enabled && server != null;
 	}
 
-	boolean isInitialized() {
+	@Override
+	public boolean isInitialized() {
 		return server != null;
 	}
 
-	String failureReason() {
+	@Override
+	public String failureReason() {
 		return failureReason;
+	}
+
+	@Override
+	public void notifyResolutionChanged(PGraphicsOpenGL graphics) {
+		// Syphon consumes the current Processing texture and requires no explicit resize.
 	}
 }

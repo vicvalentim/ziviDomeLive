@@ -30,6 +30,7 @@ final class NdiOutputBackend {
 	private static final int SLOT_COUNT = 3;
 	private static final int BYTES_PER_PIXEL = 4;
 	private static final String SENDER_NAME = "ziviDomeLive NDI Output";
+	static final long CONNECTION_POLL_INTERVAL_NANOS = TimeUnit.MILLISECONDS.toNanos(500L);
 
 	private final Logger logger = LogManager.getLogger();
 	private final long shutdownTimeoutMillis;
@@ -44,6 +45,9 @@ final class NdiOutputBackend {
 	private volatile boolean ndiShutdownPending;
 	private boolean ndiRestartRequested;
 	private volatile Thread ndiWorkerThread;
+	private final ConnectionPollGate connectionPollGate =
+			new ConnectionPollGate(CONNECTION_POLL_INTERVAL_NANOS);
+	private boolean connectionPollWarningLogged;
 
 	private final ArrayBlockingQueue<NdiFrameSlot> ndiFreeSlots =
 			new ArrayBlockingQueue<>(SLOT_COUNT);
@@ -106,6 +110,8 @@ final class NdiOutputBackend {
 
 		try {
 			ndiSender = new DevolaySender(SENDER_NAME);
+			connectionPollGate.reset();
+			connectionPollWarningLogged = false;
 			initializeSlots();
 
 			Thread worker = new Thread(this::workerLoop, "ziviDomeLive-NDI-Sender");
@@ -151,6 +157,9 @@ final class NdiOutputBackend {
 	/** Captures one selected graphics target into a pooled CPU slot on the draw thread. */
 	void capture(PGraphicsOpenGL graphics) {
 		if (!isEnabled() || graphics == null || graphics.width <= 0 || graphics.height <= 0) {
+			return;
+		}
+		if (!hasConnectedReceiver()) {
 			return;
 		}
 
@@ -204,6 +213,30 @@ final class NdiOutputBackend {
 			}
 			if (profiling) monitor.record(PerformanceMetric.NDI_CAPTURE, captureStarted);
 		}
+	}
+
+	/** Polls Devolay without blocking and caches the result to keep it off the hot frame path. */
+	private boolean hasConnectedReceiver() {
+		long now = System.nanoTime();
+		DevolaySender sender = ndiSender;
+		if (sender == null) {
+			return false;
+		}
+		if (connectionPollGate.shouldPoll(now)) {
+			try {
+				connectionPollGate.record(sender.getConnectionCount(0), now);
+				connectionPollWarningLogged = false;
+			} catch (RuntimeException | LinkageError error) {
+				connectionPollGate.failOpen(now);
+				if (!connectionPollWarningLogged) {
+					logger.warning(
+							"NDI receiver-count query failed; capture remains enabled: "
+									+ OutputManagerImpl.rootCauseMessage(error));
+					connectionPollWarningLogged = true;
+				}
+			}
+		}
+		return connectionPollGate.hasConnections();
 	}
 
 	/** Obtains a capture slot, replacing the oldest queued frame when necessary. */
@@ -430,6 +463,8 @@ final class NdiOutputBackend {
 
 	/** Releases resources only after no worker can still use them. Lifecycle lock required. */
 	private void releaseResourcesLocked() {
+		connectionPollGate.reset();
+		connectionPollWarningLogged = false;
 		ndiReadySlots.clear();
 		ndiFreeSlots.clear();
 		closeSlots();
@@ -515,6 +550,44 @@ final class NdiOutputBackend {
 
 	int frameRateDenominator() {
 		return ndiFrameRateDenominator;
+	}
+
+	/** Pure polling policy for the non-blocking Devolay receiver-count query. */
+	static final class ConnectionPollGate {
+		private final long intervalNanos;
+		private volatile long nextPollNanos;
+		private volatile int connectionCount;
+
+		ConnectionPollGate(long intervalNanos) {
+			if (intervalNanos <= 0L) {
+				throw new IllegalArgumentException("connection poll interval must be positive");
+			}
+			this.intervalNanos = intervalNanos;
+		}
+
+		boolean shouldPoll(long nowNanos) {
+			long next = nextPollNanos;
+			return next == 0L || nowNanos - next >= 0L;
+		}
+
+		void record(int connections, long nowNanos) {
+			connectionCount = Math.max(0, connections);
+			nextPollNanos = nowNanos + intervalNanos;
+		}
+
+		void failOpen(long nowNanos) {
+			connectionCount = 1;
+			nextPollNanos = nowNanos + intervalNanos;
+		}
+
+		boolean hasConnections() {
+			return connectionCount > 0;
+		}
+
+		void reset() {
+			connectionCount = 0;
+			nextPollNanos = 0L;
+		}
 	}
 
 	/** Computes the packed RGBA line stride used by Devolay. */

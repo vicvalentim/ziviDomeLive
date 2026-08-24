@@ -44,8 +44,7 @@ class OutputManagerImpl implements OutputManager {
 	private final ziviDomeLive parent;
 	private final LocalTextureBackend localTextureBackend;
 	private final NdiOutputBackend ndiBackend;
-	private final SpoutOutputBackend spoutBackend;
-	private final SyphonOutputBackend syphonBackend;
+	private final LocalTextureOutputBackend localTextureOutput;
 	private FrameViews latestFrameViews;
 
 	/* Independent output routing. Preview/viewer state is intentionally not stored here. */
@@ -88,8 +87,25 @@ class OutputManagerImpl implements OutputManager {
 		}
 
 		ndiBackend = new NdiOutputBackend(parent.getTargetFrameRate(), ndiShutdownTimeoutMillis);
-		spoutBackend = new SpoutOutputBackend(parent.getPApplet(), isWindows);
-		syphonBackend = new SyphonOutputBackend(parent.getPApplet(), isMacOS);
+		localTextureOutput = createLocalTextureOutput(parent, localTextureBackend);
+	}
+
+	private LocalTextureOutputBackend createLocalTextureOutput(
+			ziviDomeLive parent,
+			LocalTextureBackend backend) {
+		try {
+			return switch (backend) {
+				case SPOUT -> new SpoutOutputBackend(parent.getPApplet(), true);
+				case SYPHON -> new SyphonOutputBackend(parent.getPApplet(), true);
+				case NONE -> new UnavailableLocalTextureOutputBackend(
+						"no platform-local texture backend on this operating system");
+			};
+		} catch (Exception | LinkageError error) {
+			String reason = rootCauseMessage(error);
+			logger.warning(getLocalTextureBackendName()
+					+ " Processing library is unavailable; core rendering remains active: " + reason);
+			return new UnavailableLocalTextureOutputBackend(reason);
+		}
 	}
 
 	/**
@@ -200,18 +216,8 @@ class OutputManagerImpl implements OutputManager {
 	}
 
 	private void initializeLocalTextureBackend(FrameViews frameViews) {
-		switch (localTextureBackend) {
-			case SYPHON:
-				syphonBackend.initialize();
-				break;
-			case SPOUT:
-				spoutBackend.initialize(
-						resolveGraphics(frameViews, spoutView), parent.getOutputResolution());
-				break;
-			case NONE:
-			default:
-				break;
-		}
+		localTextureOutput.initialize(
+				resolveGraphics(frameViews, getLocalTextureView()), parent.getOutputResolution());
 	}
 
 	@Override
@@ -226,13 +232,22 @@ class OutputManagerImpl implements OutputManager {
 				}
 				break;
 			case SPOUT:
-				spoutBackend.setEnabled(
+				if (localTextureBackend != LocalTextureBackend.SPOUT) {
+					return;
+				}
+				localTextureOutput.setEnabled(
 						enabled,
 						resolveGraphics(latestFrameViews, spoutView),
 						parent.getOutputResolution());
 				break;
 			case SYPHON:
-				syphonBackend.setEnabled(enabled);
+				if (localTextureBackend != LocalTextureBackend.SYPHON) {
+					return;
+				}
+				localTextureOutput.setEnabled(
+						enabled,
+						resolveGraphics(latestFrameViews, syphonView),
+						parent.getOutputResolution());
 				break;
 			default:
 				throw new IllegalArgumentException("Unsupported output type: " + outputType);
@@ -275,10 +290,8 @@ class OutputManagerImpl implements OutputManager {
 			return;
 		}
 
-		if (spoutBackend.isEnabled()) {
-			spoutBackend.send(resolveGraphics(frameViews, spoutView));
-		} else if (syphonBackend.isEnabled()) {
-			syphonBackend.send(resolveGraphics(frameViews, syphonView));
+		if (localTextureOutput.isEnabled()) {
+			localTextureOutput.send(resolveGraphics(frameViews, getLocalTextureView()));
 		}
 
 		if (ndiBackend.isEnabled()) {
@@ -297,8 +310,8 @@ class OutputManagerImpl implements OutputManager {
 			return;
 		}
 
-		if (localTextureBackend == LocalTextureBackend.SPOUT && spoutBackend.isInitialized()) {
-			spoutBackend.notifyResolutionChanged(
+		if (localTextureBackend == LocalTextureBackend.SPOUT && localTextureOutput.isInitialized()) {
+			localTextureOutput.notifyResolutionChanged(
 					resolveGraphics(latestFrameViews, spoutView));
 		}
 	}
@@ -317,8 +330,7 @@ class OutputManagerImpl implements OutputManager {
 	/** Shuts down every output and releases all native resources during terminal disposal. */
 	void shutdownOutputsTerminal() {
 		ndiBackend.shutdownTerminal();
-		spoutBackend.shutdown();
-		syphonBackend.shutdown();
+		localTextureOutput.shutdown();
 		logger.info("All output services have been shut down.");
 	}
 
@@ -337,9 +349,13 @@ class OutputManagerImpl implements OutputManager {
 			case NDI:
 				return ndiBackend.state(isNdiEnabled());
 			case SPOUT:
-				return spoutBackend.state(isSpoutEnabled());
+				return localTextureBackend == LocalTextureBackend.SPOUT
+						? localTextureOutput.state(isSpoutEnabled())
+						: OutputState.UNAVAILABLE;
 			case SYPHON:
-				return syphonBackend.state(isSyphonEnabled());
+				return localTextureBackend == LocalTextureBackend.SYPHON
+						? localTextureOutput.state(isSyphonEnabled())
+						: OutputState.UNAVAILABLE;
 			default:
 				return OutputState.UNAVAILABLE;
 		}
@@ -356,10 +372,10 @@ class OutputManagerImpl implements OutputManager {
 			return ndiBackend.failureReason();
 		}
 		if (outputType == OutputType.SPOUT && localTextureBackend == LocalTextureBackend.SPOUT) {
-			return spoutBackend.failureReason();
+			return localTextureOutput.failureReason();
 		}
 		if (outputType == OutputType.SYPHON && localTextureBackend == LocalTextureBackend.SYPHON) {
-			return syphonBackend.failureReason();
+			return localTextureOutput.failureReason();
 		}
 		return "";
 	}
@@ -401,7 +417,7 @@ class OutputManagerImpl implements OutputManager {
 	 * @return {@code true} on Windows when Spout is initialized and enabled
 	 */
 	public boolean isSpoutEnabled() {
-		return spoutBackend.isEnabled();
+		return localTextureBackend == LocalTextureBackend.SPOUT && localTextureOutput.isEnabled();
 	}
 
 	/**
@@ -410,7 +426,7 @@ class OutputManagerImpl implements OutputManager {
 	 * @return {@code true} on macOS when Syphon is initialized and enabled
 	 */
 	public boolean isSyphonEnabled() {
-		return syphonBackend.isEnabled();
+		return localTextureBackend == LocalTextureBackend.SYPHON && localTextureOutput.isEnabled();
 	}
 
 	/**
