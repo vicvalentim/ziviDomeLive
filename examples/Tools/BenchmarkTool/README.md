@@ -1,5 +1,8 @@
 # BenchmarkTool — guia completo de uso
 
+**Categoria:** Tools
+**Dependência obrigatória:** ControlP5 2.2.6
+
 O **BenchmarkTool** mede o desempenho real da ziviDomeLive dentro do Processing. Ele ajuda a
 responder perguntas como:
 
@@ -140,7 +143,7 @@ As cenas são sintéticas e determinísticas: a mesma configuração repete a me
 | `STANDARD` | Visualização retangular convencional |
 | `DOMEMASTER` | Projeção fisheye para fulldome |
 | `EQUIRECTANGULAR` | Projeção panorâmica 360° |
-| `SKYBOX` | Visualização das faces do cubemap |
+| `SKYBOX` | Cruz de cubemap EAC real e inspeção das faces |
 
 Sem output externo, a resolução do modo Standard continua ligada à janela do Processing. Nos modos
 esféricos, ela controla o cubemap de preview. Com NDI, Syphon ou Spout ativo, a resolução passa a
@@ -422,7 +425,7 @@ caminhos automaticamente. Para execução manual no Processing 4.4.3 ou mais rec
 export ZIVIDOME_BENCHMARK_OUTPUT="$PWD/build/benchmark-results"
 export ZIVIDOME_BENCHMARK_REVISION="$(git rev-parse HEAD)"
 /Applications/Processing.app/Contents/MacOS/Processing cli \
-  --sketch="$PWD/examples/BenchmarkTool" \
+  --sketch="$PWD/examples/Tools/BenchmarkTool" \
   --output="$PWD/build/processing-benchmark" \
   --force --run
 ```

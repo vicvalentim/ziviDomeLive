@@ -2,8 +2,6 @@ import com.victorvalentim.zividomelive.*;
 import com.victorvalentim.zividomelive.manager.OutputManager;
 import com.victorvalentim.zividomelive.performance.*;
 import controlP5.*;
-import codeanticode.syphon.*;
-import spout.*;
 import processing.core.PApplet;
 import processing.core.PShape;
 import processing.opengl.PGraphicsOpenGL;
@@ -33,11 +31,13 @@ void setup() {
   ziviDome.setup();
 
   benchmarkScenes = createBenchmarkScenes(ziviDome);
-  sceneManager = new SceneManager();
-  for (Scene scene : benchmarkScenes) {
-    sceneManager.registerScene(scene);
+  if (benchmarkScenes.length > 0) {
+    ziviDome.setScene(benchmarkScenes[0]);
   }
-  ziviDome.setSceneManager(sceneManager);
+  for (int index = 1; index < benchmarkScenes.length; index++) {
+    ziviDome.registerScene(benchmarkScenes[index]);
+  }
+  sceneManager = ziviDome.getSceneManager();
 
   benchmarkController = new BenchmarkController(
       this,

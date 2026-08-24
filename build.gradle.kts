@@ -6,6 +6,10 @@
 import java.util.Properties
 import java.time.Instant
 import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.net.HttpURLConnection
+import java.net.URI
+import java.security.MessageDigest
 import java.util.zip.ZipFile
 import java.awt.Desktop
 import groovy.json.JsonOutput
@@ -81,19 +85,16 @@ val devolayVersion = "2.2.0-vic.2"
 // If you run the Gradle task deployToProcessingSketchbook, and you do not see your library
 // in the contributions manager, then one possible cause could be the sketchbook location
 // is wrong. You can check the sketchbook location in your Processing application preferences.
-var sketchbookLocation = ""
 val userHome = System.getProperty("user.home")
 val currentOS = OperatingSystem.current()
-if (currentOS.isMacOsX) {
-    sketchbookLocation = "$userHome/Documents/Processing/"
-} else if (currentOS.isWindows) {
-    sketchbookLocation = "$userHome/My Documents/Processing/sketchbook"
+val defaultSketchbookLocation = if (currentOS.isMacOsX || currentOS.isWindows) {
+    "$userHome/Documents/Processing"
 } else {
-    sketchbookLocation = "$userHome/sketchbook"
+    "$userHome/sketchbook"
 }
-// If you need to set the sketchbook location manually, uncomment out the following
-// line and set sketchbookLocation to the correct location
-// sketchbookLocation = "$userHome/sketchbook"
+val sketchbookLocation = providers.gradleProperty("processingSketchbook").orNull
+    ?: System.getenv("PROCESSING_SKETCHBOOK")?.takeIf { it.isNotBlank() }
+    ?: defaultSketchbookLocation
 
 
 // Repositories where dependencies will be fetched from.
@@ -142,13 +143,51 @@ dependencies {
     testRuntimeOnly(fileTree("src/main/libs/Syphon.jar"))
 }
 
+// Processing 4.0 predates publication of Processing 4 artifacts to Maven Central.
+// Point this opt-in audit at the core/library directory from the official 4.0
+// distribution (revision 1285) to compile the complete source against its API
+// and matching JOGL jars without changing the routine 4.5.6 test toolchain.
+val processing4BaselineLibrary = providers.gradleProperty("processing4BaselineLibrary").orNull
+val processing4BaselineJars = if (processing4BaselineLibrary != null) {
+    fileTree(processing4BaselineLibrary) {
+        include("core.jar", "jogl-all.jar", "gluegen-rt.jar")
+    }
+} else {
+    files()
+}
+
+tasks.register<JavaCompile>("compileProcessing4Baseline") {
+    group = "verification"
+    description = "Compiles all production sources against Processing 4.0 revision 1285"
+    dependsOn("downloadDependencies")
+    source(sourceSets["main"].allJava)
+    classpath = processing4BaselineJars + configurations.compileClasspath.get().filter {
+        it.name != "core-$processingCoreVersion.jar" &&
+            !it.name.startsWith("jogl-all-") &&
+            !it.name.startsWith("gluegen-rt-")
+    }
+    destinationDirectory.set(layout.buildDirectory.dir("classes/java/processing4Baseline"))
+    options.release.set(17)
+
+    doFirst {
+        val baselineDirectory = processing4BaselineLibrary?.let(::file)
+            ?: throw GradleException(
+                "Set -Pprocessing4BaselineLibrary to Processing 4.0's core/library directory")
+        for (jarName in listOf("core.jar", "jogl-all.jar", "gluegen-rt.jar")) {
+            check(baselineDirectory.resolve(jarName).isFile) {
+                "Processing 4.0 baseline is missing $jarName in $baselineDirectory"
+            }
+        }
+    }
+}
+
 tasks.test {
     useJUnitPlatform()
 }
 
 // Compile the pure-Java BenchmarkTool exporter only as test support. Processing
 // compiles the same Java tab when the example runs, keeping it out of the library JAR.
-sourceSets["test"].java.srcDir("examples/BenchmarkTool")
+sourceSets["test"].java.srcDir("examples/Tools/BenchmarkTool")
 
 // The offline report generator is development tooling, isolated from the library JAR.
 val benchmarkReportSourceSet = sourceSets.create("benchmarkReport") {
@@ -348,7 +387,7 @@ fun Exec.configureProcessingBenchmark(outputName: String) {
             args("cli")
         }
         args(
-            "--sketch=${file("examples/BenchmarkTool").absolutePath}",
+            "--sketch=${file("examples/Tools/BenchmarkTool").absolutePath}",
             "--output=${layout.buildDirectory.dir("processing-benchmark/$outputName").get().asFile.absolutePath}",
             "--force",
             "--run"
@@ -535,20 +574,119 @@ JUnit XML results: `../../test-results/qualification/`
     })
 }
 
-// Downloads pinned legacy libraries that are not available on Maven.
-val requiredLocalLibraries = listOf(
-    file("src/main/libs/controlP5.jar"),
-    file("src/main/libs/spout.jar"),
-    file("src/main/libs/Syphon.jar")
+// Downloads pinned legacy Processing libraries that are not available on Maven.
+data class PinnedProcessingDependency(
+    val name: String,
+    val url: String,
+    val archiveSha256: String,
+    val archiveJarPath: String,
+    val jarSha256: String,
+    val destinationName: String,
 )
 
-tasks.register<Exec>("downloadDependencies") {
-    group = "processing"
-    description = "Downloads checksum-verified ControlP5, Syphon, and Spout dependencies"
-    onlyIf {
-        requiredLocalLibraries.any { !it.isFile }
+val pinnedProcessingDependencies = listOf(
+    PinnedProcessingDependency(
+        "Syphon-4.0",
+        "https://api.github.com/repos/Syphon/Processing/releases/assets/59352362",
+        "0842c04d2332e3bfc0b601ae6dafb467b9ba8157934d584df378789750648798",
+        "Syphon/library/Syphon.jar",
+        "546af773807bb0329bc53cc9a9df44a9ed521eb839045fd2077a58625f4150c6",
+        "Syphon.jar",
+    ),
+    PinnedProcessingDependency(
+        "ControlP5-2.2.6",
+        "https://github.com/sojamo/controlp5/releases/download/v2.2.6/controlP5-2.2.6.zip",
+        "88bd4bdbb4f3d5cb77211004ac4796742eeae86d0a74726f3194cc316ad23fb3",
+        "controlP5/library/controlP5.jar",
+        "69e160f9cee979d631a4a9674f3d3b2016b66eb3e6f353918cda2b325ef3cc75",
+        "controlP5.jar",
+    ),
+    PinnedProcessingDependency(
+        "Spout-2.0.8.0",
+        "https://api.github.com/repos/leadedge/SpoutProcessing/releases/assets/188539046",
+        "65fff0a2779833073dbcd54fbbe862f43b2505cb04dd2a4fcb52b0d80c95b4ca",
+        "spout/library/spout.jar",
+        "74c6a8422590dc00ffc7a207c3c408f4b09f6da9390aae7718452095ea974cef",
+        "spout.jar",
+    ),
+)
+
+fun sha256(path: File): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    path.inputStream().buffered().use { input ->
+        val buffer = ByteArray(64 * 1024)
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            digest.update(buffer, 0, count)
+        }
     }
-    commandLine("bash", "$rootDir/download_dependencies.sh")
+    return digest.digest().joinToString("") { "%02x".format(it) }
+}
+
+tasks.register("downloadDependencies") {
+    group = "processing"
+    description = "Downloads checksum-verified ControlP5, Syphon, and Spout dependencies using the JVM"
+    doLast {
+        val librariesDirectory = file("src/main/libs").apply { mkdirs() }
+        for (dependency in pinnedProcessingDependencies) {
+            val destination = librariesDirectory.resolve(dependency.destinationName)
+            if (destination.isFile) {
+                val existingSha256 = sha256(destination)
+                check(existingSha256 == dependency.jarSha256) {
+                    "${dependency.name} JAR checksum mismatch: expected " +
+                        "${dependency.jarSha256}, got $existingSha256"
+                }
+                continue
+            }
+
+            val archive = temporaryDir.resolve("${dependency.destinationName}.zip")
+            val extractedJar = temporaryDir.resolve("${dependency.destinationName}.verified")
+            val connection = URI(dependency.url).toURL().openConnection() as HttpURLConnection
+            connection.instanceFollowRedirects = true
+            connection.connectTimeout = 30_000
+            connection.readTimeout = 60_000
+            connection.setRequestProperty("Accept", "application/octet-stream")
+            connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
+            connection.setRequestProperty("User-Agent", "ziviDomeLive-build")
+            try {
+                val responseCode = connection.responseCode
+                check(responseCode in 200..299) {
+                    "${dependency.name} download failed with HTTP $responseCode"
+                }
+                connection.inputStream.use { input ->
+                    Files.copy(input, archive.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                }
+            } finally {
+                connection.disconnect()
+            }
+
+            val archiveSha256 = sha256(archive)
+            check(archiveSha256 == dependency.archiveSha256) {
+                "${dependency.name} archive checksum mismatch: expected " +
+                    "${dependency.archiveSha256}, got $archiveSha256"
+            }
+            ZipFile(archive).use { zip ->
+                val entry = zip.getEntry(dependency.archiveJarPath)
+                    ?: throw GradleException(
+                        "${dependency.name} archive is missing ${dependency.archiveJarPath}")
+                zip.getInputStream(entry).use { input ->
+                    Files.copy(input, extractedJar.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                }
+            }
+            val jarSha256 = sha256(extractedJar)
+            check(jarSha256 == dependency.jarSha256) {
+                "${dependency.name} JAR checksum mismatch: expected " +
+                    "${dependency.jarSha256}, got $jarSha256"
+            }
+            Files.move(
+                extractedJar.toPath(),
+                destination.toPath(),
+                StandardCopyOption.REPLACE_EXISTING,
+            )
+            logger.lifecycle("Installed ${dependency.destinationName} ($jarSha256).")
+        }
+    }
 }
 
 tasks.named("compileJava") {
@@ -610,7 +748,6 @@ tasks.register<WriteProperties>("writeLibraryProperties") {
     property("tested.platform", libraryProperties.getProperty("tested.platform"))
     property("tested.processingVersion", libraryProperties.getProperty("tested.processingVersion"))
     property("library.copyright", libraryProperties.getProperty("library.copyright"))
-    property("library.dependencies", libraryProperties.getProperty("library.dependencies"))
     property("library.keywords", libraryProperties.getProperty("library.keywords"))
 }
 

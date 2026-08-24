@@ -14,23 +14,32 @@ class DependencyBootstrapTest {
 	@Test
 	void dependencyBootstrapUsesChecksumPinnedPublicReleaseDownloads() throws IOException {
 		Path projectRoot = Path.of(System.getProperty("user.dir"));
-		String source = Files.readString(projectRoot.resolve("download_dependencies.sh"));
+		String source = Files.readString(projectRoot.resolve("build.gradle.kts"));
 
-		// Bootstrap must fail hard and verify both downloaded archives and extracted JARs.
-		assertTrue(source.contains("set -euo pipefail"));
+		// The JVM bootstrap must fail hard and verify both archives and extracted JARs.
+		assertTrue(source.contains("MessageDigest.getInstance(\"SHA-256\")"));
 		assertTrue(source.contains("archive checksum mismatch"));
 		assertTrue(source.contains("JAR checksum mismatch"));
+		assertTrue(source.contains("ZipFile(archive)"));
+		assertFalse(source.contains("commandLine(\"bash\""));
+		assertFalse(Files.exists(projectRoot.resolve("download_dependencies.sh")));
 
-		// Processing dependencies must use public release downloads rather than
-		// GitHub API asset transport, which may require authentication or hit API limits.
+		// Upstreams publish these versions under a mutable tag, so use immutable asset IDs.
 		assertTrue(source.contains(
-				"https://github.com/Syphon/Processing/releases/download/latest/Syphon.zip"));
+				"https://api.github.com/repos/Syphon/Processing/releases/assets/59352362"));
 		assertTrue(source.contains(
-				"https://github.com/leadedge/SpoutProcessing/releases/download/latest/spout.zip"));
+				"https://api.github.com/repos/leadedge/SpoutProcessing/releases/assets/188539046"));
 
-		assertFalse(source.contains("api.github.com/repos/Syphon/Processing/releases/assets/"));
-		assertFalse(source.contains("api.github.com/repos/leadedge/SpoutProcessing/releases/assets/"));
-		assertFalse(source.contains("Accept: application/octet-stream"));
-		assertFalse(source.contains("use_github_api"));
+		assertFalse(source.contains("/releases/download/latest/"));
+	}
+
+	@Test
+	void sketchbookPathSupportsExplicitCrossPlatformOverrides() throws IOException {
+		String source = Files.readString(
+				Path.of(System.getProperty("user.dir")).resolve("build.gradle.kts"));
+		assertTrue(source.contains("gradleProperty(\"processingSketchbook\")"));
+		assertTrue(source.contains("PROCESSING_SKETCHBOOK"));
+		assertTrue(source.contains("$userHome/Documents/Processing"));
+		assertFalse(source.contains("My Documents/Processing/sketchbook"));
 	}
 }

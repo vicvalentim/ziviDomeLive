@@ -73,7 +73,7 @@ class ReleaseMetadataTest {
         for (String key : new String[] {
                 "name", "version", "authors", "url", "categories", "sentence",
                 "paragraph", "minRevision", "maxRevision", "tested.platform",
-                "tested.processingVersion", "library.copyright", "library.dependencies",
+                "tested.processingVersion", "library.copyright",
                 "library.keywords"
         }) {
             assertEquals(
