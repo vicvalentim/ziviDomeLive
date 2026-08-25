@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">ziviDomeLive 2.0 creative workflow</title>
+  <desc id="desc">Abstract spherical artwork with Standard, Domemaster, Equirectangular and Skybox visual motifs.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#050816"/>
+      <stop offset="0.55" stop-color="#0b1738"/>
+      <stop offset="1" stop-color="#101238"/>
+    </linearGradient>
+    <radialGradient id="sphere" cx="38%" cy="30%" r="70%">
+      <stop offset="0" stop-color="#38e8ff" stop-opacity="0.35"/>
+      <stop offset="0.55" stop-color="#2563eb" stop-opacity="0.13"/>
+      <stop offset="1" stop-color="#050816" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cyanPurple" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#27e7ff"/>
+      <stop offset="0.55" stop-color="#4f8cff"/>
+      <stop offset="1" stop-color="#b66cff"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="orbClip"><circle cx="505" cy="445" r="280"/></clipPath>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#background)"/>
+  <circle cx="505" cy="445" r="360" fill="url(#sphere)"/>
+
+  <g fill="#a9f8ff" opacity="0.72">
+    <circle cx="97" cy="104" r="2"/><circle cx="185" cy="181" r="1.5"/><circle cx="315" cy="83" r="2.5"/>
+    <circle cx="680" cy="91" r="1.5"/><circle cx="790" cy="174" r="2"/><circle cx="1472" cy="123" r="2"/>
+    <circle cx="1375" cy="728" r="1.5"/><circle cx="1208" cy="102" r="1.5"/><circle cx="1517" cy="508" r="2.5"/>
+    <circle cx="930" cy="781" r="2"/><circle cx="112" cy="719" r="2"/><circle cx="742" cy="752" r="1.5"/>
+  </g>
+
+  <g clip-path="url(#orbClip)" fill="none">
+    <circle cx="505" cy="445" r="280" stroke="url(#cyanPurple)" stroke-width="4" opacity="0.95" filter="url(#glow)"/>
+    <ellipse cx="505" cy="445" rx="280" ry="94" stroke="#42e8ff" stroke-width="2" opacity="0.44"/>
+    <ellipse cx="505" cy="445" rx="280" ry="186" stroke="#42e8ff" stroke-width="1.5" opacity="0.30"/>
+    <ellipse cx="505" cy="445" rx="95" ry="280" stroke="#7d8cff" stroke-width="2" opacity="0.38"/>
+    <ellipse cx="505" cy="445" rx="190" ry="280" stroke="#7d8cff" stroke-width="1.5" opacity="0.26"/>
+    <path d="M225 445H785 M505 165V725" stroke="#76f4ff" stroke-width="1" opacity="0.22"/>
+    <path d="M268 295C385 368 625 370 746 294M264 597C385 520 625 520 750 600" stroke="#a86cff" stroke-width="2" opacity="0.30"/>
+  </g>
+
+  <g fill="#061028" stroke="url(#cyanPurple)" stroke-width="3" filter="url(#glow)">
+    <rect x="302" y="282" width="42" height="42" rx="7" transform="rotate(-18 323 303)"/>
+    <rect x="668" y="245" width="36" height="36" rx="6" transform="rotate(15 686 263)"/>
+    <rect x="711" y="525" width="46" height="46" rx="8" transform="rotate(-12 734 548)"/>
+    <rect x="363" y="663" width="34" height="34" rx="6" transform="rotate(18 380 680)"/>
+    <rect x="197" y="477" width="30" height="30" rx="5" transform="rotate(-8 212 492)"/>
+  </g>
+
+  <path d="M505 727C330 727 218 760 147 817H863C792 760 680 727 505 727Z" fill="#132356" stroke="#42e8ff" stroke-width="2" opacity="0.88"/>
+  <path d="M206 816C276 750 375 719 505 719C635 719 734 750 804 816" fill="none" stroke="#b66cff" stroke-width="3" opacity="0.72" filter="url(#glow)"/>
+
+  <g transform="translate(900 128)">
+    <text x="0" y="0" fill="#71efff" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" letter-spacing="3">PROCESSING 4 / JAVA 17</text>
+    <text x="0" y="82" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="75" font-weight="760">One Scene.</text>
+    <text x="0" y="158" fill="#58c7ff" font-family="Arial, Helvetica, sans-serif" font-size="75" font-weight="760">Four views.</text>
+    <text x="0" y="214" fill="#b9c8e8" font-family="Arial, Helvetica, sans-serif" font-size="25">Realtime fulldome and spherical creative coding</text>
+
+    <g transform="translate(0 294)" font-family="Arial, Helvetica, sans-serif">
+      <g transform="translate(0 0)">
+        <rect width="280" height="138" rx="22" fill="#0d1a3b" stroke="#284c86" stroke-width="2"/>
+        <rect x="24" y="25" width="72" height="55" rx="7" fill="none" stroke="#42e8ff" stroke-width="3"/>
+        <path d="M32 74L55 52L72 64L89 44" fill="none" stroke="#b66cff" stroke-width="3"/>
+        <text x="24" y="112" fill="#fff" font-size="23" font-weight="700">STANDARD</text>
+      </g>
+      <g transform="translate(306 0)">
+        <rect width="280" height="138" rx="22" fill="#0d1a3b" stroke="#284c86" stroke-width="2"/>
+        <circle cx="60" cy="53" r="34" fill="none" stroke="#42e8ff" stroke-width="3"/>
+        <path d="M28 62Q60 20 92 62" fill="none" stroke="#b66cff" stroke-width="3"/>
+        <text x="24" y="112" fill="#fff" font-size="23" font-weight="700">DOMEMASTER</text>
+      </g>
+      <g transform="translate(0 164)">
+        <rect width="280" height="138" rx="22" fill="#0d1a3b" stroke="#284c86" stroke-width="2"/>
+        <rect x="24" y="25" width="104" height="52" rx="26" fill="none" stroke="#42e8ff" stroke-width="3"/>
+        <path d="M48 25V77M76 25V77M104 25V77M24 51H128" stroke="#b66cff" stroke-width="2" opacity="0.8"/>
+        <text x="24" y="112" fill="#fff" font-size="21" font-weight="700">EQUIRECTANGULAR</text>
+      </g>
+      <g transform="translate(306 164)">
+        <rect width="280" height="138" rx="22" fill="#0d1a3b" stroke="#284c86" stroke-width="2"/>
+        <g transform="translate(25 19)" fill="none" stroke="#42e8ff" stroke-width="2.5">
+          <rect x="34" y="0" width="34" height="34"/><rect x="0" y="34" width="34" height="34"/>
+          <rect x="34" y="34" width="34" height="34"/><rect x="68" y="34" width="34" height="34"/>
+          <rect x="102" y="34" width="34" height="34"/><rect x="34" y="68" width="34" height="34"/>
+        </g>
+        <text x="24" y="112" fill="#fff" font-size="23" font-weight="700">SKYBOX</text>
+      </g>
+    </g>
+  </g>
+
+  <text x="92" y="854" fill="#d9e6ff" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" letter-spacing="1">ziviDomeLive 2.0</text>
+  <text x="1450" y="854" fill="#7392c9" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="18">EDITORIAL ILLUSTRATION</text>
+</svg>
