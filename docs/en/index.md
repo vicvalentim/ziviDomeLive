@@ -51,6 +51,30 @@ Build real-time **fulldome, spherical and immersive visual workflows** from one 
 !!! tip "Start with one Scene"
     A basic project needs the `ziviDomeLive` runtime and a `Scene`. Put state/simulation in `update()` and drawing in `sceneRender()`.
 
+## Release & compatibility
+
+ziviDomeLive is a Processing 4 library for real-time Standard, fulldome and spherical visual workflows, including Domemaster, Equirectangular and Skybox representations, scene management, spherical calibration and optional NDI, Syphon and Spout output routing.
+
+| Item | Current information |
+|---|---|
+| Release | **2.0.0** |
+| Last update | **24 August 2026** |
+| Processing compatibility | Processing 4, revision `1285+` |
+| Automated test version | **Processing 4.5.6** |
+| Physically qualified systems | macOS Apple Silicon `arm64`; macOS Intel `x86_64`; Windows `x86_64`; Linux `x86_64` |
+| Categories | `3D`, `Video & Vision` |
+| Keywords | `fulldome`, `projection`, `immersive`, `spherical`, `360`, `visual`, `real-time`, `NDI`, `Syphon`, `Spout` |
+| Required Processing dependency | ControlP5 `2.2.6` for the distributed examples and control panel |
+| Optional output dependencies | NDI Runtime; Syphon for Processing `4.0` on macOS; Spout for Processing `2.0.8.0` on Windows |
+
+**Distributed examples and tools:** `EmptyProject`, `Basic`, `NamedActions`, `PortLoopback`, `SphereParticle`, `InfiniteBackground`, `FulldomePBR`, `SolarSystem`, `CalibrationTool`, and `BenchmarkTool`.
+
+[Download ziviDomeLive.zip](https://github.com/vicvalentim/ziviDomeLive/releases/latest/download/ziviDomeLive.zip){ .md-button .md-button--primary }
+[Installation details](installation/installation-steps.md){ .md-button }
+[Dependencies](installation/dependencies.md){ .md-button }
+
+The release qualification record covers the four desktop configurations above, all ten distributed examples and tools, Standard and spherical rendering, calibration, Processing package installation and platform-applicable native outputs. Qualify the exact GPU, driver, projector, lens and receiver chain before production use.
+
 ## Choose your path
 
 <div class="grid cards" markdown>

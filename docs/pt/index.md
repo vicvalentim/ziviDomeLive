@@ -51,6 +51,30 @@ Construa fluxos visuais **fulldome, esféricos e imersivos em tempo real** a par
 !!! tip "Comece com uma Scene"
     Um projeto básico precisa do runtime `ziviDomeLive` e de uma `Scene`. Coloque estado/simulação em `update()` e desenho em `sceneRender()`.
 
+## Versão e compatibilidade
+
+ziviDomeLive é uma biblioteca para Processing 4 destinada a fluxos visuais Standard, fulldome e esféricos em tempo real, incluindo representações Domemaster, Equirectangular e Skybox, gerenciamento de cenas, calibração esférica e roteamento opcional de outputs NDI, Syphon e Spout.
+
+| Item | Informação atual |
+|---|---|
+| Versão | **2.0.0** |
+| Última atualização | **24 de agosto de 2026** |
+| Compatibilidade com Processing | Processing 4, revisão `1285+` |
+| Versão usada nos testes automatizados | **Processing 4.5.6** |
+| Sistemas qualificados fisicamente | macOS Apple Silicon `arm64`; macOS Intel `x86_64`; Windows `x86_64`; Linux `x86_64` |
+| Categorias | `3D`, `Video & Vision` |
+| Palavras-chave | `fulldome`, `projection`, `immersive`, `spherical`, `360`, `visual`, `real-time`, `NDI`, `Syphon`, `Spout` |
+| Dependência Processing obrigatória | ControlP5 `2.2.6` para os exemplos distribuídos e painel de controle |
+| Dependências opcionais de output | NDI Runtime; Syphon for Processing `4.0` no macOS; Spout for Processing `2.0.8.0` no Windows |
+
+**Exemplos e ferramentas distribuídos:** `EmptyProject`, `Basic`, `NamedActions`, `PortLoopback`, `SphereParticle`, `InfiniteBackground`, `FulldomePBR`, `SolarSystem`, `CalibrationTool` e `BenchmarkTool`.
+
+[Baixar ziviDomeLive.zip](https://github.com/vicvalentim/ziviDomeLive/releases/latest/download/ziviDomeLive.zip){ .md-button .md-button--primary }
+[Detalhes de instalação](installation/installation-steps.md){ .md-button }
+[Dependências](installation/dependencies.md){ .md-button }
+
+O registro de qualificação da release cobre as quatro configurações desktop acima, os dez exemplos e ferramentas distribuídos, renderização Standard e esférica, calibração, instalação do pacote Processing e os outputs nativos aplicáveis a cada plataforma. Para uso em produção, qualifique a combinação específica de GPU, driver, projetor, lente e receptor.
+
 ## Escolha seu percurso
 
 <div class="grid cards" markdown>
