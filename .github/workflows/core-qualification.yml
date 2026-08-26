@@ -3,7 +3,8 @@ name: ziviDomeLive Core Qualification
 on:
   push:
     branches:
-      - architecture/zividomelive-core
+      - main
+      - "release/**"
   pull_request:
     paths:
       - "core/**"
