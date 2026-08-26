@@ -132,6 +132,9 @@ dependencies {
 
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+    // Golden-equivalence fixtures compare the frozen Processing 2.0 implementation with
+    // the standalone Core artifact. Core production and Core unit tests never depend on root.
+    testImplementation(project(":core"))
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     // Processing core is needed at test runtime for PApplet static math helpers
     // (sin, cos, sqrt, constrain) used by Quaternion and related classes.
