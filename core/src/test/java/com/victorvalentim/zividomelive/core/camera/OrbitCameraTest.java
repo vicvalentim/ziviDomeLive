@@ -204,6 +204,122 @@ class OrbitCameraTest {
                 () -> camera.goTo(null, Quaternion.identity(), 1.0f));
     }
 
+    @Test
+    void everyNonFiniteDistanceEntryPointRejectsWithoutChangingState() {
+        for (float invalid : new float[]{
+                Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY}) {
+            assertThrows(IllegalArgumentException.class, () -> new OrbitCamera(invalid));
+
+            OrbitCamera camera = new OrbitCamera(-75.0f);
+            camera.setDistanceLimits(-1000.0f, 1000.0f);
+            CameraPose pose = camera.getPose();
+            CameraPose goal = camera.getGoalPose();
+
+            assertThrows(IllegalArgumentException.class, () -> camera.setDistance(invalid));
+            assertThrows(IllegalArgumentException.class,
+                    () -> camera.setDistanceImmediate(invalid));
+            assertThrows(IllegalArgumentException.class, () -> camera.zoom(invalid));
+            assertThrows(IllegalArgumentException.class, () -> camera.zoomImmediate(invalid));
+            assertEquals(pose, camera.getPose());
+            assertEquals(goal, camera.getGoalPose());
+        }
+    }
+
+    @Test
+    void rejectedDistanceConfigurationIsTransactional() {
+        OrbitCamera camera = new OrbitCamera(-25.0f);
+        camera.setDistanceLimits(-100.0f, 100.0f);
+        camera.setCollapseGuard(5.0f);
+        camera.setLerpFactor(0.25f);
+        CameraPose pose = camera.getPose();
+        CameraPose goal = camera.getGoalPose();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> camera.setDistanceLimits(10.0f, -10.0f));
+        assertThrows(IllegalArgumentException.class,
+                () -> camera.setDistanceLimits(Float.NEGATIVE_INFINITY, 10.0f));
+        assertThrows(IllegalArgumentException.class,
+                () -> camera.setDistanceLimits(-10.0f, Float.POSITIVE_INFINITY));
+        assertThrows(IllegalArgumentException.class,
+                () -> camera.setCollapseGuard(Float.NaN));
+        assertThrows(IllegalArgumentException.class,
+                () -> camera.setLerpFactor(Float.NEGATIVE_INFINITY));
+
+        assertEquals(-100.0f, camera.getMinimumDistance());
+        assertEquals(100.0f, camera.getMaximumDistance());
+        assertEquals(5.0f, camera.getCollapseGuard());
+        assertEquals(0.25f, camera.getLerpFactor());
+        assertEquals(pose, camera.getPose());
+        assertEquals(goal, camera.getGoalPose());
+    }
+
+    @Test
+    void guardLargerThanRangeAndZeroGuardHaveDeterministicClamping() {
+        OrbitCamera positive = new OrbitCamera(4.0f);
+        positive.setDistanceLimits(1.0f, 5.0f);
+        positive.setCollapseGuard(10.0f);
+        assertEquals(5.0f, positive.getDistance());
+
+        OrbitCamera crossing = new OrbitCamera(-2.0f);
+        crossing.setDistanceLimits(-5.0f, 5.0f);
+        crossing.setCollapseGuard(0.0f);
+        crossing.setDistanceImmediate(2.0f);
+        assertEquals(2.0f, crossing.getDistance());
+
+        OrbitCamera large = new OrbitCamera(Float.MAX_VALUE);
+        large.setDistanceLimits(-Float.MAX_VALUE, Float.MAX_VALUE);
+        large.setDistanceImmediate(-Float.MAX_VALUE);
+        assertEquals(-Float.MAX_VALUE, large.getDistance());
+    }
+
+    @Test
+    void rejectedPoseOperationsDoNotPartiallyPublishTargets() {
+        OrbitCamera camera = new OrbitCamera(-100.0f);
+        camera.setDistanceLimits(-1000.0f, 1000.0f);
+        camera.snapTo(new Vec3(1.0f, 2.0f, 3.0f), Quaternion.identity(), -100.0f);
+        CameraPose pose = camera.getPose();
+        CameraPose goal = camera.getGoalPose();
+        Quaternion zero = new Quaternion(0.0f, 0.0f, 0.0f, 0.0f);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> camera.goTo(new Vec3(7.0f, 8.0f, 9.0f), null, -200.0f));
+        assertEquals(goal, camera.getGoalPose());
+        assertThrows(IllegalStateException.class,
+                () -> camera.goTo(new Vec3(7.0f, 8.0f, 9.0f), zero, -200.0f));
+        assertEquals(goal, camera.getGoalPose());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> camera.snapTo(7.0f, 8.0f, 9.0f, null, -200.0f));
+        assertEquals(pose, camera.getPose());
+        assertEquals(goal, camera.getGoalPose());
+        assertThrows(IllegalStateException.class,
+                () -> camera.snapTo(7.0f, 8.0f, 9.0f, zero, -200.0f));
+        assertEquals(pose, camera.getPose());
+        assertEquals(goal, camera.getGoalPose());
+    }
+
+    @Test
+    void zeroRotationIsIdentityButInvalidNonZeroAxesAreRejectedTransactionally() {
+        OrbitCamera camera = new OrbitCamera(100.0f);
+        CameraPose pose = camera.getPose();
+        CameraPose goal = camera.getGoalPose();
+
+        camera.rotateAround(0.0f, 0.0f, 0.0f, 0.0f);
+        camera.rotateAroundImmediate(0.0f, 0.0f, 0.0f, -0.0f);
+        assertPoseEquivalent(pose, camera.getPose());
+        assertPoseEquivalent(goal, camera.getGoalPose());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> camera.rotateAround(0.0f, 0.0f, 0.0f, 1.0f));
+        assertThrows(IllegalArgumentException.class,
+                () -> camera.rotateAroundImmediate(Float.NaN, 1.0f, 0.0f, 1.0f));
+        assertThrows(NullPointerException.class, () -> camera.rotateAround(null, 1.0f));
+        assertThrows(NullPointerException.class,
+                () -> camera.rotateAroundImmediate(null, 1.0f));
+        assertPoseEquivalent(pose, camera.getPose());
+        assertPoseEquivalent(goal, camera.getGoalPose());
+    }
+
     private static void settle(OrbitCamera camera) {
         for (int index = 0; index < 200; index++) {
             camera.update();

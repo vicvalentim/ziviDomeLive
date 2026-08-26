@@ -139,11 +139,13 @@ public final class OrbitCamera {
     public void goTo(Vec3 target, Quaternion orientation, float distance) {
         Vec3 value = Objects.requireNonNull(target, "target");
         requireFinite(distance, "Distance");
+        Quaternion normalizedOrientation = normalizedCopyOf(orientation);
+        float guardedDistance = guardDistance(distance, distance);
         goalTargetX = value.x();
         goalTargetY = value.y();
         goalTargetZ = value.z();
-        goalOrientation = normalizedCopyOf(orientation);
-        goalDistance = guardDistance(distance, distance);
+        goalOrientation = normalizedOrientation;
+        goalDistance = guardedDistance;
     }
 
     /** Changes all pose goals from an immutable pose. */
@@ -158,12 +160,14 @@ public final class OrbitCamera {
         requireFinite(y, "Target y");
         requireFinite(z, "Target z");
         requireFinite(distance, "Distance");
+        Quaternion normalizedOrientation = normalizedCopyOf(orientation);
+        float guardedDistance = guardDistance(distance, distance);
         targetX = goalTargetX = x;
         targetY = goalTargetY = y;
         targetZ = goalTargetZ = z;
-        this.orientation = normalizedCopyOf(orientation);
+        this.orientation = normalizedOrientation;
         goalOrientation = this.orientation;
-        this.distance = guardDistance(distance, distance);
+        this.distance = guardedDistance;
         goalDistance = this.distance;
     }
 
