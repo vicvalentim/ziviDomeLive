@@ -198,6 +198,39 @@ class PortsTest {
                 () -> new Ports(new FrameThreadQueue(), 1, 0));
     }
 
+    @Test
+    void closedPortsRejectLifecycleAndConnectionsWhileManagedOutputFailsClosed() {
+        Ports ports = new Ports(new FrameThreadQueue(), 4);
+        FakeInputPort<Integer> input = new FakeInputPort<>();
+        FakeOutputPort<Integer> output = new FakeOutputPort<>();
+        ports.connectInput(input, value -> { });
+        OutputPort<Integer> managed = ports.connectOutput(output);
+        ports.close();
+
+        assertFalse(managed.offer(1));
+        assertEquals(0, output.offerCount.get());
+        assertThrows(IllegalStateException.class, ports::pause);
+        assertThrows(IllegalStateException.class, ports::resume);
+        assertThrows(IllegalStateException.class,
+                () -> ports.connectInput(new FakeInputPort<>(), value -> { }));
+        assertThrows(IllegalStateException.class,
+                () -> ports.connectOutput(new FakeOutputPort<>()));
+        assertEquals(0, ports.drain());
+    }
+
+    @Test
+    void nullPortsHandlersAndFrameQueueAreRejectedBeforeRegistration() {
+        assertThrows(NullPointerException.class, () -> new Ports(null));
+        Ports ports = new Ports(new FrameThreadQueue(), 4);
+        FakeInputPort<Integer> input = new FakeInputPort<>();
+        assertThrows(NullPointerException.class, () -> ports.connectInput(null, value -> { }));
+        assertThrows(NullPointerException.class, () -> ports.connectInput(input, null));
+        assertThrows(NullPointerException.class, () -> ports.connectOutput(null));
+        ports.connectInput(input, value -> { });
+        ports.close();
+        assertEquals(1, input.closeCount.get());
+    }
+
     private static final class FakeInputPort<T> implements InputPort<T> {
         private Consumer<? super T> receiver;
         private final AtomicInteger closeCount = new AtomicInteger();

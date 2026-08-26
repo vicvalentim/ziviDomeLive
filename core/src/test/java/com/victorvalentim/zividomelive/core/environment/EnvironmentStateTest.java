@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EnvironmentStateTest {
@@ -69,6 +70,33 @@ class EnvironmentStateTest {
         spherical.setRoll(3.0f);
 
         assertSame(source, environment.getSourceOrientation());
+    }
+
+    @Test
+    void allNonFiniteScalarsAreIgnoredWithoutMutation() {
+        EnvironmentState state = new EnvironmentState();
+        state.setIntensity(2.5f);
+        state.setYawOffset(-0.75f);
+
+        for (float invalid : new float[]{
+                Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY}) {
+            state.setIntensity(invalid);
+            state.setYawOffset(invalid);
+            assertEquals(2.5f, state.getIntensity());
+            assertEquals(-0.75f, state.getYawOffset());
+        }
+    }
+
+    @Test
+    void invalidOrientationNormalizationDoesNotReplaceTheOwnedValue() {
+        EnvironmentState state = new EnvironmentState();
+        Quaternion valid = Quaternion.fromAxisAngle(0.0f, 1.0f, 0.0f, 0.5f);
+        state.setSourceOrientation(valid);
+
+        assertThrows(IllegalStateException.class,
+                () -> state.setSourceOrientation(new Quaternion(0.0f, 0.0f, 0.0f, 0.0f)));
+
+        assertSame(valid, state.getSourceOrientation());
     }
 
     private static void assertDefaults(EnvironmentState state) {

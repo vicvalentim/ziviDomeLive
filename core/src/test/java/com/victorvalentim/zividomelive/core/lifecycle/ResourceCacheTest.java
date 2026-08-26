@@ -91,6 +91,57 @@ class ResourceCacheTest {
     }
 
     @Test
+    void replacingTheSameIdentityTransfersOwnershipWithoutEarlyDisposal() {
+        ResourceCache<Object> cache = new ResourceCache<>();
+        Object shared = new Object();
+        AtomicInteger oldDisposer = new AtomicInteger();
+        AtomicInteger newDisposer = new AtomicInteger();
+        cache.putOwned("shared", shared, ignored -> oldDisposer.incrementAndGet());
+
+        cache.putOwned("shared", shared, ignored -> newDisposer.incrementAndGet());
+
+        assertEquals(0, oldDisposer.get());
+        assertEquals(0, newDisposer.get());
+        cache.close();
+        assertEquals(0, oldDisposer.get());
+        assertEquals(1, newDisposer.get());
+    }
+
+    @Test
+    void postCloseReadsAndCleanupAreSafeButAdmissionMutationsReject() {
+        ResourceCache<String> cache = new ResourceCache<>();
+        cache.putBorrowed("borrowed", "value");
+        cache.close();
+
+        assertNull(cache.get("borrowed"));
+        assertFalse(cache.contains("borrowed"));
+        assertEquals(0, cache.size());
+        assertNull(cache.remove("borrowed"));
+        assertEquals(0, cache.removeByPrefix(""));
+        assertDoesNotThrow(cache::clear);
+        assertThrows(IllegalStateException.class,
+                () -> cache.getOrCreateBorrowed("late", () -> "late"));
+        assertThrows(IllegalStateException.class,
+                () -> cache.getOrCreateOwned("late", () -> "late", ignored -> { }));
+        assertThrows(IllegalStateException.class, () -> cache.putBorrowed("late", "value"));
+        assertThrows(IllegalStateException.class,
+                () -> cache.putOwned("late", "value", ignored -> { }));
+    }
+
+    @Test
+    void emptyPrefixRemovesEverythingInInsertionOrder() {
+        ResourceCache<String> cache = new ResourceCache<>();
+        List<String> disposed = new ArrayList<>();
+        cache.putOwned("first", "first", disposed::add);
+        cache.putBorrowed("borrowed", "borrowed");
+        cache.putOwned("third", "third", disposed::add);
+
+        assertEquals(3, cache.removeByPrefix(""));
+        assertEquals(List.of("first", "third"), disposed);
+        assertEquals(0, cache.size());
+    }
+
+    @Test
     void invalidKeysNullResourcesAndClosedMutationAreRejected() {
         ResourceCache<Object> cache = new ResourceCache<>();
         assertThrows(IllegalArgumentException.class, () -> cache.get(" "));

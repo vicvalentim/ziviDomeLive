@@ -4,8 +4,11 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -142,6 +145,74 @@ class TaskGroupTest {
     }
 
     @Test
+    void controlledExecutorProvesAdmissionRemovalAndCallbackOrdering() {
+        FrameThreadQueue queue = new FrameThreadQueue();
+        ManualExecutor executor = new ManualExecutor();
+        TaskGroup group = new TaskGroup(2, queue, executor);
+        AtomicReference<String> firstResult = new AtomicReference<>();
+        AtomicReference<Throwable> secondError = new AtomicReference<>();
+
+        assertTrue(group.submitIfIdle("first", () -> "ready", firstResult::set));
+        assertFalse(group.submitIfIdle("first", () -> "duplicate", firstResult::set));
+        assertTrue(group.submitIfIdle("second", () -> {
+            throw new IllegalArgumentException("broken");
+        }, ignored -> fail("failure cannot publish a result"), secondError::set));
+        assertFalse(group.submitIfIdle("third", () -> { }));
+        assertEquals(2, group.getInFlightCount());
+        assertTrue(group.isBusy("first"));
+
+        executor.runNext();
+        assertFalse(group.isBusy("first"),
+                "The key is removed before its frame callback is delivered");
+        assertEquals(1, group.getInFlightCount());
+        assertEquals(1, queue.getPendingCount());
+        assertNull(firstResult.get());
+        assertEquals(1, queue.drain());
+        assertEquals("ready", firstResult.get());
+
+        executor.runNext();
+        assertFalse(group.isBusy("second"));
+        assertEquals(0, group.getInFlightCount());
+        assertNull(secondError.get());
+        assertEquals(1, queue.drain());
+        assertEquals("broken", secondError.get().getMessage());
+        group.close();
+        queue.close();
+    }
+
+    @Test
+    void controlledCancellationSuppressesWorkAndCallbacksWithoutTiming() {
+        FrameThreadQueue queue = new FrameThreadQueue();
+        ManualExecutor executor = new ManualExecutor();
+        TaskGroup group = new TaskGroup(1, queue, executor);
+        AtomicReference<String> result = new AtomicReference<>();
+        assertTrue(group.submitIfIdle("stale", () -> "old", result::set));
+
+        group.close();
+        executor.runNext();
+
+        assertTrue(group.isClosed());
+        assertEquals(0, group.getInFlightCount());
+        assertEquals(0, queue.getPendingCount());
+        assertNull(result.get());
+        queue.close();
+    }
+
+    @Test
+    void unexpectedExecutorFailureReleasesKeyAndPropagates() {
+        TaskGroup group = new TaskGroup(1, new FrameThreadQueue(), task -> {
+            throw new IllegalStateException("executor failed");
+        });
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> group.submitIfIdle("work", () -> { }));
+        assertEquals("executor failed", error.getMessage());
+        assertFalse(group.isBusy("work"));
+        assertEquals(0, group.getInFlightCount());
+        group.close();
+    }
+
+    @Test
     void invalidKeysCallbacksAndCapacityAreRejected() {
         assertThrows(IllegalArgumentException.class, () -> new TaskGroup(0));
         TaskGroup group = new TaskGroup(1);
@@ -192,6 +263,20 @@ class TaskGroupTest {
             latch.await();
         } catch (InterruptedException error) {
             Thread.currentThread().interrupt();
+        }
+    }
+
+    private static final class ManualExecutor implements Executor {
+        private final Deque<Runnable> pending = new ArrayDeque<>();
+
+        @Override
+        public void execute(Runnable command) {
+            pending.addLast(command);
+        }
+
+        private void runNext() {
+            Runnable command = pending.removeFirst();
+            command.run();
         }
     }
 }

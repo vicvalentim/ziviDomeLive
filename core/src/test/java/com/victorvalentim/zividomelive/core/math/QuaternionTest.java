@@ -117,6 +117,35 @@ class QuaternionTest {
                 () -> Quaternion.identity().slerp(Quaternion.identity(), Float.NaN));
     }
 
+    @Test
+    void allNonFiniteComponentsAxesAnglesAndFactorsRejectConsistently() {
+        for (float invalid : new float[]{
+                Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY}) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> new Quaternion(invalid, 0.0f, 0.0f, 1.0f));
+            assertThrows(IllegalArgumentException.class,
+                    () -> new Quaternion(0.0f, invalid, 0.0f, 1.0f));
+            assertThrows(IllegalArgumentException.class,
+                    () -> new Quaternion(0.0f, 0.0f, invalid, 1.0f));
+            assertThrows(IllegalArgumentException.class,
+                    () -> new Quaternion(0.0f, 0.0f, 0.0f, invalid));
+            assertThrows(IllegalArgumentException.class,
+                    () -> Quaternion.fromAxisAngle(invalid, 0.0f, 0.0f, 0.0f));
+            assertThrows(IllegalArgumentException.class,
+                    () -> Quaternion.fromAxisAngle(1.0f, 0.0f, 0.0f, invalid));
+            assertThrows(IllegalArgumentException.class,
+                    () -> Quaternion.identity().slerp(Quaternion.identity(), invalid));
+        }
+    }
+
+    @Test
+    void zeroAngleWithFiniteZeroAxisIsIdentityButNonZeroAngleRejectsTheAxis() {
+        assertSame(Quaternion.identity(),
+                Quaternion.fromAxisAngle(-0.0f, 0.0f, 0.0f, -0.0f));
+        assertThrows(IllegalArgumentException.class,
+                () -> Quaternion.fromAxisAngle(-0.0f, 0.0f, 0.0f, Float.MIN_VALUE));
+    }
+
     private static void assertUnit(Quaternion value) {
         float magnitude = (float) Math.sqrt(value.x() * value.x() + value.y() * value.y()
                 + value.z() * value.z() + value.w() * value.w());

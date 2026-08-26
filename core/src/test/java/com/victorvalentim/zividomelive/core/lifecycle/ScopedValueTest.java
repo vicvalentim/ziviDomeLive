@@ -63,4 +63,48 @@ class ScopedValueTest {
         assertThrows(IllegalStateException.class, () -> scope.set("late"));
         assertThrows(IllegalStateException.class, scope::get);
     }
+
+    @Test
+    void nullCanBeOwnedAndRestoredWhenTheHostAllowsIt() {
+        AtomicReference<String> host = new AtomicReference<>("original");
+        ScopedValue<String> scope = new ScopedValue<>(host::get, host::set);
+
+        scope.set(null);
+        assertEquals(null, scope.get());
+        scope.close();
+
+        assertEquals("original", host.get());
+    }
+
+    @Test
+    void customEqualityCanRecognizeEquivalentExternalRepresentations() {
+        AtomicReference<String> host = new AtomicReference<>("A");
+        ScopedValue<String> scope = new ScopedValue<>(host::get, host::set,
+                (left, right) -> left == null ? right == null : left.equalsIgnoreCase(right));
+        scope.set("B");
+        host.set("b");
+
+        scope.close();
+
+        assertEquals("A", host.get());
+    }
+
+    @Test
+    void failedWriterDoesNotLoseTheCapturedPreviousValue() {
+        AtomicReference<String> host = new AtomicReference<>("original");
+        AtomicReference<Boolean> fail = new AtomicReference<>(true);
+        ScopedValue<String> scope = new ScopedValue<>(host::get, value -> {
+            if (fail.get()) {
+                throw new IllegalStateException("write failed");
+            }
+            host.set(value);
+        });
+
+        assertThrows(IllegalStateException.class, () -> scope.set("rejected"));
+        assertTrue(scope.isTouched());
+        fail.set(false);
+        scope.set("applied");
+        scope.close();
+        assertEquals("original", host.get());
+    }
 }

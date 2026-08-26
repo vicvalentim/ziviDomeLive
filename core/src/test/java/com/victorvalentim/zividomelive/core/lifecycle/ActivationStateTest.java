@@ -52,4 +52,34 @@ class ActivationStateTest {
         assertTrue(state.isClosed());
         assertFalse(state.isAccepting());
     }
+
+    @Test
+    void closeClearsPauseAndPendingReloadBeforeRejectingEveryAdmissionCall() {
+        ActivationState state = new ActivationState();
+        state.requestReload();
+        state.pause();
+
+        state.close();
+
+        assertFalse(state.isPaused());
+        assertFalse(state.consumeReloadRequest());
+        assertThrows(IllegalStateException.class, state::requestReload);
+        assertThrows(IllegalStateException.class, state::pause);
+        assertThrows(IllegalStateException.class, state::resume);
+    }
+
+    @Test
+    void stoppingThenClosingIsAStableTwoPhaseTransition() {
+        ActivationState state = new ActivationState();
+        state.beginStopping();
+        assertFalse(state.isClosed());
+        assertFalse(state.isAccepting());
+
+        state.close();
+        state.beginStopping();
+
+        assertTrue(state.isClosed());
+        assertFalse(state.isAccepting());
+        assertFalse(state.isPaused());
+    }
 }
