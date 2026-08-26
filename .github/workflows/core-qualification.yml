@@ -1,0 +1,247 @@
+name: ziviDomeLive Core Qualification
+
+on:
+  push:
+    branches:
+      - architecture/zividomelive-core
+  pull_request:
+    paths:
+      - "core/**"
+      - "settings.gradle.kts"
+      - "build.gradle.kts"
+      - "src/test/java/com/victorvalentim/zividomelive/CoreGoldenEquivalenceTest.java"
+      - ".github/workflows/core-qualification.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: core-qualification-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-qualification:
+    name: Core Qualification (${{ matrix.os }}, Java 17)
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: "17"
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build, test, document, and verify Core boundaries
+        shell: bash
+        run: >-
+          ./gradlew
+          :core:clean
+          :core:check
+          :core:javadoc
+          :core:sourcesJar
+          :core:javadocJar
+          --warning-mode all
+          --console=plain
+
+      - name: Audit production dependency classpaths
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports/core-qualification
+          ./gradlew :core:dependencies --configuration compileClasspath --console=plain \
+            | tee build/reports/core-qualification/compile-classpath.txt
+          ./gradlew :core:dependencies --configuration runtimeClasspath --console=plain \
+            | tee build/reports/core-qualification/runtime-classpath.txt
+          grep -q "No dependencies" build/reports/core-qualification/compile-classpath.txt
+          grep -q "No dependencies" build/reports/core-qualification/runtime-classpath.txt
+
+      - name: Inspect Core JAR and Java module dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports/core-qualification
+          core_jar="$(find core/build/libs -maxdepth 1 -type f \
+            -name 'zividomelive-core-*.jar' \
+            ! -name '*-sources.jar' \
+            ! -name '*-javadoc.jar')"
+          if [[ -z "$core_jar" || "$core_jar" == *$'\n'* ]]; then
+            echo "Expected exactly one Core main JAR." >&2
+            exit 1
+          fi
+          jar tf "$core_jar" | tee build/reports/core-qualification/jar-contents.txt
+          if grep -Ev '^(META-INF(/.*)?|com/|com/victorvalentim/|com/victorvalentim/zividomelive/|com/victorvalentim/zividomelive/core(/.*)?)$' \
+              build/reports/core-qualification/jar-contents.txt | grep -q .; then
+            echo "Core JAR contains an entry outside the qualified namespace." >&2
+            exit 1
+          fi
+          if grep -E '(processing/|com/jogamp/|org/lwjgl/|com/victorvalentim/zividomelive/ziviDomeLive|com/victorvalentim/zividomelive/Scene)' \
+              build/reports/core-qualification/jar-contents.txt; then
+            echo "Core JAR contains a forbidden host/backend entry." >&2
+            exit 1
+          fi
+          jdeps_modules="$(jdeps --multi-release 17 --print-module-deps "$core_jar")"
+          printf '%s\n' "$jdeps_modules" | tee build/reports/core-qualification/jdeps-modules.txt
+          test "$jdeps_modules" = "java.base"
+          jdeps --multi-release 17 -s "$core_jar" \
+            | tee build/reports/core-qualification/jdeps-summary.txt
+          {
+            echo "### Core jdeps — ${{ runner.os }}"
+            echo
+            echo "- Modules: \`$jdeps_modules\`"
+            echo "- Main JAR: \`$core_jar\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish only to the build-local Maven repository and inspect POM
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew :core:publishCorePublicationToCoreTestRepository --console=plain
+          pom="core/build/publications/core/pom-default.xml"
+          test -f "$pom"
+          cp "$pom" build/reports/core-qualification/pom.xml
+          if grep -q '<dependencies' "$pom"; then
+            echo "Core POM declares unexpected dependencies." >&2
+            exit 1
+          fi
+          test -f core/build/libs/zividomelive-core-0.1.0-SNAPSHOT.jar
+          test -f core/build/libs/zividomelive-core-0.1.0-SNAPSHOT-sources.jar
+          test -f core/build/libs/zividomelive-core-0.1.0-SNAPSHOT-javadoc.jar
+
+      - name: Run independent Maven consumer smoke
+        shell: bash
+        run: ./gradlew :core:externalConsumerSmoke --warning-mode all --console=plain
+
+      - name: Summarize Core unit tests
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import glob
+          import xml.etree.ElementTree as ET
+
+          files = glob.glob("core/build/test-results/test/TEST-*.xml")
+          totals = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
+          for path in files:
+              root = ET.parse(path).getroot()
+              for key in totals:
+                  totals[key] += int(root.attrib.get(key, 0))
+          passed = totals["tests"] - totals["failures"] - totals["errors"] - totals["skipped"]
+          print(f"### Core unit tests — {totals['tests']} total")
+          print()
+          print(f"- Passed: {passed}")
+          print(f"- Failed/errors: {totals['failures'] + totals['errors']}")
+          print(f"- Skipped: {totals['skipped']}")
+          PY
+
+      - name: Upload Core qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-qualification-${{ runner.os }}-java17
+          path: |
+            core/build/libs/
+            core/build/publications/core/
+            core/build/reports/tests/test/
+            core/build/test-results/test/
+            build/reports/core-qualification/
+          if-no-files-found: warn
+          retention-days: 30
+
+  core-golden-compatibility:
+    name: Core Golden Compatibility
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: "17"
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run Core unit tests
+        run: ./gradlew :core:test --warning-mode all --console=plain
+
+      - name: Run only Core golden-equivalence fixtures
+        run: >-
+          ./gradlew qualificationTests
+          --tests com.victorvalentim.zividomelive.CoreGoldenEquivalenceTest
+          --warning-mode all
+          --console=plain
+
+      - name: Preserve golden-only evidence
+        shell: bash
+        run: |
+          mkdir -p build/reports/core-golden build/test-results/core-golden
+          cp build/reports/qualification/summary.md build/reports/core-golden/summary.md
+          cp -R build/test-results/qualification/. build/test-results/core-golden/
+
+      - name: Run authoritative root qualification suite
+        run: ./gradlew qualificationTests --warning-mode all --console=plain
+
+      - name: Report test categories separately
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import glob
+          import xml.etree.ElementTree as ET
+
+          def totals(pattern):
+              result = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
+              for path in glob.glob(pattern):
+                  root = ET.parse(path).getroot()
+                  for key in result:
+                      result[key] += int(root.attrib.get(key, 0))
+              return result
+
+          core = totals("core/build/test-results/test/TEST-*.xml")
+          golden = totals("build/test-results/core-golden/TEST-*.xml")
+          root = totals("build/test-results/qualification/TEST-*.xml")
+          processing = root["tests"] - golden["tests"]
+          print("### Qualification categories")
+          print()
+          print(f"- Core unit tests: {core['tests']}")
+          print(f"- Golden equivalence tests: {golden['tests']}")
+          print(f"- Processing/root non-golden tests: {processing}")
+          print(f"- Authoritative root qualification total: {root['tests']}")
+          PY
+          cat build/reports/qualification/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload golden compatibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-golden-compatibility-java17
+          path: |
+            core/build/test-results/test/
+            core/build/reports/tests/test/
+            build/test-results/core-golden/
+            build/reports/core-golden/
+            build/test-results/qualification/
+            build/reports/qualification/
+          if-no-files-found: warn
+          retention-days: 30
