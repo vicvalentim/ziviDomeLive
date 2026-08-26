@@ -1,4 +1,5 @@
 import java.util.zip.ZipFile
+import org.gradle.external.javadoc.StandardJavadocDocletOptions
 
 plugins {
     `java-library`
@@ -41,6 +42,10 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.withType<Javadoc>().configureEach {
     options.encoding = "UTF-8"
+    // Public APIs carry focused narrative documentation; do not require repetitive tag-only
+    // prose while retaining every non-missing doclint check.
+    (options as StandardJavadocDocletOptions)
+        .addStringOption("Xdoclint:all,-missing", "-quiet")
 }
 
 publishing {
