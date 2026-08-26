@@ -49,10 +49,16 @@ From the containing build:
 
 ```text
 ./gradlew :core:clean :core:check :core:javadoc :core:publishCorePublicationToCoreTestRepository
+./gradlew :core:externalConsumerSmoke --warning-mode all
 ```
 
 Artifacts are `zividomelive-core-0.1.0-SNAPSHOT.jar`, sources JAR, Javadoc JAR, and a Maven POM.
 The local publication repository is written below `core/build/` and never publishes remotely.
 
-Core 0.1 is a development API extracted from the frozen 2.0 behavior. Its public types are usable,
-but the compatibility tier is not yet 1.0 Stable.
+The qualified edge-case matrix is in
+[`docs/CORE_SEMANTIC_CONTRACT.md`](docs/CORE_SEMANTIC_CONTRACT.md). Obligations for the future,
+not-yet-implemented Processing 2.1 bridge are in
+[`docs/PROCESSING_2_1_ADAPTER_CONTRACT.md`](docs/PROCESSING_2_1_ADAPTER_CONTRACT.md).
+
+Core 0.1 is a qualified development API extracted from the frozen 2.0 behavior. Its public types
+are usable, but the compatibility tier is not yet 1.0 Stable.
